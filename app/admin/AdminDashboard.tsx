@@ -1,15 +1,13 @@
 // ============================================
 // 📁 LOKASI: app/admin/AdminDashboard.tsx
-// ✅ UPDATED: All features integrated
-//    - Today stats (laporan masuk & verified hari ini)
-//    - Enhanced user management (search, detail, ban, view reports)
-//    - Tabs via sidebar (no more inline tabs)
-//    - Global search support via URL params
+// ✅ FIX: Tambah useEffect untuk sync activeTab dengan URL params
+//    - Hanya perubahan minimal: import useEffect + tambah useEffect hook
+//    - Semua logic lain tidak diubah
 // ============================================
 
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useEffect } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   CheckCircle2, XCircle, Clock, Eye, ExternalLink,
@@ -70,10 +68,12 @@ export default function AdminDashboard({
   users: User[];
 }) {
   const searchParams = useSearchParams();
-  const initialTab = (searchParams.get('tab') as Tab) || 'dashboard';
+
+  // ✅ FIX: Baca dari URL setiap render
+  const tabFromUrl = (searchParams.get('tab') as Tab) || 'dashboard';
   const initialSearch = searchParams.get('search') || '';
 
-  const [activeTab, setActiveTab] = useState<Tab>(initialTab);
+  const [activeTab, setActiveTab] = useState<Tab>(tabFromUrl);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('semua');
   const [searchQuery, setSearchQuery] = useState(initialSearch);
   const [bankFilter, setBankFilter] = useState('');
@@ -85,6 +85,11 @@ export default function AdminDashboard({
   const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
   const [userSearch, setUserSearch] = useState('');
   const router = useRouter();
+
+  // ✅ FIX: Sync activeTab setiap kali URL berubah (navigasi sidebar)
+  useEffect(() => {
+    setActiveTab(tabFromUrl);
+  }, [tabFromUrl]);
 
   // Unique banks & platforms
   const uniqueBanks = useMemo(() => {
@@ -647,11 +652,8 @@ function UserRow({ user, reports, isExpanded, onToggle, onRefresh }: {
     finally { setLoading(false); setAction(null); }
   };
 
-  // Find reports by this user (match by checking all reports)
   const userReports = reports.filter(r => {
-    // We don't have direct user→email mapping in this component,
-    // so we show reports section only when expanded
-    return false; // Will be populated when we have email data
+    return false;
   });
 
   const roleConfig = {

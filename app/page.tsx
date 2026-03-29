@@ -1,8 +1,8 @@
 // ============================================
 // 📁 LOKASI: app/page.tsx (Homepage)
 // ✅ FIX:
-//    1. maskNumber() pakai dari lib/utils.ts
-//    2. Hapus 'as any' casts di reports map
+//    1. Tambah target_type di query recent reports
+//    2. Tambah icon + label tipe di card laporan (Nomor HP / Rekening / E-Wallet)
 // ============================================
 
 import Link from 'next/link';
@@ -16,12 +16,38 @@ import {
   Phone,
   Landmark,
   ShieldCheck,
+  Building2,
+  Wallet,
 } from 'lucide-react';
 import * as motion from 'motion/react-client';
 import { createClient } from '@/lib/supabase-server';
 import { formatDateID, maskNumber } from '@/lib/utils';
 
 export const revalidate = 60;
+
+// Helper: label + icon berdasarkan target_type
+function TargetTypeBadge({ type }: { type: string }) {
+  if (type === 'bank_account') {
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded">
+        <Building2 className="w-2.5 h-2.5" /> Rekening
+      </span>
+    );
+  }
+  if (type === 'ewallet') {
+    return (
+      <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-purple-600 bg-purple-50 px-2 py-0.5 rounded">
+        <Wallet className="w-2.5 h-2.5" /> E-Wallet
+      </span>
+    );
+  }
+  // default: phone
+  return (
+    <span className="inline-flex items-center gap-1 text-[10px] font-semibold text-blue-600 bg-blue-50 px-2 py-0.5 rounded">
+      <Phone className="w-2.5 h-2.5" /> Nomor HP
+    </span>
+  );
+}
 
 export default async function HomePage() {
   const supabase = await createClient();
@@ -39,7 +65,8 @@ export default async function HomePage() {
       .eq('status', 'verified'),
     supabase
       .from('reports')
-      .select('id, target_number, target_name, category, created_at, status')
+      // ✅ FIX: Tambah target_type di query
+      .select('id, target_number, target_name, target_type, category, created_at, status')
       .order('created_at', { ascending: false })
       .limit(6),
     supabase.rpc('get_category_counts'),
@@ -368,26 +395,30 @@ export default async function HomePage() {
                     className="block bg-white border border-zinc-200 rounded-xl p-4 sm:p-5 hover:shadow-md hover:border-zinc-300 transition-all group"
                   >
                     <div className="flex justify-between items-start mb-3">
-                      <span
-                        className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded ${
-                          report.status === 'verified'
-                            ? 'bg-red-50 text-red-600'
+                      <div className="flex items-center gap-1.5 flex-wrap">
+                        {/* ✅ FIX: Status badge */}
+                        <span
+                          className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-wider rounded ${
+                            report.status === 'verified'
+                              ? 'bg-red-50 text-red-600'
+                              : report.status === 'rejected'
+                                ? 'bg-zinc-100 text-zinc-400'
+                                : 'bg-amber-50 text-amber-600'
+                          }`}
+                        >
+                          {report.status === 'verified'
+                            ? 'Verified'
                             : report.status === 'rejected'
-                              ? 'bg-zinc-100 text-zinc-400'
-                              : 'bg-amber-50 text-amber-600'
-                        }`}
-                      >
-                        {report.status === 'verified'
-                          ? 'Verified'
-                          : report.status === 'rejected'
-                            ? 'Rejected'
-                            : 'Pending'}
-                      </span>
-                      <span className="text-[11px] text-zinc-400 font-medium">
+                              ? 'Rejected'
+                              : 'Pending'}
+                        </span>
+                        {/* ✅ FIX: Tipe target badge */}
+                        <TargetTypeBadge type={report.target_type} />
+                      </div>
+                      <span className="text-[11px] text-zinc-400 font-medium shrink-0 ml-1">
                         {formatDateID(report.created_at)}
                       </span>
                     </div>
-                    {/* ✅ FIX: Pakai maskNumber dari utils */}
                     <p className="text-base sm:text-lg font-extrabold text-zinc-900 mb-0.5 font-mono tracking-wide">
                       {maskNumber(report.target_number)}
                     </p>

@@ -684,7 +684,7 @@ export default function ReportForm() {
               setFormData({ ...formData, incident_date: e.target.value })
             }
             max={new Date().toISOString().split('T')[0]}
-            className="w-full px-4 py-3.5 bg-zinc-50 border border-zinc-200 rounded-xl focus:border-zinc-900 focus:bg-white focus:ring-2 focus:ring-zinc-900/5 outline-none transition-all text-sm font-semibold text-zinc-900"
+            className="w-full px-4 py-3.5 bg-zinc-50 border border-zinc-200 rounded-xl focus:border-zinc-900 focus:bg-white focus:ring-2 focus:ring-zinc-900/5 outline-none transition-all text-sm font-semibold text-zinc-900 appearance-none box-border"
           />
         </div>
 
