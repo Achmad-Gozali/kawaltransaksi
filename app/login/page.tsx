@@ -3,7 +3,13 @@ import { createClient } from '@/lib/supabase-server';
 import { Shield, FileText, Users, CheckCircle2, TrendingUp } from 'lucide-react';
 import Link from 'next/link';
 
-export default async function LoginPage() {
+interface LoginPageProps {
+  searchParams: Promise<{ error?: string }>;
+}
+
+export default async function LoginPage({ searchParams }: LoginPageProps) {
+  const { error: oauthError } = await searchParams;
+
   const supabase = await createClient();
   const { count: totalReports } = await supabase
     .from('reports')
@@ -67,7 +73,7 @@ export default async function LoginPage() {
         </div>
 
         <p className="text-xs text-zinc-400 font-medium italic">
-          "Satu laporan bisa menyelamatkan banyak orang."
+          &quot;Satu laporan bisa menyelamatkan banyak orang.&quot;
         </p>
       </div>
 
@@ -82,6 +88,14 @@ export default async function LoginPage() {
               CEK<span className="text-red-500">NO</span>SCAM
             </span>
           </div>
+
+          {/* ✅ Tampilkan error kalau OAuth gagal */}
+          {oauthError === 'oauth_failed' && (
+            <div className="mb-6 p-4 bg-red-50 border border-red-200 rounded-2xl text-red-700 text-sm font-semibold text-center">
+              Login dengan akun sosial gagal. Silakan coba lagi.
+            </div>
+          )}
+
           <AuthForm type="login" />
         </div>
       </div>
