@@ -20,7 +20,6 @@ export async function GET(request: NextRequest) {
     return NextResponse.redirect(`${siteUrl}/login?error=oauth_failed`);
   }
 
-  // ✅ PKCE flow: ada code di query param
   if (code) {
     const cookieStore = await cookies();
     const supabase = createServerClient(
@@ -34,20 +33,31 @@ export async function GET(request: NextRequest) {
               cookiesToSet.forEach(({ name, value, options }) =>
                 cookieStore.set(name, value, options)
               );
-            } catch { /* ignore */ }
+            } catch { }
           },
         },
       }
     );
 
-    const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
-    if (!exchangeError) {
+    const { error: exchangeError, data } = await supabase.auth.exchangeCodeForSession(code);
+
+    if (!exchangeError && data.user) {
+      // ✅ Cek role — kalau admin langsung ke /admin
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', data.user.id)
+        .single() as any;
+
+      if (profile?.role === 'admin') {
+        return NextResponse.redirect(`${siteUrl}/admin`);
+      }
+
       return NextResponse.redirect(`${siteUrl}${next}`);
     }
-    console.error('Code exchange failed:', exchangeError.message);
+
+    console.error('Code exchange failed:', exchangeError?.message);
   }
 
-  // ✅ Implicit flow: tidak ada code, token ada di URL fragment (#access_token=...)
-  // Fragment tidak bisa dibaca server-side, redirect ke halaman yang handle di client
   return NextResponse.redirect(`${siteUrl}${next}`);
 }
