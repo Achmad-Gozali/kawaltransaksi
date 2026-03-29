@@ -1,5 +1,6 @@
 // ============================================
 // 📁 LOKASI: app/admin/layout.tsx
+// ✅ FIX: Hapus 'as any' cast — profile type sekarang sudah include role
 // ============================================
 
 import { createClient } from '@/lib/supabase-server';
@@ -8,17 +9,24 @@ import Link from 'next/link';
 import { ShieldAlert, Home } from 'lucide-react';
 import AdminLogout from './AdminLogout';
 
-export default async function AdminLayout({ children }: { children: React.ReactNode }) {
+export default async function AdminLayout({
+  children,
+}: {
+  children: React.ReactNode;
+}) {
   const supabase = await createClient();
 
-  const { data: { user } } = await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
   if (!user) redirect('/login?redirectTo=/admin');
 
+  // ✅ FIX: Hapus 'as any' — kolom role sekarang ada di schema & types
   const { data: profile } = await supabase
     .from('profiles')
     .select('role')
     .eq('id', user.id)
-    .single() as any;
+    .single();
 
   if (!profile || profile.role !== 'admin') redirect('/');
 
@@ -34,7 +42,9 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           </span>
         </div>
         <div className="flex items-center gap-2 sm:gap-3">
-          <span className="text-xs text-zinc-400 hidden sm:block truncate max-w-[160px]">{user.email}</span>
+          <span className="text-xs text-zinc-400 hidden sm:block truncate max-w-[160px]">
+            {user.email}
+          </span>
           <Link
             href="/"
             className="flex items-center gap-1.5 text-xs text-zinc-400 hover:text-white transition-colors border border-zinc-700 hover:border-zinc-500 px-3 py-1.5 rounded-lg"

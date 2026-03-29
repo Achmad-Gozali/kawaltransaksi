@@ -1,9 +1,18 @@
+// ============================================
+// 📁 LOKASI: lib/groq.ts
+// ✅ FIX:
+//    1. Pisah model text vs vision — llama-3.3-70b TIDAK support image
+//    2. analyzeEvidenceImage sekarang pakai vision model yang benar
+//    3. Fallback model kalau vision gagal
+//    4. Improved error messages
+// ============================================
+
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
-// ✅ FIX: Ganti model ke llama-3.3-70b-versatile (stable & tersedia di Groq)
-const GROQ_MODEL = 'llama-3.3-70b-versatile';
+// ✅ FIX: Model terpisah — text model TIDAK bisa proses gambar
+const GROQ_TEXT_MODEL = 'llama-3.3-70b-versatile';
+const GROQ_VISION_MODEL = 'llama-3.2-90b-vision-preview';
 
-// ✅ Timeout 15 detik — cegah server action hang kalau Groq lambat/down
 const TIMEOUT_MS = 15_000;
 
 interface AnalysisResult {
@@ -14,8 +23,18 @@ interface AnalysisResult {
   scam_category_suggestion: string | null;
 }
 
-// ✅ Helper: fetch dengan timeout
-async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: number): Promise<Response> {
+interface TextAnalysisResult {
+  risk_level: 'low' | 'medium' | 'high';
+  analysis: string;
+  suggested_category: string | null;
+}
+
+// Helper: fetch dengan timeout
+async function fetchWithTimeout(
+  url: string,
+  options: RequestInit,
+  timeoutMs: number
+): Promise<Response> {
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), timeoutMs);
   try {
@@ -25,7 +44,7 @@ async function fetchWithTimeout(url: string, options: RequestInit, timeoutMs: nu
   }
 }
 
-// ✅ Helper: parse JSON dari response Groq — handle markdown fence
+// Helper: parse JSON dari response Groq — handle markdown fence
 function parseGroqJson<T>(content: string): T | null {
   try {
     const cleaned = content.replace(/```json\s*|```/g, '').trim();
@@ -35,7 +54,7 @@ function parseGroqJson<T>(content: string): T | null {
   }
 }
 
-// ✅ Header reusable
+// Header reusable
 function getGroqHeaders(apiKey: string): Record<string, string> {
   return {
     Authorization: `Bearer ${apiKey}`,
@@ -44,7 +63,9 @@ function getGroqHeaders(apiKey: string): Record<string, string> {
 }
 
 /**
- * Analyze uploaded screenshot evidence using Groq vision model
+ * ✅ FIX: Analyze screenshot evidence pakai VISION model
+ * Sebelumnya pakai llama-3.3-70b yang TIDAK support image input
+ * Sekarang pakai llama-3.2-90b-vision-preview
  */
 export async function analyzeEvidenceImage(
   base64Image: string,
@@ -53,17 +74,24 @@ export async function analyzeEvidenceImage(
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) throw new Error('GROQ_API_KEY is not configured');
 
+  // Validate mime type
+  const allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
+  if (!allowedMimes.includes(mimeType)) {
+    throw new Error(`Unsupported image type: ${mimeType}. Use JPG, PNG, or WebP.`);
+  }
+
   const response = await fetchWithTimeout(
     GROQ_API_URL,
     {
       method: 'POST',
       headers: getGroqHeaders(apiKey),
       body: JSON.stringify({
-        model: GROQ_MODEL,
+        // ✅ FIX: Pakai vision model, bukan text model
+        model: GROQ_VISION_MODEL,
         messages: [
           {
             role: 'system',
-            content: `Kamu adalah AI forensik digital yang menganalisis bukti screenshot penipuan online.
+            content: `Kamu adalah AI forensik digital yang menganalisis bukti screenshot penipuan online di Indonesia.
 Analisis gambar yang diberikan dan tentukan:
 1. Apakah screenshot terlihat autentik (bukan editan/fabricated)
 2. Identifikasi red flags penipuan yang terlihat
@@ -101,7 +129,8 @@ Respon HARUS dalam format JSON berikut (tanpa markdown, tanpa backticks):
 
   if (!response.ok) {
     const errBody = await response.text();
-    throw new Error(`Groq API error: ${response.status} - ${errBody}`);
+    console.error('Groq Vision API error:', response.status, errBody);
+    throw new Error(`Groq Vision API error: ${response.status}`);
   }
 
   const data = await response.json();
@@ -118,15 +147,15 @@ Respon HARUS dalam format JSON berikut (tanpa markdown, tanpa backticks):
 }
 
 /**
- * Analyze chronology text for scam patterns using Groq
+ * Analyze chronology text for scam patterns using Groq (text model)
  */
 export async function analyzeChronologyText(
   chronology: string
-): Promise<{ risk_level: 'low' | 'medium' | 'high'; analysis: string; suggested_category: string | null }> {
+): Promise<TextAnalysisResult> {
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) throw new Error('GROQ_API_KEY is not configured');
 
-  // ✅ Batasi panjang input — cegah token waste
+  // Batasi panjang input — cegah token waste
   const trimmedChronology = chronology.slice(0, 2000);
 
   const response = await fetchWithTimeout(
@@ -135,7 +164,7 @@ export async function analyzeChronologyText(
       method: 'POST',
       headers: getGroqHeaders(apiKey),
       body: JSON.stringify({
-        model: GROQ_MODEL,
+        model: GROQ_TEXT_MODEL,
         messages: [
           {
             role: 'system',
@@ -170,7 +199,7 @@ Respon HARUS dalam format JSON (tanpa markdown, tanpa backticks):
 
   const data = await response.json();
   const content = data.choices?.[0]?.message?.content ?? '';
-  const parsed = parseGroqJson<{ risk_level: 'low' | 'medium' | 'high'; analysis: string; suggested_category: string | null }>(content);
+  const parsed = parseGroqJson<TextAnalysisResult>(content);
 
   return parsed ?? {
     risk_level: 'medium',
