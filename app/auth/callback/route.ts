@@ -12,13 +12,11 @@ export async function GET(request: NextRequest) {
   const code = searchParams.get('code');
   const next = searchParams.get('next') ?? '/';
   const error = searchParams.get('error');
-  const errorDescription = searchParams.get('error_description');
 
   const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || 'https://kawaltransaksi-kf68.vercel.app';
 
-  // ✅ Handle error dari provider
   if (error) {
-    console.error('OAuth error:', error, errorDescription);
+    console.error('OAuth provider error:', error);
     return NextResponse.redirect(`${siteUrl}/login?error=oauth_failed`);
   }
 
@@ -29,6 +27,11 @@ export async function GET(request: NextRequest) {
       process.env.NEXT_PUBLIC_SUPABASE_URL!,
       process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
       {
+        cookieOptions: {
+          sameSite: 'lax',
+          secure: true,
+          maxAge: 60 * 60 * 24,
+        },
         cookies: {
           getAll() {
             return cookieStore.getAll();
@@ -46,13 +49,16 @@ export async function GET(request: NextRequest) {
       }
     );
 
-    const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+    const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
 
-    if (!exchangeError) {
-      return NextResponse.redirect(`${siteUrl}${next}`);
+    if (exchangeError) {
+      console.error('Exchange error:', exchangeError.message);
+      return NextResponse.redirect(`${siteUrl}/login?error=oauth_failed`);
     }
 
-    console.error('Exchange error:', exchangeError);
+    if (data.session) {
+      return NextResponse.redirect(`${siteUrl}${next}`);
+    }
   }
 
   return NextResponse.redirect(`${siteUrl}/login?error=oauth_failed`);
