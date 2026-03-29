@@ -1,7 +1,5 @@
 // ============================================
 // 📁 LOKASI: app/auth/callback/route.ts
-// 📝 BARU — OAuth callback handler
-// Supabase redirect ke sini setelah user approve OAuth
 // ============================================
 
 import { createServerClient } from '@supabase/ssr';
@@ -12,8 +10,11 @@ import type { NextRequest } from 'next/server';
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get('code');
-  // ✅ next = halaman tujuan setelah login (dari redirectTo param)
   const next = searchParams.get('next') ?? '/';
+
+  // ✅ Gunakan NEXT_PUBLIC_SITE_URL kalau ada, fallback ke origin dari request
+  // Ini fix masalah redirect ke localhost padahal udah di Vercel
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || origin;
 
   if (code) {
     const cookieStore = await cookies();
@@ -42,13 +43,11 @@ export async function GET(request: NextRequest) {
     const { error } = await supabase.auth.exchangeCodeForSession(code);
 
     if (!error) {
-      // ✅ Redirect ke halaman tujuan setelah session berhasil dibuat
-      return NextResponse.redirect(`${origin}${next}`);
+      return NextResponse.redirect(`${siteUrl}${next}`);
     }
 
     console.error('OAuth callback error:', error);
   }
 
-  // ✅ Kalau gagal, redirect ke login dengan pesan error
-  return NextResponse.redirect(`${origin}/login?error=oauth_failed`);
+  return NextResponse.redirect(`${siteUrl}/login?error=oauth_failed`);
 }
