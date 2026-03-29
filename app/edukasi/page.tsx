@@ -1,13 +1,13 @@
 // ============================================
 // 📁 LOKASI: app/edukasi/page.tsx
 // ✅ FIX:
-//    1. Branding konsisten: KawalTransaksi
-//    2. Stats section -mt-6 diperbaiki agar tidak overlap di mobile
+//    1. Branding konsisten: KawalTransaksi
+//    2. Stats section -mt-6 diperbaiki agar tidak overlap di mobile
+//    3. Tombol Kembali Dihapus
 // ============================================
 
 import Link from 'next/link';
 import {
-  ArrowLeft,
   ShieldAlert,
   AlertTriangle,
   CreditCard,
@@ -219,20 +219,7 @@ const modusData = [
 export default function EdukasiPage() {
   return (
     <div className="min-h-screen bg-zinc-50">
-      {/* Top Bar */}
-      <div className="border-b border-zinc-200 bg-white">
-        <div className="max-w-6xl mx-auto px-4 py-4">
-          <Link
-            href="/"
-            className="inline-flex items-center gap-2 text-zinc-400 hover:text-zinc-900 text-sm font-medium transition-colors group"
-          >
-            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
-            Kembali
-          </Link>
-        </div>
-      </div>
-
-      {/* Header */}
+      {/* Header (Top Bar Dihapus) */}
       <div className="bg-white border-b border-zinc-100">
         <div className="max-w-6xl mx-auto px-4 py-10 sm:py-16 text-center">
           <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900 text-white text-[10px] font-bold uppercase tracking-[0.2em] mb-5 sm:mb-6">

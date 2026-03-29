@@ -1,6 +1,6 @@
 // ============================================
 // 📁 LOKASI: app/admin/AdminDashboard.tsx
-// ✅ FIX: Data display fixed, bigger cards, fast tab switch
+// ✅ FIX: Perbaikan parsing Number untuk loss_amount agar grafik kerugian muncul
 // ============================================
 
 'use client';
@@ -10,9 +10,8 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import {
   CheckCircle2, XCircle, Clock, Eye, ExternalLink,
   Phone, Building2, ChevronDown, ChevronUp, Loader2,
-  Search, Users, FileText, BarChart2, Download,
-  AlertCircle, DollarSign, X, TrendingUp, ChevronRight,
-  Shield, ShieldCheck,
+  Search, Users, FileText, DollarSign, X, TrendingUp, ChevronRight,
+  AlertCircle, Download
 } from 'lucide-react';
 import { updateReportStatus, updateUserRole } from './actions';
 import { formatDateID } from '@/lib/utils';
@@ -29,7 +28,7 @@ interface Report {
   status: string;
   created_at: string;
   bank_name?: string | null;
-  loss_amount?: number | null;
+  loss_amount?: number | string | null; // Bisa string dari DB
   incident_date?: string | null;
   platform?: string | null;
 }
@@ -45,10 +44,11 @@ interface Stats { total: number; pending: number; verified: number; rejected: nu
 type Tab = 'dashboard' | 'laporan' | 'statistik' | 'pengguna';
 type StatusFilter = 'semua' | 'pending' | 'verified' | 'rejected';
 
-function formatRupiah(num: number): string {
-  if (num >= 1_000_000_000) return `Rp ${(num / 1_000_000_000).toFixed(1)}M`;
-  if (num >= 1_000_000) return `Rp ${(num / 1_000_000).toFixed(1)}jt`;
-  return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(num);
+function formatRupiah(num: number | string): string {
+  const parsedNum = Number(num) || 0;
+  if (parsedNum >= 1_000_000_000) return `Rp ${(parsedNum / 1_000_000_000).toFixed(1)}M`;
+  if (parsedNum >= 1_000_000) return `Rp ${(parsedNum / 1_000_000).toFixed(1)}jt`;
+  return new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(parsedNum);
 }
 
 function DashboardInner({ stats, reports, users }: { stats: Stats; reports: Report[]; users: AdminUser[] }) {
@@ -62,7 +62,6 @@ function DashboardInner({ stats, reports, users }: { stats: Stats; reports: Repo
   const [loadingId, setLoadingId] = useState<string | null>(null);
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkLoading, setBulkLoading] = useState(false);
-  const [expandedUserId, setExpandedUserId] = useState<string | null>(null);
   const [userSearch, setUserSearch] = useState('');
   const router = useRouter();
 
@@ -90,11 +89,20 @@ function DashboardInner({ stats, reports, users }: { stats: Stats; reports: Repo
   const todayStr = new Date().toISOString().split('T')[0];
   const todayReports = useMemo(() => reports.filter(r => r.created_at.startsWith(todayStr)), [reports, todayStr]);
   const todayVerified = useMemo(() => todayReports.filter(r => r.status === 'verified'), [todayReports]);
-  const totalLoss = useMemo(() => reports.reduce((s, r) => s + (r.loss_amount || 0), 0), [reports]);
+  
+  // ✅ FIX: Parsing loss_amount ke Number dengan aman
+  const totalLoss = useMemo(() => reports.reduce((s, r) => s + (Number(r.loss_amount) || 0), 0), [reports]);
 
+  // ✅ FIX: Parsing nominal bank
   const bankStats = useMemo(() => {
     const map: Record<string, { count: number; loss: number }> = {};
-    reports.forEach(r => { if (r.bank_name) { if (!map[r.bank_name]) map[r.bank_name] = { count: 0, loss: 0 }; map[r.bank_name].count++; map[r.bank_name].loss += r.loss_amount || 0; } });
+    reports.forEach(r => { 
+        if (r.bank_name) { 
+            if (!map[r.bank_name]) map[r.bank_name] = { count: 0, loss: 0 }; 
+            map[r.bank_name].count++; 
+            map[r.bank_name].loss += (Number(r.loss_amount) || 0); 
+        } 
+    });
     return Object.entries(map).sort((a, b) => b[1].count - a[1].count);
   }, [reports]);
 
@@ -136,12 +144,15 @@ function DashboardInner({ stats, reports, users }: { stats: Stats; reports: Repo
     setLoadingId(id);
     try { await updateReportStatus(id, status); router.refresh(); } catch (err) { console.error(err); } finally { setLoadingId(null); }
   };
+  
   const handleBulkAction = async (status: 'verified' | 'rejected') => {
     if (selectedIds.size === 0) return; setBulkLoading(true);
     try { await Promise.all([...selectedIds].map(id => updateReportStatus(id, status))); setSelectedIds(new Set()); router.refresh(); } catch (err) { console.error(err); } finally { setBulkLoading(false); }
   };
+  
   const toggleSelect = (id: string) => { const n = new Set(selectedIds); n.has(id) ? n.delete(id) : n.add(id); setSelectedIds(n); };
   const selectAll = () => setSelectedIds(selectedIds.size === filteredReports.length ? new Set() : new Set(filteredReports.map(r => r.id)));
+  
   const handleExportCSV = () => {
     const rows = [['ID','Nomor','Nama','Tipe','Bank','Kategori','Platform','Kerugian','Tgl Kejadian','Status','Pelapor','Tgl Lapor'],
       ...reports.map(r => [r.id,r.target_number,r.target_name??'',r.target_type,r.bank_name??'',r.category,r.platform??'',r.loss_amount?String(r.loss_amount):'',r.incident_date??'',r.status,r.reporter_email,r.created_at])];

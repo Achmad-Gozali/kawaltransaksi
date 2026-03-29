@@ -1,5 +1,4 @@
 import Link from 'next/link';
-import { ArrowLeft } from 'lucide-react';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
@@ -10,15 +9,6 @@ export const metadata: Metadata = {
 export default function KebijakanPrivasiPage() {
   return (
     <div className="min-h-screen bg-zinc-50">
-      <div className="border-b border-zinc-200 bg-white">
-        <div className="max-w-3xl mx-auto px-4 py-4">
-          <Link href="/" className="inline-flex items-center gap-2 text-zinc-400 hover:text-zinc-900 text-sm font-medium transition-colors group">
-            <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
-            Kembali
-          </Link>
-        </div>
-      </div>
-
       <div className="max-w-3xl mx-auto px-4 py-12 sm:py-16">
         <h1 className="text-2xl sm:text-3xl font-extrabold text-zinc-900 tracking-tight mb-2">Kebijakan Privasi</h1>
         <p className="text-sm text-zinc-400 mb-8 sm:mb-10">Terakhir diperbarui: 29 Maret 2026</p>
