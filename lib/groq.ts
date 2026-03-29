@@ -11,7 +11,7 @@ const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
 // ✅ FIX: Model terpisah — text model TIDAK bisa proses gambar
 const GROQ_TEXT_MODEL = 'llama-3.3-70b-versatile';
-const GROQ_VISION_MODEL = 'llama-3.2-90b-vision-preview';
+const GROQ_VISION_MODEL = 'meta-llama/llama-4-scout-17b-16e-instruct';
 
 const TIMEOUT_MS = 15_000;
 
