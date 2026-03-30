@@ -80,7 +80,7 @@ export default function ReportForm() {
     loss_amount: '',
     incident_date: '',
     platform: '',
-    link_url: '', // ✅ field baru
+    link_url: '',
   });
 
   const [file, setFile] = useState<File | null>(null);
@@ -161,7 +161,7 @@ export default function ReportForm() {
         loss_amount: formData.loss_amount ? parseInt(formData.loss_amount.replace(/\D/g, ''), 10) : null,
         incident_date: formData.incident_date || null,
         platform: formData.platform || null,
-        link_url: formData.link_url || null, // ✅ data link terkirim
+        link_url: formData.link_url || null,
       });
 
       if (result.success) {
@@ -307,13 +307,17 @@ export default function ReportForm() {
           </div>
           <div className="space-y-2">
             <label className="text-[10px] font-bold text-zinc-500 ml-1 flex items-center gap-1.5"><Calendar className="w-3 h-3" /> Tanggal</label>
-            <input
-              type="date"
-              max={new Date().toISOString().split('T')[0]}
-              value={formData.incident_date}
-              onChange={(e) => setFormData({ ...formData, incident_date: e.target.value })}
-              className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-sm font-semibold"
-            />
+            {/* ✅ FIX: Date input layout alignment for mobile */}
+            <div className="relative">
+              <input
+                type="date"
+                max={new Date().toISOString().split('T')[0]}
+                value={formData.incident_date}
+                onChange={(e) => setFormData({ ...formData, incident_date: e.target.value })}
+                className="w-full h-[46px] px-4 bg-zinc-50 border border-zinc-200 rounded-xl text-sm font-semibold appearance-none focus:bg-white focus:border-zinc-900 outline-none transition-all"
+                style={{ minHeight: '46px' }}
+              />
+            </div>
           </div>
           <div className="space-y-2">
             <label className="text-[10px] font-bold text-zinc-500 ml-1 flex items-center gap-1.5"><Globe className="w-3 h-3" /> Platform</label>
@@ -326,7 +330,6 @@ export default function ReportForm() {
               {platformList.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
             </select>
           </div>
-          {/* ✅ FIELD BARU: LINK / URL PENIPUAN ✅ */}
           <div className="space-y-2">
             <label className="text-[10px] font-bold text-zinc-500 ml-1 flex items-center gap-1.5"><Globe className="w-3 h-3" /> Link / URL</label>
             <input
