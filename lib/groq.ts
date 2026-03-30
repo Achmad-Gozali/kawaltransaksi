@@ -1,10 +1,10 @@
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
-// ✅ FIX: ganti ke model vision yang beneran ada di groq
+// ✅ fix: pake model yang beneran ada & stabil di groq
 const GROQ_TEXT_MODEL = 'llama-3.3-70b-versatile';
-const GROQ_VISION_MODEL = 'llama-3.2-11b-vision-preview'; // ini yang bener mad
+const GROQ_VISION_MODEL = 'llama-3.2-11b-vision-preview'; 
 
-const TIMEOUT_MS = 15_000;
+const TIMEOUT_MS = 25_000; // gua naikin ke 25 detik biar gak gampang timeout pas upload gambar
 
 interface AnalysisResult {
   authenticity_score: number;
@@ -35,26 +35,20 @@ async function fetchWithTimeout(
   }
 }
 
-// helper: parse json dari response groq
+// helper: parse json biar lebih badak nangkep respon ai
 function parseGroqJson<T>(content: string): T | null {
   try {
-    const cleaned = content.replace(/```json\s*|```/g, '').trim();
-    return JSON.parse(cleaned) as T;
-  } catch {
+    const jsonMatch = content.match(/\{[\s\S]*\}/);
+    const target = jsonMatch ? jsonMatch[0] : content;
+    return JSON.parse(target) as T;
+  } catch (e) {
+    console.error('parse error:', e);
     return null;
   }
 }
 
-// header reusable
-function getGroqHeaders(apiKey: string): Record<string, string> {
-  return {
-    Authorization: `Bearer ${apiKey}`,
-    'Content-Type': 'application/json',
-  };
-}
-
 /**
- * ✅ analyze screenshot evidence pakai vision model
+ * ✅ fix: analyze screenshot evidence pakai vision model + json mode
  */
 export async function analyzeEvidenceImage(
   base64Image: string,
@@ -63,34 +57,29 @@ export async function analyzeEvidenceImage(
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) throw new Error('groq_api_key is not configured');
 
-  const allowedMimes = ['image/jpeg', 'image/png', 'image/webp'];
-  if (!allowedMimes.includes(mimeType)) {
-    throw new Error(`unsupported image type: ${mimeType}. use jpg, png, or webp.`);
-  }
-
   const response = await fetchWithTimeout(
     GROQ_API_URL,
     {
       method: 'POST',
-      headers: getGroqHeaders(apiKey),
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify({
         model: GROQ_VISION_MODEL,
+        // ✅ paksa mode json biar kaga ada teks sampah diluar kurung kurawal
+        response_format: { type: "json_object" }, 
         messages: [
           {
             role: 'system',
-            content: `kamu adalah ai forensik digital yang menganalisis bukti screenshot penipuan online di indonesia.
-analisis gambar yang diberikan dan tentukan:
-1. apakah screenshot terlihat autentik (bukan editan/fabricated)
-2. identifikasi red flags penipuan yang terlihat
-3. sugesti kategori penipuan
-
-respon harus dalam format json berikut (tanpa markdown, tanpa backticks):
+            content: `kamu adalah ai forensik digital. analisis screenshot bukti penipuan ini.
+respon harus dalam format json: 
 {
-  "authenticity_score": <number 0-100>,
-  "is_likely_authentic": <boolean>,
-  "summary": "<ringkasan singkat dalam bahasa indonesia>",
-  "red_flags": ["<flag1>", "<flag2>"],
-  "scam_category_suggestion": "<kategori atau null>"
+  "authenticity_score": number,
+  "is_likely_authentic": boolean,
+  "summary": "string",
+  "red_flags": ["string"],
+  "scam_category_suggestion": "string atau null"
 }`,
           },
           {
@@ -102,7 +91,7 @@ respon harus dalam format json berikut (tanpa markdown, tanpa backticks):
               },
               {
                 type: 'text',
-                text: 'analisis screenshot bukti penipuan ini. apakah autentik? apa red flags yang terlihat?',
+                text: 'analisis screenshot ini. apakah asli? apa red flags-nya?',
               },
             ],
           },
@@ -114,11 +103,7 @@ respon harus dalam format json berikut (tanpa markdown, tanpa backticks):
     TIMEOUT_MS
   );
 
-  if (!response.ok) {
-    const errBody = await response.text();
-    console.error('groq vision api error:', response.status, errBody);
-    throw new Error(`groq vision api error: ${response.status}`);
-  }
+  if (!response.ok) throw new Error(`api error: ${response.status}`);
 
   const data = await response.json();
   const content = data.choices?.[0]?.message?.content ?? '';
@@ -127,7 +112,7 @@ respon harus dalam format json berikut (tanpa markdown, tanpa backticks):
   return parsed ?? {
     authenticity_score: 50,
     is_likely_authentic: false,
-    summary: 'gagal memparse hasil analisis ai. silakan coba lagi.',
+    summary: 'gagal memproses data analisis gambar.',
     red_flags: [],
     scam_category_suggestion: null,
   };
@@ -142,34 +127,30 @@ export async function analyzeChronologyText(
   const apiKey = process.env.GROQ_API_KEY;
   if (!apiKey) throw new Error('groq_api_key is not configured');
 
-  const trimmedChronology = chronology.slice(0, 2000);
-
   const response = await fetchWithTimeout(
     GROQ_API_URL,
     {
       method: 'POST',
-      headers: getGroqHeaders(apiKey),
+      headers: {
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify({
         model: GROQ_TEXT_MODEL,
+        response_format: { type: "json_object" }, // ✅ paksa mode json
         messages: [
           {
             role: 'system',
-            content: `kamu adalah ai yang menganalisis kronologi penipuan online di indonesia.
-analisis teks kronologi dan tentukan:
-1. tingkat risiko bahwa ini benar-benar penipuan (low/medium/high)
-2. analisis singkat pola penipuan yang terdeteksi
-3. sugesti kategori penipuan
-
-respon harus dalam format json (tanpa markdown, tanpa backticks):
+            content: `kamu adalah ai analis penipuan. analisis kronologi berikut dan berikan respon json:
 {
   "risk_level": "low|medium|high",
-  "analysis": "<analisis singkat dalam bahasa indonesia>",
-  "suggested_category": "<kategori atau null>"
+  "analysis": "string",
+  "suggested_category": "string atau null"
 }`,
           },
           {
             role: 'user',
-            content: `analisis kronologi penipuan berikut:\n\n"${trimmedChronology}"`,
+            content: `analisis kronologi: "${chronology.slice(0, 2000)}"`,
           },
         ],
         max_tokens: 512,
@@ -179,9 +160,7 @@ respon harus dalam format json (tanpa markdown, tanpa backticks):
     TIMEOUT_MS
   );
 
-  if (!response.ok) {
-    throw new Error(`groq api error: ${response.status}`);
-  }
+  if (!response.ok) throw new Error(`api error: ${response.status}`);
 
   const data = await response.json();
   const content = data.choices?.[0]?.message?.content ?? '';
@@ -189,7 +168,7 @@ respon harus dalam format json (tanpa markdown, tanpa backticks):
 
   return parsed ?? {
     risk_level: 'medium',
-    analysis: 'gagal memparse hasil analisis.',
+    analysis: 'gagal memproses data analisis teks.',
     suggested_category: null,
   };
 }
