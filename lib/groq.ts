@@ -1,10 +1,10 @@
 const GROQ_API_URL = 'https://api.groq.com/openai/v1/chat/completions';
 
-// ✅ fix: pake model yang beneran ada & stabil di groq
+// ✅ pake model yang paling pinter buat gambar mad
 const GROQ_TEXT_MODEL = 'llama-3.3-70b-versatile';
-const GROQ_VISION_MODEL = 'llama-3.2-11b-vision-preview'; 
+const GROQ_VISION_MODEL = 'llama-3.2-90b-vision-preview'; 
 
-const TIMEOUT_MS = 25_000; // gua naikin ke 25 detik biar gak gampang timeout pas upload gambar
+const TIMEOUT_MS = 30_000; // gua kasih 30 detik biar lega
 
 interface AnalysisResult {
   authenticity_score: number;
@@ -20,67 +20,43 @@ interface TextAnalysisResult {
   suggested_category: string | null;
 }
 
-// helper: fetch dengan timeout
-async function fetchWithTimeout(
-  url: string,
-  options: RequestInit,
-  timeoutMs: number
-): Promise<Response> {
-  const controller = new AbortController();
-  const timer = setTimeout(() => controller.abort(), timeoutMs);
-  try {
-    return await fetch(url, { ...options, signal: controller.signal });
-  } finally {
-    clearTimeout(timer);
-  }
-}
-
-// helper: parse json biar lebih badak nangkep respon ai
+// parse json sakti
 function parseGroqJson<T>(content: string): T | null {
   try {
     const jsonMatch = content.match(/\{[\s\S]*\}/);
     const target = jsonMatch ? jsonMatch[0] : content;
     return JSON.parse(target) as T;
   } catch (e) {
-    console.error('parse error:', e);
+    console.error('failed to parse ai response:', content);
     return null;
   }
 }
 
 /**
- * ✅ fix: analyze screenshot evidence pakai vision model + json mode
+ * analisis gambar mad
  */
-export async function analyzeEvidenceImage(
-  base64Image: string,
-  mimeType: string
-): Promise<AnalysisResult> {
+export async function analyzeEvidenceImage(base64Image: string, mimeType: string): Promise<AnalysisResult> {
   const apiKey = process.env.GROQ_API_KEY;
-  if (!apiKey) throw new Error('groq_api_key is not configured');
+  if (!apiKey) throw new Error('api key kaga ada di .env mad');
 
-  const response = await fetchWithTimeout(
-    GROQ_API_URL,
-    {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+
+  try {
+    const response = await fetch(GROQ_API_URL, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
         'Content-Type': 'application/json',
       },
+      signal: controller.signal,
       body: JSON.stringify({
         model: GROQ_VISION_MODEL,
-        // ✅ paksa mode json biar kaga ada teks sampah diluar kurung kurawal
-        response_format: { type: "json_object" }, 
+        response_format: { type: "json_object" },
         messages: [
           {
             role: 'system',
-            content: `kamu adalah ai forensik digital. analisis screenshot bukti penipuan ini.
-respon harus dalam format json: 
-{
-  "authenticity_score": number,
-  "is_likely_authentic": boolean,
-  "summary": "string",
-  "red_flags": ["string"],
-  "scam_category_suggestion": "string atau null"
-}`,
+            content: `kamu adalah ai forensik. analisis gambar dan berikan output dalam format JSON.`
           },
           {
             role: 'user',
@@ -91,45 +67,48 @@ respon harus dalam format json:
               },
               {
                 type: 'text',
-                text: 'analisis screenshot ini. apakah asli? apa red flags-nya?',
+                text: 'analisis screenshot ini dalam format JSON: { "authenticity_score": number, "is_likely_authentic": boolean, "summary": string, "red_flags": array, "scam_category_suggestion": string }',
               },
             ],
           },
         ],
-        max_tokens: 1024,
         temperature: 0.2,
       }),
-    },
-    TIMEOUT_MS
-  );
+    });
 
-  if (!response.ok) throw new Error(`api error: ${response.status}`);
+    clearTimeout(timer);
 
-  const data = await response.json();
-  const content = data.choices?.[0]?.message?.content ?? '';
-  const parsed = parseGroqJson<AnalysisResult>(content);
+    if (!response.ok) {
+      const errBody = await response.text();
+      // ✅ LIAT DI CONSOLE LU: ini bakal ngebocorin kenapa groq nolak
+      console.error('--- GROQ API ERROR ---', response.status, errBody);
+      throw new Error(`groq error: ${response.status}`);
+    }
 
-  return parsed ?? {
-    authenticity_score: 50,
-    is_likely_authentic: false,
-    summary: 'gagal memproses data analisis gambar.',
-    red_flags: [],
-    scam_category_suggestion: null,
-  };
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content ?? '';
+    return parseGroqJson<AnalysisResult>(content) ?? {
+      authenticity_score: 50,
+      is_likely_authentic: false,
+      summary: 'gagal memproses data analisis.',
+      red_flags: [],
+      scam_category_suggestion: null,
+    };
+  } catch (err) {
+    console.error('analysis execution failed:', err);
+    throw err;
+  }
 }
 
 /**
- * analyze chronology text for scam patterns
+ * analisis teks mad
  */
-export async function analyzeChronologyText(
-  chronology: string
-): Promise<TextAnalysisResult> {
+export async function analyzeChronologyText(chronology: string): Promise<TextAnalysisResult> {
   const apiKey = process.env.GROQ_API_KEY;
-  if (!apiKey) throw new Error('groq_api_key is not configured');
+  if (!apiKey) throw new Error('api key kaga ada mad');
 
-  const response = await fetchWithTimeout(
-    GROQ_API_URL,
-    {
+  try {
+    const response = await fetch(GROQ_API_URL, {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
@@ -137,38 +116,31 @@ export async function analyzeChronologyText(
       },
       body: JSON.stringify({
         model: GROQ_TEXT_MODEL,
-        response_format: { type: "json_object" }, // ✅ paksa mode json
+        response_format: { type: "json_object" },
         messages: [
           {
             role: 'system',
-            content: `kamu adalah ai analis penipuan. analisis kronologi berikut dan berikan respon json:
-{
-  "risk_level": "low|medium|high",
-  "analysis": "string",
-  "suggested_category": "string atau null"
-}`,
+            content: `kamu adalah ai analis penipuan. berikan output dalam format JSON.`
           },
           {
             role: 'user',
-            content: `analisis kronologi: "${chronology.slice(0, 2000)}"`,
+            content: `analisis kronologi ini dalam format JSON { "risk_level": "low|medium|high", "analysis": string, "suggested_category": string }: "${chronology}"`,
           },
         ],
-        max_tokens: 512,
-        temperature: 0.2,
       }),
-    },
-    TIMEOUT_MS
-  );
+    });
 
-  if (!response.ok) throw new Error(`api error: ${response.status}`);
+    if (!response.ok) throw new Error(`api error: ${response.status}`);
 
-  const data = await response.json();
-  const content = data.choices?.[0]?.message?.content ?? '';
-  const parsed = parseGroqJson<TextAnalysisResult>(content);
-
-  return parsed ?? {
-    risk_level: 'medium',
-    analysis: 'gagal memproses data analisis teks.',
-    suggested_category: null,
-  };
+    const data = await response.json();
+    const content = data.choices?.[0]?.message?.content ?? '';
+    return parseGroqJson<TextAnalysisResult>(content) ?? {
+      risk_level: 'medium',
+      analysis: 'gagal analisis teks.',
+      suggested_category: null,
+    };
+  } catch (err) {
+    console.error('text analysis failed:', err);
+    throw err;
+  }
 }
