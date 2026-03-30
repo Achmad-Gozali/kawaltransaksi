@@ -9,29 +9,12 @@ import {
   analyzeChronology,
 } from '@/app/actions/reportActions';
 import {
-  Loader2,
-  Upload,
-  AlertCircle,
-  CheckCircle2,
-  Brain,
-  FileWarning,
-  Sparkles,
-  X,
-  ImageIcon,
-  Phone,
-  Building2,
-  Wallet,
-  ChevronDown,
-  Calendar,
-  DollarSign,
-  Globe,
-  Send
+  Loader2, Upload, AlertCircle, CheckCircle2, Brain,
+  FileWarning, Sparkles, X, ImageIcon, Phone,
+  Building2, Wallet, ChevronDown, Calendar, DollarSign, Globe, Send
 } from 'lucide-react';
 import * as motion from 'motion/react-client';
 
-// ============================================
-// DATA LISTS (Bank, E-Wallet, Platform, Category)
-// ============================================
 const bankList = [
   { value: 'BCA', label: 'BCA (Bank Central Asia)' },
   { value: 'BRI', label: 'BRI (Bank Rakyat Indonesia)' },
@@ -106,7 +89,6 @@ export default function ReportForm() {
   const [imageAnalysis, setImageAnalysis] = useState<any>(null);
   const [textAnalysis, setTextAnalysis] = useState<any>(null);
 
-  // Logic Handlers (Tetap sama seperti aslinya)
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0] || null;
     if (selected && selected.size > 5 * 1024 * 1024) {
@@ -132,6 +114,7 @@ export default function ReportForm() {
       fd.append('file', file);
       const result = await analyzeEvidence(fd);
       if (result.success) setImageAnalysis(result.data);
+      else setError(result.error || 'Gagal analisis gambar.');
     } catch (err) { setError('Gagal analisis gambar.'); }
     finally { setIsAnalyzingImage(false); }
   };
@@ -142,6 +125,7 @@ export default function ReportForm() {
     try {
       const result = await analyzeChronology(formData.chronology);
       if (result.success) setTextAnalysis(result.data);
+      else setError(result.error || 'Gagal analisis teks.');
     } catch (err) { setError('Gagal analisis teks.'); }
     finally { setIsAnalyzingText(false); }
   };
@@ -151,52 +135,63 @@ export default function ReportForm() {
     setIsLoading(true);
     setError(null);
     try {
-      let uploadedUrl = null;
+      let uploadedUrl: string | null = null;
       if (file) {
         const fd = new FormData();
         fd.append('file', file);
         const up = await uploadEvidence(fd);
-        if (up.success) uploadedUrl = up.url;
+        if (up.success) uploadedUrl = up.url ?? null;
       }
 
-      const providerName = formData.target_type === 'bank_account' ? formData.bank_name : formData.ewallet_name;
+      const providerName = formData.target_type === 'bank_account' 
+        ? formData.bank_name 
+        : formData.target_type === 'ewallet' 
+          ? formData.ewallet_name 
+          : null;
 
+      // ✅ FIX TypeScript & Logic Error
       const result = await submitReport({
-        ...formData,
-        target_type: formData.target_type === 'ewallet' ? 'bank_account' : formData.target_type,
+        target_number: formData.target_number,
+        target_name: formData.target_name || '',
+        target_type: formData.target_type, 
+        category: formData.category,
+        chronology: formData.chronology,
         evidence_url: uploadedUrl || null,
         bank_name: providerName || null,
         loss_amount: formData.loss_amount ? parseInt(formData.loss_amount.replace(/\D/g, ''), 10) : null,
+        incident_date: formData.incident_date || null,
+        platform: formData.platform || null,
       });
 
       if (result.success) {
         setIsSuccess(true);
         setTimeout(() => router.push(`/check/${result.slug}`), 1500);
       } else {
-        setError(result.error || 'Terjadi kesalahan saat mengirim laporan');
+        setError(result.error || 'Gagal mengirim laporan.');
       }
-    } catch (err) { setError('Terjadi kesalahan.'); }
+    } catch (err) { 
+      setError('Terjadi kesalahan. Periksa koneksi Anda.'); 
+    }
     finally { setIsLoading(false); }
   };
 
   if (isSuccess) return (
     <div className="text-center py-20">
       <CheckCircle2 className="w-16 h-16 text-emerald-500 mx-auto mb-4" />
-      <h3 className="text-xl font-bold">Laporan Dikirim!</h3>
-      <p className="text-zinc-400 text-sm">Sedang mengalihkan...</p>
+      <h3 className="text-xl font-bold">Laporan Berhasil Dikirim</h3>
+      <p className="text-zinc-400 text-sm">Sedang mengalihkan ke detail...</p>
     </div>
   );
 
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
-      {/* Error Banner */}
       {error && (
         <div className="p-4 bg-red-50 border border-red-100 rounded-2xl flex items-center gap-3 text-red-600 text-sm font-medium">
           <AlertCircle className="w-4 h-4" /> {error}
         </div>
       )}
 
-      {/* 1. TABS (Pengganti 3 kotak besar - Hemat tempat di HP) */}
+      {/* TABS */}
       <div className="space-y-3">
         <label className="text-[10px] font-extrabold text-zinc-400 uppercase tracking-widest ml-1">Jenis Laporan</label>
         <div className="bg-zinc-100 p-1 rounded-2xl flex gap-1">
@@ -219,7 +214,7 @@ export default function ReportForm() {
         </div>
       </div>
 
-      {/* 2. INFORMASI TARGET (Satu Kolom) */}
+      {/* DATA PENIPU */}
       <div className="space-y-5">
         <div className="flex items-center gap-2 pb-2 border-b border-zinc-100">
           <div className="w-1.5 h-1.5 rounded-full bg-red-500" />
@@ -227,7 +222,6 @@ export default function ReportForm() {
         </div>
 
         <div className="space-y-4">
-          {/* Dynamic Dropdown for Bank/E-Wallet */}
           {formData.target_type !== 'phone' && (
             <motion.div initial={{ opacity: 0, y: -10 }} animate={{ opacity: 1, y: 0 }} className="space-y-2">
               <label className="text-[11px] font-bold text-zinc-700 ml-1">Pilih {formData.target_type === 'bank_account' ? 'Bank' : 'Layanan'} *</label>
@@ -289,7 +283,7 @@ export default function ReportForm() {
         </div>
       </div>
 
-      {/* 3. DETAIL TAMBAHAN (Horizontal grid di desktop, stacking di mobile) */}
+      {/* DETAIL TAMBAHAN */}
       <div className="space-y-5 pt-4">
         <div className="flex items-center gap-2 pb-2 border-b border-zinc-100">
           <div className="w-1.5 h-1.5 rounded-full bg-zinc-300" />
@@ -314,6 +308,7 @@ export default function ReportForm() {
             <label className="text-[10px] font-bold text-zinc-500 ml-1 flex items-center gap-1.5"><Calendar className="w-3 h-3" /> Tanggal</label>
             <input
               type="date"
+              max={new Date().toISOString().split('T')[0]}
               value={formData.incident_date}
               onChange={(e) => setFormData({ ...formData, incident_date: e.target.value })}
               className="w-full px-4 py-3 bg-zinc-50 border border-zinc-200 rounded-xl text-sm font-semibold"
@@ -347,6 +342,7 @@ export default function ReportForm() {
           <textarea
             required
             rows={5}
+            minLength={20}
             value={formData.chronology}
             onChange={(e) => setFormData({ ...formData, chronology: e.target.value })}
             placeholder="Ceritakan bagaimana penipuan terjadi..."
@@ -360,7 +356,7 @@ export default function ReportForm() {
           )}
         </div>
 
-        {/* 4. BUKTI (Satu Box Rapi) */}
+        {/* BUKTI */}
         <div className="space-y-3">
           <label className="text-[11px] font-bold text-zinc-700 ml-1">Lampiran Bukti</label>
           {!filePreview ? (
@@ -372,7 +368,7 @@ export default function ReportForm() {
           ) : (
             <div className="relative rounded-2xl overflow-hidden border border-zinc-200 bg-white p-2">
               <img src={filePreview} alt="Preview" className="w-full h-40 object-cover rounded-xl" />
-              <button onClick={() => { setFile(null); setFilePreview(null); setImageAnalysis(null); }} className="absolute top-4 right-4 p-1.5 bg-black/60 text-white rounded-full hover:bg-black">
+              <button type="button" onClick={() => { setFile(null); setFilePreview(null); setImageAnalysis(null); }} className="absolute top-4 right-4 p-1.5 bg-black/60 text-white rounded-full hover:bg-black">
                 <X className="w-3 h-3" />
               </button>
               <div className="mt-2 px-2 pb-1 flex justify-between items-center">
@@ -389,7 +385,7 @@ export default function ReportForm() {
             </div>
           )}
           {imageAnalysis && (
-            <div className="p-4 rounded-xl bg-emerald-50 border border-emerald-100 text-emerald-700 text-xs">
+            <div className={`p-4 rounded-xl border text-xs ${imageAnalysis.is_likely_authentic ? 'bg-emerald-50 border-emerald-100 text-emerald-700' : 'bg-amber-50 border-amber-100 text-amber-700'}`}>
               <div className="font-bold mb-1 flex items-center gap-1.5"><CheckCircle2 className="w-3 h-3" /> Keaslian: {imageAnalysis.authenticity_score}%</div>
               {imageAnalysis.summary}
             </div>
@@ -397,7 +393,6 @@ export default function ReportForm() {
         </div>
       </div>
 
-      {/* 5. SUBMIT BUTTON (Gede dan Mantap) */}
       <button
         type="submit"
         disabled={isLoading}

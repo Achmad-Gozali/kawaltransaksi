@@ -1,9 +1,3 @@
-// ============================================
-// 📁 LOKASI: app/actions/reportActions.ts
-// ✅ UPDATE: Support field baru dari form yang diperbarui
-//    - bank_name, loss_amount, incident_date, platform
-// ============================================
-
 'use server';
 
 import { createClient } from '@/lib/supabase-server';
@@ -12,7 +6,7 @@ import { analyzeChronologyText } from '@/lib/groq';
 export async function submitReport(formData: {
   target_number: string;
   target_name: string;
-  target_type: 'phone' | 'bank_account';
+  target_type: 'phone' | 'bank_account' | 'ewallet'; 
   category: string;
   chronology: string;
   evidence_url: string | null;
@@ -57,14 +51,17 @@ export async function submitReport(formData: {
     console.error('AI auto-verify error (fallback to pending):', err);
   }
 
+  // ✅ FIX UTAMA: Mapping ewallet jadi bank_account buat di database
+  const dbTargetType = formData.target_type === 'ewallet' ? 'bank_account' : formData.target_type;
+
   const { error } = await supabase.from('reports').insert({
     reporter_id: user.id,
     target_number: cleanNumber,
     target_name: formData.target_name?.trim() || null,
-    target_type: formData.target_type,
+    target_type: dbTargetType, 
     category: formData.category,
     chronology: trimmedChronology,
-    evidence_url: formData.evidence_url,
+    evidence_url: formData.evidence_url || null,
     status: autoStatus,
     bank_name: formData.bank_name || null,
     loss_amount: formData.loss_amount || null,
@@ -133,6 +130,7 @@ export async function analyzeChronology(chronology: string) {
     return { success: false, error: 'Kronologi terlalu pendek untuk dianalisis.' };
   }
   try {
+    const { analyzeChronologyText } = await import('@/lib/groq');
     const result = await analyzeChronologyText(chronology);
     return { success: true, data: result };
   } catch (err) {
