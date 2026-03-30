@@ -1,6 +1,6 @@
 // ============================================
 // 📁 LOKASI: app/admin/AdminDashboard.tsx
-// ✅ FIX: Perbaikan parsing Number untuk loss_amount agar grafik kerugian muncul
+// ✅ FIX: Statistik lengkap (Bank + Phone), Parsing nominal, & Sync Tab
 // ============================================
 
 'use client';
@@ -28,7 +28,7 @@ interface Report {
   status: string;
   created_at: string;
   bank_name?: string | null;
-  loss_amount?: number | string | null; // Bisa string dari DB
+  loss_amount?: number | string | null;
   incident_date?: string | null;
   platform?: string | null;
 }
@@ -53,7 +53,10 @@ function formatRupiah(num: number | string): string {
 
 function DashboardInner({ stats, reports, users }: { stats: Stats; reports: Report[]; users: AdminUser[] }) {
   const searchParams = useSearchParams();
-  const [activeTab, setActiveTab] = useState<Tab>((searchParams.get('tab') as Tab) || 'dashboard');
+  const router = useRouter();
+  
+  // ✅ FIX: Sync tab dengan URL (Dashboard default ke 'dashboard')
+  const currentTab = (searchParams.get('tab') as Tab) || 'dashboard';
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('semua');
   const [searchQuery, setSearchQuery] = useState(searchParams.get('search') || '');
   const [bankFilter, setBankFilter] = useState('');
@@ -63,13 +66,10 @@ function DashboardInner({ stats, reports, users }: { stats: Stats; reports: Repo
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkLoading, setBulkLoading] = useState(false);
   const [userSearch, setUserSearch] = useState('');
-  const router = useRouter();
 
-  // Read tab from URL on change
-  const urlTab = searchParams.get('tab') as Tab | null;
-  if (urlTab && urlTab !== activeTab) {
-    setActiveTab(urlTab);
-  }
+  const setActiveTab = (tab: Tab) => {
+    router.push(`/admin?tab=${tab}`);
+  };
 
   const uniqueBanks = useMemo(() => Array.from(new Set(reports.map(r => r.bank_name).filter(Boolean) as string[])).sort(), [reports]);
   const uniquePlatforms = useMemo(() => Array.from(new Set(reports.map(r => r.platform).filter(Boolean) as string[])).sort(), [reports]);
@@ -90,18 +90,17 @@ function DashboardInner({ stats, reports, users }: { stats: Stats; reports: Repo
   const todayReports = useMemo(() => reports.filter(r => r.created_at.startsWith(todayStr)), [reports, todayStr]);
   const todayVerified = useMemo(() => todayReports.filter(r => r.status === 'verified'), [todayReports]);
   
-  // ✅ FIX: Parsing loss_amount ke Number dengan aman
+  // ✅ FIX: Hitung total kerugian dari SEMUA data (BCA + Phone)
   const totalLoss = useMemo(() => reports.reduce((s, r) => s + (Number(r.loss_amount) || 0), 0), [reports]);
 
-  // ✅ FIX: Parsing nominal bank
+  // ✅ FIX: Grafik Bank/E-Wallet sekarang nampilin label "Nomor Telepon" kalau bank_name kosong
   const bankStats = useMemo(() => {
     const map: Record<string, { count: number; loss: number }> = {};
     reports.forEach(r => { 
-        if (r.bank_name) { 
-            if (!map[r.bank_name]) map[r.bank_name] = { count: 0, loss: 0 }; 
-            map[r.bank_name].count++; 
-            map[r.bank_name].loss += (Number(r.loss_amount) || 0); 
-        } 
+        const label = r.bank_name || (r.target_type === 'phone' ? 'Nomor Telepon' : 'Lainnya');
+        if (!map[label]) map[label] = { count: 0, loss: 0 }; 
+        map[label].count++; 
+        map[label].loss += (Number(r.loss_amount) || 0); 
     });
     return Object.entries(map).sort((a, b) => b[1].count - a[1].count);
   }, [reports]);
@@ -164,7 +163,7 @@ function DashboardInner({ stats, reports, users }: { stats: Stats; reports: Repo
     <div className="max-w-[1200px] mx-auto px-4 lg:px-8 py-8 space-y-8">
 
       {/* ===== DASHBOARD ===== */}
-      {activeTab === 'dashboard' && (
+      {currentTab === 'dashboard' && (
         <div className="space-y-8">
           <div><h1 className="text-xl lg:text-2xl font-semibold text-zinc-900">Dashboard</h1><p className="text-sm text-zinc-400 mt-1">Overview semua laporan</p></div>
 
@@ -220,10 +219,16 @@ function DashboardInner({ stats, reports, users }: { stats: Stats; reports: Repo
               <h3 className="text-sm font-medium text-zinc-900 mb-4">Bank terbanyak dilaporkan</h3>
               {bankStats.length === 0 ? <p className="text-sm text-zinc-400 text-center py-8">Belum ada data</p> : (
                 <div className="space-y-3">
-                  {bankStats.slice(0, 5).map(([bank, data]) => (
-                    <div key={bank} className="flex items-center justify-between">
-                      <div className="flex items-center gap-2"><Building2 className="w-3.5 h-3.5 text-zinc-400" /><span className="text-sm text-zinc-700">{bank}</span></div>
-                      <div className="flex items-center gap-3">{data.loss > 0 && <span className="text-[11px] text-red-500">{formatRupiah(data.loss)}</span>}<span className="text-xs bg-zinc-100 text-zinc-500 px-2 py-0.5 rounded">{data.count}</span></div>
+                  {bankStats.slice(0, 5).map(([label, data]) => (
+                    <div key={label} className="flex items-center justify-between">
+                      <div className="flex items-center gap-2">
+                        {label === 'Nomor Telepon' ? <Phone className="w-3.5 h-3.5 text-zinc-400" /> : <Building2 className="w-3.5 h-3.5 text-zinc-400" />}
+                        <span className="text-sm text-zinc-700">{label}</span>
+                      </div>
+                      <div className="flex items-center gap-3">
+                        {data.loss > 0 && <span className="text-[11px] text-red-500">{formatRupiah(data.loss)}</span>}
+                        <span className="text-xs bg-zinc-100 text-zinc-500 px-2 py-0.5 rounded">{data.count}</span>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -234,7 +239,7 @@ function DashboardInner({ stats, reports, users }: { stats: Stats; reports: Repo
       )}
 
       {/* ===== LAPORAN ===== */}
-      {activeTab === 'laporan' && (
+      {currentTab === 'laporan' && (
         <div className="space-y-5">
           <div className="flex items-center justify-between"><h1 className="text-xl lg:text-2xl font-semibold text-zinc-900">Laporan</h1>
             <button onClick={handleExportCSV} className="flex items-center gap-2 px-3 py-2 bg-white border border-zinc-200 rounded-lg text-sm text-zinc-600 hover:border-zinc-300"><Download className="w-4 h-4" />Export</button>
@@ -333,7 +338,7 @@ function DashboardInner({ stats, reports, users }: { stats: Stats; reports: Repo
       )}
 
       {/* ===== STATISTIK ===== */}
-      {activeTab === 'statistik' && (
+      {currentTab === 'statistik' && (
         <div className="space-y-6">
           <h1 className="text-xl lg:text-2xl font-semibold text-zinc-900">Statistik</h1>
           <div className="grid lg:grid-cols-2 gap-4">
@@ -347,7 +352,22 @@ function DashboardInner({ stats, reports, users }: { stats: Stats; reports: Repo
             </div>
             <div className="bg-white border border-zinc-200/80 rounded-xl p-5 lg:p-6">
               <h3 className="text-sm font-medium text-zinc-900 mb-4">Bank / E-Wallet</h3>
-              {bankStats.length === 0 ? <p className="text-sm text-zinc-400 text-center py-8">Belum ada</p> : <div className="space-y-2.5">{bankStats.map(([bank, data]) => (<div key={bank} className="flex items-center justify-between py-1.5"><div className="flex items-center gap-2"><Building2 className="w-3.5 h-3.5 text-zinc-400" /><span className="text-sm text-zinc-700">{bank}</span></div><div className="flex items-center gap-2">{data.loss > 0 && <span className="text-[11px] text-red-500">{formatRupiah(data.loss)}</span>}<span className="text-xs bg-zinc-100 text-zinc-500 px-2 py-0.5 rounded">{data.count}</span></div></div>))}</div>}
+              {bankStats.length === 0 ? <p className="text-sm text-zinc-400 text-center py-8">Belum ada</p> : (
+                <div className="space-y-2.5">
+                  {bankStats.map(([label, data]) => (
+                    <div key={label} className="flex items-center justify-between py-1.5">
+                      <div className="flex items-center gap-2">
+                        {label === 'Nomor Telepon' ? <Phone className="w-3.5 h-3.5 text-zinc-400" /> : <Building2 className="w-3.5 h-3.5 text-zinc-400" />}
+                        <span className="text-sm text-zinc-700">{label}</span>
+                      </div>
+                      <div className="flex items-center gap-2">
+                        {data.loss > 0 && <span className="text-[11px] text-red-500">{formatRupiah(data.loss)}</span>}
+                        <span className="text-xs bg-zinc-100 text-zinc-500 px-2 py-0.5 rounded">{data.count}</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
             </div>
             <div className="bg-white border border-zinc-200/80 rounded-xl p-5 lg:p-6">
               <h3 className="text-sm font-medium text-zinc-900 mb-5">Platform</h3>
@@ -364,7 +384,7 @@ function DashboardInner({ stats, reports, users }: { stats: Stats; reports: Repo
       )}
 
       {/* ===== PENGGUNA ===== */}
-      {activeTab === 'pengguna' && (
+      {currentTab === 'pengguna' && (
         <div className="space-y-5">
           <div><h1 className="text-xl lg:text-2xl font-semibold text-zinc-900">Pengguna</h1><p className="text-sm text-zinc-400 mt-1">{users.length} total</p></div>
           <div className="relative max-w-md"><Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-zinc-400" /><input type="text" placeholder="Cari nama..." value={userSearch} onChange={(e) => setUserSearch(e.target.value)} className="w-full pl-10 pr-4 py-2.5 bg-white border border-zinc-200 rounded-lg text-sm focus:outline-none focus:border-zinc-400" /></div>
