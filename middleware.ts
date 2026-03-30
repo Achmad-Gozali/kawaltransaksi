@@ -22,38 +22,30 @@ export async function middleware(request: NextRequest) {
   );
 
   const { data: { user } } = await supabase.auth.getUser();
+  const pathname = request.nextUrl.pathname;
 
-  const protectedPaths = ['/dashboard', '/admin'];
-  const isProtected = protectedPaths.some((path) =>
-    request.nextUrl.pathname.startsWith(path)
-  );
-
-  if (isProtected && !user) {
+  // Logika Proteksi
+  if (['/dashboard', '/admin'].some(path => pathname.startsWith(path)) && !user) {
     const url = request.nextUrl.clone();
     url.pathname = '/login';
-    url.searchParams.set('redirectTo', request.nextUrl.pathname);
-    return NextResponse.redirect(url);
+    url.searchParams.set('redirectTo', pathname);
+    
+    // ✅ FIX: Pindahkan cookies ke redirect response
+    const redirectRes = NextResponse.redirect(url);
+    supabaseResponse.cookies.getAll().forEach(c => redirectRes.cookies.set(c.name, c.value));
+    return redirectRes;
   }
 
-  const authPaths = ['/login', '/register'];
-  const isAuthPage = authPaths.some((path) =>
-    request.nextUrl.pathname.startsWith(path)
-  );
-
-  if (isAuthPage && user) {
-    const url = request.nextUrl.clone();
-    url.pathname = '/';
-    return NextResponse.redirect(url);
+  if (['/login', '/register'].some(path => pathname.startsWith(path)) && user) {
+    const redirectRes = NextResponse.redirect(new URL('/admin', request.url));
+    supabaseResponse.cookies.getAll().forEach(c => redirectRes.cookies.set(c.name, c.value));
+    return redirectRes;
   }
 
-  // ✅ Set pathname di header biar bisa dibaca di layout
-  supabaseResponse.headers.set('x-pathname', request.nextUrl.pathname);
-
+  supabaseResponse.headers.set('x-pathname', pathname);
   return supabaseResponse;
 }
 
 export const config = {
-  matcher: [
-    '/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)',
-  ],
+  matcher: ['/((?!_next/static|_next/image|favicon.ico|.*\\.(?:svg|png|jpg|jpeg|gif|webp)$).*)'],
 };
