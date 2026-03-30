@@ -1,6 +1,6 @@
 // ============================================
 // 📁 LOKASI: app/admin/AdminShell.tsx
-// ✅ FIX: Logo pakai logo.png, sidebar nav uses state not URL
+// ✅ FIX: Navigasi Dashboard sekarang pakai ?tab=dashboard agar state berubah
 // ============================================
 
 'use client';
@@ -22,7 +22,8 @@ interface AdminShellProps {
 }
 
 const navItems = [
-  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, href: '/admin' },
+  // ✅ FIX: Ganti href dari '/admin' ke '/admin?tab=dashboard'
+  { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, href: '/admin?tab=dashboard' },
   { id: 'laporan', label: 'Laporan', icon: FileText, href: '/admin?tab=laporan' },
   { id: 'statistik', label: 'Statistik', icon: BarChart2, href: '/admin?tab=statistik' },
   { id: 'pengguna', label: 'Pengguna', icon: Users, href: '/admin?tab=pengguna' },
