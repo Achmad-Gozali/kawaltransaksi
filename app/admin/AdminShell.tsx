@@ -27,12 +27,11 @@ export default function AdminShell({ email, children }: AdminShellProps) {
   const [collapsed, setCollapsed] = useState(false);
   const [mobileOpen, setMobileOpen] = useState(false);
   const [globalSearch, setGlobalSearch] = useState('');
-  
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = createClient();
 
-  // ✅ Deteksi tab aktif dari URL
+  // ✅ Deteksi tab mana yang aktif buat styling menu
   const activeTab = searchParams.get('tab') || 'dashboard';
 
   const handleLogout = async () => {
@@ -58,7 +57,6 @@ export default function AdminShell({ email, children }: AdminShellProps) {
         ${collapsed ? 'w-[60px]' : 'w-[220px]'}
         ${mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'}
       `}>
-        
         {/* ✅ Logo Linkable */}
         <Link href="/admin?tab=dashboard" className={`flex items-center gap-2.5 px-4 h-14 border-b border-zinc-100 shrink-0 hover:bg-zinc-50 transition-colors ${collapsed ? 'justify-center px-0' : ''}`}>
           <Image src="/logo.png" alt="KawalTransaksi" width={28} height={28} className="rounded-lg shrink-0" />
