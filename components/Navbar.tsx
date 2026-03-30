@@ -1,18 +1,13 @@
-// ============================================
-// 📁 LOKASI: components/Navbar.tsx
-// ✅ FIX: Logo pakai logo.png, bukan icon ShieldAlert
-// ============================================
-
 'use client';
 
 import React, { useState, useEffect, useRef } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
-import { useRouter } from 'next/navigation';
+import { useRouter, usePathname } from 'next/navigation'; // Tambahin usePathname
 import { createClient } from '@/lib/supabase-browser';
 import {
   LogOut, User as UserIcon, PlusCircle,
-  Menu, X, BookOpen, LayoutDashboard, Phone, Building2,
+  Menu, X, BookOpen, LayoutDashboard, Phone, Building2, Home // Tambahin Home Icon
 } from 'lucide-react';
 import type { User } from '@supabase/supabase-js';
 
@@ -21,6 +16,7 @@ export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const router = useRouter();
+  const pathname = usePathname(); // Biar tau lagi di halaman mana
   const supabase = useRef(createClient()).current;
 
   useEffect(() => {
@@ -45,6 +41,9 @@ export default function Navbar() {
 
   const closeMenu = () => setIsMenuOpen(false);
 
+  // Helper function buat cek menu aktif
+  const isActive = (path: string) => pathname === path;
+
   return (
     <nav className="border-b border-zinc-200 bg-white/70 backdrop-blur-xl sticky top-0 z-50">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -58,20 +57,26 @@ export default function Navbar() {
           </Link>
 
           {/* Desktop Nav */}
-          <div className="hidden md:flex items-center gap-6">
-            <Link href="/cek-nomor" className="text-sm font-semibold text-zinc-600 hover:text-zinc-900 flex items-center gap-1.5 transition-colors">
+          <div className="hidden lg:flex items-center gap-6"> {/* Ganti md jadi lg biar gak sempit */}
+            {/* ✅ BERANDA DITAMBAHIN DI SINI */}
+            <Link href="/" className={`text-sm font-semibold flex items-center gap-1.5 transition-colors ${isActive('/') ? 'text-red-600' : 'text-zinc-600 hover:text-zinc-900'}`}>
+              <Home className="w-4 h-4" />Beranda
+            </Link>
+            <Link href="/cek-nomor" className={`text-sm font-semibold flex items-center gap-1.5 transition-colors ${isActive('/cek-nomor') ? 'text-red-600' : 'text-zinc-600 hover:text-zinc-900'}`}>
               <Phone className="w-4 h-4" />Cek Nomor
             </Link>
-            <Link href="/cek-rekening" className="text-sm font-semibold text-zinc-600 hover:text-zinc-900 flex items-center gap-1.5 transition-colors">
+            <Link href="/cek-rekening" className={`text-sm font-semibold flex items-center gap-1.5 transition-colors ${isActive('/cek-rekening') ? 'text-red-600' : 'text-zinc-600 hover:text-zinc-900'}`}>
               <Building2 className="w-4 h-4" />Cek Rekening
             </Link>
-            <Link href="/report" className="text-sm font-semibold text-zinc-600 hover:text-zinc-900 flex items-center gap-1.5 transition-colors">
+            <Link href="/report" className={`text-sm font-semibold flex items-center gap-1.5 transition-colors ${isActive('/report') ? 'text-red-600' : 'text-zinc-600 hover:text-zinc-900'}`}>
               <PlusCircle className="w-4 h-4" />Laporkan
             </Link>
-            <Link href="/edukasi" className="text-sm font-semibold text-zinc-600 hover:text-zinc-900 flex items-center gap-1.5 transition-colors">
+            <Link href="/edukasi" className={`text-sm font-semibold flex items-center gap-1.5 transition-colors ${isActive('/edukasi') ? 'text-red-600' : 'text-zinc-600 hover:text-zinc-900'}`}>
               <BookOpen className="w-4 h-4" />Edukasi
             </Link>
+            
             <div className="h-4 w-px bg-zinc-200" />
+            
             {isLoading ? (
               <div className="w-32 h-8 bg-zinc-100 rounded-full animate-pulse" />
             ) : user ? (
@@ -97,19 +102,33 @@ export default function Navbar() {
             )}
           </div>
 
-          {/* Mobile */}
-          <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="md:hidden p-2 text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg transition-colors">
+          {/* Mobile Toggle Button */}
+          <button onClick={() => setIsMenuOpen(!isMenuOpen)} className="lg:hidden p-2 text-zinc-600 hover:text-zinc-900 hover:bg-zinc-100 rounded-lg transition-colors">
             {isMenuOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
         </div>
       </div>
 
+      {/* Mobile Menu */}
       {isMenuOpen && (
-        <div className="md:hidden bg-white border-t border-zinc-100 px-4 py-5 space-y-1">
-          <Link href="/cek-nomor" onClick={closeMenu} className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold text-zinc-700 hover:bg-zinc-50"><Phone className="w-4 h-4 text-zinc-400" />Cek Nomor</Link>
-          <Link href="/cek-rekening" onClick={closeMenu} className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold text-zinc-700 hover:bg-zinc-50"><Building2 className="w-4 h-4 text-zinc-400" />Cek Rekening</Link>
-          <Link href="/report" onClick={closeMenu} className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold text-zinc-700 hover:bg-zinc-50"><PlusCircle className="w-4 h-4 text-zinc-400" />Laporkan</Link>
-          <Link href="/edukasi" onClick={closeMenu} className="flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold text-zinc-700 hover:bg-zinc-50"><BookOpen className="w-4 h-4 text-zinc-400" />Edukasi</Link>
+        <div className="lg:hidden bg-white border-t border-zinc-100 px-4 py-5 space-y-1">
+          {/* ✅ BERANDA DITAMBAHIN DI SINI JUGA */}
+          <Link href="/" onClick={closeMenu} className={`flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold transition-colors ${isActive('/') ? 'bg-red-50 text-red-600' : 'text-zinc-700 hover:bg-zinc-50'}`}>
+            <Home className={`w-4 h-4 ${isActive('/') ? 'text-red-500' : 'text-zinc-400'}`} />Beranda
+          </Link>
+          <Link href="/cek-nomor" onClick={closeMenu} className={`flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold transition-colors ${isActive('/cek-nomor') ? 'bg-red-50 text-red-600' : 'text-zinc-700 hover:bg-zinc-50'}`}>
+            <Phone className={`w-4 h-4 ${isActive('/cek-nomor') ? 'text-red-500' : 'text-zinc-400'}`} />Cek Nomor
+          </Link>
+          <Link href="/cek-rekening" onClick={closeMenu} className={`flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold transition-colors ${isActive('/cek-rekening') ? 'bg-red-50 text-red-600' : 'text-zinc-700 hover:bg-zinc-50'}`}>
+            <Building2 className={`w-4 h-4 ${isActive('/cek-rekening') ? 'text-red-500' : 'text-zinc-400'}`} />Cek Rekening
+          </Link>
+          <Link href="/report" onClick={closeMenu} className={`flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold transition-colors ${isActive('/report') ? 'bg-red-50 text-red-600' : 'text-zinc-700 hover:bg-zinc-50'}`}>
+            <PlusCircle className={`w-4 h-4 ${isActive('/report') ? 'text-red-500' : 'text-zinc-400'}`} />Laporkan
+          </Link>
+          <Link href="/edukasi" onClick={closeMenu} className={`flex items-center gap-3 px-3 py-3 rounded-xl text-sm font-semibold transition-colors ${isActive('/edukasi') ? 'bg-red-50 text-red-600' : 'text-zinc-700 hover:bg-zinc-50'}`}>
+            <BookOpen className={`w-4 h-4 ${isActive('/edukasi') ? 'text-red-500' : 'text-zinc-400'}`} />Edukasi
+          </Link>
+
           <div className="pt-3 mt-3 border-t border-zinc-100">
             {isLoading ? <div className="h-10 bg-zinc-100 rounded-xl animate-pulse" /> : user ? (
               <div className="space-y-1">

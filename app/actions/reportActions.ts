@@ -69,9 +69,10 @@ export async function submitReport(formData: {
     platform: formData.platform || null,
   });
 
-  if (error) {
+if (error) {
     console.error('Report insert error:', error);
-    return { success: false, error: 'Gagal mengirim laporan. Silakan coba lagi.' };
+    // Munculin pesan error langsung dari database ke layar lu!
+    return { success: false, error: `Supabase Error: ${error.message}` };
   }
 
   return { success: true, slug: cleanNumber, status: autoStatus };
