@@ -1,5 +1,6 @@
 import { createClient } from '@/lib/supabase-server';
 import Link from 'next/link';
+import Image from 'next/image';
 import {
   ShieldCheck, CheckCircle2, ArrowUpRight,
   ShieldAlert, PlusCircle, AlertTriangle,
@@ -15,6 +16,51 @@ export const metadata: Metadata = {
 };
 
 export const revalidate = 60;
+
+const banks = [
+  {
+    id: 'bca',
+    name: 'Bank Central Asia',
+    shortName: 'BCA',
+    logo: '/banks/bca.png',
+    description: 'Verifikasi rekening BCA dan identifikasi potensi penipuan sebelum transfer.',
+  },
+  {
+    id: 'bri',
+    name: 'Bank Rakyat Indonesia',
+    shortName: 'BRI',
+    logo: '/banks/bri.png',
+    description: 'Verifikasi rekening BRI dan identifikasi potensi penipuan sebelum transfer.',
+  },
+  {
+    id: 'bni',
+    name: 'Bank Negara Indonesia',
+    shortName: 'BNI',
+    logo: '/banks/bni.png',
+    description: 'Verifikasi rekening BNI dan identifikasi potensi penipuan sebelum transfer.',
+  },
+  {
+    id: 'mandiri',
+    name: 'Bank Mandiri',
+    shortName: 'Mandiri',
+    logo: '/banks/mandiri.png',
+    description: 'Verifikasi rekening Mandiri dan identifikasi potensi penipuan sebelum transfer.',
+  },
+  {
+    id: 'cimb',
+    name: 'Bank CIMB Niaga',
+    shortName: 'CIMB Niaga',
+    logo: '/banks/cimb.png',
+    description: 'Verifikasi rekening CIMB Niaga dan identifikasi potensi penipuan sebelum transfer.',
+  },
+  {
+    id: 'bsi',
+    name: 'Bank Syariah Indonesia',
+    shortName: 'BSI',
+    logo: '/banks/bsi.png',
+    description: 'Verifikasi rekening BSI dan identifikasi potensi penipuan sebelum transfer.',
+  },
+];
 
 export default async function CekRekeningPage() {
   const supabase = await createClient();
@@ -39,7 +85,7 @@ export default async function CekRekeningPage() {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 pb-16 font-sans">
       
-      {/* SECTION 1: HERO - Enterprise Style */}
+      {/* SECTION 1: HERO */}
       <section className="relative pt-16 sm:pt-24 pb-14 sm:pb-20 overflow-hidden text-center border-b border-slate-200 bg-white">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-full max-w-5xl h-[300px] sm:h-[400px] bg-emerald-100/30 rounded-full blur-[100px] -z-10" />
         <div className="max-w-4xl mx-auto px-6 relative z-10">
@@ -54,7 +100,7 @@ export default async function CekRekeningPage() {
         </div>
       </section>
 
-      {/* SECTION 2: BENTO DASHBOARD - Kotak Tegas */}
+      {/* SECTION 2: BENTO DASHBOARD */}
       <section className="max-w-5xl mx-auto px-6 grid grid-cols-1 md:grid-cols-12 gap-5 mb-16 sm:mb-24 pt-12">
         <div className="md:col-span-8 bg-white border border-slate-200 rounded-2xl p-8 sm:p-10 flex flex-col justify-between shadow-sm relative overflow-hidden group">
           <div className="absolute top-0 right-0 p-8 opacity-5 hidden sm:block">
@@ -92,7 +138,7 @@ export default async function CekRekeningPage() {
         </div>
       </section>
 
-      {/* SECTION 3: RECENT LIST (Tabel Desktop & Card Mobile) - Enterprise Style */}
+      {/* SECTION 3: RECENT LIST */}
       <section className="max-w-5xl mx-auto px-6 mb-20">
         <div className="flex items-end justify-between mb-6 px-1 border-b border-slate-200 pb-4">
           <div>
@@ -167,7 +213,46 @@ export default async function CekRekeningPage() {
         </div>
       </section>
 
-      {/* SECTION 4: CTA - Kotak Tegas Emerald */}
+      {/* SECTION 4: CEK REKENING PER BANK ← BARU */}
+      <section className="max-w-5xl mx-auto px-6 mb-20">
+        <div className="flex items-end justify-between mb-6 px-1 border-b border-slate-200 pb-4">
+          <div>
+            <h2 className="text-lg sm:text-xl font-black text-slate-900 uppercase tracking-tight">Cek Rekening Per Bank</h2>
+            <p className="text-[10px] sm:text-xs text-slate-500 font-bold uppercase tracking-widest mt-1">Pilih bank untuk mulai verifikasi</p>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
+          {banks.map((bank) => (
+            <Link
+              key={bank.id}
+              href={`/cek-rekening/${bank.id}`}
+              className="group bg-white border border-slate-200 rounded-xl p-6 shadow-sm hover:border-emerald-500 hover:shadow-md transition-all duration-200 flex flex-col justify-between"
+            >
+              <div>
+                <div className="w-16 h-10 relative mb-4">
+                  <Image
+                    src={bank.logo}
+                    alt={`Logo ${bank.name}`}
+                    fill
+                    className="object-contain object-left"
+                  />
+                </div>
+                <h3 className="text-sm font-black text-slate-900 mb-1 tracking-tight">{bank.name}</h3>
+                <p className="text-[11px] text-slate-500 leading-relaxed font-medium">{bank.description}</p>
+              </div>
+              <div className="mt-5 pt-4 border-t border-slate-100 flex items-center justify-between">
+                <span className="text-[11px] font-bold text-emerald-600 group-hover:text-emerald-700 uppercase tracking-wider transition-colors">
+                  Cek Selengkapnya
+                </span>
+                <ArrowUpRight className="w-4 h-4 text-emerald-500 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
+              </div>
+            </Link>
+          ))}
+        </div>
+      </section>
+
+      {/* SECTION 5: CTA */}
       <section className="max-w-5xl mx-auto px-6">
         <div className="bg-emerald-600 rounded-2xl p-8 sm:p-16 text-center text-white relative overflow-hidden shadow-lg border border-emerald-700">
           <div className="absolute top-0 right-0 w-80 h-80 bg-white/10 rounded-full blur-[80px] pointer-events-none" />

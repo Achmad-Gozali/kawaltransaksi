@@ -64,10 +64,10 @@ const categoryList = [
 ];
 
 const reportedToOptions = [
-  { value: 'polisi', label: '🚔 Polisi' },
-  { value: 'ojk', label: '🏦 OJK' },
-  { value: 'platform', label: '📱 Platform terkait' },
-  { value: 'belum', label: '❌ Belum lapor' },
+  { value: 'polisi', label: 'Polisi' },
+  { value: 'ojk', label: 'OJK' },
+  { value: 'platform', label: 'Platform terkait' },
+  { value: 'belum', label: 'Belum lapor' },
 ];
 
 type TargetType = 'phone' | 'bank_account' | 'ewallet';
@@ -321,7 +321,6 @@ export default function ReportForm() {
                   : 'text-zinc-500 hover:text-zinc-800'}`}
             >
               <item.icon className={`w-3.5 h-3.5 shrink-0 ${formData.target_type === item.id ? 'text-zinc-900' : 'text-zinc-400'}`} />
-              {/* label selalu tampil — fix mobile */}
               <span className="text-[11px]">{item.label}</span>
             </button>
           ))}
@@ -376,7 +375,7 @@ export default function ReportForm() {
           </div>
         </div>
 
-        {/* Username Sosmed — FIELD BARU */}
+        {/* Username Sosmed */}
         <div className="space-y-2">
           <FieldLabel icon={AtSign} label="Akun Media Sosial Penipu" optional />
           <p className="text-[10px] text-zinc-400 font-medium ml-1 -mt-1">
@@ -418,7 +417,7 @@ export default function ReportForm() {
           </div>
         </div>
 
-        {/* Foto Profil Penipu — FIELD BARU */}
+        {/* Foto Profil Penipu */}
         <div className="space-y-2">
           <FieldLabel icon={Users} label="Foto Profil / Identitas Visual Penipu" optional />
           <p className="text-[10px] text-zinc-400 font-medium ml-1 -mt-1">
@@ -523,13 +522,13 @@ export default function ReportForm() {
           </div>
         </div>
 
-        {/* Ada korban lain? — FIELD BARU */}
+        {/* Ada korban lain? */}
         <div className="space-y-2">
           <FieldLabel icon={Users} label="Ada korban lain yang kamu tahu?" optional />
           <div className="flex gap-2">
             {[
-              { val: 'yes', label: '🙋 Ya, ada korban lain' },
-              { val: 'no', label: '🙅 Hanya saya' },
+              { val: 'yes', label: 'Ya, ada korban lain' },
+              { val: 'no', label: 'Hanya saya' },
             ].map(opt => (
               <button
                 key={opt.val}
@@ -549,7 +548,7 @@ export default function ReportForm() {
           </div>
         </div>
 
-        {/* Sudah lapor ke mana — FIELD BARU */}
+        {/* Sudah lapor ke mana */}
         <div className="space-y-2">
           <FieldLabel icon={ShieldCheck} label="Sudah lapor ke mana?" optional />
           <div className="grid grid-cols-2 gap-2">
@@ -670,7 +669,7 @@ export default function ReportForm() {
             )}
             {imageAnalysis.relevance_score < 65 && (
               <p className="font-semibold text-amber-800 mt-1">
-                ⚠ Foto kurang relevan. Upload struk transfer atau screenshot chat transaksi untuk memperkuat laporan.
+                Foto kurang relevan. Upload struk transfer atau screenshot chat transaksi untuk memperkuat laporan.
               </p>
             )}
           </div>
