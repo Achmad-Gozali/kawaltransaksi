@@ -16,8 +16,7 @@ export function formatPhoneNumber(num: string): string {
 }
 
 /**
- * ✅ FIX: Satu maskNumber() untuk semua halaman
- * Sebelumnya ada 3 versi berbeda — sekarang konsisten
+ * Mask number for privacy
  */
 export function maskNumber(num: string): string {
   if (num.length <= 6) return num;
@@ -25,7 +24,6 @@ export function maskNumber(num: string): string {
 }
 
 /**
- * ✅ FIX: formatNum() dipindah dari check/[slug]/page.tsx
  * Format nomor dengan spasi setiap 4 digit untuk readability
  */
 export function formatNum(num: string): string {
@@ -52,7 +50,7 @@ export function formatDateID(dateStr: string): string {
 }
 
 /**
- * ✅ NEW: Encode string ke Base64 URL-safe (masking url)
+ * Encode string ke Base64 URL-safe (masking url)
  */
 export function encodeSlug(text: string): string {
   return Buffer.from(text).toString('base64')
@@ -62,13 +60,17 @@ export function encodeSlug(text: string): string {
 }
 
 /**
- * ✅ NEW: Balikin Base64 URL-safe ke string asli
+ * Decode Base64 URL-safe ke string asli
+ * Kalo slug isinya cuma angka (nomor polos), langsung return tanpa decode
  */
 export function decodeSlug(slug: string): string {
+  // Fallback: kalo isinya cuma digit, ini nomor polos — return langsung
+  if (/^\d+$/.test(slug)) return slug;
+
   let base64 = slug.replace(/-/g, '+').replace(/_/g, '/');
   while (base64.length % 4) base64 += '=';
   try {
-    return Buffer.from(base64, 'base64').toString('ascii');
+    return Buffer.from(base64, 'base64').toString('utf-8');
   } catch (e) {
     return slug; // fallback kalo gagal decode
   }

@@ -5,9 +5,8 @@ import type { Metadata } from 'next';
 import {
   ShieldCheck, ArrowLeft,
   ExternalLink,
-  Globe, PlusCircle,
+  Globe, PlusCircle, AlertTriangle, Clock,
 } from 'lucide-react';
-// ✅ Added decodeSlug to imports
 import { formatDateID, formatNum, decodeSlug } from '@/lib/utils';
 import ShareButtons from './ShareButtons';
 
@@ -19,7 +18,6 @@ interface CheckPageProps {
 
 export async function generateMetadata({ params }: CheckPageProps): Promise<Metadata> {
   const { slug } = await params;
-  // ✅ Decode untuk metadata title/description
   const realNumber = decodeSlug(slug);
   return {
     title: `cek nomor ${realNumber} - kawaltransaksi`,
@@ -36,13 +34,24 @@ function formatSosmed(acc: string): { label: string; isUrl: boolean; href: strin
   return { label: `@${withoutAt}`, isUrl: false, href: '' };
 }
 
+function formatTimestamp(date: Date): string {
+  const now = new Date();
+  const diffMs = now.getTime() - date.getTime();
+  const diffSec = Math.floor(diffMs / 1000);
+  const diffMin = Math.floor(diffSec / 60);
+  const diffHour = Math.floor(diffMin / 60);
+
+  if (diffSec < 60) return 'baru saja';
+  if (diffMin < 60) return `${diffMin} menit lalu`;
+  if (diffHour < 24) return `${diffHour} jam lalu`;
+  return date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
+}
+
 export default async function CheckPage({ params }: CheckPageProps) {
   const { slug } = await params;
-
-  // ✅ 1. Decode slug untuk dapet nomor HP aslinya
   const realNumber = decodeSlug(slug);
+  const checkedAt = new Date();
 
-  // ✅ 2. Update validasi length karena base64 slug lebih panjang
   if (!slug || slug.length > 50) {
     notFound();
   }
@@ -52,7 +61,6 @@ export default async function CheckPage({ params }: CheckPageProps) {
   const { data, error } = await supabase
     .from('reports')
     .select('*')
-    // ✅ 3. Query pake realNumber aslinya
     .eq('target_number', realNumber)
     .order('created_at', { ascending: false });
 
@@ -131,7 +139,6 @@ export default async function CheckPage({ params }: CheckPageProps) {
 
   const config = statusConfig[status];
 
-  // ✅ 4. Gunakan formatNum(realNumber) buat teks share
   const shareText = status === 'danger'
     ? `⚠️ waspada! nomor ${formatNum(realNumber)} terindikasi penipu dengan ${verifiedCount} laporan terverifikasi. cek di kawaltransaksi:`
     : status === 'warning'
@@ -142,6 +149,15 @@ export default async function CheckPage({ params }: CheckPageProps) {
     { label: 'Laporan diterima', done: true },
     { label: 'Dalam review moderator', done: status === 'warning' || status === 'danger' },
     { label: 'Terverifikasi', done: status === 'danger' },
+  ];
+
+const waspadaChecklist = [
+    { text: 'Minta transfer atau DP duluan sebelum barang/jasa dikirim' },
+    { text: 'Harga terlalu murah atau tidak masuk akal' },
+    { text: 'Menekan untuk segera bayar / "stok terbatas"' },
+    { text: 'Minta kode OTP, PIN, atau data pribadi' },
+    { text: 'Menolak video call atau bertemu langsung untuk verifikasi' },
+    { text: 'Rekening atas nama berbeda dengan identitas penjual' },
   ];
 
   return (
@@ -175,6 +191,11 @@ export default async function CheckPage({ params }: CheckPageProps) {
             {config.verdict}
           </span>
           <span className={`text-xs ${config.barDesc}`}>— {config.verdictSub}</span>
+          {/* Timestamp last checked */}
+          <span className="ml-auto flex items-center gap-1 text-[10px] text-slate-400">
+            <Clock className="w-3 h-3" />
+            Dicek {formatTimestamp(checkedAt)}
+          </span>
         </div>
       </div>
 
@@ -228,7 +249,7 @@ export default async function CheckPage({ params }: CheckPageProps) {
           {/* ── LEFT COLUMN ── */}
           <div className="lg:col-span-2 space-y-5">
 
-            {/* INFO PENIPU */}
+            {/* INFO NOMOR */}
             <div>
               <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-2.5 font-medium px-0.5">
                 Nomor terperiksa
@@ -241,7 +262,6 @@ export default async function CheckPage({ params }: CheckPageProps) {
                       className="text-[2rem] sm:text-5xl font-medium text-slate-900 tracking-tight break-all leading-none mb-4"
                       style={{ fontFamily: "'DM Mono', monospace" }}
                     >
-                      {/* ✅ 5. Tampilkan realNumber yang asli */}
                       {formatNum(realNumber)}
                     </p>
                     <div className="flex flex-wrap gap-2">
@@ -343,6 +363,39 @@ export default async function CheckPage({ params }: CheckPageProps) {
                 )}
               </div>
             </div>
+
+            {/* ── CHECKLIST WASPADA — hanya muncul kalau status safe ── */}
+            {status === 'safe' && (
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-2.5 font-medium px-0.5">
+                  Tetap waspada
+                </p>
+                <div className="bg-amber-50 rounded-lg border border-amber-200/80 shadow-sm overflow-hidden">
+                  <div className="px-5 py-3.5 border-b border-amber-100 flex items-center gap-2">
+                    <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
+                    <p className="text-xs font-semibold text-amber-800">
+                      Meski belum ada laporan, waspada jika nomor ini...
+                    </p>
+                  </div>
+                  <ul className="divide-y divide-amber-100">
+                    {waspadaChecklist.map((item, i) => (
+                      <li key={i} className="flex items-start gap-3 px-5 py-3 hover:bg-amber-100/40 transition-colors">
+                        <p className="text-xs text-amber-900 leading-relaxed">{item.text}</p>
+                      </li>
+                    ))}
+                  </ul>
+                  <div className="px-5 py-3 border-t border-amber-100 bg-amber-100/30">
+                    <p className="text-[10px] text-amber-700 leading-relaxed">
+                      Penipu bisa pakai nomor baru yang belum terdata. Jika ragu,{' '}
+                      <Link href="/report" className="font-semibold underline underline-offset-2 hover:text-amber-900">
+                        laporkan sekarang
+                      </Link>{' '}
+                      untuk melindungi orang lain.
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* RIWAYAT LAPORAN */}
             <div>
@@ -486,18 +539,14 @@ export default async function CheckPage({ params }: CheckPageProps) {
                   <div className="flex relative">
                     {verificationSteps.map((step, i) => (
                       <div key={i} className="relative flex flex-col items-center flex-1">
-                        {/* garis konektor ditaruh absolute di belakang bulatan */}
                         {i < verificationSteps.length - 1 && (
                           <div className={`absolute top-1.5 left-1/2 w-full h-[2px] z-0 ${
                             verificationSteps[i + 1].done ? 'bg-emerald-500' : 'bg-slate-200'
                           }`} />
                         )}
-
-                        {/* bulatan dikasih z-10 biar nutupin ujung garis */}
                         <div className={`relative z-10 w-3 h-3 rounded-full border-2 transition-colors mb-2 ${
                           step.done ? 'bg-emerald-500 border-emerald-500 shadow-sm' : 'bg-white border-slate-300'
                         }`} />
-
                         <p className={`text-[10px] text-center leading-snug px-1 ${
                           step.done ? 'text-slate-700 font-medium' : 'text-slate-400'
                         }`}>
@@ -535,7 +584,6 @@ export default async function CheckPage({ params }: CheckPageProps) {
               <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-3 font-medium">
                 Sebarkan peringatan
               </p>
-              {/* ✅ 6. ShareButtons tetep pake slug (base64) biar link yang di-copy juga rapi */}
               <ShareButtons slug={slug} shareText={shareText} />
             </div>
 
@@ -590,7 +638,7 @@ export default async function CheckPage({ params }: CheckPageProps) {
                       href={contact.url}
                       target="_blank"
                       rel="noopener noreferrer"
-                      className="text-[10px] text-blue-500 hover:text-blue-700 flex items-center gap-1 transition-colors font-medium"
+                      className="text-[10px] text-blue-500 hover:text-blue-700 flex items-center gap 1 transition-colors font-medium"
                     >
                       {contact.urlLabel} <ExternalLink className="w-2.5 h-2.5" />
                     </a>

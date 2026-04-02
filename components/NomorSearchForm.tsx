@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { Phone, Loader2, ArrowRight } from 'lucide-react';
-import { toSlug } from '@/lib/utils';
+import { encodeSlug } from '@/lib/utils';
 
 export default function NomorSearchForm() {
   const [query, setQuery] = useState('');
@@ -14,7 +14,7 @@ export default function NomorSearchForm() {
     e.preventDefault();
     if (!query.trim()) return;
     setIsLoading(true);
-    router.push(`/check/${toSlug(query)}`);
+    router.push(`/check/${encodeSlug(query)}`);
   };
 
   const examples = ['08123456789', '08571234567'];
@@ -22,7 +22,6 @@ export default function NomorSearchForm() {
   return (
     <div className="w-full max-w-2xl mx-auto px-2 sm:px-0">
       <form onSubmit={handleSubmit} className="group relative">
-        {/* PERUBAHAN: Sudut dipertajam (rounded-xl), shadow lebih tipis & elegan */}
         <div className="relative flex flex-col sm:flex-row items-stretch sm:items-center bg-white rounded-xl shadow-sm border border-slate-200 p-1.5 focus-within:border-emerald-500 focus-within:ring-2 focus-within:ring-emerald-500/10 transition-all duration-300">
           
           <div className="relative flex-grow flex items-center">
@@ -39,7 +38,6 @@ export default function NomorSearchForm() {
             />
           </div>
 
-          {/* PERUBAHAN: Tombol lebih kotak (rounded-lg) dengan warna tegas */}
           <button
             type="submit"
             disabled={isLoading || !query.trim()}
@@ -61,7 +59,6 @@ export default function NomorSearchForm() {
             key={num} 
             type="button" 
             onClick={() => setQuery(num)}
-            // PERUBAHAN: Chip dibikin kotak tegas (rounded-md)
             className="px-2.5 py-1.5 bg-white border border-slate-200 rounded-md text-[10px] font-bold text-slate-500 hover:border-emerald-500 hover:text-emerald-600 transition-all shadow-sm"
           >
             {num}
