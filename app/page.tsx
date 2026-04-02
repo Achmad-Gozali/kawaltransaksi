@@ -116,7 +116,7 @@ export default async function HomePage() {
         <div className="hidden md:flex relative w-[48%] items-center justify-start bg-white overflow-hidden pl-4">
           <div className="relative w-[460px] h-[460px]">
             <Image
-              src="/poster.jpeg"
+              src="/poster1.png"
               alt="Ilustrasi keamanan transaksi digital"
               fill
               className="object-contain"

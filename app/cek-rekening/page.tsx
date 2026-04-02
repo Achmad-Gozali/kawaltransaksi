@@ -52,16 +52,48 @@ export default async function CekRekeningPage() {
     <div className="min-h-screen bg-slate-50 text-slate-900 pb-16 font-sans">
 
       {/* SECTION 1: HERO */}
-      <section className="relative pt-16 sm:pt-24 pb-14 sm:pb-20 overflow-hidden text-center border-b border-slate-200 bg-white">
-        <div className="max-w-4xl mx-auto px-6 relative z-10">
-          <h1 className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tighter text-slate-900 mb-4 sm:mb-6 leading-tight uppercase">
-            Cek Rekening Bank. <br />
-            <span className="text-emerald-600 italic">Amankan Transaksi.</span>
-          </h1>
-          <p className="text-slate-500 text-sm sm:text-base mb-8 sm:mb-12 max-w-xl mx-auto font-medium leading-relaxed">
-            Verifikasi kredibilitas nomor rekening tujuan sebelum melakukan transfer dana. Hindari risiko penipuan finansial dalam satu klik.
-          </p>
-          <RekeningSearchForm />
+      <section className="relative pt-16 sm:pt-24 pb-0 overflow-hidden bg-white">
+        <div className="max-w-6xl mx-auto px-6 relative z-10">
+          <div className="flex flex-col md:flex-row items-center gap-10 pb-16 sm:pb-24">
+
+            {/* KIRI: Teks + Form */}
+            <div className="flex-1 text-center md:text-left">
+              <h1 className="text-4xl sm:text-5xl md:text-6xl font-black tracking-tighter text-slate-900 mb-4 sm:mb-6 leading-tight uppercase">
+                Cek Rekening Bank. <br />
+                <span className="text-emerald-600 italic">Amankan Transaksi.</span>
+              </h1>
+              <p className="text-slate-500 text-sm sm:text-base mb-8 sm:mb-12 max-w-xl font-medium leading-relaxed">
+                Verifikasi kredibilitas nomor rekening tujuan sebelum melakukan transfer dana. Hindari risiko penipuan finansial dalam satu klik.
+              </p>
+              <RekeningSearchForm />
+            </div>
+
+            {/* KANAN: Foto Hero */}
+            <div className="flex-1 flex justify-center md:justify-end">
+              <div className="relative w-full max-w-sm md:max-w-md aspect-square">
+                <Image
+                  src="/hero.png"
+                  alt="Ilustrasi penipuan online"
+                  fill
+                  className="object-contain drop-shadow-lg"
+                  priority
+                />
+              </div>
+            </div>
+
+          </div>
+        </div>
+
+        {/* WAVE SEPARATOR */}
+        <div className="w-full overflow-hidden leading-none -mb-1">
+          <svg
+            viewBox="0 0 1440 80"
+            xmlns="http://www.w3.org/2000/svg"
+            preserveAspectRatio="none"
+            className="w-full h-16 sm:h-20 block"
+          >
+            <path d="M0,20 C360,80 1080,0 1440,60 L1440,80 L0,80 Z" fill="#f8fafc" />
+          </svg>
         </div>
       </section>
 

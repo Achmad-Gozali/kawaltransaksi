@@ -1,6 +1,5 @@
 // ============================================
 // 📁 LOKASI: app/faq/page.tsx
-// ✅ FIX: Branding konsisten — semua CekNoScam → KawalTransaksi
 // ============================================
 
 import Link from 'next/link';
@@ -59,7 +58,9 @@ const faqs = [
 export default function FAQPage() {
   return (
     <div className="min-h-screen bg-zinc-50">
-      <div className="border-b border-zinc-200 bg-white">
+
+      {/* Subnav Kembali - hanya muncul di mobile */}
+      <div className="border-b border-zinc-200 bg-white sm:hidden">
         <div className="max-w-4xl mx-auto px-4 py-4">
           <Link
             href="/"
@@ -73,16 +74,18 @@ export default function FAQPage() {
 
       <div className="max-w-4xl mx-auto px-4 py-16">
         <div className="text-center mb-14">
-          <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-100 text-zinc-600 text-[10px] font-bold uppercase tracking-[0.2em] mb-6">
+
+          {/* Badge FAQ - hanya muncul di mobile */}
+          <div className="sm:hidden inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-100 text-zinc-600 text-[10px] font-bold uppercase tracking-[0.2em] mb-6">
             <HelpCircle className="w-3 h-3" />
             FAQ
           </div>
+
           <h1 className="text-4xl font-extrabold text-zinc-900 tracking-tight mb-3">
             Pertanyaan Umum
           </h1>
           <p className="text-zinc-500 text-lg max-w-xl mx-auto">
-            Jawaban untuk pertanyaan yang paling sering diajukan tentang
-            KawalTransaksi.
+            Jawaban untuk pertanyaan yang paling sering diajukan tentang KawalTransaksi.
           </p>
         </div>
 
