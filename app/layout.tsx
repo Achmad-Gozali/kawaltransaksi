@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Inter } from 'next/font/google';
+import { Inter, Roboto_Mono } from 'next/font/google';
 import './globals.css';
 import SiteShell from '@/components/SiteShell';
 
@@ -8,6 +8,13 @@ const inter = Inter({
   display: 'swap',
   preload: true,
   variable: '--font-inter',
+});
+
+const robotoMono = Roboto_Mono({
+  subsets: ['latin'],
+  weight: ['400', '500'],
+  display: 'swap',
+  variable: '--font-dm-mono',
 });
 
 export const metadata: Metadata = {
@@ -29,12 +36,9 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-// ✅ Layout ini SELALU render Navbar & Footer
-// Admin page punya layout sendiri di app/admin/layout.tsx
-// Next.js App Router otomatis pakai layout terdekat — /admin pakai admin/layout.tsx bukan ini
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="id" className={`scroll-smooth ${inter.variable}`}>
+    <html lang="id" className={`scroll-smooth ${inter.variable} ${robotoMono.variable}`}>
       <body
         className={`${inter.className} bg-zinc-50 text-zinc-900 min-h-screen flex flex-col selection:bg-red-100 selection:text-red-900`}
         suppressHydrationWarning

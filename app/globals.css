@@ -1,19 +1,18 @@
-/* ============================================
-   📁 LOKASI: app/globals.css
-   📝 REPLACE — tambah animations + scrollbar
-   ============================================ */
-
 @import "tailwindcss";
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap');
 
-@keyframes loading {
-  0% {
-    transform: translateX(-100%);
-  }
-  100% {
-    transform: translateX(250%);
-  }
+/* ── BASE ── */
+*, *::before, *::after {
+  box-sizing: border-box;
 }
 
+html {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+/* ── PAGE TRANSITION ── */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -29,6 +28,17 @@ main {
   animation: fadeIn 0.3s ease-out;
 }
 
+/* ── LOADING BAR ── */
+@keyframes loading {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(250%);
+  }
+}
+
+/* ── SCROLLBAR ── */
 ::-webkit-scrollbar {
   width: 6px;
 }
@@ -39,7 +49,6 @@ main {
 
 ::-webkit-scrollbar-thumb {
   background: #d4d4d8;
-  border-radius: 3px;
 }
 
 ::-webkit-scrollbar-thumb:hover {

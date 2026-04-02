@@ -4,19 +4,18 @@ import Link from 'next/link';
 import Image from 'next/image';
 import {
   ArrowLeft, ArrowRight,
-  Phone, Hash,
-  Globe, ShieldCheck,
+  Phone, ShieldCheck, Globe, ExternalLink,
 } from 'lucide-react';
 
 // ── TYPES ─────────────────────────────────────────────────────────────────────
-interface BankData {
+interface EwalletData {
   name: string;
   fullName: string;
   logo: string;
-  kodeBank: string;
   callCenter: string;
   website: string;
   websiteLabel: string;
+  helpUrl: string;
   description: string;
   transferTips: string[];
   securityTips: string[];
@@ -38,7 +37,7 @@ interface CategoryCount {
 }
 
 interface Props {
-  bankData: BankData;
+  walletData: EwalletData;
   reports: ReportRow[];
   totalCount: number;
   verifiedCount: number;
@@ -46,14 +45,58 @@ interface Props {
   categoryBreakdown: CategoryCount[];
 }
 
+// ── SOCIAL MEDIA MAP ──────────────────────────────────────────────────────────
+const SOCIALS: Record<string, { instagram?: string; tiktok?: string }> = {
+  GoPay: {
+    instagram: 'https://www.instagram.com/gopayindonesia?igsh=amo1enhtbHRocnAx',
+    tiktok: 'https://www.tiktok.com/@gopayindonesia?_r=1&_t=ZS-95BnWJjSmDV',
+  },
+  DANA: {
+    instagram: 'https://www.instagram.com/dana.id?igsh=MXNwa2JyN29temV6Zg==',
+    tiktok: 'https://www.tiktok.com/@dana.indonesia?_r=1&_t=ZS-95BnaGLA0N2',
+  },
+  LinkAja: {
+    instagram: 'https://www.instagram.com/linkaja?igsh=ejNjdjg4c3R4YnY4',
+    tiktok: 'https://www.tiktok.com/@linkajaid?_r=1&_t=ZS-95BnjrE9TnA',
+  },
+  ShopeePay: {
+    instagram: 'https://www.instagram.com/shopee_id?igsh=MW9sa2hsc2JiMWZ1bA==',
+    tiktok: 'https://www.tiktok.com/@shopee_id?_r=1&_t=ZS-95Bo2gL2ZGe',
+  },
+  OVO: {
+    instagram: 'https://www.instagram.com/ovo_id?igsh=MWZiczE3NnYybDQ1Zw==',
+    tiktok: 'https://www.tiktok.com/@ovo.id?_r=1&_t=ZS-95BoCLQZGOT',
+  },
+};
+
+// ── SOCIAL ICONS (SVG inline) ─────────────────────────────────────────────────
+function InstagramIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.947-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+    </svg>
+  );
+}
+
+function TiktokIcon() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+      <path d="M19.59 6.69a4.83 4.83 0 01-3.77-4.25V2h-3.45v13.67a2.89 2.89 0 01-2.88 2.5 2.89 2.89 0 01-2.89-2.89 2.89 2.89 0 012.89-2.89c.28 0 .54.04.79.1V9.01a6.33 6.33 0 00-.79-.05 6.34 6.34 0 00-6.34 6.34 6.34 6.34 0 006.34 6.34 6.34 6.34 0 006.33-6.34V8.69a8.18 8.18 0 004.78 1.52V6.75a4.85 4.85 0 01-1.01-.06z"/>
+    </svg>
+  );
+}
+
 // ── MAIN ─────────────────────────────────────────────────────────────────────
-export default function BankPageClient({
-  bankData: data,
+export default function EwalletPageClient({
+  walletData: data,
   reports,
   totalCount,
   verifiedCount,
   pendingCount,
 }: Props) {
+  const socials = SOCIALS[data.name] ?? {};
+  const hasSocials = socials.instagram || socials.tiktok;
+
   return (
     <div
       className="min-h-screen bg-slate-50 text-slate-900 pb-16"
@@ -63,7 +106,7 @@ export default function BankPageClient({
       <div className="sm:hidden bg-white border-b border-slate-100">
         <div className="px-4 py-3 flex items-center justify-between">
           <Link
-            href="/cek-rekening"
+            href="/cek-nomor"
             className="inline-flex items-center gap-2 text-slate-500 hover:text-slate-900 text-sm transition-colors"
           >
             <ArrowLeft className="w-4 h-4" />
@@ -97,7 +140,7 @@ export default function BankPageClient({
                     {data.fullName}
                   </h1>
                   <p className="text-[10px] text-slate-400 uppercase tracking-[0.15em] mt-0.5 font-medium">
-                    Verifikasi rekening · {data.name}
+                    Verifikasi akun · {data.name}
                   </p>
                 </div>
               </div>
@@ -124,40 +167,63 @@ export default function BankPageClient({
               </div>
             </div>
 
-            {/* Kanan — sidebar: kode bank + call center only */}
-            <div className="lg:col-span-1">
-              <div className="bg-white rounded-[8px] border border-slate-200/80 shadow-sm overflow-hidden">
-                {/* Kode Bank */}
-                <div className="flex items-start gap-3 px-4 py-4 border-b border-slate-100">
-                  <div className="w-7 h-7 bg-slate-50 border border-slate-100 rounded-[8px] flex items-center justify-center shrink-0 mt-0.5">
-                    <Hash className="w-3.5 h-3.5 text-slate-400" />
+            {/* Kanan — sidebar sosmed */}
+            {hasSocials && (
+              <div className="lg:col-span-1">
+                <div className="bg-white rounded-[8px] border border-slate-200/80 shadow-sm overflow-hidden">
+                  <div className="px-4 py-3 border-b border-slate-100">
+                    <p className="text-[10px] text-slate-400 uppercase tracking-[0.12em] font-medium">
+                      Akun resmi {data.name}
+                    </p>
+                    <p className="text-[10px] text-slate-400 mt-0.5 leading-relaxed">
+                      Pastikan hanya berinteraksi dengan akun terverifikasi berikut.
+                    </p>
                   </div>
-                  <div>
-                    <p className="text-[10px] text-slate-400 uppercase tracking-[0.12em] font-medium mb-0.5">Kode bank</p>
-                    <span className="text-lg font-bold text-slate-900" style={{ fontFamily: "'DM Mono', monospace" }}>
-                      {data.kodeBank}
-                    </span>
-                  </div>
-                </div>
 
-                {/* Call Center */}
-                <div className="flex items-start gap-3 px-4 py-4">
-                  <div className="w-7 h-7 bg-slate-50 border border-slate-100 rounded-[8px] flex items-center justify-center shrink-0 mt-0.5">
-                    <Phone className="w-3.5 h-3.5 text-slate-400" />
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-slate-400 uppercase tracking-[0.12em] font-medium mb-0.5">Call center</p>
-                    <a
-                      href={`tel:${data.callCenter}`}
-                      className="text-lg font-bold text-slate-900 hover:text-emerald-600 transition-colors"
-                      style={{ fontFamily: "'DM Mono', monospace" }}
-                    >
-                      {data.callCenter}
-                    </a>
+                  <div className="divide-y divide-slate-100">
+                    {socials.instagram && (
+                      <a
+                        href={socials.instagram}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-between px-4 py-3.5 hover:bg-slate-50/60 transition-colors group"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-7 h-7 bg-pink-50 border border-pink-100 rounded-[8px] flex items-center justify-center shrink-0 text-pink-500">
+                            <InstagramIcon />
+                          </div>
+                          <div>
+                            <p className="text-xs font-medium text-slate-900">Instagram</p>
+                            <p className="text-[10px] text-slate-400">@{socials.instagram.split('/').filter(Boolean).pop()?.split('?')[0]}</p>
+                          </div>
+                        </div>
+                        <ExternalLink className="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-500 transition-colors" />
+                      </a>
+                    )}
+
+                    {socials.tiktok && (
+                      <a
+                        href={socials.tiktok}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="flex items-center justify-between px-4 py-3.5 hover:bg-slate-50/60 transition-colors group"
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className="w-7 h-7 bg-slate-900 border border-slate-800 rounded-[8px] flex items-center justify-center shrink-0 text-white">
+                            <TiktokIcon />
+                          </div>
+                          <div>
+                            <p className="text-xs font-medium text-slate-900">TikTok</p>
+                            <p className="text-[10px] text-slate-400">@{socials.tiktok.split('@')[1]?.split('?')[0]}</p>
+                          </div>
+                        </div>
+                        <ExternalLink className="w-3.5 h-3.5 text-slate-300 group-hover:text-slate-500 transition-colors" />
+                      </a>
+                    )}
                   </div>
                 </div>
               </div>
-            </div>
+            )}
 
           </div>
         </div>
@@ -166,8 +232,8 @@ export default function BankPageClient({
       {/* ── BODY ── */}
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-6">
 
-        {/* STATS — dipindah ke atas */}
-        <div className="grid grid-cols-3 gap-2">
+        {/* STATS */}
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
           {[
             { value: totalCount, label: 'Total laporan', valueClass: 'text-slate-900' },
             { value: verifiedCount, label: 'Verified scam', valueClass: verifiedCount > 0 ? 'text-red-600' : 'text-slate-300' },
@@ -188,17 +254,17 @@ export default function BankPageClient({
           ))}
         </div>
 
-        {/* DAFTAR LAPORAN — dipindah ke bawah stats */}
+        {/* DAFTAR LAPORAN */}
         <div>
           <div className="flex items-center justify-between mb-2.5 px-0.5">
             <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 font-medium">
-              Rekening {data.name} dilaporkan
+              Akun {data.name} dilaporkan
             </p>
             <Link
               href="/report"
               className="text-[10px] font-medium text-emerald-600 hover:text-emerald-700 uppercase tracking-wider flex items-center gap-1 transition-colors"
             >
-              Lapor rekening <ArrowRight className="w-3 h-3" />
+              Lapor akun <ArrowRight className="w-3 h-3" />
             </Link>
           </div>
 
@@ -208,7 +274,7 @@ export default function BankPageClient({
               <table className="w-full text-left hidden md:table">
                 <thead>
                   <tr className="border-b border-slate-100 bg-slate-50/60">
-                    <th className="px-5 py-3 text-[10px] font-medium text-slate-400 uppercase tracking-[0.12em]">Nomor rekening</th>
+                    <th className="px-5 py-3 text-[10px] font-medium text-slate-400 uppercase tracking-[0.12em]">ID akun / nomor HP</th>
                     <th className="px-5 py-3 text-[10px] font-medium text-slate-400 uppercase tracking-[0.12em]">Status</th>
                     <th className="px-5 py-3 text-[10px] font-medium text-slate-400 uppercase tracking-[0.12em]">Tanggal</th>
                     <th className="px-5 py-3" />
@@ -295,28 +361,28 @@ export default function BankPageClient({
               <ShieldCheck className="w-8 h-8 text-emerald-500 mx-auto mb-3" />
               <p className="text-sm font-semibold text-slate-900 mb-1">Belum ada laporan</p>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Tidak ada rekening {data.name} yang dilaporkan saat ini.
+                Tidak ada akun {data.name} yang dilaporkan saat ini.
               </p>
             </div>
           )}
         </div>
 
-        {/* CTA — tombol ke halaman cek rekening */}
+        {/* CTA CEK REKENING */}
         <div className="bg-slate-900 rounded-[8px] p-7 sm:p-10 text-center shadow-sm">
           <p
-            className="text-xl sm:text-2xl font-bold text-white mb-2 leading-tight"
+            className="text-xl sm:text-2xl font-bold text-white mb-2 leading-tight uppercase tracking-tight"
             style={{ fontFamily: "'Syne', sans-serif" }}
           >
-            Cek rekening {data.name} sebelum transfer
+            ragu sama nomor rekening tujuan?
           </p>
           <p className="text-sm text-slate-400 max-w-md mx-auto mb-6 leading-relaxed">
-            Verifikasi nomor rekening untuk memastikan keamanan transaksi kamu.
+            jangan asal transfer. pastikan nomor rekening tujuan aman dan tidak memiliki riwayat penipuan di database kami.
           </p>
           <Link
             href="/cek-rekening"
-            className="inline-flex items-center gap-2 px-6 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-semibold rounded-[8px] transition-colors"
+            className="inline-flex items-center gap-2 px-6 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-semibold rounded-[8px] transition-colors uppercase tracking-wider"
           >
-            Cek rekening sekarang <ArrowRight className="w-3.5 h-3.5" />
+            cek rekening sekarang <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
 

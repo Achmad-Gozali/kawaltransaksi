@@ -5,8 +5,7 @@ import type { Metadata } from 'next';
 import {
   ShieldCheck, ArrowLeft,
   ExternalLink,
-  MessageSquare, DollarSign, Calendar, FileText, Users,
-  AtSign, ShieldAlert, Globe, PlusCircle,
+  Globe, PlusCircle,
 } from 'lucide-react';
 import { formatDateID, formatNum } from '@/lib/utils';
 import ShareButtons from './ShareButtons';
@@ -91,9 +90,7 @@ export default async function CheckPage({ params }: CheckPageProps) {
 
   const statusConfig = {
     danger: {
-      barBorder: 'border-l-red-500',
       barBg: 'bg-red-50',
-      barDot: 'bg-red-500',
       barLabel: 'text-red-800',
       barDesc: 'text-red-600',
       nameBadgeBg: 'bg-red-50',
@@ -101,12 +98,9 @@ export default async function CheckPage({ params }: CheckPageProps) {
       nameBadgeBorder: 'border-red-200',
       verdict: 'Terindikasi penipuan',
       verdictSub: `${verifiedCount} laporan telah diverifikasi oleh sistem & komunitas.`,
-      reportBorder: 'border-l-red-400',
     },
     warning: {
-      barBorder: 'border-l-amber-400',
       barBg: 'bg-amber-50',
-      barDot: 'bg-amber-400',
       barLabel: 'text-amber-900',
       barDesc: 'text-amber-700',
       nameBadgeBg: 'bg-amber-50',
@@ -114,12 +108,9 @@ export default async function CheckPage({ params }: CheckPageProps) {
       nameBadgeBorder: 'border-amber-200',
       verdict: 'Dalam investigasi',
       verdictSub: `${pendingReports.length} laporan masuk sedang diverifikasi moderator.`,
-      reportBorder: 'border-l-amber-400',
     },
     safe: {
-      barBorder: 'border-l-emerald-500',
       barBg: 'bg-emerald-50',
-      barDot: 'bg-emerald-500',
       barLabel: 'text-emerald-900',
       barDesc: 'text-emerald-700',
       nameBadgeBg: 'bg-emerald-50',
@@ -127,7 +118,6 @@ export default async function CheckPage({ params }: CheckPageProps) {
       nameBadgeBorder: 'border-emerald-200',
       verdict: 'Tidak ada laporan',
       verdictSub: 'Nomor ini bersih di database kami. Tetap waspada.',
-      reportBorder: 'border-l-emerald-400',
     },
   };
 
@@ -167,9 +157,8 @@ export default async function CheckPage({ params }: CheckPageProps) {
       </div>
 
       {/* ── STATUS BAR ── */}
-      <div className={`border-l-4 ${config.barBorder} ${config.barBg} px-4 sm:px-6 py-3`}>
+      <div className={`${config.barBg} px-4 sm:px-6 py-3`}>
         <div className="max-w-5xl mx-auto flex items-center gap-3 flex-wrap">
-          <div className={`w-2 h-2 rounded-full shrink-0 ${config.barDot}`} />
           <span
             className={`text-xs font-semibold uppercase tracking-widest ${config.barLabel}`}
             style={{ fontFamily: "'Syne', sans-serif" }}
@@ -185,7 +174,7 @@ export default async function CheckPage({ params }: CheckPageProps) {
 
         {/* Stats row */}
         {reports.length > 0 && (
-          <div className="grid grid-cols-3 gap-2 mb-6">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 mb-6">
             {[
               {
                 value: String(reports.length),
@@ -210,7 +199,7 @@ export default async function CheckPage({ params }: CheckPageProps) {
             ].map((stat) => (
               <div
                 key={stat.label}
-                className={`${stat.bg} rounded-xl border border-slate-200/80 shadow-sm p-4 sm:p-5 transition-colors`}
+                className={`${stat.bg} rounded-lg border border-slate-200/80 shadow-sm p-4 sm:p-5 transition-colors`}
               >
                 <p
                   className={`text-3xl sm:text-4xl font-bold leading-none tabular-nums ${stat.valueClass}`}
@@ -235,7 +224,7 @@ export default async function CheckPage({ params }: CheckPageProps) {
               <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-2.5 font-medium px-0.5">
                 Nomor terperiksa
               </p>
-              <div className="bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-hidden">
+              <div className="bg-white rounded-lg border border-slate-200/80 shadow-sm overflow-hidden">
 
                 <div className="p-5 sm:p-6 flex justify-between items-start gap-4">
                   <div className="flex-1 min-w-0">
@@ -255,8 +244,7 @@ export default async function CheckPage({ params }: CheckPageProps) {
                         </span>
                       )}
                     </div>
-                    <p className="flex items-center gap-1.5 text-[11px] text-slate-400 mt-3">
-                      <Users className="w-3 h-3" />
+                    <p className="text-[11px] text-slate-400 mt-3">
                       Data dikumpulkan dari laporan komunitas
                     </p>
                   </div>
@@ -279,8 +267,8 @@ export default async function CheckPage({ params }: CheckPageProps) {
 
                 {allSocialAccounts.length > 0 && (
                   <div className="px-5 sm:px-6 py-4 border-t border-slate-100 bg-slate-50/50">
-                    <p className="text-[10px] text-slate-400 uppercase tracking-[0.15em] mb-2.5 flex items-center gap-1.5 font-medium">
-                      <AtSign className="w-3 h-3" /> Akun media sosial penipu
+                    <p className="text-[10px] text-slate-400 uppercase tracking-[0.15em] mb-2.5 font-medium">
+                      Akun media sosial penipu
                     </p>
                     <div className="flex flex-wrap gap-2">
                       {allSocialAccounts.map((acc, i) => {
@@ -305,8 +293,8 @@ export default async function CheckPage({ params }: CheckPageProps) {
 
                 {reports.some(r => r.link_url) && (
                   <div className="px-5 sm:px-6 py-4 border-t border-slate-100 bg-red-50/30">
-                    <p className="text-[10px] text-slate-400 uppercase tracking-[0.15em] mb-2.5 flex items-center gap-1.5 font-medium">
-                      <Globe className="w-3 h-3 text-red-400" /> Tautan berbahaya terdeteksi
+                    <p className="text-[10px] text-slate-400 uppercase tracking-[0.15em] mb-2.5 font-medium">
+                      Tautan berbahaya terdeteksi
                     </p>
                     <div className="flex items-center justify-between gap-3">
                       <span
@@ -324,8 +312,8 @@ export default async function CheckPage({ params }: CheckPageProps) {
 
                 {allReportedTo.length > 0 && (
                   <div className="px-5 sm:px-6 py-4 border-t border-slate-100 bg-slate-50/50">
-                    <p className="text-[10px] text-slate-400 uppercase tracking-[0.15em] mb-2.5 flex items-center gap-1.5 font-medium">
-                      <ShieldAlert className="w-3 h-3" /> Sudah dilaporkan ke
+                    <p className="text-[10px] text-slate-400 uppercase tracking-[0.15em] mb-2.5 font-medium">
+                      Sudah dilaporkan ke
                     </p>
                     <div className="flex flex-wrap gap-2">
                       {allReportedTo.map((v) => (
@@ -349,8 +337,8 @@ export default async function CheckPage({ params }: CheckPageProps) {
             {/* RIWAYAT LAPORAN */}
             <div>
               <div className="flex items-center justify-between mb-2.5 px-0.5">
-                <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 flex items-center gap-1.5 font-medium">
-                  <FileText className="w-3 h-3" /> Riwayat laporan
+                <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 font-medium">
+                  Riwayat laporan
                 </p>
                 <span className="text-[10px] text-slate-500 bg-slate-200/70 px-2 py-0.5 rounded-full font-medium">
                   {reports.length} entri
@@ -362,7 +350,7 @@ export default async function CheckPage({ params }: CheckPageProps) {
                   {reports.map((report) => (
                     <div
                       key={report.id}
-                      className={`bg-white rounded-xl border border-slate-200/80 border-l-4 ${config.reportBorder} shadow-sm hover:shadow-md transition-shadow overflow-hidden`}
+                      className="bg-white rounded-lg border border-slate-200/80 shadow-sm hover:shadow-md transition-shadow overflow-hidden"
                     >
                       <div className="flex flex-wrap items-center justify-between gap-2 px-4 py-2.5 border-b border-slate-100 bg-slate-50/60">
                         <div className="flex items-center gap-2 flex-wrap">
@@ -377,8 +365,7 @@ export default async function CheckPage({ params }: CheckPageProps) {
                             {report.category}
                           </span>
                         </div>
-                        <div className="flex items-center gap-1.5 text-[10px] text-slate-400">
-                          <Calendar className="w-3 h-3" />
+                        <div className="text-[10px] text-slate-400">
                           {formatDateID(report.created_at)}
                         </div>
                       </div>
@@ -391,25 +378,23 @@ export default async function CheckPage({ params }: CheckPageProps) {
 
                       <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 px-4 py-2.5 border-t border-slate-100 bg-slate-50/40">
                         {report.platform && (
-                          <div className="flex items-center gap-1.5 text-[10px] text-slate-500 uppercase">
-                            <MessageSquare className="w-3 h-3 text-slate-400" />{report.platform}
+                          <div className="text-[10px] text-slate-500 uppercase">
+                            {report.platform}
                           </div>
                         )}
                         {report.loss_amount && (
-                          <div className="flex items-center gap-1.5 text-[10px] font-semibold text-red-600 uppercase">
-                            <DollarSign className="w-3 h-3" />
+                          <div className="text-[10px] font-semibold text-red-600 uppercase">
                             {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(Number(report.loss_amount))}
                           </div>
                         )}
                         {report.incident_date && (
-                          <div className="flex items-center gap-1.5 text-[10px] text-slate-400 uppercase">
-                            <Calendar className="w-3 h-3" />
+                          <div className="text-[10px] text-slate-400 uppercase">
                             Kejadian: {new Date(report.incident_date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}
                           </div>
                         )}
                         {report.has_other_victims === 'yes' && (
-                          <div className="flex items-center gap-1.5 text-[10px] font-semibold text-amber-600 uppercase">
-                            <Users className="w-3 h-3" /> Ada korban lain
+                          <div className="text-[10px] font-semibold text-amber-600 uppercase">
+                            Ada korban lain
                           </div>
                         )}
                         {report.evidence_url && (
@@ -440,7 +425,7 @@ export default async function CheckPage({ params }: CheckPageProps) {
                   ))}
                 </div>
               ) : (
-                <div className="bg-white rounded-xl border border-slate-200/80 shadow-sm p-14 text-center">
+                <div className="bg-white rounded-lg border border-slate-200/80 shadow-sm p-14 text-center">
                   <ShieldCheck className="w-8 h-8 text-emerald-500 mx-auto mb-3" />
                   <p className="text-sm font-semibold text-slate-900 mb-1">Database bersih</p>
                   <p className="text-xs text-slate-400 max-w-xs mx-auto leading-relaxed">
@@ -456,7 +441,7 @@ export default async function CheckPage({ params }: CheckPageProps) {
                 <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-2.5 font-medium px-0.5">
                   Apa yang harus kamu lakukan?
                 </p>
-                <div className="bg-white rounded-xl border border-slate-200/80 shadow-sm overflow-hidden divide-y divide-slate-100">
+                <div className="bg-white rounded-lg border border-slate-200/80 shadow-sm overflow-hidden divide-y divide-slate-100">
                   {(status === 'danger' ? [
                     { step: '01', title: 'Jangan transfer', desc: 'Batalkan segera rencana transfer ke nomor ini. Uang yang sudah ditransfer sangat sulit untuk dikembalikan.' },
                     { step: '02', title: 'Simpan semua bukti', desc: 'Screenshot semua percakapan, nomor rekening, dan detail transaksi sebagai barang bukti.' },
@@ -481,27 +466,33 @@ export default async function CheckPage({ params }: CheckPageProps) {
               </div>
             )}
 
-            {/* STATUS VERIFIKASI */}
+{/* STATUS VERIFIKASI */}
             {reports.length > 0 && (
               <div>
                 <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-2.5 font-medium px-0.5">
                   Status verifikasi
                 </p>
-                <div className="bg-white rounded-xl border border-slate-200/80 shadow-sm px-6 py-5">
-                  <div className="flex items-start">
+                <div className="bg-white rounded-lg border border-slate-200/80 shadow-sm px-6 py-5">
+                  <div className="flex relative">
                     {verificationSteps.map((step, i) => (
-                      <div key={i} className="flex items-start flex-1">
-                        <div className="flex flex-col items-center gap-2 flex-1">
-                          <div className={`w-3 h-3 rounded-full border-2 transition-colors ${
-                            step.done ? 'bg-emerald-500 border-emerald-500 shadow-sm' : 'bg-white border-slate-300'
-                          }`} />
-                          <p className={`text-[10px] text-center leading-snug px-1 ${step.done ? 'text-slate-700 font-medium' : 'text-slate-400'}`}>
-                            {step.label}
-                          </p>
-                        </div>
+                      <div key={i} className="relative flex flex-col items-center flex-1">
+                        {/* garis konektor ditaruh absolute di belakang bulatan */}
                         {i < verificationSteps.length - 1 && (
-                          <div className={`h-px w-full mt-1.5 mx-1 ${verificationSteps[i + 1].done ? 'bg-emerald-400' : 'bg-slate-200'}`} />
+                          <div className={`absolute top-1.5 left-1/2 w-full h-[2px] z-0 ${
+                            verificationSteps[i + 1].done ? 'bg-emerald-500' : 'bg-slate-200'
+                          }`} />
                         )}
+
+                        {/* bulatan dikasih z-10 biar nutupin ujung garis */}
+                        <div className={`relative z-10 w-3 h-3 rounded-full border-2 transition-colors mb-2 ${
+                          step.done ? 'bg-emerald-500 border-emerald-500 shadow-sm' : 'bg-white border-slate-300'
+                        }`} />
+
+                        <p className={`text-[10px] text-center leading-snug px-1 ${
+                          step.done ? 'text-slate-700 font-medium' : 'text-slate-400'
+                        }`}>
+                          {step.label}
+                        </p>
                       </div>
                     ))}
                   </div>
@@ -514,7 +505,7 @@ export default async function CheckPage({ params }: CheckPageProps) {
           <div className="lg:col-span-1 space-y-4">
 
             {/* CTA */}
-            <div className="bg-slate-900 rounded-xl p-5 shadow-sm">
+            <div className="bg-slate-900 rounded-lg p-5 shadow-sm">
               <p className="text-sm font-semibold text-white mb-1" style={{ fontFamily: "'Syne', sans-serif" }}>
                 Punya bukti baru?
               </p>
@@ -530,7 +521,7 @@ export default async function CheckPage({ params }: CheckPageProps) {
             </div>
 
             {/* Share */}
-            <div className="bg-white rounded-xl border border-slate-200/80 shadow-sm p-5">
+            <div className="bg-white rounded-lg border border-slate-200/80 shadow-sm p-5">
               <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-3 font-medium">
                 Sebarkan peringatan
               </p>
@@ -538,7 +529,7 @@ export default async function CheckPage({ params }: CheckPageProps) {
             </div>
 
             {/* Tips */}
-            <div className="bg-white rounded-xl border border-slate-200/80 shadow-sm p-5">
+            <div className="bg-white rounded-lg border border-slate-200/80 shadow-sm p-5">
               <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-3 font-medium">
                 Tips keamanan
               </p>
@@ -559,7 +550,7 @@ export default async function CheckPage({ params }: CheckPageProps) {
             </div>
 
             {/* Kontak darurat */}
-            <div className="bg-white rounded-xl border border-slate-200/80 shadow-sm p-5">
+            <div className="bg-white rounded-lg border border-slate-200/80 shadow-sm p-5">
               <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-3 font-medium">
                 Kontak darurat
               </p>

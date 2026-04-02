@@ -17,6 +17,13 @@ const nextConfig: NextConfig = {
   },
 
   images: {
+    // ✅ Tambahan ini supaya eror /logo.png?v=2 hilang
+    localPatterns: [
+      {
+        pathname: '/**',
+        search: '',
+      },
+    ],
     remotePatterns: [
       {
         protocol: 'https',

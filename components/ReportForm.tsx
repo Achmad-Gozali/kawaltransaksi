@@ -12,8 +12,8 @@ import type { AnalysisResult } from '@/lib/groq';
 import {
   Loader2, Upload, AlertCircle, CheckCircle2, Brain,
   Sparkles, X, Phone, Building2, Wallet, ChevronDown,
-  Calendar, DollarSign, Globe, Send, AtSign, Users,
-  ShieldCheck, Plus, Trash2
+  Send, Plus, Trash2
+  // ✅ UPDATED: hapus Calendar, DollarSign, Globe, AtSign, Users, ShieldCheck dari import
 } from 'lucide-react';
 import * as motion from 'motion/react-client';
 
@@ -90,10 +90,10 @@ function SectionHeader({ dot, label, muted }: { dot: string; label: string; mute
   );
 }
 
-function FieldLabel({ icon: Icon, label, optional }: { icon?: any; label: string; optional?: boolean }) {
+// ✅ UPDATED: hapus prop icon dari FieldLabel, teks aja
+function FieldLabel({ label, optional }: { label: string; optional?: boolean }) {
   return (
     <label className="text-[11px] font-bold text-zinc-700 ml-1 flex items-center gap-1.5">
-      {Icon && <Icon className="w-3 h-3 text-zinc-400" />}
       {label}
       {optional && <span className="text-zinc-300 font-normal">(opsional)</span>}
     </label>
@@ -129,13 +129,11 @@ export default function ReportForm() {
     incident_date: '',
     platform: '',
     link_url: '',
-    // ── FIELD BARU ──
-    social_media_accounts: [''],   // username sosmed penipu (bisa multi)
+    social_media_accounts: [''],
     has_other_victims: '' as '' | 'yes' | 'no',
     reported_to: [] as string[],
   });
 
-  // bukti transaksi (existing)
   const [file, setFile] = useState<File | null>(null);
   const [filePreview, setFilePreview] = useState<string | null>(null);
   const [isAnalyzingImage, setIsAnalyzingImage] = useState(false);
@@ -144,11 +142,8 @@ export default function ReportForm() {
   const [textAnalysis, setTextAnalysis] = useState<any>(null);
   const [aiPhotoResult, setAiPhotoResult] = useState<PhotoScanPayload | null>(null);
 
-  // foto profil penipu (baru)
   const [suspectPhoto, setSuspectPhoto] = useState<File | null>(null);
   const [suspectPhotoPreview, setSuspectPhotoPreview] = useState<string | null>(null);
-
-  // ── handlers ──
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0] || null;
@@ -205,7 +200,6 @@ export default function ReportForm() {
     finally { setIsAnalyzingText(false); }
   };
 
-  // sosmed multi-field helpers
   const addSocialField = () =>
     setFormData(f => ({ ...f, social_media_accounts: [...f.social_media_accounts, ''] }));
 
@@ -240,7 +234,6 @@ export default function ReportForm() {
         if (up.success) uploadedUrl = up.url ?? null;
       }
 
-      // upload foto profil penipu (opsional, pakai endpoint yang sama)
       let suspectPhotoUrl: string | null = null;
       if (suspectPhoto) {
         const fd = new FormData();
@@ -267,7 +260,6 @@ export default function ReportForm() {
         platform: formData.platform || null,
         link_url: formData.link_url || null,
         ai_photo_result: aiPhotoResult,
-        // field baru — terima atau ignore di server tergantung schema
         social_media_accounts: formData.social_media_accounts.filter(Boolean),
         has_other_victims: formData.has_other_victims || null,
         reported_to: formData.reported_to,
@@ -282,7 +274,6 @@ export default function ReportForm() {
     finally { setIsLoading(false); }
   };
 
-  // ── SUCCESS STATE ──
   if (isSuccess)
     return (
       <div className="text-center py-20">
@@ -292,7 +283,6 @@ export default function ReportForm() {
       </div>
     );
 
-  // ── FORM ──
   return (
     <form onSubmit={handleSubmit} className="space-y-8">
 
@@ -375,9 +365,9 @@ export default function ReportForm() {
           </div>
         </div>
 
-        {/* Username Sosmed */}
+        {/* Username Sosmed — ✅ tanpa icon di label */}
         <div className="space-y-2">
-          <FieldLabel icon={AtSign} label="Akun Media Sosial Penipu" optional />
+          <FieldLabel label="Akun Media Sosial Penipu" optional />
           <p className="text-[10px] text-zinc-400 font-medium ml-1 -mt-1">
             Instagram, TikTok, Facebook, Telegram, dll. Penipu sering ganti nomor tapi akun sosmed-nya tetap.
           </p>
@@ -417,9 +407,9 @@ export default function ReportForm() {
           </div>
         </div>
 
-        {/* Foto Profil Penipu */}
+        {/* Foto Profil Penipu — ✅ tanpa icon di label */}
         <div className="space-y-2">
-          <FieldLabel icon={Users} label="Foto Profil / Identitas Visual Penipu" optional />
+          <FieldLabel label="Foto Profil / Identitas Visual Penipu" optional />
           <p className="text-[10px] text-zinc-400 font-medium ml-1 -mt-1">
             Screenshot foto profil WA, IG, atau foto KTP yang dikirim penipu.
           </p>
@@ -471,8 +461,9 @@ export default function ReportForm() {
         <SectionHeader dot="bg-zinc-300" label="Detail Tambahan" muted />
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          {/* ✅ semua FieldLabel tanpa icon */}
           <div className="space-y-2">
-            <FieldLabel icon={DollarSign} label="Kerugian" optional />
+            <FieldLabel label="Kerugian" optional />
             <div className="relative">
               <span className="absolute left-3 top-1/2 -translate-y-1/2 text-zinc-400 text-xs font-bold select-none">Rp</span>
               <input
@@ -488,7 +479,7 @@ export default function ReportForm() {
             </div>
           </div>
           <div className="space-y-2">
-            <FieldLabel icon={Calendar} label="Tanggal" optional />
+            <FieldLabel label="Tanggal" optional />
             <input
               type="date"
               max={new Date().toISOString().split('T')[0]}
@@ -498,7 +489,7 @@ export default function ReportForm() {
             />
           </div>
           <div className="space-y-2">
-            <FieldLabel icon={Globe} label="Platform" optional />
+            <FieldLabel label="Platform" optional />
             <div className="relative">
               <select
                 value={formData.platform}
@@ -512,7 +503,7 @@ export default function ReportForm() {
             </div>
           </div>
           <div className="space-y-2">
-            <FieldLabel icon={Globe} label="Link / URL" optional />
+            <FieldLabel label="Link / URL" optional />
             <InputBase
               type="url"
               value={formData.link_url}
@@ -522,9 +513,9 @@ export default function ReportForm() {
           </div>
         </div>
 
-        {/* Ada korban lain? */}
+        {/* Ada korban lain? — ✅ tanpa icon */}
         <div className="space-y-2">
-          <FieldLabel icon={Users} label="Ada korban lain yang kamu tahu?" optional />
+          <FieldLabel label="Ada korban lain yang kamu tahu?" optional />
           <div className="flex gap-2">
             {[
               { val: 'yes', label: 'Ya, ada korban lain' },
@@ -548,9 +539,9 @@ export default function ReportForm() {
           </div>
         </div>
 
-        {/* Sudah lapor ke mana */}
+        {/* Sudah lapor ke mana — ✅ tanpa icon */}
         <div className="space-y-2">
-          <FieldLabel icon={ShieldCheck} label="Sudah lapor ke mana?" optional />
+          <FieldLabel label="Sudah lapor ke mana?" optional />
           <div className="grid grid-cols-2 gap-2">
             {reportedToOptions.map(opt => {
               const active = formData.reported_to.includes(opt.value);
