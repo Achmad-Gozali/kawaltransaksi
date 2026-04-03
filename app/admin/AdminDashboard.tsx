@@ -7,7 +7,7 @@ import {
   Phone, Building2, ChevronDown, ChevronUp, Loader2,
   Search, Users, FileText, DollarSign, X, TrendingUp, ChevronRight,
   AlertCircle, Download, Globe, AtSign, ShieldAlert, UserX, Calendar,
-  TrendingDown,
+  TrendingDown, Undo2, FilePen,
 } from 'lucide-react';
 import { updateReportStatus, updateUserRole } from './actions';
 import { formatDateID } from '@/lib/utils';
@@ -43,7 +43,7 @@ interface AdminUser {
 
 interface Stats { total: number; pending: number; verified: number; rejected: number; }
 type Tab = 'dashboard' | 'laporan' | 'statistik' | 'pengguna';
-type StatusFilter = 'semua' | 'pending' | 'verified' | 'rejected';
+type StatusFilter = 'semua' | 'pending' | 'verified' | 'rejected' | 'withdrawn';
 
 function formatRupiah(num: number | string): string {
   const n = Number(num) || 0;
@@ -167,12 +167,13 @@ function DashboardInner({ stats, reports, users }: { stats: Stats; reports: Repo
   }, [users, userSearch]);
 
   const statusConfig = {
-    pending:  { label: 'Pending',  color: 'bg-amber-50 text-amber-600 border-amber-200',   icon: Clock },
-    verified: { label: 'Verified', color: 'bg-emerald-50 text-emerald-600 border-emerald-200', icon: CheckCircle2 },
-    rejected: { label: 'Rejected', color: 'bg-red-50 text-red-500 border-red-200',         icon: XCircle },
+    pending:   { label: 'Pending',         color: 'bg-amber-50 text-amber-600 border-amber-200',       icon: Clock },
+    verified:  { label: 'Verified',        color: 'bg-emerald-50 text-emerald-600 border-emerald-200', icon: CheckCircle2 },
+    rejected:  { label: 'Rejected',        color: 'bg-red-50 text-red-500 border-red-200',              icon: XCircle },
+    withdrawn: { label: 'Sedang Direvisi', color: 'bg-blue-50 text-blue-600 border-blue-200',           icon: FilePen },
   };
 
-  const handleAction = async (id: string, status: 'verified' | 'rejected' | 'pending') => {
+  const handleAction = async (id: string, status: 'verified' | 'rejected' | 'pending' | 'withdrawn') => {
     setLoadingId(id);
     try { await updateReportStatus(id, status); router.refresh(); } catch (err) { console.error(err); } finally { setLoadingId(null); }
   };
@@ -211,14 +212,10 @@ function DashboardInner({ stats, reports, users }: { stats: Stats; reports: Repo
     a.download = `laporan-${todayStr}.csv`; a.click();
   };
 
-  // ─────────────────────────────────────────────────────────
-  // DASHBOARD TAB
-  // ─────────────────────────────────────────────────────────
+  // ─── DASHBOARD TAB ───
   if (currentTab === 'dashboard') return (
     <div className="space-y-6 max-w-7xl mx-auto">
       <SectionTitle title="Dashboard" subtitle="Overview semua laporan masuk" />
-
-      {/* Stats row 1 */}
       <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-4">
         <StatCard label="Total Laporan"  value={String(stats.total)}   color="text-slate-800"   bg="bg-slate-100"    icon={FileText} />
         <StatCard label="Menunggu"       value={String(stats.pending)}  color="text-amber-600"   bg="bg-amber-50"     icon={Clock} />
@@ -226,13 +223,11 @@ function DashboardInner({ stats, reports, users }: { stats: Stats; reports: Repo
         <StatCard label="Ditolak"        value={String(stats.rejected)} color="text-red-500"     bg="bg-red-50"       icon={XCircle} />
         <StatCard label="Total Kerugian" value={totalLoss > 0 ? formatRupiah(totalLoss) : 'Rp 0'} color="text-slate-800" bg="bg-slate-100" icon={TrendingDown} />
       </div>
-
-      {/* Stats row 2 */}
       <div className="grid grid-cols-3 gap-4">
         {[
-          { label: 'Masuk Hari Ini',   value: todayReports.length,  color: 'text-blue-600',   bg: 'bg-blue-50',   icon: TrendingUp },
-          { label: 'Verified Hari Ini',value: todayVerified.length, color: 'text-emerald-600',bg: 'bg-emerald-50',icon: CheckCircle2 },
-          { label: 'Multi Korban',     value: multiVictimCount,     color: 'text-orange-600', bg: 'bg-orange-50', icon: Users },
+          { label: 'Masuk Hari Ini',    value: todayReports.length,  color: 'text-blue-600',   bg: 'bg-blue-50',   icon: TrendingUp },
+          { label: 'Verified Hari Ini', value: todayVerified.length, color: 'text-emerald-600',bg: 'bg-emerald-50',icon: CheckCircle2 },
+          { label: 'Multi Korban',      value: multiVictimCount,     color: 'text-orange-600', bg: 'bg-orange-50', icon: Users },
         ].map(s => (
           <div key={s.label} className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 flex items-center gap-4">
             <div className={`w-10 h-10 ${s.bg} rounded-xl flex items-center justify-center shrink-0`}>
@@ -245,8 +240,6 @@ function DashboardInner({ stats, reports, users }: { stats: Stats; reports: Repo
           </div>
         ))}
       </div>
-
-      {/* Alert pending */}
       {stats.pending > 0 && (
         <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 flex items-center gap-3">
           <div className="w-8 h-8 bg-amber-100 rounded-lg flex items-center justify-center shrink-0">
@@ -263,29 +256,19 @@ function DashboardInner({ stats, reports, users }: { stats: Stats; reports: Repo
           </button>
         </div>
       )}
-
-      {/* Charts row */}
       <div className="grid lg:grid-cols-2 gap-4">
-        {/* Bar chart */}
         <div className="bg-white rounded-2xl border border-slate-200 p-6">
           <h3 className="text-sm font-semibold text-slate-900 mb-6">Laporan 7 Hari Terakhir</h3>
           <div className="flex items-end gap-2 h-36">
             {dailyStats.map(([date, count]) => (
               <div key={date} className="flex-1 flex flex-col items-center gap-2">
                 <span className="text-[10px] text-slate-400 font-medium">{count}</span>
-                <div
-                  className="w-full bg-emerald-500 rounded-lg hover:bg-emerald-400 transition-colors"
-                  style={{ height: `${Math.max((count / maxDaily) * 100, 4)}%`, minHeight: '4px' }}
-                />
-                <span className="text-[9px] text-slate-400">
-                  {new Date(date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}
-                </span>
+                <div className="w-full bg-emerald-500 rounded-lg hover:bg-emerald-400 transition-colors" style={{ height: `${Math.max((count / maxDaily) * 100, 4)}%`, minHeight: '4px' }} />
+                <span className="text-[9px] text-slate-400">{new Date(date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })}</span>
               </div>
             ))}
           </div>
         </div>
-
-        {/* Bank stats */}
         <div className="bg-white rounded-2xl border border-slate-200 p-6">
           <h3 className="text-sm font-semibold text-slate-900 mb-5">Bank Terbanyak Dilaporkan</h3>
           {bankStats.length === 0
@@ -296,9 +279,7 @@ function DashboardInner({ stats, reports, users }: { stats: Stats; reports: Repo
                   <div key={label} className="flex items-center justify-between">
                     <div className="flex items-center gap-2.5">
                       <div className="w-7 h-7 bg-slate-100 rounded-lg flex items-center justify-center">
-                        {label === 'Nomor Telepon'
-                          ? <Phone className="w-3.5 h-3.5 text-slate-500" />
-                          : <Building2 className="w-3.5 h-3.5 text-slate-500" />}
+                        {label === 'Nomor Telepon' ? <Phone className="w-3.5 h-3.5 text-slate-500" /> : <Building2 className="w-3.5 h-3.5 text-slate-500" />}
                       </div>
                       <span className="text-sm text-slate-700 font-medium">{label}</span>
                     </div>
@@ -315,48 +296,32 @@ function DashboardInner({ stats, reports, users }: { stats: Stats; reports: Repo
     </div>
   );
 
-  // ─────────────────────────────────────────────────────────
-  // LAPORAN TAB
-  // ─────────────────────────────────────────────────────────
+  // ─── LAPORAN TAB ───
   if (currentTab === 'laporan') return (
     <div className="space-y-5 max-w-7xl mx-auto">
       <div className="flex items-center justify-between">
         <SectionTitle title="Laporan" />
-        <button
-          onClick={handleExportCSV}
-          className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-600 hover:border-slate-300 hover:bg-slate-50 font-medium transition-colors"
-        >
+        <button onClick={handleExportCSV} className="flex items-center gap-2 px-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm text-slate-600 hover:border-slate-300 hover:bg-slate-50 font-medium transition-colors">
           <Download className="w-4 h-4" /><span className="hidden sm:inline">Export CSV</span>
         </button>
       </div>
-
-      {/* Search + filter */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-grow">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-          <input
-            type="text"
-            placeholder="Cari nomor, nama, sosmed..."
-            value={searchQuery}
-            onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all"
-          />
+          <input type="text" placeholder="Cari nomor, nama, sosmed..." value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all" />
         </div>
         <div className="flex gap-2">
           {uniqueBanks.length > 0 && (
-            <select
-              value={bankFilter} onChange={(e) => setBankFilter(e.target.value)}
-              className={`px-3 py-2.5 border rounded-xl text-sm cursor-pointer transition-all ${bankFilter ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-600'}`}
-            >
+            <select value={bankFilter} onChange={(e) => setBankFilter(e.target.value)}
+              className={`px-3 py-2.5 border rounded-xl text-sm cursor-pointer transition-all ${bankFilter ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-600'}`}>
               <option value="">Bank</option>
               {uniqueBanks.map(b => <option key={b} value={b}>{b}</option>)}
             </select>
           )}
           {uniquePlatforms.length > 0 && (
-            <select
-              value={platformFilter} onChange={(e) => setPlatformFilter(e.target.value)}
-              className={`px-3 py-2.5 border rounded-xl text-sm cursor-pointer transition-all ${platformFilter ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-600'}`}
-            >
+            <select value={platformFilter} onChange={(e) => setPlatformFilter(e.target.value)}
+              className={`px-3 py-2.5 border rounded-xl text-sm cursor-pointer transition-all ${platformFilter ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-200 bg-white text-slate-600'}`}>
               <option value="">Platform</option>
               {uniquePlatforms.map(p => <option key={p} value={p}>{p}</option>)}
             </select>
@@ -369,46 +334,42 @@ function DashboardInner({ stats, reports, users }: { stats: Stats; reports: Repo
         </div>
       </div>
 
-      {/* Status tabs */}
       <div className="flex gap-2 overflow-x-auto pb-1">
-        {(['semua', 'pending', 'verified', 'rejected'] as StatusFilter[]).map(f => {
+        {(['semua', 'pending', 'verified', 'rejected', 'withdrawn'] as StatusFilter[]).map(f => {
           const count = f === 'semua' ? reports.length : reports.filter(r => r.status === f).length;
-          const colors = {
-            semua:    statusFilter === f ? 'bg-slate-900 text-white' : 'bg-white text-slate-500 border border-slate-200 hover:border-slate-300',
-            pending:  statusFilter === f ? 'bg-amber-500 text-white' : 'bg-white text-amber-500 border border-amber-200 hover:border-amber-300',
-            verified: statusFilter === f ? 'bg-emerald-500 text-white' : 'bg-white text-emerald-600 border border-emerald-200 hover:border-emerald-300',
-            rejected: statusFilter === f ? 'bg-red-500 text-white' : 'bg-white text-red-500 border border-red-200 hover:border-red-300',
+          const colors: Record<StatusFilter, string> = {
+            semua:     statusFilter === f ? 'bg-slate-900 text-white' : 'bg-white text-slate-500 border border-slate-200 hover:border-slate-300',
+            pending:   statusFilter === f ? 'bg-amber-500 text-white' : 'bg-white text-amber-500 border border-amber-200 hover:border-amber-300',
+            verified:  statusFilter === f ? 'bg-emerald-500 text-white' : 'bg-white text-emerald-600 border border-emerald-200 hover:border-emerald-300',
+            rejected:  statusFilter === f ? 'bg-red-500 text-white' : 'bg-white text-red-500 border border-red-200 hover:border-red-300',
+            withdrawn: statusFilter === f ? 'bg-blue-600 text-white' : 'bg-white text-blue-600 border border-blue-200 hover:border-blue-300',
+          };
+          const labels: Record<StatusFilter, string> = {
+            semua: 'Semua', pending: 'Pending', verified: 'Verified',
+            rejected: 'Rejected', withdrawn: 'Sedang Direvisi',
           };
           return (
-            <button
-              key={f}
-              onClick={() => setStatusFilter(f)}
-              className={`px-4 py-2 rounded-xl text-xs font-semibold capitalize whitespace-nowrap transition-all ${colors[f]}`}
-            >
-              {f} ({count})
+            <button key={f} onClick={() => setStatusFilter(f)}
+              className={`px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-all ${colors[f]}`}>
+              {labels[f]} ({count})
             </button>
           );
         })}
       </div>
 
-      {/* Bulk action bar */}
       {selectedIds.size > 0 && (
         <div className="bg-slate-900 text-white rounded-2xl px-5 py-3.5 flex items-center justify-between">
           <span className="text-sm font-medium">{selectedIds.size} laporan dipilih</span>
           <div className="flex gap-2">
             <button onClick={() => handleBulkAction('verified')} disabled={bulkLoading}
               className="flex items-center gap-1.5 px-4 py-2 bg-emerald-500 hover:bg-emerald-400 text-xs font-semibold rounded-xl disabled:opacity-50 transition-colors">
-              {bulkLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />}
-              Approve
+              {bulkLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <CheckCircle2 className="w-3.5 h-3.5" />} Approve
             </button>
             <button onClick={() => handleBulkAction('rejected')} disabled={bulkLoading}
               className="flex items-center gap-1.5 px-4 py-2 bg-red-500 hover:bg-red-400 text-xs font-semibold rounded-xl disabled:opacity-50 transition-colors">
-              {bulkLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-3.5 h-3.5" />}
-              Reject
+              {bulkLoading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <XCircle className="w-3.5 h-3.5" />} Reject
             </button>
-            <button onClick={() => setSelectedIds(new Set())} className="text-xs text-slate-400 hover:text-white px-2 transition-colors">
-              Batal
-            </button>
+            <button onClick={() => setSelectedIds(new Set())} className="text-xs text-slate-400 hover:text-white px-2 transition-colors">Batal</button>
           </div>
         </div>
       )}
@@ -436,25 +397,16 @@ function DashboardInner({ stats, reports, users }: { stats: Stats; reports: Repo
             const isExp  = expandedId === report.id;
             const isLd   = loadingId === report.id;
             const isSel  = selectedIds.has(report.id);
-            const hasSocmed    = (report.social_media_accounts ?? []).filter(Boolean).length > 0;
+            const hasSocmed     = (report.social_media_accounts ?? []).filter(Boolean).length > 0;
             const hasReportedTo = (report.reported_to ?? []).filter(Boolean).length > 0;
 
             return (
-              <div
-                key={report.id}
-                className={`bg-white border rounded-2xl overflow-hidden transition-all duration-150 ${isSel ? 'border-emerald-400 ring-1 ring-emerald-200' : 'border-slate-200 hover:border-slate-300'}`}
-              >
-                {/* Card header */}
+              <div key={report.id} className={`bg-white border rounded-2xl overflow-hidden transition-all duration-150 ${isSel ? 'border-emerald-400 ring-1 ring-emerald-200' : 'border-slate-200 hover:border-slate-300'}`}>
                 <div className="px-4 py-4 sm:px-5">
                   <div className="flex items-start gap-3">
-                    <input
-                      type="checkbox" checked={isSel} onChange={() => toggleSelect(report.id)}
-                      className="w-4 h-4 accent-emerald-600 shrink-0 mt-1 rounded"
-                    />
+                    <input type="checkbox" checked={isSel} onChange={() => toggleSelect(report.id)} className="w-4 h-4 accent-emerald-600 shrink-0 mt-1 rounded" />
                     <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 ${report.target_type === 'phone' ? 'bg-blue-50' : 'bg-purple-50'}`}>
-                      {report.target_type === 'phone'
-                        ? <Phone className="w-4 h-4 text-blue-500" />
-                        : <Building2 className="w-4 h-4 text-purple-500" />}
+                      {report.target_type === 'phone' ? <Phone className="w-4 h-4 text-blue-500" /> : <Building2 className="w-4 h-4 text-purple-500" />}
                     </div>
                     <div className="flex-grow min-w-0">
                       <div className="flex flex-wrap items-center gap-1.5 mb-1">
@@ -463,13 +415,9 @@ function DashboardInner({ stats, reports, users }: { stats: Stats; reports: Repo
                         <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-semibold border ${st.color}`}>
                           <StIcon className="w-2.5 h-2.5" />{st.label}
                         </span>
-                        {report.bank_name && (
-                          <span className="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-500 rounded-lg font-medium hidden sm:inline">{report.bank_name}</span>
-                        )}
+                        {report.bank_name && <span className="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-500 rounded-lg font-medium hidden sm:inline">{report.bank_name}</span>}
                         {report.has_other_victims === 'yes' && (
-                          <span className="text-[10px] px-2 py-0.5 bg-orange-50 text-orange-600 border border-orange-200 rounded-lg font-semibold">
-                            👥 Multi korban
-                          </span>
+                          <span className="text-[10px] px-2 py-0.5 bg-orange-50 text-orange-600 border border-orange-200 rounded-lg font-semibold">👥 Multi korban</span>
                         )}
                       </div>
                       <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-400">
@@ -481,9 +429,7 @@ function DashboardInner({ stats, reports, users }: { stats: Stats; reports: Repo
                       {hasSocmed && (
                         <div className="flex flex-wrap gap-1 mt-1.5">
                           {(report.social_media_accounts ?? []).filter(Boolean).slice(0, 2).map((acc, i) => (
-                            <span key={i} className="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-600 rounded-lg font-mono border border-slate-200">
-                              @{acc.replace(/^@/, '')}
-                            </span>
+                            <span key={i} className="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-600 rounded-lg font-mono border border-slate-200">@{acc.replace(/^@/, '')}</span>
                           ))}
                           {(report.social_media_accounts ?? []).filter(Boolean).length > 2 && (
                             <span className="text-[10px] text-slate-400">+{(report.social_media_accounts ?? []).filter(Boolean).length - 2} lagi</span>
@@ -492,7 +438,6 @@ function DashboardInner({ stats, reports, users }: { stats: Stats; reports: Repo
                       )}
                     </div>
 
-                    {/* Action buttons */}
                     <div className="flex items-center gap-1.5 shrink-0">
                       {report.status === 'pending' && (
                         <>
@@ -520,20 +465,23 @@ function DashboardInner({ stats, reports, users }: { stats: Stats; reports: Repo
                           <CheckCircle2 className="w-3.5 h-3.5" /><span className="hidden sm:inline">Approve</span>
                         </button>
                       )}
-                      <button
-                        onClick={() => setExpandedId(isExp ? null : report.id)}
-                        className="w-9 h-9 bg-slate-100 rounded-xl flex items-center justify-center hover:bg-slate-200 transition-colors"
-                      >
+                      {report.status === 'withdrawn' && (
+                        <button onClick={() => handleAction(report.id, 'pending')} disabled={isLd}
+                          className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 text-slate-500 text-xs font-semibold rounded-xl hover:bg-amber-50 hover:text-amber-600 disabled:opacity-50 transition-colors">
+                          {isLd ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Undo2 className="w-3.5 h-3.5" />}
+                          <span className="hidden sm:inline">Restore</span>
+                        </button>
+                      )}
+                      <button onClick={() => setExpandedId(isExp ? null : report.id)}
+                        className="w-9 h-9 bg-slate-100 rounded-xl flex items-center justify-center hover:bg-slate-200 transition-colors">
                         {isExp ? <ChevronUp className="w-4 h-4 text-slate-500" /> : <ChevronDown className="w-4 h-4 text-slate-500" />}
                       </button>
                     </div>
                   </div>
                 </div>
 
-                {/* Expanded detail */}
                 {isExp && (
                   <div className="border-t border-slate-100 px-4 sm:px-5 py-5 bg-slate-50/60 space-y-5">
-
                     {report.suspect_photo_url && (
                       <div className="flex items-start gap-4 p-4 bg-red-50 border border-red-100 rounded-xl">
                         <img src={report.suspect_photo_url} alt="Foto penipu" className="w-16 h-16 object-cover rounded-xl border-2 border-red-200 shrink-0" />
@@ -541,14 +489,12 @@ function DashboardInner({ stats, reports, users }: { stats: Stats; reports: Repo
                           <p className="text-[10px] font-bold text-red-700 uppercase tracking-wider mb-1 flex items-center gap-1">
                             <UserX className="w-3 h-3" /> Foto Profil Penipu
                           </p>
-                          <a href={report.suspect_photo_url} target="_blank" rel="noopener noreferrer"
-                            className="text-xs text-red-600 hover:underline flex items-center gap-1">
+                          <a href={report.suspect_photo_url} target="_blank" rel="noopener noreferrer" className="text-xs text-red-600 hover:underline flex items-center gap-1">
                             Lihat ukuran penuh <ExternalLink className="w-3 h-3" />
                           </a>
                         </div>
                       </div>
                     )}
-
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                       {[
                         { label: 'Pelapor', value: report.reporter_email, className: '' },
@@ -567,18 +513,15 @@ function DashboardInner({ stats, reports, users }: { stats: Stats; reports: Repo
                           <p className={`text-xs font-medium text-slate-700 truncate ${item!.className}`}>{item!.value}</p>
                         </div>
                       ))}
-
                       {report.link_url && (
                         <div className="bg-white rounded-xl border border-slate-100 p-3.5 col-span-2">
                           <p className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold mb-1">Link URL</p>
-                          <a href={report.link_url} target="_blank" rel="noopener noreferrer"
-                            className="text-xs font-medium text-blue-600 hover:underline flex items-center gap-1 truncate">
+                          <a href={report.link_url} target="_blank" rel="noopener noreferrer" className="text-xs font-medium text-blue-600 hover:underline flex items-center gap-1 truncate">
                             {report.link_url} <ExternalLink className="w-3 h-3 shrink-0" />
                           </a>
                         </div>
                       )}
                     </div>
-
                     {hasSocmed && (
                       <div>
                         <p className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold mb-2 flex items-center gap-1.5">
@@ -595,7 +538,6 @@ function DashboardInner({ stats, reports, users }: { stats: Stats; reports: Repo
                         </div>
                       </div>
                     )}
-
                     {hasReportedTo && (
                       <div>
                         <p className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold mb-2 flex items-center gap-1.5">
@@ -610,23 +552,19 @@ function DashboardInner({ stats, reports, users }: { stats: Stats; reports: Repo
                         </div>
                       </div>
                     )}
-
                     <div>
                       <p className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold mb-2">Kronologi</p>
                       <div className="bg-white border border-slate-100 rounded-xl p-4">
                         <p className="text-sm text-slate-600 leading-relaxed">{report.chronology}</p>
                       </div>
                     </div>
-
                     <div className="flex gap-4 pt-1">
                       {report.evidence_url && (
-                        <a href={report.evidence_url} target="_blank" rel="noopener noreferrer"
-                          className="text-xs text-slate-500 hover:text-slate-900 flex items-center gap-1.5 font-medium transition-colors">
+                        <a href={report.evidence_url} target="_blank" rel="noopener noreferrer" className="text-xs text-slate-500 hover:text-slate-900 flex items-center gap-1.5 font-medium transition-colors">
                           <Eye className="w-3.5 h-3.5" />Lihat Bukti
                         </a>
                       )}
-                      <a href={`/check/${report.target_number}`} target="_blank" rel="noopener noreferrer"
-                        className="text-xs text-slate-400 hover:text-slate-700 flex items-center gap-1.5 transition-colors">
+                      <a href={`/check/${report.target_number}`} target="_blank" rel="noopener noreferrer" className="text-xs text-slate-400 hover:text-slate-700 flex items-center gap-1.5 transition-colors">
                         <ExternalLink className="w-3.5 h-3.5" />Halaman Publik
                       </a>
                     </div>
@@ -640,15 +578,11 @@ function DashboardInner({ stats, reports, users }: { stats: Stats; reports: Repo
     </div>
   );
 
-  // ─────────────────────────────────────────────────────────
-  // STATISTIK TAB
-  // ─────────────────────────────────────────────────────────
+  // ─── STATISTIK TAB ───
   if (currentTab === 'statistik') return (
     <div className="space-y-6 max-w-7xl mx-auto">
       <SectionTitle title="Statistik" subtitle="Analisis data laporan" />
-
       <div className="grid lg:grid-cols-2 gap-4">
-        {/* Bar chart */}
         <div className="bg-white rounded-2xl border border-slate-200 p-6">
           <h3 className="text-sm font-semibold text-slate-900 mb-6">Laporan 7 Hari Terakhir</h3>
           <div className="flex items-end gap-2 h-36">
@@ -661,78 +595,64 @@ function DashboardInner({ stats, reports, users }: { stats: Stats; reports: Repo
             ))}
           </div>
         </div>
-
-        {/* Kategori */}
         <div className="bg-white rounded-2xl border border-slate-200 p-6">
           <h3 className="text-sm font-semibold text-slate-900 mb-5">Kategori</h3>
-          {categoryStats.length === 0
-            ? <p className="text-sm text-slate-400 text-center py-8">Belum ada</p>
-            : (
-              <div className="space-y-3.5">
-                {categoryStats.map(([cat, count]) => (
-                  <div key={cat}>
-                    <div className="flex justify-between mb-1.5">
-                      <span className="text-xs font-medium text-slate-700">{cat}</span>
-                      <span className="text-xs text-slate-400 font-semibold">{count}</span>
-                    </div>
-                    <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${(count / maxCat) * 100}%` }} />
-                    </div>
+          {categoryStats.length === 0 ? <p className="text-sm text-slate-400 text-center py-8">Belum ada</p> : (
+            <div className="space-y-3.5">
+              {categoryStats.map(([cat, count]) => (
+                <div key={cat}>
+                  <div className="flex justify-between mb-1.5">
+                    <span className="text-xs font-medium text-slate-700">{cat}</span>
+                    <span className="text-xs text-slate-400 font-semibold">{count}</span>
                   </div>
-                ))}
-              </div>
-            )}
+                  <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-emerald-500 rounded-full transition-all" style={{ width: `${(count / maxCat) * 100}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-
-        {/* Bank/Ewallet */}
         <div className="bg-white rounded-2xl border border-slate-200 p-6">
           <h3 className="text-sm font-semibold text-slate-900 mb-5">Bank / E-Wallet</h3>
-          {bankStats.length === 0
-            ? <p className="text-sm text-slate-400 text-center py-8">Belum ada</p>
-            : (
-              <div className="space-y-3">
-                {bankStats.map(([label, data]) => (
-                  <div key={label} className="flex items-center justify-between py-1">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-7 h-7 bg-slate-100 rounded-lg flex items-center justify-center">
-                        {label === 'Nomor Telepon' ? <Phone className="w-3.5 h-3.5 text-slate-400" /> : <Building2 className="w-3.5 h-3.5 text-slate-400" />}
-                      </div>
-                      <span className="text-sm text-slate-700 font-medium">{label}</span>
+          {bankStats.length === 0 ? <p className="text-sm text-slate-400 text-center py-8">Belum ada</p> : (
+            <div className="space-y-3">
+              {bankStats.map(([label, data]) => (
+                <div key={label} className="flex items-center justify-between py-1">
+                  <div className="flex items-center gap-2.5">
+                    <div className="w-7 h-7 bg-slate-100 rounded-lg flex items-center justify-center">
+                      {label === 'Nomor Telepon' ? <Phone className="w-3.5 h-3.5 text-slate-400" /> : <Building2 className="w-3.5 h-3.5 text-slate-400" />}
                     </div>
-                    <div className="flex items-center gap-2">
-                      {data.loss > 0 && <span className="text-xs text-red-500 font-semibold">{formatRupiah(data.loss)}</span>}
-                      <span className="text-xs bg-slate-100 text-slate-600 font-bold px-2.5 py-0.5 rounded-lg">{data.count}</span>
-                    </div>
+                    <span className="text-sm text-slate-700 font-medium">{label}</span>
                   </div>
-                ))}
-              </div>
-            )}
+                  <div className="flex items-center gap-2">
+                    {data.loss > 0 && <span className="text-xs text-red-500 font-semibold">{formatRupiah(data.loss)}</span>}
+                    <span className="text-xs bg-slate-100 text-slate-600 font-bold px-2.5 py-0.5 rounded-lg">{data.count}</span>
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
-
-        {/* Platform */}
         <div className="bg-white rounded-2xl border border-slate-200 p-6">
           <h3 className="text-sm font-semibold text-slate-900 mb-5">Platform</h3>
-          {platformStats.length === 0
-            ? <p className="text-sm text-slate-400 text-center py-8">Belum ada</p>
-            : (
-              <div className="space-y-3.5">
-                {platformStats.map(([p, c]) => (
-                  <div key={p}>
-                    <div className="flex justify-between mb-1.5">
-                      <span className="text-xs font-medium text-slate-700">{p}</span>
-                      <span className="text-xs text-slate-400 font-semibold">{c}</span>
-                    </div>
-                    <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
-                      <div className="h-full bg-slate-600 rounded-full" style={{ width: `${(c / maxPlat) * 100}%` }} />
-                    </div>
+          {platformStats.length === 0 ? <p className="text-sm text-slate-400 text-center py-8">Belum ada</p> : (
+            <div className="space-y-3.5">
+              {platformStats.map(([p, c]) => (
+                <div key={p}>
+                  <div className="flex justify-between mb-1.5">
+                    <span className="text-xs font-medium text-slate-700">{p}</span>
+                    <span className="text-xs text-slate-400 font-semibold">{c}</span>
                   </div>
-                ))}
-              </div>
-            )}
+                  <div className="h-2 bg-slate-100 rounded-full overflow-hidden">
+                    <div className="h-full bg-slate-600 rounded-full" style={{ width: `${(c / maxPlat) * 100}%` }} />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       </div>
-
-      {/* Rates */}
       <div className="grid grid-cols-3 gap-4">
         {[
           { label: 'Approval Rate',  value: stats.total > 0 ? Math.round((stats.verified / stats.total) * 100) : 0, color: 'text-emerald-600', bg: 'bg-emerald-50' },
@@ -745,8 +665,6 @@ function DashboardInner({ stats, reports, users }: { stats: Stats; reports: Repo
           </div>
         ))}
       </div>
-
-      {/* Info tambahan */}
       <div className="bg-white rounded-2xl border border-slate-200 p-6">
         <h3 className="text-sm font-semibold text-slate-900 mb-5">Info Tambahan</h3>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
@@ -755,15 +673,11 @@ function DashboardInner({ stats, reports, users }: { stats: Stats; reports: Repo
             <p className="text-xs text-orange-500 font-medium mt-1">Laporan multi korban</p>
           </div>
           <div className="p-4 bg-slate-50 rounded-xl border border-slate-100">
-            <p className="text-2xl font-black text-slate-700">
-              {reports.filter(r => (r.social_media_accounts ?? []).filter(Boolean).length > 0).length}
-            </p>
+            <p className="text-2xl font-black text-slate-700">{reports.filter(r => (r.social_media_accounts ?? []).filter(Boolean).length > 0).length}</p>
             <p className="text-xs text-slate-500 font-medium mt-1">Laporan ada data sosmed</p>
           </div>
           <div className="p-4 bg-emerald-50 rounded-xl border border-emerald-100">
-            <p className="text-2xl font-black text-emerald-600">
-              {reports.filter(r => (r.reported_to ?? []).some(v => v !== 'belum')).length}
-            </p>
+            <p className="text-2xl font-black text-emerald-600">{reports.filter(r => (r.reported_to ?? []).some(v => v !== 'belum')).length}</p>
             <p className="text-xs text-emerald-600 font-medium mt-1">Sudah lapor ke instansi</p>
           </div>
         </div>
@@ -771,22 +685,15 @@ function DashboardInner({ stats, reports, users }: { stats: Stats; reports: Repo
     </div>
   );
 
-  // ─────────────────────────────────────────────────────────
-  // PENGGUNA TAB
-  // ─────────────────────────────────────────────────────────
+  // ─── PENGGUNA TAB ───
   return (
     <div className="space-y-5 max-w-7xl mx-auto">
       <SectionTitle title="Pengguna" subtitle={`${users.length} total pengguna terdaftar`} />
-
       <div className="relative max-w-md">
         <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-        <input
-          type="text" placeholder="Cari nama pengguna..."
-          value={userSearch} onChange={(e) => setUserSearch(e.target.value)}
-          className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all"
-        />
+        <input type="text" placeholder="Cari nama pengguna..." value={userSearch} onChange={(e) => setUserSearch(e.target.value)}
+          className="w-full pl-10 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all" />
       </div>
-
       {filteredUsers.length === 0 ? (
         <div className="bg-white border border-slate-200 rounded-2xl p-20 text-center">
           <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
@@ -814,14 +721,11 @@ function DashboardInner({ stats, reports, users }: { stats: Stats; reports: Repo
 function UserRow({ user, role, onRefresh }: { user: AdminUser; role: { l: string; c: string }; onRefresh: () => void }) {
   const [loading, setLoading] = useState(false);
   const [action, setAction]   = useState<string | null>(null);
-
   const handleRole = async (r: 'user' | 'admin' | 'moderator') => {
     setLoading(true); setAction(r);
     try { await updateUserRole(user.id, r); onRefresh(); } catch (e) { console.error(e); } finally { setLoading(false); setAction(null); }
   };
-
   const initial = (user.full_name || 'U').charAt(0).toUpperCase();
-
   return (
     <div className="bg-white border border-slate-200 rounded-2xl px-4 py-3.5 sm:px-5 flex items-center gap-4 hover:border-slate-300 transition-colors">
       <div className="w-10 h-10 bg-slate-900 rounded-xl flex items-center justify-center shrink-0">
@@ -862,9 +766,7 @@ export default function AdminDashboard(props: { stats: Stats; reports: Report[];
       <div className="max-w-7xl mx-auto space-y-4">
         <div className="h-8 w-40 bg-slate-200 rounded-xl animate-pulse" />
         <div className="grid grid-cols-5 gap-4">
-          {[...Array(5)].map((_, i) => (
-            <div key={i} className="h-28 bg-white border border-slate-200 rounded-2xl animate-pulse" />
-          ))}
+          {[...Array(5)].map((_, i) => <div key={i} className="h-28 bg-white border border-slate-200 rounded-2xl animate-pulse" />)}
         </div>
       </div>
     }>

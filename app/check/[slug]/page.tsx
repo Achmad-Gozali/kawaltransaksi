@@ -63,7 +63,7 @@ export default async function CheckPage({ params }: CheckPageProps) {
 
   if (error) console.error('error fetching reports:', error);
 
-  const reports = (data as any[]) ?? [];
+  const reports = ((data as any[]) ?? []).filter((r) => r.status !== 'withdrawn'); // ✅ sembunyikan withdrawn dari publik
   const verifiedReports = reports.filter((r) => r.status === 'verified');
   const pendingReports = reports.filter((r) => r.status === 'pending');
   const verifiedCount = verifiedReports.length;

@@ -1,19 +1,12 @@
 // ============================================
 // 📁 LOKASI: types/database.ts
-// ✅ UPDATE: Tambah kolom baru di reports table:
-//    - link_url
-//    - social_media_accounts
-//    - suspect_photo_url
-//    - has_other_victims
-//    - reported_to
-//    Dan update return type get_reports_admin
+// ✅ UPDATE: Tambah 'withdrawn' ke ReportStatus dan Enums
 // ============================================
 
 export type TargetType = 'phone' | 'bank_account';
-export type ReportStatus = 'pending' | 'verified' | 'rejected';
+export type ReportStatus = 'pending' | 'verified' | 'rejected' | 'withdrawn'; // ✅ tambah withdrawn
 export type UserRole = 'user' | 'admin' | 'moderator';
 
-// Helper types untuk dipakai di luar Supabase queries
 export interface Profile {
   id: string;
   updated_at: string | null;
@@ -94,7 +87,6 @@ export interface Database {
           loss_amount: number | null;
           incident_date: string | null;
           platform: string | null;
-          // ── FIELD BARU ──
           link_url: string | null;
           social_media_accounts: string[] | null;
           suspect_photo_url: string | null;
@@ -116,7 +108,6 @@ export interface Database {
           loss_amount?: number | null;
           incident_date?: string | null;
           platform?: string | null;
-          // ── FIELD BARU ──
           link_url?: string | null;
           social_media_accounts?: string[] | null;
           suspect_photo_url?: string | null;
@@ -138,7 +129,6 @@ export interface Database {
           loss_amount?: number | null;
           incident_date?: string | null;
           platform?: string | null;
-          // ── FIELD BARU ──
           link_url?: string | null;
           social_media_accounts?: string[] | null;
           suspect_photo_url?: string | null;
@@ -154,10 +144,7 @@ export interface Database {
     Functions: {
       get_category_counts: {
         Args: Record<string, never>;
-        Returns: {
-          category: string;
-          count: number;
-        }[];
+        Returns: { category: string; count: number }[];
       };
       get_reports_admin: {
         Args: Record<string, never>;
@@ -176,7 +163,6 @@ export interface Database {
           loss_amount: number | null;
           incident_date: string | null;
           platform: string | null;
-          // ── FIELD BARU ──
           link_url: string | null;
           social_media_accounts: string[] | null;
           suspect_photo_url: string | null;
@@ -185,23 +171,17 @@ export interface Database {
         }[];
       };
       update_report_status: {
-        Args: {
-          report_id: string;
-          new_status: string;
-        };
+        Args: { report_id: string; new_status: string };
         Returns: undefined;
       };
       update_user_role: {
-        Args: {
-          target_user_id: string;
-          new_role: string;
-        };
+        Args: { target_user_id: string; new_role: string };
         Returns: undefined;
       };
     };
     Enums: {
       target_type_enum: 'phone' | 'bank_account';
-      report_status_enum: 'pending' | 'verified' | 'rejected';
+      report_status_enum: 'pending' | 'verified' | 'rejected' | 'withdrawn'; // ✅ tambah withdrawn
     };
     CompositeTypes: {
       [_ in never]: never;

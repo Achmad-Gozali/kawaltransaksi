@@ -45,7 +45,6 @@ function useRecaptcha() {
   const [recaptchaReady, setRecaptchaReady] = useState(false);
 
   useEffect(() => {
-    // Kalau script sudah ada dan grecaptcha sudah loaded
     if (document.getElementById('recaptcha-script')) {
       if (window.grecaptcha) {
         window.grecaptcha.ready(() => setRecaptchaReady(true));
@@ -128,16 +127,29 @@ function AuthFormInner({ type }: AuthFormProps) {
     e.preventDefault();
     setError(null);
 
-    if (type === 'register' && password !== confirmPassword) {
-      setError('Kata sandi dan konfirmasi kata sandi tidak cocok.');
-      return;
-    }
-    if (type === 'register' && password.length < 6) {
-      setError('Kata sandi minimal 6 karakter.');
-      return;
+    // Sanitasi input
+    const sanitizedEmail = email.trim().toLowerCase();
+    const sanitizedFullName = fullName.trim().replace(/[<>'"]/g, '');
+
+    if (type === 'register') {
+      if (!sanitizedFullName) {
+        setError('Nama lengkap tidak boleh kosong.');
+        return;
+      }
+      if (sanitizedFullName.length < 2) {
+        setError('Nama lengkap minimal 2 karakter.');
+        return;
+      }
+      if (password !== confirmPassword) {
+        setError('Kata sandi dan konfirmasi kata sandi tidak cocok.');
+        return;
+      }
+      if (password.length < 6) {
+        setError('Kata sandi minimal 6 karakter.');
+        return;
+      }
     }
 
-    // Cek recaptcha siap sebelum submit
     if (!recaptchaReady) {
       setError('Sistem keamanan belum siap. Tunggu sebentar lalu coba lagi.');
       return;
@@ -162,15 +174,18 @@ function AuthFormInner({ type }: AuthFormProps) {
 
       if (type === 'register') {
         const { error: signUpError } = await supabase.auth.signUp({
-          email,
+          email: sanitizedEmail,
           password,
-          options: { data: { full_name: fullName } },
+          options: { data: { full_name: sanitizedFullName } },
         });
         if (signUpError) throw signUpError;
         router.refresh();
         setTimeout(() => router.push(redirectTo), 100);
       } else {
-        const { error: signInError } = await supabase.auth.signInWithPassword({ email, password });
+        const { error: signInError } = await supabase.auth.signInWithPassword({
+          email: sanitizedEmail,
+          password,
+        });
         if (signInError) throw signInError;
         router.refresh();
         setTimeout(() => router.push(redirectTo), 100);

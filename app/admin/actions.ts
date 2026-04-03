@@ -1,9 +1,6 @@
 // ============================================
 // 📁 LOKASI: app/admin/actions.ts
-// ✅ FIX:
-//    1. Hapus semua 'as any' cast
-//    2. Pakai RPC update_user_role (lebih aman, security definer)
-//    3. Revalidate lebih banyak path yang terpengaruh
+// ✅ UPDATE: Tambah 'withdrawn' ke type updateReportStatus
 // ============================================
 
 'use server';
@@ -13,7 +10,7 @@ import { revalidatePath } from 'next/cache';
 
 export async function updateReportStatus(
   reportId: string,
-  status: 'verified' | 'rejected' | 'pending'
+  status: 'verified' | 'rejected' | 'pending' | 'withdrawn' // ✅ tambah withdrawn
 ) {
   const supabase = await createClient();
   const {
@@ -21,7 +18,6 @@ export async function updateReportStatus(
   } = await supabase.auth.getUser();
   if (!user) throw new Error('Unauthorized');
 
-  // ✅ FIX: Check admin role
   const { data: profile } = await supabase
     .from('profiles')
     .select('role')
@@ -30,7 +26,6 @@ export async function updateReportStatus(
 
   if (!profile || profile.role !== 'admin') throw new Error('Forbidden');
 
-  // ✅ FIX: Pakai RPC yang sekarang sudah ada di schema.sql
   const { error } = await supabase.rpc('update_report_status', {
     report_id: reportId,
     new_status: status,
@@ -41,7 +36,6 @@ export async function updateReportStatus(
     throw new Error('Gagal update status');
   }
 
-  // ✅ FIX: Revalidate semua path yang terpengaruh
   revalidatePath('/admin');
   revalidatePath('/');
   revalidatePath('/dashboard');
@@ -65,8 +59,6 @@ export async function updateUserRole(
 
   if (!profile || profile.role !== 'admin') throw new Error('Forbidden');
 
-  // ✅ FIX: Pakai RPC update_user_role (security definer)
-  // Sebelumnya direct update yang bisa di-bypass via RLS
   const { error } = await supabase.rpc('update_user_role', {
     target_user_id: userId,
     new_role: role,
