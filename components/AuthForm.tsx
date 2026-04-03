@@ -42,25 +42,50 @@ function getPasswordStrength(password: string): { label: string; color: string; 
 }
 
 function useRecaptcha() {
+  const [recaptchaReady, setRecaptchaReady] = useState(false);
+
   useEffect(() => {
-    if (document.getElementById('recaptcha-script')) return;
+    // Kalau script sudah ada dan grecaptcha sudah loaded
+    if (document.getElementById('recaptcha-script')) {
+      if (window.grecaptcha) {
+        window.grecaptcha.ready(() => setRecaptchaReady(true));
+      }
+      return;
+    }
+
+    if (!RECAPTCHA_SITE_KEY) {
+      console.error('NEXT_PUBLIC_RECAPTCHA_SITE_KEY tidak ditemukan di environment variables.');
+      return;
+    }
+
     const script = document.createElement('script');
     script.id = 'recaptcha-script';
     script.src = `https://www.google.com/recaptcha/api.js?render=${RECAPTCHA_SITE_KEY}`;
     script.async = true;
+    script.onload = () => {
+      window.grecaptcha.ready(() => setRecaptchaReady(true));
+    };
+    script.onerror = () => {
+      console.error('Gagal memuat script reCAPTCHA.');
+    };
     document.head.appendChild(script);
   }, []);
 
   const getToken = useCallback((action: string): Promise<string> => {
     return new Promise((resolve, reject) => {
-      if (!window.grecaptcha) return reject('reCAPTCHA belum siap.');
+      if (!recaptchaReady || !window.grecaptcha) {
+        return reject(new Error('reCAPTCHA belum siap. Coba beberapa saat lagi.'));
+      }
       window.grecaptcha.ready(() => {
-        window.grecaptcha.execute(RECAPTCHA_SITE_KEY, { action }).then(resolve).catch(reject);
+        window.grecaptcha
+          .execute(RECAPTCHA_SITE_KEY, { action })
+          .then(resolve)
+          .catch(() => reject(new Error('Gagal mendapatkan token reCAPTCHA.')));
       });
     });
-  }, []);
+  }, [recaptchaReady]);
 
-  return { getToken };
+  return { getToken, recaptchaReady };
 }
 
 function AuthFormInner({ type }: AuthFormProps) {
@@ -76,7 +101,7 @@ function AuthFormInner({ type }: AuthFormProps) {
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = createClient();
-  const { getToken } = useRecaptcha();
+  const { getToken, recaptchaReady } = useRecaptcha();
 
   const redirectTo = searchParams.get('redirectTo') || '/';
   const strength = type === 'register' ? getPasswordStrength(password) : { label: '', color: '', width: '0%' };
@@ -112,9 +137,14 @@ function AuthFormInner({ type }: AuthFormProps) {
       return;
     }
 
+    // Cek recaptcha siap sebelum submit
+    if (!recaptchaReady) {
+      setError('Sistem keamanan belum siap. Tunggu sebentar lalu coba lagi.');
+      return;
+    }
+
     setIsLoading(true);
     try {
-      // reCAPTCHA v3 verification
       const action = type === 'register' ? 'register' : 'login';
       const token = await getToken(action);
 
@@ -130,7 +160,6 @@ function AuthFormInner({ type }: AuthFormProps) {
         return;
       }
 
-      // Auth
       if (type === 'register') {
         const { error: signUpError } = await supabase.auth.signUp({
           email,
@@ -291,7 +320,7 @@ function AuthFormInner({ type }: AuthFormProps) {
 
         <button
           type="submit"
-          disabled={isLoading || !!oauthLoading || (type === 'register' && passwordMismatch)}
+          disabled={isLoading || !!oauthLoading || (type === 'register' && passwordMismatch) || !recaptchaReady}
           className={`w-full py-3.5 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 active:scale-[0.98] shadow-md disabled:opacity-50 disabled:cursor-not-allowed text-sm uppercase tracking-widest mt-2 ${
             type === 'login'
               ? 'bg-slate-900 hover:bg-slate-800 shadow-slate-900/20'
@@ -300,6 +329,11 @@ function AuthFormInner({ type }: AuthFormProps) {
         >
           {isLoading ? (
             <Loader2 className="w-4 h-4 animate-spin" />
+          ) : !recaptchaReady ? (
+            <>
+              <Loader2 className="w-4 h-4 animate-spin" />
+              Memuat sistem keamanan...
+            </>
           ) : (
             <>
               {type === 'login' ? 'Otentikasi Masuk' : 'Buat Akun'}
