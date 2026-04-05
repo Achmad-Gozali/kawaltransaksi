@@ -18,7 +18,9 @@ export async function verifyRecaptcha(req: Request, res: Response) {
 
     const verifyUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${secretKey}&response=${token}`;
     const response = await fetch(verifyUrl, { method: 'POST' });
-    const data = await response.json();
+    
+    // Ini doang yang ditambahin (: any) biar TypeScript gak rewel
+    const data: any = await response.json();
 
     if (!data.success) {
       res.status(403).json({ success: false, message: 'Verifikasi keamanan gagal. Coba lagi.' });
