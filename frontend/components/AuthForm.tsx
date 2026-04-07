@@ -5,7 +5,7 @@ import { createClient } from '@/lib/supabase-browser';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Loader2, AlertCircle, CheckCircle2, Mail, Lock,
-  UserPlus, ArrowRight, Eye, EyeOff, ShieldCheck, XCircle, Timer, AlertTriangle,
+  UserPlus, ArrowRight, Eye, EyeOff, XCircle, Timer, AlertTriangle,
 } from 'lucide-react';
 
 interface AuthFormProps {
@@ -460,7 +460,7 @@ useEffect(() => {
           <div className="space-y-1.5">
             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Konfirmasi Kata Sandi</label>
             <div className="relative">
-              <ShieldCheck className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none transition-colors ${passwordMatch ? 'text-emerald-500' : passwordMismatch ? 'text-red-400' : 'text-slate-400'}`} />
+              <Lock className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none transition-colors ${passwordMatch ? 'text-emerald-500' : passwordMismatch ? 'text-red-400' : 'text-slate-400'}`} />
               <input
                 type={showConfirmPassword ? 'text' : 'password'} value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Ulangi kata sandi"
