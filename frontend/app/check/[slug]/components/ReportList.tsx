@@ -67,7 +67,7 @@ export default function ReportList({ reports, hasWithdrawn = false }: Props) {
             {reports.map((report) => (
               <div key={report.id} className="bg-white rounded-xl border border-slate-200 px-5 py-4 hover:border-slate-300 transition-colors">
                 <div className="flex gap-4">
-                  <p className="flex-1 text-sm text-slate-600 leading-relaxed" style={{ fontFamily: 'var(--font-serif, Georgia, serif)' }}>
+                  <p className="flex-1 text-sm text-slate-600 leading-relaxed break-all overflow-hidden" style={{ fontFamily: 'var(--font-serif, Georgia, serif)' }}>
                     &quot;{cleanChronology(report.chronology)}&quot;
                   </p>
                   <span className="text-[10px] text-slate-400 font-medium whitespace-nowrap shrink-0 mt-0.5">

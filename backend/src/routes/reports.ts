@@ -13,6 +13,19 @@ const THRESHOLD = {
   PHOTO_RELEVANCE_MIN: 90,
 };
 
+// FIX: Whitelist target_type dan category
+const VALID_TARGET_TYPES = ['phone', 'bank_account', 'ewallet'] as const;
+const VALID_CATEGORIES = [
+  'Jual Beli Online',
+  'Investasi Bodong',
+  'Pinjaman Online',
+  'Phishing / Soceng',
+  'Modus Kurir/APK',
+  'Lainnya',
+] as const;
+
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 function sanitizeText(input: string): string {
   return input.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;').replace(/'/g, '&#x27;').replace(/\//g, '&#x2F;').trim();
@@ -55,6 +68,7 @@ reports.post('/', authMiddleware, async (c) => {
     const body = await c.req.json();
     const supabase = getSupabaseAdmin(c.env);
 
+    // Rate limit: maks 10 laporan per hari
     const oneDayAgo = new Date(Date.now() - 86400000).toISOString();
     const { count: todayCount } = await supabase.from('reports')
       .select('*', { count: 'exact', head: true })
@@ -62,6 +76,21 @@ reports.post('/', authMiddleware, async (c) => {
 
     if ((todayCount ?? 0) >= 10) {
       return c.json({ success: false, message: 'Batas laporan harian tercapai.' }, 429);
+    }
+
+    // FIX: Validasi target_type dan category dengan whitelist
+    if (!body.target_type || !VALID_TARGET_TYPES.includes(body.target_type)) {
+      return c.json({
+        success: false,
+        message: `Jenis laporan tidak valid. Nilai yang diizinkan: ${VALID_TARGET_TYPES.join(', ')}.`,
+      }, 400);
+    }
+
+    if (!body.category || !VALID_CATEGORIES.includes(body.category)) {
+      return c.json({
+        success: false,
+        message: `Kategori tidak valid. Nilai yang diizinkan: ${VALID_CATEGORIES.join(', ')}.`,
+      }, 400);
     }
 
     const cleanNumber = String(body.target_number).replace(/[^0-9]/g, '');
@@ -79,14 +108,37 @@ reports.post('/', authMiddleware, async (c) => {
     let autoStatus: 'pending' | 'verified' = 'pending';
     try {
       const textResult = await analyzeChronologyText(sanitizedChronology, c.env.GROQ_API_KEY);
-      const photoResult = body.ai_photo_result
-        ? ({ ...body.ai_photo_result, summary: '', red_flags: [], scam_category_suggestion: null } as AnalysisResult)
-        : null;
+
+      // FIX: Backend analisis foto sendiri dari URL storage
+      // Sebelumnya percaya body.ai_photo_result dari client — bisa dimanipulasi
+      let photoResult: AnalysisResult | null = null;
+      if (hasPhoto && evidenceUrls[0]) {
+        try {
+          const imgRes = await fetch(evidenceUrls[0]);
+          if (imgRes.ok) {
+            const contentType = imgRes.headers.get('content-type') ?? 'image/jpeg';
+            const buffer = await imgRes.arrayBuffer();
+            const bytes = new Uint8Array(buffer);
+            let binary = '';
+            for (let i = 0; i < bytes.byteLength; i++) {
+              binary += String.fromCharCode(bytes[i]);
+            }
+            const base64 = btoa(binary);
+            // Analisis dilakukan backend, bukan percaya skor dari client
+            photoResult = await analyzeEvidenceImage(base64, contentType, c.env.GROQ_API_KEY);
+          }
+        } catch {
+          // Gagal analisis foto → tetap pending, tidak throw
+          photoResult = null;
+        }
+      }
+
       autoStatus = determineAutoStatus({
         chronologyScore: textResult.chronology_score,
         chronologyLength: sanitizedChronology.length,
         riskLevel: textResult.risk_level,
-        photoResult, hasPhoto,
+        photoResult,
+        hasPhoto,
       });
     } catch { /* tetap pending */ }
 
@@ -111,7 +163,6 @@ reports.post('/', authMiddleware, async (c) => {
       suspect_photo_url: body.suspect_photo_url || null,
     });
 
-    // FIX: Jangan expose detail error database ke client
     if (error) {
       console.error('Insert report error:', error.message);
       return c.json({ success: false, message: 'Gagal menyimpan laporan.' }, 500);
@@ -168,7 +219,12 @@ reports.post('/withdraw', authMiddleware, async (c) => {
   try {
     const userId = c.get('userId');
     const { reportId } = await c.req.json();
-    if (!reportId) return c.json({ success: false, message: 'ID laporan tidak valid.' }, 400);
+
+    // FIX: Validasi UUID reportId
+    if (!reportId || !UUID_REGEX.test(reportId)) {
+      return c.json({ success: false, message: 'ID laporan tidak valid.' }, 400);
+    }
+
     const supabase = getSupabaseAdmin(c.env);
     const { data: report, error: fetchError } = await supabase.from('reports')
       .select('id, status, reporter_id').eq('id', reportId).eq('reporter_id', userId).single();
@@ -188,6 +244,12 @@ reports.put('/:reportId', authMiddleware, async (c) => {
   try {
     const userId = c.get('userId');
     const reportId = c.req.param('reportId');
+
+    // FIX: Validasi UUID reportId
+    if (!UUID_REGEX.test(reportId)) {
+      return c.json({ success: false, message: 'ID laporan tidak valid.' }, 400);
+    }
+
     const body = await c.req.json();
     const supabase = getSupabaseAdmin(c.env);
     const { data: report, error: fetchError } = await supabase.from('reports')

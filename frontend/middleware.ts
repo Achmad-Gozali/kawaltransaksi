@@ -35,6 +35,20 @@ export async function middleware(request: NextRequest) {
     return NextResponse.redirect(url);
   }
 
+  // FIX: Cek role admin khusus untuk /admin
+  // Sebelumnya hanya cek login, user biasa bisa akses halaman admin
+  if (pathname.startsWith('/admin') && user) {
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
+
+    if (profile?.role !== 'admin') {
+      return NextResponse.redirect(new URL('/', request.url));
+    }
+  }
+
   // Redirect kalau sudah login dan akses halaman auth
   if (['/login', '/register'].some(path => pathname.startsWith(path)) && user) {
     const { data: profile } = await supabase
