@@ -92,6 +92,7 @@ function translateError(message: string): string {
 // ── RECAPTCHA ─────────────────────────────────────────────────────────────────
 function useRecaptcha() {
   const [recaptchaReady, setRecaptchaReady] = useState(false);
+
   useEffect(() => {
     if (document.getElementById('recaptcha-script')) {
       if (window.grecaptcha) { window.grecaptcha.ready(() => setRecaptchaReady(true)); }
@@ -119,15 +120,17 @@ function useRecaptcha() {
   return { getToken, recaptchaReady };
 }
 
-// ── COUNTDOWN TIMER HOOK ──────────────────────────────────────────────────────
+// ── COUNTDOWN TIMER ───────────────────────────────────────────────────────────
 function useCountdown(targetMs: number | null) {
-  const [remaining, setRemaining] = useState<number>(0);
+  const [remaining, setRemaining] = useState<number>(() => {
+    if (!targetMs) return 0;
+    return Math.max(0, targetMs - Date.now());
+  });
 
   useEffect(() => {
     const update = () => {
       if (!targetMs) { setRemaining(0); return; }
-      const diff = targetMs - Date.now();
-      setRemaining(Math.max(0, diff));
+      setRemaining(Math.max(0, targetMs - Date.now()));
     };
     update();
     const interval = setInterval(update, 1000);
@@ -136,11 +139,12 @@ function useCountdown(targetMs: number | null) {
 
   const minutes = Math.floor(remaining / 60000);
   const seconds = Math.floor((remaining % 60000) / 1000);
-  const isExpired = remaining === 0;
+  const isExpired = targetMs === null ? true : remaining === 0;
 
   return { minutes, seconds, remaining, isExpired };
 }
 
+// ── OAUTH PROVIDERS ───────────────────────────────────────────────────────────
 const oauthProviders = [
   {
     id: 'google', label: 'Google',
@@ -170,13 +174,11 @@ function AuthFormInner({ type }: AuthFormProps) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
   const [passwordFocused, setPasswordFocused] = useState(false);
-
-  // ── Lock state ──────────────────────────────────────────────────────────────
   const [lockedUntilMs, setLockedUntilMs] = useState<number | null>(null);
+
   const { minutes, seconds, isExpired } = useCountdown(lockedUntilMs);
   const isLocked = lockedUntilMs !== null && !isExpired;
 
-  // Reset lock saat expired
   useEffect(() => {
     if (isExpired && lockedUntilMs !== null) {
       setLockedUntilMs(null);
@@ -188,17 +190,14 @@ function AuthFormInner({ type }: AuthFormProps) {
   const searchParams = useSearchParams();
   const supabase = createClient();
   const { getToken, recaptchaReady } = useRecaptcha();
-
   const redirectTo = searchParams.get('redirectTo') || '/';
+
   const strength = type === 'register' ? getPasswordStrength(password) : { label: '', color: '', width: '0%' };
   const passwordChecks = type === 'register' ? getPasswordChecks(password) : [];
   const passwordMatch = confirmPassword.length > 0 && password === confirmPassword;
   const passwordMismatch = confirmPassword.length > 0 && password !== confirmPassword;
-
-  const emailValidation = type === 'register' && email.includes('@')
-    ? validateEmail(email) : { valid: true, message: '' };
+  const emailValidation = type === 'register' && email.includes('@') ? validateEmail(email) : { valid: true, message: '' };
   const emailInvalid = type === 'register' && email.includes('@') && !emailValidation.valid;
-
   const isRegisterInvalid = type === 'register' && (
     emailInvalid || !isPasswordValid(password) || passwordMismatch || fullName.trim().length < 2
   );
@@ -214,30 +213,30 @@ function AuthFormInner({ type }: AuthFormProps) {
     if (error) { setError(`Gagal masuk dengan ${provider}. Coba lagi.`); setOauthLoading(null); }
   };
 
-const handleSubmit = async (e: React.FormEvent) => {
-  e.preventDefault();
-  
-  if (isLocked) return;
-  
-  setError(null);
-  setSuccess(null);
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
 
-  const sanitizedEmail = email.trim().toLowerCase();
-  const sanitizedFullName = fullName.trim().replace(/[<>'"]/g, '');
+    if (isLocked) return;
 
-  if (type === 'register') {
-    if (!sanitizedFullName || sanitizedFullName.length < 2) {
-      setError('Nama lengkap minimal 2 karakter.'); return;
+    setError(null);
+    setSuccess(null);
+
+    const sanitizedEmail = email.trim().toLowerCase();
+    const sanitizedFullName = fullName.trim().replace(/[<>'"]/g, '');
+
+    if (type === 'register') {
+      if (!sanitizedFullName || sanitizedFullName.length < 2) {
+        setError('Nama lengkap minimal 2 karakter.'); return;
+      }
+      const emailCheck = validateEmail(sanitizedEmail);
+      if (!emailCheck.valid) { setError(emailCheck.message); return; }
+      if (!isPasswordValid(password)) {
+        setError('Kata sandi tidak memenuhi persyaratan keamanan.'); return;
+      }
+      if (password !== confirmPassword) {
+        setError('Kata sandi dan konfirmasi tidak cocok.'); return;
+      }
     }
-    const emailCheck = validateEmail(sanitizedEmail);
-    if (!emailCheck.valid) { setError(emailCheck.message); return; }
-    if (!isPasswordValid(password)) {
-      setError('Kata sandi tidak memenuhi persyaratan keamanan.'); return;
-    }
-    if (password !== confirmPassword) {
-      setError('Kata sandi dan konfirmasi tidak cocok.'); return;
-    }
-  }
 
     if (!recaptchaReady) {
       setError('Sistem keamanan belum siap. Tunggu sebentar lalu coba lagi.'); return;
@@ -248,7 +247,6 @@ const handleSubmit = async (e: React.FormEvent) => {
       const action = type === 'register' ? 'register' : 'login';
       const token = await getToken(action);
 
-      // ── Verifikasi reCAPTCHA ──────────────────────────────────────────────
       const verifyRes = await fetch(`${BACKEND_URL}/api/auth/verify-recaptcha`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -264,7 +262,6 @@ const handleSubmit = async (e: React.FormEvent) => {
       }
 
       if (type === 'register') {
-        // ── Register tetap lewat Supabase langsung ──────────────────────────
         const normalizedEmail = normalizeEmail(sanitizedEmail);
         const { error: signUpError } = await supabase.auth.signUp({
           email: normalizedEmail, password,
@@ -274,9 +271,7 @@ const handleSubmit = async (e: React.FormEvent) => {
         setSuccess('Akun berhasil dibuat! Mengalihkan...');
         router.refresh();
         setTimeout(() => router.push(redirectTo), 1500);
-
       } else {
-        // ── Login lewat backend — dengan rate limiting ──────────────────────
         const loginRes = await fetch(`${BACKEND_URL}/api/auth/login`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -286,18 +281,15 @@ const handleSubmit = async (e: React.FormEvent) => {
         const loginData = await loginRes.json();
 
         if (!loginData.success) {
-          // Akun dikunci
           if (loginData.locked && loginData.locked_until) {
             setLockedUntilMs(new Date(loginData.locked_until).getTime());
             setError(loginData.message);
             return;
           }
-          // Password salah biasa
           setError(loginData.message || 'Email atau kata sandi salah.');
           return;
         }
 
-        // ── Login berhasil — set session di browser ─────────────────────────
         if (loginData.session) {
           await supabase.auth.setSession({
             access_token: loginData.session.access_token,
@@ -319,20 +311,13 @@ const handleSubmit = async (e: React.FormEvent) => {
 
   return (
     <div className="w-full">
-      {/* ── Error banner ── */}
       {error && (
         <div className={`mb-5 p-3.5 border rounded-xl flex items-start gap-3 shadow-sm ${
-          isLocked
-            ? 'bg-amber-50 border-amber-200 text-amber-700'
-            : 'bg-red-50 border-red-200 text-red-700'
+          isLocked ? 'bg-amber-50 border-amber-200 text-amber-700' : 'bg-red-50 border-red-200 text-red-700'
         }`}>
-          {isLocked
-            ? <Timer className="w-4 h-4 shrink-0 mt-0.5" />
-            : <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />
-          }
+          {isLocked ? <Timer className="w-4 h-4 shrink-0 mt-0.5" /> : <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />}
           <div className="flex-1">
             <p className="text-xs font-semibold leading-relaxed">{error}</p>
-            {/* Countdown timer */}
             {isLocked && (
               <div className="mt-2 flex items-center gap-2">
                 <div className="flex items-center gap-1 bg-amber-100 px-2.5 py-1 rounded-lg">
@@ -361,8 +346,10 @@ const handleSubmit = async (e: React.FormEvent) => {
             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Nama Lengkap</label>
             <div className="relative">
               <UserPlus className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-              <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)} placeholder="Nama lengkap Anda"
-                className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all text-sm font-medium text-slate-900 placeholder:text-slate-400 shadow-sm" required />
+              <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)}
+                placeholder="Nama lengkap Anda"
+                className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all text-sm font-medium text-slate-900 placeholder:text-slate-400 shadow-sm"
+                required />
             </div>
           </div>
         )}
@@ -371,7 +358,8 @@ const handleSubmit = async (e: React.FormEvent) => {
           <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Alamat Email</label>
           <div className="relative">
             <Mail className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none transition-colors ${emailInvalid ? 'text-red-400' : 'text-slate-400'}`} />
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)} placeholder="email@gmail.com"
+            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+              placeholder="email@gmail.com"
               className={`w-full pl-10 pr-4 py-3 bg-white border rounded-xl outline-none transition-all text-sm font-medium text-slate-900 placeholder:text-slate-400 shadow-sm focus:ring-2 ${emailInvalid ? 'border-red-300 focus:border-red-400 focus:ring-red-500/10' : 'border-slate-200 focus:border-emerald-500 focus:ring-emerald-500/10'}`}
               required autoComplete="email" disabled={isLocked} />
           </div>
@@ -381,18 +369,25 @@ const handleSubmit = async (e: React.FormEvent) => {
               <p className="text-[11px] font-semibold text-red-600 leading-relaxed">{emailValidation.message}</p>
             </div>
           )}
-          {type === 'register' && <p className="text-[10px] text-slate-400 font-medium ml-1">Gunakan email dari Gmail, Yahoo, Outlook, iCloud, atau ProtonMail.</p>}
+          {type === 'register' && (
+            <p className="text-[10px] text-slate-400 font-medium ml-1">
+              Gunakan email dari Gmail, Yahoo, Outlook, iCloud, atau ProtonMail.
+            </p>
+          )}
         </div>
 
         <div className="space-y-1.5">
           <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Kata Sandi</label>
           <div className="relative">
             <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-            <input type={showPassword ? 'text' : 'password'} value={password} onChange={(e) => setPassword(e.target.value)}
+            <input
+              type={showPassword ? 'text' : 'password'} value={password}
+              onChange={(e) => setPassword(e.target.value)}
               onFocus={() => setPasswordFocused(true)} onBlur={() => setPasswordFocused(false)}
               placeholder={type === 'register' ? 'Min. 8 karakter, huruf besar, angka, simbol' : '••••••••'}
               className="w-full pl-10 pr-11 py-3 bg-white border border-slate-200 rounded-xl focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all text-sm font-medium text-slate-900 placeholder:text-slate-400 shadow-sm"
-              required minLength={type === 'register' ? 8 : 6} autoComplete={type === 'login' ? 'current-password' : 'new-password'}
+              required minLength={type === 'register' ? 8 : 6}
+              autoComplete={type === 'login' ? 'current-password' : 'new-password'}
               disabled={isLocked} />
             <button type="button" onClick={() => setShowPassword(!showPassword)}
               className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-0.5" tabIndex={-1}>
@@ -404,7 +399,9 @@ const handleSubmit = async (e: React.FormEvent) => {
               <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
                 <div className={`h-full rounded-full transition-all duration-300 ${strength.color}`} style={{ width: strength.width }} />
               </div>
-              <p className="text-[10px] font-semibold text-slate-400">Kekuatan: <span className="text-slate-600">{strength.label}</span></p>
+              <p className="text-[10px] font-semibold text-slate-400">
+                Kekuatan: <span className="text-slate-600">{strength.label}</span>
+              </p>
             </div>
           )}
           {type === 'register' && (passwordFocused || password.length > 0) && (
@@ -412,8 +409,12 @@ const handleSubmit = async (e: React.FormEvent) => {
               <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Persyaratan kata sandi:</p>
               {passwordChecks.map((check, i) => (
                 <div key={i} className="flex items-center gap-2">
-                  {check.passed ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" /> : <XCircle className="w-3.5 h-3.5 text-slate-300 shrink-0" />}
-                  <span className={`text-[11px] font-medium ${check.passed ? 'text-emerald-700' : 'text-slate-400'}`}>{check.label}</span>
+                  {check.passed
+                    ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                    : <XCircle className="w-3.5 h-3.5 text-slate-300 shrink-0" />}
+                  <span className={`text-[11px] font-medium ${check.passed ? 'text-emerald-700' : 'text-slate-400'}`}>
+                    {check.label}
+                  </span>
                 </div>
               ))}
             </div>
@@ -425,7 +426,9 @@ const handleSubmit = async (e: React.FormEvent) => {
             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Konfirmasi Kata Sandi</label>
             <div className="relative">
               <ShieldCheck className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none transition-colors ${passwordMatch ? 'text-emerald-500' : passwordMismatch ? 'text-red-400' : 'text-slate-400'}`} />
-              <input type={showConfirmPassword ? 'text' : 'password'} value={confirmPassword} onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Ulangi kata sandi"
+              <input
+                type={showConfirmPassword ? 'text' : 'password'} value={confirmPassword}
+                onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Ulangi kata sandi"
                 className={`w-full pl-10 pr-11 py-3 bg-white border rounded-xl outline-none transition-all text-sm font-medium text-slate-900 placeholder:text-slate-400 shadow-sm focus:ring-2 ${passwordMatch ? 'border-emerald-400 focus:border-emerald-500 focus:ring-emerald-500/10' : passwordMismatch ? 'border-red-300 focus:border-red-400 focus:ring-red-500/10' : 'border-slate-200 focus:border-emerald-500 focus:ring-emerald-500/10'}`}
                 required autoComplete="new-password" />
               <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)}
@@ -433,8 +436,16 @@ const handleSubmit = async (e: React.FormEvent) => {
                 {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
-            {passwordMatch && <p className="text-[10px] font-semibold text-emerald-600 flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Kata sandi cocok</p>}
-            {passwordMismatch && <p className="text-[10px] font-semibold text-red-500 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> Kata sandi tidak cocok</p>}
+            {passwordMatch && (
+              <p className="text-[10px] font-semibold text-emerald-600 flex items-center gap-1">
+                <CheckCircle2 className="w-3 h-3" /> Kata sandi cocok
+              </p>
+            )}
+            {passwordMismatch && (
+              <p className="text-[10px] font-semibold text-red-500 flex items-center gap-1">
+                <AlertCircle className="w-3 h-3" /> Kata sandi tidak cocok
+              </p>
+            )}
           </div>
         )}
 
@@ -471,7 +482,8 @@ const handleSubmit = async (e: React.FormEvent) => {
 
       <div className="space-y-2.5">
         {oauthProviders.map((p) => (
-          <button key={p.id} type="button" onClick={() => handleOAuthLogin(p.id)} disabled={!!oauthLoading || isLoading || isLocked}
+          <button key={p.id} type="button" onClick={() => handleOAuthLogin(p.id)}
+            disabled={!!oauthLoading || isLoading || isLocked}
             className="w-full flex items-center justify-center gap-3 py-3 px-4 bg-white border border-slate-200 rounded-xl font-semibold text-sm text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm active:scale-[0.98] disabled:opacity-50">
             {oauthLoading === p.id ? <Loader2 className="w-4 h-4 animate-spin" /> : p.icon}
             Lanjutkan dengan {p.label}
