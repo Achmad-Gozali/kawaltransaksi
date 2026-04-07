@@ -1,5 +1,6 @@
 import { createMiddleware } from 'hono/factory';
 import { getSupabaseAdmin } from '../lib/supabase';
+import type { Env } from '../types';
 
 export const authMiddleware = createMiddleware<{ Bindings: Env; Variables: { userId: string; userEmail: string } }>(
   async (c, next) => {

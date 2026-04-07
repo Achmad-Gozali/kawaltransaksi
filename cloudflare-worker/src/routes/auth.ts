@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { getSupabaseAdmin, getSupabaseClient } from '../lib/supabase';
+import type { Env } from '../types';
 
 const auth = new Hono<{ Bindings: Env }>();
 
@@ -16,9 +17,9 @@ auth.post('/verify-recaptcha', async (c) => {
     const response = await fetch(verifyUrl, { method: 'POST' });
     const data = await response.json() as { success: boolean; score: number };
 
-    if (!data.success) return c.json({ success: false, message: 'Verifikasi keamanan gagal.' }, 403);
+    if (!data.success) return c.json({ success: false, message: 'Verifikasi reCAPTCHA gagal.' }, 400);
 
-    const threshold = 0.5;
+    const threshold = 0.3;
     if (data.score < threshold) return c.json({ success: false, message: 'Terdeteksi aktivitas mencurigakan.' }, 403);
 
     return c.json({ success: true, score: data.score });
@@ -30,6 +31,12 @@ auth.post('/verify-recaptcha', async (c) => {
 // ── POST /api/auth/login ──────────────────────────────────────────────────────
 auth.post('/login', async (c) => {
   try {
+    console.log('ENV CHECK:', {
+      url: c.env.SUPABASE_URL,
+      hasAnon: !!c.env.SUPABASE_ANON_KEY,
+      hasService: !!c.env.SUPABASE_SERVICE_ROLE_KEY,
+    });
+
     const { email, password } = await c.req.json();
     if (!email || !password) {
       return c.json({ success: false, message: 'Email dan kata sandi wajib diisi.' }, 400);
@@ -37,55 +44,48 @@ auth.post('/login', async (c) => {
 
     const normalizedEmail = email.trim().toLowerCase();
     const supabaseAdmin = getSupabaseAdmin(c.env);
-
-    // Cari user
-    const { data: authUsers } = await supabaseAdmin.auth.admin.listUsers();
-    const authUser = authUsers?.users?.find((u: { email?: string }) => u.email?.toLowerCase() === normalizedEmail);
-
-    if (!authUser) {
-      return c.json({ success: false, message: 'Email atau kata sandi salah.', remaining_attempts: null }, 401);
-    }
-
-    // Cek profile — lock status + banned
-    const { data: profile } = await supabaseAdmin
-      .from('profiles')
-      .select('failed_attempts, locked_until, is_banned')
-      .eq('id', authUser.id)
-      .single();
-
-    if (profile?.is_banned) {
-      return c.json({ success: false, message: 'Akun Anda telah dinonaktifkan. Hubungi admin.' }, 403);
-    }
-
-    // Cek locked
-    if (profile?.locked_until) {
-      const lockedUntil = new Date(profile.locked_until);
-      const now = new Date();
-      if (lockedUntil > now) {
-        const remainingMs = lockedUntil.getTime() - now.getTime();
-        const lockedUntilTime = lockedUntil.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
-        return c.json({
-          success: false,
-          message: `Akun dikunci karena terlalu banyak percobaan gagal. Coba lagi pukul ${lockedUntilTime}.`,
-          locked: true,
-          locked_until: profile.locked_until,
-          remaining_ms: remainingMs,
-        }, 429);
-      } else {
-        // Lock expired — reset
-        await supabaseAdmin.from('profiles').update({ failed_attempts: 0, locked_until: null }).eq('id', authUser.id);
-      }
-    }
-
-    // Coba login
     const supabaseClient = getSupabaseClient(c.env);
+
     const { data: signInData, error: signInError } = await supabaseClient.auth.signInWithPassword({
       email: normalizedEmail,
       password,
     });
 
     if (signInError) {
-      // Login gagal — increment counter
+      const { data: { users } } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
+      const authUser = users?.find((u: { email?: string }) => u.email?.toLowerCase() === normalizedEmail);
+
+      if (!authUser) {
+        return c.json({ success: false, message: 'Email atau kata sandi salah.' }, 401);
+      }
+
+      const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('failed_attempts, locked_until, is_banned')
+        .eq('id', authUser.id)
+        .single();
+
+      if (profile?.is_banned) {
+        return c.json({ success: false, message: 'Akun Anda telah dinonaktifkan. Hubungi admin.' }, 403);
+      }
+
+      if (profile?.locked_until) {
+        const lockedUntil = new Date(profile.locked_until);
+        if (lockedUntil > new Date()) {
+          const remainingMs = lockedUntil.getTime() - Date.now();
+          const lockedUntilTime = lockedUntil.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
+          return c.json({
+            success: false,
+            message: `Akun dikunci. Coba lagi pukul ${lockedUntilTime}.`,
+            locked: true,
+            locked_until: profile.locked_until,
+            remaining_ms: remainingMs,
+          }, 429);
+        } else {
+          await supabaseAdmin.from('profiles').update({ failed_attempts: 0, locked_until: null }).eq('id', authUser.id);
+        }
+      }
+
       const currentAttempts = (profile?.failed_attempts ?? 0) + 1;
       const remaining = MAX_ATTEMPTS - currentAttempts;
 
@@ -99,29 +99,50 @@ auth.post('/login', async (c) => {
         const lockedUntilTime = lockedUntil.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' });
         return c.json({
           success: false,
-          message: `Akun dikunci selama ${LOCK_DURATION_MINUTES} menit karena terlalu banyak percobaan gagal. Coba lagi pukul ${lockedUntilTime}.`,
+          message: `Akun dikunci selama ${LOCK_DURATION_MINUTES} menit. Coba lagi pukul ${lockedUntilTime}.`,
           locked: true,
           locked_until: lockedUntil.toISOString(),
           remaining_ms: LOCK_DURATION_MINUTES * 60 * 1000,
         }, 429);
-      } else {
-        await supabaseAdmin.from('profiles').update({ failed_attempts: currentAttempts }).eq('id', authUser.id);
-        return c.json({
-          success: false,
-          message: remaining === 1
-            ? 'Kata sandi salah. Tersisa 1 percobaan sebelum akun dikunci.'
-            : `Kata sandi salah. Tersisa ${remaining} percobaan lagi.`,
-          locked: false,
-          remaining_attempts: remaining,
-        }, 401);
       }
+
+      await supabaseAdmin.from('profiles').update({ failed_attempts: currentAttempts }).eq('id', authUser.id);
+      return c.json({
+        success: false,
+        message: remaining === 1
+          ? 'Kata sandi salah. Tersisa 1 percobaan sebelum akun dikunci.'
+          : `Kata sandi salah. Tersisa ${remaining} percobaan lagi.`,
+        locked: false,
+        remaining_attempts: remaining,
+      }, 401);
     }
 
-    // Login berhasil — reset counter
-    await supabaseAdmin.from('profiles').update({ failed_attempts: 0, locked_until: null }).eq('id', authUser.id);
+    if (signInData.user) {
+      const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('is_banned')
+        .eq('id', signInData.user.id)
+        .single();
 
-    return c.json({ success: true, message: 'Login berhasil.', session: signInData.session, user: signInData.user });
-  } catch {
+      if (profile?.is_banned) {
+        await supabaseClient.auth.signOut();
+        return c.json({ success: false, message: 'Akun Anda telah dinonaktifkan. Hubungi admin.' }, 403);
+      }
+
+      await supabaseAdmin.from('profiles')
+        .update({ failed_attempts: 0, locked_until: null })
+        .eq('id', signInData.user.id);
+    }
+
+    return c.json({
+      success: true,
+      message: 'Login berhasil.',
+      session: signInData.session,
+      user: signInData.user,
+    });
+
+  } catch (err) {
+    console.error('Login error:', err);
     return c.json({ success: false, message: 'Terjadi kesalahan server.' }, 500);
   }
 });

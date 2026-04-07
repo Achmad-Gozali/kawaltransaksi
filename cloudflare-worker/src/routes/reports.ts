@@ -2,6 +2,7 @@ import { Hono } from 'hono';
 import { authMiddleware } from '../middleware/auth';
 import { getSupabaseAdmin } from '../lib/supabase';
 import { analyzeChronologyText, analyzeEvidenceImage, AnalysisResult } from '../lib/groq';
+import type { Env } from '../types';
 
 const reports = new Hono<{ Bindings: Env; Variables: { userId: string; userEmail: string } }>();
 
@@ -12,7 +13,6 @@ const THRESHOLD = {
   PHOTO_RELEVANCE_MIN: 90,
 };
 
-// ── Sanitize helpers ──────────────────────────────────────────────────────────
 function sanitizeText(input: string): string {
   return input.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;').replace(/'/g, '&#x27;').replace(/\//g, '&#x2F;').trim();
@@ -48,21 +48,20 @@ function determineAutoStatus(params: {
   return 'pending';
 }
 
-// ── POST /api/reports — submit laporan ───────────────────────────────────────
+// ── POST /api/reports ─────────────────────────────────────────────────────────
 reports.post('/', authMiddleware, async (c) => {
   try {
     const userId = c.get('userId');
     const body = await c.req.json();
     const supabase = getSupabaseAdmin(c.env);
 
-    // Rate limit: max 10 laporan per hari
     const oneDayAgo = new Date(Date.now() - 86400000).toISOString();
     const { count: todayCount } = await supabase.from('reports')
       .select('*', { count: 'exact', head: true })
       .eq('reporter_id', userId).gte('created_at', oneDayAgo);
 
     if ((todayCount ?? 0) >= 10) {
-      return c.json({ success: false, message: 'Batas laporan harian tercapai. Maksimal 10 laporan per hari.' }, 429);
+      return c.json({ success: false, message: 'Batas laporan harian tercapai.' }, 429);
     }
 
     const cleanNumber = String(body.target_number).replace(/[^0-9]/g, '');
@@ -77,7 +76,6 @@ reports.post('/', authMiddleware, async (c) => {
       ? body.evidence_urls : body.evidence_url ? [body.evidence_url] : [];
     const hasPhoto = evidenceUrls.length > 0;
 
-    // Auto-verify dengan AI
     let autoStatus: 'pending' | 'verified' = 'pending';
     try {
       const textResult = await analyzeChronologyText(sanitizedChronology, c.env.GROQ_API_KEY);
@@ -114,7 +112,6 @@ reports.post('/', authMiddleware, async (c) => {
     });
 
     if (error) return c.json({ success: false, message: `Gagal menyimpan laporan: ${error.message}` }, 500);
-
     return c.json({ success: true, slug: cleanNumber, status: autoStatus }, 201);
   } catch {
     return c.json({ success: false, message: 'Terjadi kesalahan server.' }, 500);
@@ -126,19 +123,24 @@ reports.post('/analyze/image', authMiddleware, async (c) => {
   try {
     const formData = await c.req.formData();
     const file = formData.get('file') as File | null;
-
     if (!file) return c.json({ success: false, message: 'File tidak ditemukan.' }, 400);
-    if (file.size > 5 * 1024 * 1024) return c.json({ success: false, message: 'Ukuran file melebihi batas 5MB.' }, 400);
+    if (file.size > 5 * 1024 * 1024) return c.json({ success: false, message: 'Ukuran file melebihi 5MB.' }, 400);
     if (!['image/jpeg', 'image/png'].includes(file.type)) {
       return c.json({ success: false, message: 'Tipe file tidak didukung.' }, 400);
     }
-
     const buffer = await file.arrayBuffer();
-    const base64 = btoa(String.fromCharCode(...new Uint8Array(buffer)));
+    const bytes = new Uint8Array(buffer);
+    let binary = '';
+    for (let i = 0; i < bytes.byteLength; i++) {
+      binary += String.fromCharCode(bytes[i]);
+    }
+    const base64 = btoa(binary);
+    console.log('GROQ KEY exists:', !!c.env.GROQ_API_KEY, 'length:', c.env.GROQ_API_KEY?.length);
     const result = await analyzeEvidenceImage(base64, file.type, c.env.GROQ_API_KEY);
-
+    console.log('GROQ result:', JSON.stringify(result));
     return c.json({ success: true, data: result });
-  } catch {
+  } catch (err) {
+    console.error('Analyze image error:', err);
     return c.json({ success: false, message: 'Sistem analisis sedang tidak tersedia.' }, 500);
   }
 });
@@ -164,19 +166,15 @@ reports.post('/withdraw', authMiddleware, async (c) => {
     const userId = c.get('userId');
     const { reportId } = await c.req.json();
     if (!reportId) return c.json({ success: false, message: 'ID laporan tidak valid.' }, 400);
-
     const supabase = getSupabaseAdmin(c.env);
     const { data: report, error: fetchError } = await supabase.from('reports')
       .select('id, status, reporter_id').eq('id', reportId).eq('reporter_id', userId).single();
-
     if (fetchError || !report) return c.json({ success: false, message: 'Laporan tidak ditemukan.' }, 404);
-    if (report.status === 'withdrawn') return c.json({ success: false, message: 'Laporan ini sudah dalam status revisi.' }, 400);
-
+    if (report.status === 'withdrawn') return c.json({ success: false, message: 'Laporan sudah dalam status revisi.' }, 400);
     const { error } = await supabase.from('reports').update({ status: 'withdrawn' })
       .eq('id', reportId).eq('reporter_id', userId);
     if (error) throw error;
-
-    return c.json({ success: true, message: 'Laporan berhasil ditarik untuk direvisi.' });
+    return c.json({ success: true, message: 'Laporan berhasil ditarik.' });
   } catch {
     return c.json({ success: false, message: 'Terjadi kesalahan server.' }, 500);
   }
@@ -189,15 +187,12 @@ reports.put('/:reportId', authMiddleware, async (c) => {
     const reportId = c.req.param('reportId');
     const body = await c.req.json();
     const supabase = getSupabaseAdmin(c.env);
-
     const { data: report, error: fetchError } = await supabase.from('reports')
       .select('id, status, reporter_id').eq('id', reportId).eq('reporter_id', userId).single();
-
     if (fetchError || !report) return c.json({ success: false, message: 'Laporan tidak ditemukan.' }, 404);
     if (report.status !== 'withdrawn') {
-      return c.json({ success: false, message: 'Hanya laporan berstatus "Sedang Direvisi" yang dapat diedit.' }, 400);
+      return c.json({ success: false, message: 'Hanya laporan "Sedang Direvisi" yang dapat diedit.' }, 400);
     }
-
     const sanitizedData = {
       target_name: body.target_name ? sanitizeText(String(body.target_name)) : null,
       category: body.category,
@@ -216,11 +211,9 @@ reports.put('/:reportId', authMiddleware, async (c) => {
       suspect_photo_url: body.suspect_photo_url || null,
       status: 'pending',
     };
-
     const { error } = await supabase.from('reports').update(sanitizedData)
       .eq('id', reportId).eq('reporter_id', userId);
     if (error) throw error;
-
     return c.json({ success: true, message: 'Laporan berhasil diperbarui.' });
   } catch {
     return c.json({ success: false, message: 'Terjadi kesalahan server.' }, 500);
