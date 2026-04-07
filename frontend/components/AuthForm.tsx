@@ -214,27 +214,30 @@ function AuthFormInner({ type }: AuthFormProps) {
     if (error) { setError(`Gagal masuk dengan ${provider}. Coba lagi.`); setOauthLoading(null); }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError(null);
-    setSuccess(null);
+const handleSubmit = async (e: React.FormEvent) => {
+  e.preventDefault();
+  
+  if (isLocked) return;
+  
+  setError(null);
+  setSuccess(null);
 
-    const sanitizedEmail = email.trim().toLowerCase();
-    const sanitizedFullName = fullName.trim().replace(/[<>'"]/g, '');
+  const sanitizedEmail = email.trim().toLowerCase();
+  const sanitizedFullName = fullName.trim().replace(/[<>'"]/g, '');
 
-    if (type === 'register') {
-      if (!sanitizedFullName || sanitizedFullName.length < 2) {
-        setError('Nama lengkap minimal 2 karakter.'); return;
-      }
-      const emailCheck = validateEmail(sanitizedEmail);
-      if (!emailCheck.valid) { setError(emailCheck.message); return; }
-      if (!isPasswordValid(password)) {
-        setError('Kata sandi tidak memenuhi persyaratan keamanan.'); return;
-      }
-      if (password !== confirmPassword) {
-        setError('Kata sandi dan konfirmasi tidak cocok.'); return;
-      }
+  if (type === 'register') {
+    if (!sanitizedFullName || sanitizedFullName.length < 2) {
+      setError('Nama lengkap minimal 2 karakter.'); return;
     }
+    const emailCheck = validateEmail(sanitizedEmail);
+    if (!emailCheck.valid) { setError(emailCheck.message); return; }
+    if (!isPasswordValid(password)) {
+      setError('Kata sandi tidak memenuhi persyaratan keamanan.'); return;
+    }
+    if (password !== confirmPassword) {
+      setError('Kata sandi dan konfirmasi tidak cocok.'); return;
+    }
+  }
 
     if (!recaptchaReady) {
       setError('Sistem keamanan belum siap. Tunggu sebentar lalu coba lagi.'); return;
