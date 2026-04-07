@@ -15,11 +15,6 @@ export default function NotFound() {
           <p className="text-[120px] sm:text-[180px] font-black tracking-tighter leading-none text-slate-100 uppercase">
             404
           </p>
-          <div className="absolute inset-0 flex items-center justify-center">
-            <p className="text-[120px] sm:text-[180px] font-black tracking-tighter leading-none text-slate-900 uppercase opacity-[0.06]">
-              404
-            </p>
-          </div>
           <div className="absolute inset-0 flex flex-col items-center justify-center gap-2">
             <span className="inline-flex items-center gap-2 px-3 py-1 bg-red-50 border border-red-200 rounded-full text-[10px] font-bold text-red-600 uppercase tracking-widest">
               <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse" />
@@ -63,12 +58,12 @@ export default function NotFound() {
         <div className="w-px h-10 bg-slate-200 mx-auto mb-8" />
 
         {/* Back link */}
-        <button
-          onClick={() => window.history.back()}
+        <Link
+          href="/"
           className="inline-flex items-center gap-2 text-xs text-slate-400 hover:text-slate-700 font-medium transition-colors uppercase tracking-widest"
         >
-          <ArrowLeft className="w-3.5 h-3.5" /> Kembali ke halaman sebelumnya
-        </button>
+          <ArrowLeft className="w-3.5 h-3.5" /> Kembali ke Beranda
+        </Link>
 
       </div>
 
