@@ -31,11 +31,9 @@ function parseGroqJson<T>(content: string): T | null {
 
 export async function analyzeEvidenceImage(
   base64Image: string,
-  mimeType: string
+  mimeType: string,
+  apiKey: string
 ): Promise<AnalysisResult> {
-  const apiKey = process.env.GROQ_API_KEY;
-  if (!apiKey) throw new Error('GROQ_API_KEY tidak ditemukan');
-
   const response = await fetch(GROQ_API_URL, {
     method: 'POST',
     headers: {
@@ -77,10 +75,7 @@ export async function analyzeEvidenceImage(
               type: 'image_url',
               image_url: { url: `data:${mimeType};base64,${base64Image}` },
             },
-            {
-              type: 'text',
-              text: 'lakukan audit forensik pada screenshot ini.',
-            },
+            { type: 'text', text: 'lakukan audit forensik pada screenshot ini.' },
           ],
         },
       ],
@@ -92,23 +87,21 @@ export async function analyzeEvidenceImage(
   const data = await response.json() as { choices?: { message?: { content?: string } }[] };
   const content = data.choices?.[0]?.message?.content ?? '';
 
-  return (
-    parseGroqJson<AnalysisResult>(content) ?? {
-      authenticity_score: 40,
-      relevance_score: 0,
-      has_concrete_evidence: false,
-      is_likely_authentic: false,
-      summary: 'gagal memproses analisis gambar.',
-      red_flags: ['analisis tidak dapat diselesaikan'],
-      scam_category_suggestion: null,
-    }
-  );
+  return parseGroqJson<AnalysisResult>(content) ?? {
+    authenticity_score: 40,
+    relevance_score: 0,
+    has_concrete_evidence: false,
+    is_likely_authentic: false,
+    summary: 'gagal memproses analisis gambar.',
+    red_flags: ['analisis tidak dapat diselesaikan'],
+    scam_category_suggestion: null,
+  };
 }
 
-export async function analyzeChronologyText(chronology: string): Promise<TextAnalysisResult> {
-  const apiKey = process.env.GROQ_API_KEY;
-  if (!apiKey) throw new Error('GROQ_API_KEY tidak ditemukan');
-
+export async function analyzeChronologyText(
+  chronology: string,
+  apiKey: string
+): Promise<TextAnalysisResult> {
   const response = await fetch(GROQ_API_URL, {
     method: 'POST',
     headers: {
@@ -128,13 +121,6 @@ export async function analyzeChronologyText(chronology: string): Promise<TextAna
 - "high": modus jelas, ada nominal kerugian, ada identitas penipu, ada platform transaksi.
 - "medium": modus cukup jelas tapi beberapa detail masih kurang.
 - "low": kronologi sangat singkat atau tidak ada indikasi penipuan yang kuat.
-
-## panduan penilaian chronology_score (0-100):
-- +30 poin: menyebut nominal kerugian secara spesifik
-- +25 poin: menyebut platform transaksi
-- +20 poin: menyebut identitas penipu
-- +15 poin: urutan kejadian logis
-- +10 poin: menyebut waktu/tanggal kejadian
 
 ## format output json:
 {
@@ -157,12 +143,10 @@ export async function analyzeChronologyText(chronology: string): Promise<TextAna
   const data = await response.json() as { choices?: { message?: { content?: string } }[] };
   const content = data.choices?.[0]?.message?.content ?? '';
 
-  return (
-    parseGroqJson<TextAnalysisResult>(content) ?? {
-      risk_level: 'low',
-      chronology_score: 0,
-      analysis: 'gagal memproses teks.',
-      suggested_category: null,
-    }
-  );
+  return parseGroqJson<TextAnalysisResult>(content) ?? {
+    risk_level: 'low',
+    chronology_score: 0,
+    analysis: 'gagal memproses teks.',
+    suggested_category: null,
+  };
 }

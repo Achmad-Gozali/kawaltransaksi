@@ -1,66 +1,33 @@
-import express from 'express';
-import cors from 'cors';
-import helmet from 'helmet';
-import dotenv from 'dotenv';
-import { generalLimiter } from './middleware/rateLimiter';
-import reportRoutes from './routes/reports';
-import adminRoutes from './routes/admin';
+import { Hono } from 'hono';
+import { cors } from 'hono/cors';
 import authRoutes from './routes/auth';
+import reportsRoutes from './routes/reports';
+import adminRoutes from './routes/admin';
+import type { Env } from './types';
 
-dotenv.config();
+const app = new Hono<{ Bindings: Env }>();
 
-const app = express();
-const PORT = process.env.PORT || 5000;
-
-// ── SECURITY ──────────────────────────────────────────────────────────────────
-app.use(helmet());
-app.use(cors({
-  origin: [
-    'http://localhost:3000', 
-    'http://127.0.0.1:3000', 
-    'https://kawaltransaksi.vercel.app', // Link Vercel lu
-    process.env.FRONTEND_URL || ''
-  ].filter(Boolean),
-  methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'], // Tambahin OPTIONS biar aman
-  allowedHeaders: ['Content-Type', 'Authorization'],
+app.use('*', cors({
+  origin: (origin) => {
+    const allowed = ['http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:3000', 'http://127.0.0.1:3001'];
+    if (origin?.includes('kawaltransaksi') || allowed.includes(origin ?? '')) return origin;
+    return null;
+  },
+  allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  allowHeaders: ['Content-Type', 'Authorization'],
   credentials: true,
 }));
 
-// ── BODY PARSER ───────────────────────────────────────────────────────────────
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true }));
+app.get('/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }));
 
-// ── RATE LIMITER GLOBAL ───────────────────────────────────────────────────────
-app.use(generalLimiter);
+app.route('/api/auth', authRoutes);
+app.route('/api/reports', reportsRoutes);
+app.route('/api/admin', adminRoutes);
 
-// ── HEALTH CHECK ──────────────────────────────────────────────────────────────
-app.get('/health', (_req, res) => {
-  res.json({ status: 'ok', timestamp: new Date().toISOString() });
-});
-
-// ── ROUTES ────────────────────────────────────────────────────────────────────
-app.use('/api/reports', reportRoutes);
-app.use('/api/admin', adminRoutes);
-app.use('/api/auth', authRoutes);
-
-// ── 404 ───────────────────────────────────────────────────────────────────────
-app.use((_req, res) => {
-  res.status(404).json({ success: false, message: 'Endpoint tidak ditemukan.' });
-});
-
-// ── ERROR HANDLER ─────────────────────────────────────────────────────────────
-app.use((err: Error, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+app.notFound((c) => c.json({ success: false, message: 'Endpoint tidak ditemukan.' }, 404));
+app.onError((err, c) => {
   console.error('[ERROR]:', err.message);
-  res.status(500).json({ success: false, message: 'Terjadi kesalahan server.' });
-});
-
-// ── START ─────────────────────────────────────────────────────────────────────
-// Hugging Face butuh port 7860, kita set default ke sana kalau process.env.PORT kosong
-const port = Number(process.env.PORT) || 7860;
-
-app.listen(port, '0.0.0.0', () => {
-  console.log(`Backend siap tempur di port ${port}`);
-  console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
+  return c.json({ success: false, message: 'Terjadi kesalahan server.' }, 500);
 });
 
 export default app;

@@ -1,9 +1,169 @@
-import { Router } from 'express';
-import { verifyRecaptcha, loginWithPassword } from '../controllers/authController';
+import { Hono } from 'hono';
+import { getSupabaseAdmin, getSupabaseClient } from '../lib/supabase';
+import type { Env } from '../types';
 
-const router = Router();
+const auth = new Hono<{ Bindings: Env }>();
 
-router.post('/verify-recaptcha', verifyRecaptcha);
-router.post('/login', loginWithPassword);
+const LOCK_DURATION_MINUTES = 10;
+const MAX_ATTEMPTS = 5;
 
-export default router;
+// ── POST /api/auth/verify-recaptcha ──────────────────────────────────────────
+auth.post('/verify-recaptcha', async (c) => {
+  try {
+    const { token } = await c.req.json();
+    if (!token) return c.json({ success: false, message: 'Token tidak ditemukan.' }, 400);
+
+    const verifyUrl = `https://www.google.com/recaptcha/api/siteverify?secret=${c.env.RECAPTCHA_SECRET_KEY}&response=${token}`;
+    const response = await fetch(verifyUrl, { method: 'POST' });
+    const data = await response.json() as { success: boolean; score: number };
+
+    if (!data.success) return c.json({ success: false, message: 'Verifikasi reCAPTCHA gagal.' }, 400);
+
+    const threshold = 0.3;
+    if (data.score < threshold) return c.json({ success: false, message: 'Terdeteksi aktivitas mencurigakan.' }, 403);
+
+    return c.json({ success: true, score: data.score });
+  } catch {
+    return c.json({ success: false, message: 'Terjadi kesalahan server.' }, 500);
+  }
+});
+
+// ── POST /api/auth/login ──────────────────────────────────────────────────────
+auth.post('/login', async (c) => {
+  try {
+    const { email, password } = await c.req.json();
+    if (!email || !password) {
+      return c.json({ success: false, message: 'Email dan kata sandi wajib diisi.' }, 400);
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const supabaseAdmin = getSupabaseAdmin(c.env);
+    const supabaseClient = getSupabaseClient(c.env);
+
+    // ── Cari user by email ────────────────────────────────────────────────────
+    const { data: { users } } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
+    const authUser = users?.find((u: { email?: string }) => u.email?.toLowerCase() === normalizedEmail);
+
+    if (authUser) {
+      const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('failed_attempts, locked_until, is_banned')
+        .eq('id', authUser.id)
+        .single();
+
+      if (profile?.is_banned) {
+        return c.json({ success: false, message: 'Akun Anda telah dinonaktifkan. Hubungi admin.' }, 403);
+      }
+
+      // ── Cek locked SEBELUM attempt login ─────────────────────────────────
+      if (profile?.locked_until) {
+        const lockedUntil = new Date(profile.locked_until);
+        if (lockedUntil > new Date()) {
+          const remainingMs = lockedUntil.getTime() - Date.now();
+          const lockedUntilTime = lockedUntil.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' });
+          return c.json({
+            success: false,
+            message: `Akun dikunci selama ${LOCK_DURATION_MINUTES} menit. Coba lagi pukul ${lockedUntilTime}.`,
+            locked: true,
+            locked_until: profile.locked_until,
+            remaining_ms: remainingMs,
+          }, 429);
+        } else {
+          await supabaseAdmin.from('profiles').update({ failed_attempts: 0, locked_until: null }).eq('id', authUser.id);
+        }
+      }
+    }
+
+    // ── Coba login ────────────────────────────────────────────────────────────
+    const { data: signInData, error: signInError } = await supabaseClient.auth.signInWithPassword({
+      email: normalizedEmail,
+      password,
+    });
+
+    if (signInError) {
+      if (!authUser) {
+        return c.json({ success: false, message: 'Email atau kata sandi salah.' }, 401);
+      }
+
+      const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('failed_attempts, locked_until, is_banned')
+        .eq('id', authUser.id)
+        .single();
+
+      const currentAttempts = (profile?.failed_attempts ?? 0) + 1;
+      const remaining = MAX_ATTEMPTS - currentAttempts;
+
+      // ── Percobaan ke-5: langsung lock ─────────────────────────────────────
+      if (currentAttempts >= MAX_ATTEMPTS) {
+        const lockedUntil = new Date(Date.now() + LOCK_DURATION_MINUTES * 60 * 1000);
+        await supabaseAdmin.from('profiles').update({
+          failed_attempts: currentAttempts,
+          locked_until: lockedUntil.toISOString(),
+        }).eq('id', authUser.id);
+
+        const lockedUntilTime = lockedUntil.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' });
+        return c.json({
+          success: false,
+          message: `Akun dikunci selama ${LOCK_DURATION_MINUTES} menit. Coba lagi pukul ${lockedUntilTime}.`,
+          locked: true,
+          locked_until: lockedUntil.toISOString(),
+          remaining_ms: LOCK_DURATION_MINUTES * 60 * 1000,
+        }, 429);
+      }
+
+      await supabaseAdmin.from('profiles').update({ failed_attempts: currentAttempts }).eq('id', authUser.id);
+
+      // ── Percobaan ke-4: warning 1 lagi sebelum lock ───────────────────────
+      if (remaining === 1) {
+        return c.json({
+          success: false,
+          message: 'Kata sandi salah. Tersisa 1 percobaan lagi sebelum akun dikunci!',
+          locked: false,
+          remaining_attempts: 1,
+          warning: true,
+        }, 401);
+      }
+
+      // ── Percobaan 1-3: error biasa ────────────────────────────────────────
+      return c.json({
+        success: false,
+        message: `Kata sandi salah. Tersisa ${remaining} percobaan lagi.`,
+        locked: false,
+        remaining_attempts: remaining,
+        warning: false,
+      }, 401);
+    }
+
+    // ── Login berhasil ────────────────────────────────────────────────────────
+    if (signInData.user) {
+      const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('is_banned')
+        .eq('id', signInData.user.id)
+        .single();
+
+      if (profile?.is_banned) {
+        await supabaseClient.auth.signOut();
+        return c.json({ success: false, message: 'Akun Anda telah dinonaktifkan. Hubungi admin.' }, 403);
+      }
+
+      await supabaseAdmin.from('profiles')
+        .update({ failed_attempts: 0, locked_until: null })
+        .eq('id', signInData.user.id);
+    }
+
+    return c.json({
+      success: true,
+      message: 'Login berhasil.',
+      session: signInData.session,
+      user: signInData.user,
+    });
+
+  } catch (err) {
+    console.error('Login error:', err);
+    return c.json({ success: false, message: 'Terjadi kesalahan server.' }, 500);
+  }
+});
+
+export default auth;

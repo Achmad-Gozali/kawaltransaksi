@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, Suspense } from 'react';
+import React, { useState, useEffect, useCallback, useRef, Suspense } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -122,26 +122,23 @@ function useRecaptcha() {
 
 // ── COUNTDOWN TIMER ───────────────────────────────────────────────────────────
 function useCountdown(targetMs: number | null) {
-  const [remaining, setRemaining] = useState<number>(() => {
-    if (!targetMs) return 0;
-    return Math.max(0, targetMs - Date.now());
-  });
+  const [remaining, setRemaining] = useState<number>(() =>
+    targetMs ? Math.max(0, targetMs - Date.now()) : 0
+  );
 
   useEffect(() => {
-    const update = () => {
-      if (!targetMs) { setRemaining(0); return; }
-      setRemaining(Math.max(0, targetMs - Date.now()));
-    };
+    const update = () => setRemaining(targetMs ? Math.max(0, targetMs - Date.now()) : 0);
     update();
     const interval = setInterval(update, 1000);
     return () => clearInterval(interval);
   }, [targetMs]);
 
-  const minutes = Math.floor(remaining / 60000);
-  const seconds = Math.floor((remaining % 60000) / 1000);
-  const isExpired = targetMs === null ? true : remaining === 0;
-
-  return { minutes, seconds, remaining, isExpired };
+  return {
+    minutes: Math.floor(remaining / 60000),
+    seconds: Math.floor((remaining % 60000) / 1000),
+    remaining,
+    isExpired: targetMs === null ? true : remaining === 0,
+  };
 }
 
 // ── OAUTH PROVIDERS ───────────────────────────────────────────────────────────
@@ -175,18 +172,22 @@ function AuthFormInner({ type }: AuthFormProps) {
   const [success, setSuccess] = useState<string | null>(null);
   const [passwordFocused, setPasswordFocused] = useState(false);
   const [lockedUntilMs, setLockedUntilMs] = useState<number | null>(null);
-  const [isWarning, setIsWarning] = useState(false); // ← state warning percobaan ke-4
+  const [isWarning, setIsWarning] = useState(false);
 
   const { minutes, seconds, isExpired } = useCountdown(lockedUntilMs);
   const isLocked = lockedUntilMs !== null && !isExpired;
 
-  useEffect(() => {
-    if (isExpired && lockedUntilMs !== null) {
+  // Reset saat lock expired
+useEffect(() => {
+  if (isExpired && lockedUntilMs !== null) {
+    // Pastikan memang sudah expired beneran, bukan baru di-set
+    if (lockedUntilMs <= Date.now()) {
       setLockedUntilMs(null);
       setError(null);
       setIsWarning(false);
     }
-  }, [isExpired, lockedUntilMs]);
+  }
+}, [isExpired, lockedUntilMs]);
 
   const router = useRouter();
   const searchParams = useSearchParams();
@@ -218,7 +219,6 @@ function AuthFormInner({ type }: AuthFormProps) {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
     if (isLocked) return;
 
     setError(null);
@@ -256,13 +256,10 @@ function AuthFormInner({ type }: AuthFormProps) {
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ token, action }),
       });
-      if (!verifyRes.ok) {
-        const errData = await verifyRes.json().catch(() => ({}));
-        setError(errData.message || 'Verifikasi keamanan gagal. Coba lagi.'); return;
-      }
-      const verifyData = await verifyRes.json();
-      if (!verifyData.success) {
-        setError(verifyData.message || 'Verifikasi keamanan gagal. Coba lagi.'); return;
+      const verifyData = await verifyRes.json().catch(() => ({})) as { success?: boolean; message?: string };
+      if (!verifyRes.ok || !verifyData.success) {
+        setError(verifyData.message || 'Verifikasi keamanan gagal. Coba lagi.');
+        return;
       }
 
       if (type === 'register') {
@@ -275,43 +272,53 @@ function AuthFormInner({ type }: AuthFormProps) {
         setSuccess('Akun berhasil dibuat! Mengalihkan...');
         router.refresh();
         setTimeout(() => router.push(redirectTo), 1500);
-      } else {
-        const loginRes = await fetch(`${BACKEND_URL}/api/auth/login`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: sanitizedEmail, password }),
-        });
-
-        const loginData = await loginRes.json();
-
-        if (!loginData.success) {
-          if (loginData.locked && loginData.locked_until) {
-            setLockedUntilMs(new Date(loginData.locked_until).getTime());
-            setError(loginData.message);
-            setIsWarning(false);
-            return;
-          }
-          // ── Warning percobaan ke-4 ────────────────────────────────────────
-          if (loginData.warning) {
-            setIsWarning(true);
-          } else {
-            setIsWarning(false);
-          }
-          setError(loginData.message || 'Email atau kata sandi salah.');
-          return;
-        }
-
-        if (loginData.session) {
-          await supabase.auth.setSession({
-            access_token: loginData.session.access_token,
-            refresh_token: loginData.session.refresh_token,
-          });
-        }
-
-        setSuccess('Berhasil masuk! Mengalihkan...');
-        router.refresh();
-        setTimeout(() => router.push(redirectTo), 1000);
+        return;
       }
+
+      // ── LOGIN ─────────────────────────────────────────────────────────────
+      const loginRes = await fetch(`${BACKEND_URL}/api/auth/login`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: sanitizedEmail, password }),
+      });
+      const loginData = await loginRes.json().catch(() => ({})) as {
+        success?: boolean;
+        message?: string;
+        locked?: boolean;
+        locked_until?: string;
+        warning?: boolean;
+        session?: { access_token: string; refresh_token: string };
+      };
+
+      if (!loginData.success) {
+        if (loginData.locked && loginData.locked_until) {
+          // ── Akun dikunci ────────────────────────────────────────────────
+          setLockedUntilMs(new Date(loginData.locked_until).getTime());
+          setError(loginData.message ?? 'Akun dikunci sementara.');
+          setIsWarning(false);
+        } else if (loginData.warning) {
+          // ── Warning: 1 percobaan tersisa ───────────────────────────────
+          setIsWarning(true);
+          setError(loginData.message ?? 'Kata sandi salah.');
+        } else {
+          // ── Error biasa ────────────────────────────────────────────────
+          setIsWarning(false);
+          setError(loginData.message ?? 'Email atau kata sandi salah.');
+        }
+        return;
+      }
+
+      if (loginData.session) {
+        await supabase.auth.setSession({
+          access_token: loginData.session.access_token,
+          refresh_token: loginData.session.refresh_token,
+        });
+      }
+
+      setSuccess('Berhasil masuk! Mengalihkan...');
+      router.refresh();
+      setTimeout(() => router.push(redirectTo), 1000);
+
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Terjadi kesalahan sistem.';
       setError(translateError(message));
@@ -320,7 +327,7 @@ function AuthFormInner({ type }: AuthFormProps) {
     }
   };
 
-  // ── Tentukan style notif error ────────────────────────────────────────────
+  // ── Style notif berdasarkan state ─────────────────────────────────────────
   const errorStyle = isLocked
     ? 'bg-amber-50 border-amber-200 text-amber-700'
     : isWarning
@@ -335,6 +342,7 @@ function AuthFormInner({ type }: AuthFormProps) {
 
   return (
     <div className="w-full">
+      {/* ── Error / Lock Notification ── */}
       {error && (
         <div className={`mb-5 p-3.5 border rounded-xl flex items-start gap-3 shadow-sm ${errorStyle}`}>
           {errorIcon}
@@ -355,6 +363,7 @@ function AuthFormInner({ type }: AuthFormProps) {
         </div>
       )}
 
+      {/* ── Success Notification ── */}
       {success && (
         <div className="mb-5 p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-start gap-3 text-emerald-700 shadow-sm">
           <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
@@ -363,6 +372,7 @@ function AuthFormInner({ type }: AuthFormProps) {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
+        {/* ── Nama Lengkap (Register only) ── */}
         {type === 'register' && (
           <div className="space-y-1.5">
             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Nama Lengkap</label>
@@ -376,6 +386,7 @@ function AuthFormInner({ type }: AuthFormProps) {
           </div>
         )}
 
+        {/* ── Email ── */}
         <div className="space-y-1.5">
           <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Alamat Email</label>
           <div className="relative">
@@ -398,6 +409,7 @@ function AuthFormInner({ type }: AuthFormProps) {
           )}
         </div>
 
+        {/* ── Password ── */}
         <div className="space-y-1.5">
           <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Kata Sandi</label>
           <div className="relative">
@@ -443,6 +455,7 @@ function AuthFormInner({ type }: AuthFormProps) {
           )}
         </div>
 
+        {/* ── Konfirmasi Password (Register only) ── */}
         {type === 'register' && (
           <div className="space-y-1.5">
             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Konfirmasi Kata Sandi</label>
@@ -471,6 +484,7 @@ function AuthFormInner({ type }: AuthFormProps) {
           </div>
         )}
 
+        {/* ── Submit Button ── */}
         <button type="submit" disabled={isSubmitDisabled}
           className={`w-full py-3.5 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 active:scale-[0.98] shadow-md disabled:opacity-50 disabled:cursor-not-allowed text-sm uppercase tracking-widest mt-2 ${
             isLocked ? 'bg-amber-400 cursor-not-allowed'
