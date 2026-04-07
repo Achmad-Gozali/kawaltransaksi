@@ -40,27 +40,29 @@ auth.post('/login', async (c) => {
     const supabaseAdmin = getSupabaseAdmin(c.env);
     const supabaseClient = getSupabaseClient(c.env);
 
-    // ── Cari user by email ────────────────────────────────────────────────────
-    const { data: { users } } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
-    const authUser = users?.find((u: { email?: string }) => u.email?.toLowerCase() === normalizedEmail);
+    // ── Cari profile by email langsung (fix: ganti listUsers) ────────────────
+    const { data: profile, error: profileError } = await supabaseAdmin
+      .from('profiles')
+      .select('id, failed_attempts, locked_until, is_banned')
+      .eq('email', normalizedEmail)
+      .single();
 
-    if (authUser) {
-      const { data: profile } = await supabaseAdmin
-        .from('profiles')
-        .select('failed_attempts, locked_until, is_banned')
-        .eq('id', authUser.id)
-        .single();
-
-      if (profile?.is_banned) {
+    // Jika user ditemukan, cek status akun dulu sebelum attempt login
+    if (profile && !profileError) {
+      if (profile.is_banned) {
         return c.json({ success: false, message: 'Akun Anda telah dinonaktifkan. Hubungi admin.' }, 403);
       }
 
-      // ── Cek locked SEBELUM attempt login ─────────────────────────────────
-      if (profile?.locked_until) {
+      // ── Cek locked SEBELUM attempt login ───────────────────────────────────
+      if (profile.locked_until) {
         const lockedUntil = new Date(profile.locked_until);
         if (lockedUntil > new Date()) {
           const remainingMs = lockedUntil.getTime() - Date.now();
-          const lockedUntilTime = lockedUntil.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' });
+          const lockedUntilTime = lockedUntil.toLocaleTimeString('id-ID', {
+            hour: '2-digit',
+            minute: '2-digit',
+            timeZone: 'Asia/Jakarta',
+          });
           return c.json({
             success: false,
             message: `Akun dikunci selama ${LOCK_DURATION_MINUTES} menit. Coba lagi pukul ${lockedUntilTime}.`,
@@ -69,7 +71,11 @@ auth.post('/login', async (c) => {
             remaining_ms: remainingMs,
           }, 429);
         } else {
-          await supabaseAdmin.from('profiles').update({ failed_attempts: 0, locked_until: null }).eq('id', authUser.id);
+          // Lock sudah expire, reset
+          await supabaseAdmin
+            .from('profiles')
+            .update({ failed_attempts: 0, locked_until: null })
+            .eq('id', profile.id);
         }
       }
     }
@@ -81,28 +87,37 @@ auth.post('/login', async (c) => {
     });
 
     if (signInError) {
-      if (!authUser) {
+      // Jika user tidak ditemukan di profiles, return generic error
+      if (!profile || profileError) {
         return c.json({ success: false, message: 'Email atau kata sandi salah.' }, 401);
       }
 
-      const { data: profile } = await supabaseAdmin
+      // Refresh profile data terbaru setelah gagal login
+      const { data: freshProfile } = await supabaseAdmin
         .from('profiles')
         .select('failed_attempts, locked_until, is_banned')
-        .eq('id', authUser.id)
+        .eq('id', profile.id)
         .single();
 
-      const currentAttempts = (profile?.failed_attempts ?? 0) + 1;
+      const currentAttempts = (freshProfile?.failed_attempts ?? 0) + 1;
       const remaining = MAX_ATTEMPTS - currentAttempts;
 
-      // ── Percobaan ke-5: langsung lock ─────────────────────────────────────
+      // ── Percobaan ke-5: langsung lock ──────────────────────────────────────
       if (currentAttempts >= MAX_ATTEMPTS) {
         const lockedUntil = new Date(Date.now() + LOCK_DURATION_MINUTES * 60 * 1000);
-        await supabaseAdmin.from('profiles').update({
-          failed_attempts: currentAttempts,
-          locked_until: lockedUntil.toISOString(),
-        }).eq('id', authUser.id);
+        await supabaseAdmin
+          .from('profiles')
+          .update({
+            failed_attempts: currentAttempts,
+            locked_until: lockedUntil.toISOString(),
+          })
+          .eq('id', profile.id);
 
-        const lockedUntilTime = lockedUntil.toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit', timeZone: 'Asia/Jakarta' });
+        const lockedUntilTime = lockedUntil.toLocaleTimeString('id-ID', {
+          hour: '2-digit',
+          minute: '2-digit',
+          timeZone: 'Asia/Jakarta',
+        });
         return c.json({
           success: false,
           message: `Akun dikunci selama ${LOCK_DURATION_MINUTES} menit. Coba lagi pukul ${lockedUntilTime}.`,
@@ -112,9 +127,12 @@ auth.post('/login', async (c) => {
         }, 429);
       }
 
-      await supabaseAdmin.from('profiles').update({ failed_attempts: currentAttempts }).eq('id', authUser.id);
+      await supabaseAdmin
+        .from('profiles')
+        .update({ failed_attempts: currentAttempts })
+        .eq('id', profile.id);
 
-      // ── Percobaan ke-4: warning 1 lagi sebelum lock ───────────────────────
+      // ── Percobaan ke-4: warning 1 lagi sebelum lock ────────────────────────
       if (remaining === 1) {
         return c.json({
           success: false,
@@ -125,7 +143,7 @@ auth.post('/login', async (c) => {
         }, 401);
       }
 
-      // ── Percobaan 1-3: error biasa ────────────────────────────────────────
+      // ── Percobaan 1-3: error biasa ─────────────────────────────────────────
       return c.json({
         success: false,
         message: `Kata sandi salah. Tersisa ${remaining} percobaan lagi.`,
@@ -137,18 +155,19 @@ auth.post('/login', async (c) => {
 
     // ── Login berhasil ────────────────────────────────────────────────────────
     if (signInData.user) {
-      const { data: profile } = await supabaseAdmin
+      const { data: freshProfile } = await supabaseAdmin
         .from('profiles')
         .select('is_banned')
         .eq('id', signInData.user.id)
         .single();
 
-      if (profile?.is_banned) {
+      if (freshProfile?.is_banned) {
         await supabaseClient.auth.signOut();
         return c.json({ success: false, message: 'Akun Anda telah dinonaktifkan. Hubungi admin.' }, 403);
       }
 
-      await supabaseAdmin.from('profiles')
+      await supabaseAdmin
+        .from('profiles')
         .update({ failed_attempts: 0, locked_until: null })
         .eq('id', signInData.user.id);
     }

@@ -8,9 +8,17 @@ import type { Env } from './types';
 const app = new Hono<{ Bindings: Env }>();
 
 app.use('*', cors({
-  origin: (origin) => {
-    const allowed = ['http://localhost:3000', 'http://localhost:3001', 'http://127.0.0.1:3000', 'http://127.0.0.1:3001'];
-    if (origin?.includes('kawaltransaksi') || allowed.includes(origin ?? '')) return origin;
+  origin: (origin, c) => {
+    const allowedOrigins = [
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'http://127.0.0.1:3000',
+      'http://127.0.0.1:3001',
+      'https://kawaltransaksi.vercel.app',
+      c.env.FRONTEND_URL, // fallback dari env
+    ].filter(Boolean);
+
+    if (allowedOrigins.includes(origin ?? '')) return origin;
     return null;
   },
   allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
