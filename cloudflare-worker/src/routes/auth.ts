@@ -31,12 +31,6 @@ auth.post('/verify-recaptcha', async (c) => {
 // ── POST /api/auth/login ──────────────────────────────────────────────────────
 auth.post('/login', async (c) => {
   try {
-    console.log('ENV CHECK:', {
-      url: c.env.SUPABASE_URL,
-      hasAnon: !!c.env.SUPABASE_ANON_KEY,
-      hasService: !!c.env.SUPABASE_SERVICE_ROLE_KEY,
-    });
-
     const { email, password } = await c.req.json();
     if (!email || !password) {
       return c.json({ success: false, message: 'Email dan kata sandi wajib diisi.' }, 400);
@@ -46,19 +40,11 @@ auth.post('/login', async (c) => {
     const supabaseAdmin = getSupabaseAdmin(c.env);
     const supabaseClient = getSupabaseClient(c.env);
 
-    const { data: signInData, error: signInError } = await supabaseClient.auth.signInWithPassword({
-      email: normalizedEmail,
-      password,
-    });
+    // ── Cari user by email dulu ───────────────────────────────────────────────
+    const { data: { users } } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
+    const authUser = users?.find((u: { email?: string }) => u.email?.toLowerCase() === normalizedEmail);
 
-    if (signInError) {
-      const { data: { users } } = await supabaseAdmin.auth.admin.listUsers({ perPage: 1000 });
-      const authUser = users?.find((u: { email?: string }) => u.email?.toLowerCase() === normalizedEmail);
-
-      if (!authUser) {
-        return c.json({ success: false, message: 'Email atau kata sandi salah.' }, 401);
-      }
-
+    if (authUser) {
       const { data: profile } = await supabaseAdmin
         .from('profiles')
         .select('failed_attempts, locked_until, is_banned')
@@ -69,6 +55,7 @@ auth.post('/login', async (c) => {
         return c.json({ success: false, message: 'Akun Anda telah dinonaktifkan. Hubungi admin.' }, 403);
       }
 
+      // ── Cek locked SEBELUM attempt login ─────────────────────────────────
       if (profile?.locked_until) {
         const lockedUntil = new Date(profile.locked_until);
         if (lockedUntil > new Date()) {
@@ -85,6 +72,24 @@ auth.post('/login', async (c) => {
           await supabaseAdmin.from('profiles').update({ failed_attempts: 0, locked_until: null }).eq('id', authUser.id);
         }
       }
+    }
+
+    // ── Coba login ────────────────────────────────────────────────────────────
+    const { data: signInData, error: signInError } = await supabaseClient.auth.signInWithPassword({
+      email: normalizedEmail,
+      password,
+    });
+
+    if (signInError) {
+      if (!authUser) {
+        return c.json({ success: false, message: 'Email atau kata sandi salah.' }, 401);
+      }
+
+      const { data: profile } = await supabaseAdmin
+        .from('profiles')
+        .select('failed_attempts, locked_until, is_banned')
+        .eq('id', authUser.id)
+        .single();
 
       const currentAttempts = (profile?.failed_attempts ?? 0) + 1;
       const remaining = MAX_ATTEMPTS - currentAttempts;
@@ -117,6 +122,7 @@ auth.post('/login', async (c) => {
       }, 401);
     }
 
+    // ── Login berhasil ────────────────────────────────────────────────────────
     if (signInData.user) {
       const { data: profile } = await supabaseAdmin
         .from('profiles')
