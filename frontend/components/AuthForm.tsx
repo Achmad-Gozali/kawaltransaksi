@@ -1,21 +1,20 @@
 'use client';
 
-import React, { useState, useEffect, useCallback, useRef, Suspense } from 'react';
+import React, { useState, useEffect, Suspense, useRef } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   Loader2, AlertCircle, CheckCircle2, Mail, Lock,
-  UserPlus, ArrowRight, Eye, EyeOff, XCircle, Timer, AlertTriangle,
+  UserPlus, ArrowRight, Eye, EyeOff, XCircle, Timer, AlertTriangle, ShieldCheck,
 } from 'lucide-react';
+import { Turnstile, TurnstileInstance } from '@marsidev/react-turnstile';
 
 interface AuthFormProps {
   type: 'login' | 'register';
 }
 
-const RECAPTCHA_SITE_KEY = process.env.NEXT_PUBLIC_RECAPTCHA_SITE_KEY!;
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000';
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8787';
 
-// ── EMAIL VALIDATION ──────────────────────────────────────────────────────────
 const ALLOWED_DOMAINS = [
   'gmail.com', 'yahoo.com', 'yahoo.co.id', 'outlook.com', 'hotmail.com',
   'icloud.com', 'live.com', 'protonmail.com', 'mail.com', 'googlemail.com',
@@ -44,7 +43,6 @@ function validateEmail(email: string): { valid: boolean; message: string } {
   return { valid: true, message: '' };
 }
 
-// ── PASSWORD POLICY ───────────────────────────────────────────────────────────
 interface PasswordCheck { label: string; passed: boolean; }
 
 function getPasswordChecks(password: string): PasswordCheck[] {
@@ -52,7 +50,7 @@ function getPasswordChecks(password: string): PasswordCheck[] {
     { label: 'Minimal 8 karakter', passed: password.length >= 8 },
     { label: 'Mengandung huruf besar (A-Z)', passed: /[A-Z]/.test(password) },
     { label: 'Mengandung angka (0-9)', passed: /[0-9]/.test(password) },
-    { label: 'Mengandung simbol (!@#$...)', passed: /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password) },
+    { label: 'Mengandung simbol (!@#$...)', passed: /[!@#$%^&*()_+\-=\[\]{};\':"\\|,.<>\/?]/.test(password) },
   ];
 }
 
@@ -69,7 +67,6 @@ function getPasswordStrength(password: string): { label: string; color: string; 
   return { label: 'Kuat', color: 'bg-emerald-500', width: '100%' };
 }
 
-// ── ERROR TRANSLATION ─────────────────────────────────────────────────────────
 function translateError(message: string): string {
   const errorMap: Record<string, string> = {
     'Invalid login credentials': 'Email atau kata sandi salah.',
@@ -89,50 +86,16 @@ function translateError(message: string): string {
   return message;
 }
 
-// ── RECAPTCHA ─────────────────────────────────────────────────────────────────
-function useRecaptcha() {
-  const [recaptchaReady, setRecaptchaReady] = useState(false);
-
-  useEffect(() => {
-    if (document.getElementById('recaptcha-script')) {
-      if (window.grecaptcha) { window.grecaptcha.ready(() => setRecaptchaReady(true)); }
-      return;
-    }
-    if (!RECAPTCHA_SITE_KEY) return;
-    const script = document.createElement('script');
-    script.id = 'recaptcha-script';
-    script.src = `https://www.google.com/recaptcha/api.js?render=${RECAPTCHA_SITE_KEY}`;
-    script.async = true;
-    script.onload = () => { window.grecaptcha.ready(() => setRecaptchaReady(true)); };
-    document.head.appendChild(script);
-  }, []);
-
-  const getToken = useCallback((action: string): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      if (!recaptchaReady || !window.grecaptcha) return reject(new Error('Sistem keamanan belum siap.'));
-      window.grecaptcha.ready(() => {
-        window.grecaptcha.execute(RECAPTCHA_SITE_KEY, { action }).then(resolve)
-          .catch(() => reject(new Error('Gagal mendapatkan token keamanan.')));
-      });
-    });
-  }, [recaptchaReady]);
-
-  return { getToken, recaptchaReady };
-}
-
-// ── COUNTDOWN TIMER ───────────────────────────────────────────────────────────
 function useCountdown(targetMs: number | null) {
   const [remaining, setRemaining] = useState<number>(() =>
     targetMs ? Math.max(0, targetMs - Date.now()) : 0
   );
-
   useEffect(() => {
     const update = () => setRemaining(targetMs ? Math.max(0, targetMs - Date.now()) : 0);
     update();
     const interval = setInterval(update, 1000);
     return () => clearInterval(interval);
   }, [targetMs]);
-
   return {
     minutes: Math.floor(remaining / 60000),
     seconds: Math.floor((remaining % 60000) / 1000),
@@ -141,7 +104,6 @@ function useCountdown(targetMs: number | null) {
   };
 }
 
-// ── OAUTH PROVIDERS ───────────────────────────────────────────────────────────
 const oauthProviders = [
   {
     id: 'google', label: 'Google',
@@ -158,7 +120,6 @@ const oauthProviders = [
 
 type OAuthProvider = typeof oauthProviders[number]['id'];
 
-// ── MAIN FORM ─────────────────────────────────────────────────────────────────
 function AuthFormInner({ type }: AuthFormProps) {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -173,26 +134,26 @@ function AuthFormInner({ type }: AuthFormProps) {
   const [passwordFocused, setPasswordFocused] = useState(false);
   const [lockedUntilMs, setLockedUntilMs] = useState<number | null>(null);
   const [isWarning, setIsWarning] = useState(false);
+  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [turnstileStatus, setTurnstileStatus] = useState<'loading' | 'ready' | 'error'>('loading');
+  const [captchaError, setCaptchaError] = useState<string | null>(null);
+
+  const turnstileRef = useRef<TurnstileInstance>(null);
 
   const { minutes, seconds, isExpired } = useCountdown(lockedUntilMs);
   const isLocked = lockedUntilMs !== null && !isExpired;
 
-  // Reset saat lock expired
-useEffect(() => {
-  if (isExpired && lockedUntilMs !== null) {
-    // Pastikan memang sudah expired beneran, bukan baru di-set
-    if (lockedUntilMs <= Date.now()) {
+  useEffect(() => {
+    if (isExpired && lockedUntilMs !== null && lockedUntilMs <= Date.now()) {
       setLockedUntilMs(null);
       setError(null);
       setIsWarning(false);
     }
-  }
-}, [isExpired, lockedUntilMs]);
+  }, [isExpired, lockedUntilMs]);
 
   const router = useRouter();
   const searchParams = useSearchParams();
   const supabase = createClient();
-  const { getToken, recaptchaReady } = useRecaptcha();
   const redirectTo = searchParams.get('redirectTo') || '/';
 
   const strength = type === 'register' ? getPasswordStrength(password) : { label: '', color: '', width: '0%' };
@@ -204,7 +165,7 @@ useEffect(() => {
   const isRegisterInvalid = type === 'register' && (
     emailInvalid || !isPasswordValid(password) || passwordMismatch || fullName.trim().length < 2
   );
-  const isSubmitDisabled = isLoading || !!oauthLoading || !recaptchaReady || isRegisterInvalid || isLocked;
+  const isSubmitDisabled = isLoading || !!oauthLoading || turnstileStatus !== 'ready' || !turnstileToken || isRegisterInvalid || isLocked;
 
   const handleOAuthLogin = async (provider: OAuthProvider) => {
     setOauthLoading(provider);
@@ -220,45 +181,41 @@ useEffect(() => {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isLocked) return;
-
     setError(null);
     setSuccess(null);
     setIsWarning(false);
+    setCaptchaError(null);
+
+    if (!turnstileToken) {
+      setCaptchaError('Selesaikan verifikasi keamanan terlebih dahulu.');
+      return;
+    }
 
     const sanitizedEmail = email.trim().toLowerCase();
     const sanitizedFullName = fullName.trim().replace(/[<>'"]/g, '');
 
     if (type === 'register') {
-      if (!sanitizedFullName || sanitizedFullName.length < 2) {
-        setError('Nama lengkap minimal 2 karakter.'); return;
-      }
+      if (!sanitizedFullName || sanitizedFullName.length < 2) { setError('Nama lengkap minimal 2 karakter.'); return; }
       const emailCheck = validateEmail(sanitizedEmail);
       if (!emailCheck.valid) { setError(emailCheck.message); return; }
-      if (!isPasswordValid(password)) {
-        setError('Kata sandi tidak memenuhi persyaratan keamanan.'); return;
-      }
-      if (password !== confirmPassword) {
-        setError('Kata sandi dan konfirmasi tidak cocok.'); return;
-      }
-    }
-
-    if (!recaptchaReady) {
-      setError('Sistem keamanan belum siap. Tunggu sebentar lalu coba lagi.'); return;
+      if (!isPasswordValid(password)) { setError('Kata sandi tidak memenuhi persyaratan keamanan.'); return; }
+      if (password !== confirmPassword) { setError('Kata sandi dan konfirmasi tidak cocok.'); return; }
     }
 
     setIsLoading(true);
     try {
-      const action = type === 'register' ? 'register' : 'login';
-      const token = await getToken(action);
-
-      const verifyRes = await fetch(`${BACKEND_URL}/api/auth/verify-recaptcha`, {
+      const verifyRes = await fetch(`${BACKEND_URL}/api/search/verify-turnstile`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token, action }),
+        body: JSON.stringify({ token: turnstileToken }),
       });
       const verifyData = await verifyRes.json().catch(() => ({})) as { success?: boolean; message?: string };
-      if (!verifyRes.ok || !verifyData.success) {
-        setError(verifyData.message || 'Verifikasi keamanan gagal. Coba lagi.');
+
+      if (!verifyData.success) {
+        setCaptchaError('Verifikasi keamanan gagal. Coba refresh halaman.');
+        setTurnstileToken(null);
+        turnstileRef.current?.reset();
+        setIsLoading(false);
         return;
       }
 
@@ -275,7 +232,6 @@ useEffect(() => {
         return;
       }
 
-      // ── LOGIN ─────────────────────────────────────────────────────────────
       const loginRes = await fetch(`${BACKEND_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -292,19 +248,19 @@ useEffect(() => {
 
       if (!loginData.success) {
         if (loginData.locked && loginData.locked_until) {
-          // ── Akun dikunci ────────────────────────────────────────────────
           setLockedUntilMs(new Date(loginData.locked_until).getTime());
           setError(loginData.message ?? 'Akun dikunci sementara.');
           setIsWarning(false);
         } else if (loginData.warning) {
-          // ── Warning: 1 percobaan tersisa ───────────────────────────────
           setIsWarning(true);
-          setError(loginData.message ?? 'Kata sandi salah.');
+          // FIX: Tidak expose info sisa percobaan — pakai pesan dari backend langsung
+          setError(loginData.message ?? 'Email atau kata sandi salah.');
         } else {
-          // ── Error biasa ────────────────────────────────────────────────
           setIsWarning(false);
           setError(loginData.message ?? 'Email atau kata sandi salah.');
         }
+        setTurnstileToken(null);
+        turnstileRef.current?.reset();
         return;
       }
 
@@ -322,12 +278,13 @@ useEffect(() => {
     } catch (err: unknown) {
       const message = err instanceof Error ? err.message : 'Terjadi kesalahan sistem.';
       setError(translateError(message));
+      setTurnstileToken(null);
+      turnstileRef.current?.reset();
     } finally {
       setIsLoading(false);
     }
   };
 
-  // ── Style notif berdasarkan state ─────────────────────────────────────────
   const errorStyle = isLocked
     ? 'bg-amber-50 border-amber-200 text-amber-700'
     : isWarning
@@ -342,7 +299,6 @@ useEffect(() => {
 
   return (
     <div className="w-full">
-      {/* ── Error / Lock Notification ── */}
       {error && (
         <div className={`mb-5 p-3.5 border rounded-xl flex items-start gap-3 shadow-sm ${errorStyle}`}>
           {errorIcon}
@@ -363,7 +319,6 @@ useEffect(() => {
         </div>
       )}
 
-      {/* ── Success Notification ── */}
       {success && (
         <div className="mb-5 p-3.5 bg-emerald-50 border border-emerald-200 rounded-xl flex items-start gap-3 text-emerald-700 shadow-sm">
           <CheckCircle2 className="w-4 h-4 shrink-0 mt-0.5" />
@@ -372,7 +327,6 @@ useEffect(() => {
       )}
 
       <form onSubmit={handleSubmit} className="space-y-4">
-        {/* ── Nama Lengkap (Register only) ── */}
         {type === 'register' && (
           <div className="space-y-1.5">
             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Nama Lengkap</label>
@@ -386,7 +340,6 @@ useEffect(() => {
           </div>
         )}
 
-        {/* ── Email ── */}
         <div className="space-y-1.5">
           <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Alamat Email</label>
           <div className="relative">
@@ -409,7 +362,6 @@ useEffect(() => {
           )}
         </div>
 
-        {/* ── Password ── */}
         <div className="space-y-1.5">
           <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Kata Sandi</label>
           <div className="relative">
@@ -455,7 +407,6 @@ useEffect(() => {
           )}
         </div>
 
-        {/* ── Konfirmasi Password (Register only) ── */}
         {type === 'register' && (
           <div className="space-y-1.5">
             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Konfirmasi Kata Sandi</label>
@@ -484,7 +435,32 @@ useEffect(() => {
           </div>
         )}
 
-        {/* ── Submit Button ── */}
+        <div className="flex flex-col items-start gap-2">
+          <Turnstile
+            ref={turnstileRef}
+            siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
+            onSuccess={(token) => { setTurnstileToken(token); setTurnstileStatus('ready'); setCaptchaError(null); }}
+            onExpire={() => { setTurnstileToken(null); setTurnstileStatus('loading'); }}
+            onError={() => { setTurnstileToken(null); setTurnstileStatus('error'); setCaptchaError('Widget keamanan gagal dimuat. Coba refresh halaman.'); }}
+          />
+          {turnstileStatus === 'ready' && !captchaError && (
+            <p className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1">
+              <ShieldCheck className="w-3 h-3" /> Verifikasi keamanan selesai
+            </p>
+          )}
+          {turnstileStatus === 'loading' && (
+            <p className="text-[10px] text-slate-400 font-medium flex items-center gap-1">
+              <Loader2 className="w-3 h-3 animate-spin" /> Memuat verifikasi keamanan...
+            </p>
+          )}
+          {captchaError && (
+            <div className="w-full flex items-start gap-2.5 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl">
+              <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+              <p className="text-xs font-semibold text-amber-600 leading-relaxed">{captchaError}</p>
+            </div>
+          )}
+        </div>
+
         <button type="submit" disabled={isSubmitDisabled}
           className={`w-full py-3.5 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 active:scale-[0.98] shadow-md disabled:opacity-50 disabled:cursor-not-allowed text-sm uppercase tracking-widest mt-2 ${
             isLocked ? 'bg-amber-400 cursor-not-allowed'
@@ -496,21 +472,14 @@ useEffect(() => {
             ? <><Timer className="w-4 h-4" /> Dikunci {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}</>
             : isLoading
             ? <><Loader2 className="w-4 h-4 animate-spin" /> {type === 'login' ? 'Sedang Masuk...' : 'Membuat Akun...'}</>
-            : !recaptchaReady
+            : turnstileStatus === 'loading'
             ? <><Loader2 className="w-4 h-4 animate-spin" /> Memuat keamanan...</>
             : isWarning
-            ? <><AlertTriangle className="w-4 h-4" /> Coba Lagi (Percobaan Terakhir)</>
+            // FIX: Hapus teks "Percobaan Terakhir" — tidak expose info sisa percobaan ke user
+            ? <><AlertTriangle className="w-4 h-4" /> Coba Lagi</>
             : <>{type === 'login' ? 'Masuk' : 'Buat Akun'}<ArrowRight className="w-4 h-4 opacity-70" /></>
           }
         </button>
-
-        <p className="text-[9px] text-slate-300 text-center leading-relaxed">
-          Dilindungi oleh reCAPTCHA &amp; berlaku{' '}
-          <a href="https://policies.google.com/privacy" className="underline hover:text-slate-400" target="_blank" rel="noreferrer">Privasi</a>
-          {' '}dan{' '}
-          <a href="https://policies.google.com/terms" className="underline hover:text-slate-400" target="_blank" rel="noreferrer">Ketentuan</a>
-          {' '}Google.
-        </p>
       </form>
 
       <div className="flex items-center gap-3 my-6">
@@ -531,15 +500,6 @@ useEffect(() => {
       </div>
     </div>
   );
-}
-
-declare global {
-  interface Window {
-    grecaptcha: {
-      ready: (cb: () => void) => void;
-      execute: (siteKey: string, options: { action: string }) => Promise<string>;
-    };
-  }
 }
 
 export default function AuthForm({ type }: AuthFormProps) {

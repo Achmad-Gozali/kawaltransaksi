@@ -9,6 +9,9 @@ const admin = new Hono<{ Bindings: Env; Variables: { userId: string; userEmail: 
 const VALID_STATUSES = ['pending', 'verified', 'rejected', 'withdrawn'] as const;
 const VALID_ROLES = ['user', 'admin'] as const;
 
+// FIX: UUID regex untuk validasi semua param :id
+const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+
 // ── Middleware cek role admin ─────────────────────────────────────────────────
 async function requireAdmin(c: any, next: any) {
   const userId = c.get('userId');
@@ -53,10 +56,15 @@ admin.get('/users', authMiddleware, requireAdmin, async (c) => {
 });
 
 // ── GET /api/admin/users/:userId/banned ───────────────────────────────────────
-// FIX: Ditambah authMiddleware + requireAdmin — sebelumnya endpoint ini terbuka untuk siapapun
 admin.get('/users/:userId/banned', authMiddleware, requireAdmin, async (c) => {
   try {
     const userId = c.req.param('userId');
+
+    // FIX: Validasi UUID
+    if (!UUID_REGEX.test(userId)) {
+      return c.json({ success: false, message: 'ID pengguna tidak valid.' }, 400);
+    }
+
     const supabase = getSupabaseAdmin(c.env);
     const { data: profile } = await supabase
       .from('profiles')
@@ -73,9 +81,14 @@ admin.get('/users/:userId/banned', authMiddleware, requireAdmin, async (c) => {
 admin.patch('/reports/:id/status', authMiddleware, requireAdmin, async (c) => {
   try {
     const id = c.req.param('id');
+
+    // FIX: Validasi UUID
+    if (!UUID_REGEX.test(id)) {
+      return c.json({ success: false, message: 'ID laporan tidak valid.' }, 400);
+    }
+
     const { status } = await c.req.json();
 
-    // FIX: Validasi status sebelum update ke DB
     if (!status || !VALID_STATUSES.includes(status)) {
       return c.json({
         success: false,
@@ -96,9 +109,14 @@ admin.patch('/reports/:id/status', authMiddleware, requireAdmin, async (c) => {
 admin.patch('/users/:id/role', authMiddleware, requireAdmin, async (c) => {
   try {
     const id = c.req.param('id');
+
+    // FIX: Validasi UUID
+    if (!UUID_REGEX.test(id)) {
+      return c.json({ success: false, message: 'ID pengguna tidak valid.' }, 400);
+    }
+
     const { role } = await c.req.json();
 
-    // FIX: Validasi role sebelum update ke DB
     if (!role || !VALID_ROLES.includes(role)) {
       return c.json({
         success: false,
@@ -106,7 +124,7 @@ admin.patch('/users/:id/role', authMiddleware, requireAdmin, async (c) => {
       }, 400);
     }
 
-    // FIX: Cegah admin hapus role diri sendiri
+    // Cegah admin hapus role diri sendiri
     const requesterId = c.get('userId');
     if (requesterId === id) {
       return c.json({ success: false, message: 'Tidak dapat mengubah role diri sendiri.' }, 400);
@@ -126,7 +144,12 @@ admin.patch('/users/:id/ban', authMiddleware, requireAdmin, async (c) => {
   try {
     const id = c.req.param('id');
 
-    // FIX: Cegah admin ban diri sendiri
+    // FIX: Validasi UUID
+    if (!UUID_REGEX.test(id)) {
+      return c.json({ success: false, message: 'ID pengguna tidak valid.' }, 400);
+    }
+
+    // Cegah admin ban diri sendiri
     const requesterId = c.get('userId');
     if (requesterId === id) {
       return c.json({ success: false, message: 'Tidak dapat memban diri sendiri.' }, 400);
@@ -145,6 +168,12 @@ admin.patch('/users/:id/ban', authMiddleware, requireAdmin, async (c) => {
 admin.patch('/users/:id/unban', authMiddleware, requireAdmin, async (c) => {
   try {
     const id = c.req.param('id');
+
+    // FIX: Validasi UUID
+    if (!UUID_REGEX.test(id)) {
+      return c.json({ success: false, message: 'ID pengguna tidak valid.' }, 400);
+    }
+
     const supabase = getSupabaseAdmin(c.env);
     const { error } = await supabase.from('profiles').update({ is_banned: false }).eq('id', id);
     if (error) throw error;

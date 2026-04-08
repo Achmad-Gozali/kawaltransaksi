@@ -33,7 +33,7 @@ const ewalletData: Record<string, {
     faqs: [
       { question: 'Cara cek akun DANA dari penipuan?', answer: 'Masukkan nomor HP yang terdaftar di DANA ke kolom pencarian di atas, lalu klik "Cek Database".' },
       { question: 'Cara melaporkan akun DANA penipu?', answer: 'Klik tombol "Lapor Akun" di halaman ini. Isi nomor HP DANA penipu, kronologi penipuan, dan lampirkan bukti.' },
-      { question: 'Cara menghubungi DANA untuk lapor penipuan?', answer: 'Hubungi CS DANA di 1500 445 atau melalui fitur "Bantuan" di aplikasi DANA.' },
+      { question: 'Cara menghubungi DANA untuk lapor penipuan?', answer: 'Hubungi CS DANA di 1500 445 or melalui fitur "Bantuan" di aplikasi DANA.' },
       { question: 'Bagaimana cara blokir akun DANA penipu?', answer: 'Laporkan ke CS DANA di 1500 445 dengan menyertakan nomor HP penipu dan bukti transaksi.' },
     ],
   },
@@ -147,6 +147,7 @@ export default async function EwalletDetailPage({ params }: PageProps) {
 
   return (
     <EwalletPageClient
+      walletId={walletKey}
       walletData={data}
       reports={reports}
       totalCount={totalCount ?? 0}

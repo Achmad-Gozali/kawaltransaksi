@@ -13,6 +13,7 @@ export const revalidate = 60;
 
 interface CheckPageProps {
   params: Promise<{ slug: string }>;
+  searchParams: Promise<{ type?: string; bank?: string; wallet?: string }>; // FIX: tambah bank & wallet
 }
 
 async function createClient() {
@@ -87,16 +88,40 @@ const warningSteps = [
   { step: '03', title: 'Pantau perkembangan', desc: 'Cek kembali halaman ini dalam beberapa hari.' },
 ];
 
-export default async function CheckPage({ params }: CheckPageProps) {
-  const { slug } = await params;
+// FIX: mapping bank id → nama tampil
+const bankNameMap: Record<string, string> = {
+  bca: 'BCA',
+  bri: 'BRI',
+  bni: 'BNI',
+  mandiri: 'Mandiri',
+  cimb: 'CIMB Niaga',
+  bsi: 'BSI',
+};
 
-  // FIX: Validasi slug panjang maksimal
+// FIX: mapping wallet id → nama tampil
+const walletNameMap: Record<string, string> = {
+  gopay: 'GoPay',
+  dana: 'DANA',
+  ovo: 'OVO',
+  shopee: 'ShopeePay',
+  linkaja: 'LinkAja',
+};
+
+export default async function CheckPage({ params, searchParams }: CheckPageProps) {
+  const { slug } = await params;
+  const { type, bank, wallet } = await searchParams; // FIX: baca bank & wallet
+
   if (!slug || slug.length > 50) notFound();
 
   const realNumber = decodeSlug(slug);
-
-  // FIX: Validasi hasil decode — harus angka saja, cegah string aneh masuk ke query DB
   if (!realNumber || !/^\d+$/.test(realNumber)) notFound();
+
+  // FIX: tentukan defaultType dari query param
+  const defaultType = type === 'bank' ? 'bank_account' : type === 'ewallet' ? 'ewallet' : 'phone';
+
+  // FIX: tentukan label dari query param bank/wallet
+  const defaultBankName = bank ? (bankNameMap[bank] ?? null) : null;
+  const defaultWalletName = wallet ? (walletNameMap[wallet] ?? null) : null;
 
   const checkedAt = new Date();
   const supabase = await createClient();
@@ -241,9 +266,16 @@ export default async function CheckPage({ params }: CheckPageProps) {
           {/* Kolom kiri */}
           <div className="lg:col-span-2 space-y-5">
 
-            <NumberCard reports={reports} realNumber={realNumber} config={config} />
+            {/* FIX: pass defaultType, defaultBankName, defaultWalletName ke NumberCard */}
+            <NumberCard
+              reports={reports}
+              realNumber={realNumber}
+              config={config}
+              defaultType={defaultType}
+              defaultBankName={defaultBankName}
+              defaultWalletName={defaultWalletName}
+            />
 
-            {/* Waspada checklist — hanya jika safe */}
             {status === 'safe' && (
               <div>
                 <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-2.5 font-medium px-0.5">

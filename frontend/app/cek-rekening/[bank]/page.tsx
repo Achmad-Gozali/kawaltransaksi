@@ -160,6 +160,7 @@ export default async function BankDetailPage({ params }: PageProps) {
 
   return (
     <BankPageClient
+      bankId={bankKey}
       bankData={data}
       reports={reports}
       totalCount={totalCount ?? 0}

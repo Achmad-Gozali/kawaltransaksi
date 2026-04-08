@@ -17,6 +17,18 @@ export const authMiddleware = createMiddleware<{ Bindings: Env; Variables: { use
       return c.json({ success: false, message: 'Token tidak valid atau sudah kadaluarsa.' }, 401);
     }
 
+    // FIX: Cek is_banned — user yang di-ban tidak boleh akses protected route
+    // meskipun token masih valid
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('is_banned')
+      .eq('id', user.id)
+      .single();
+
+    if (profile?.is_banned) {
+      return c.json({ success: false, message: 'Akun Anda telah dinonaktifkan. Hubungi admin.' }, 403);
+    }
+
     c.set('userId', user.id);
     c.set('userEmail', user.email ?? '');
     await next();

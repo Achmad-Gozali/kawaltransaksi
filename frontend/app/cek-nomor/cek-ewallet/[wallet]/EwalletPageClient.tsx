@@ -6,6 +6,7 @@ import {
   ArrowLeft, ArrowRight,
   Phone, ShieldCheck, Globe, ExternalLink,
 } from 'lucide-react';
+import { encodeSlug } from '@/lib/utils';
 
 // ── TYPES ─────────────────────────────────────────────────────────────────────
 interface EwalletData {
@@ -38,6 +39,7 @@ interface CategoryCount {
 
 interface Props {
   walletData: EwalletData;
+  walletId: string; // FIX: tambah walletId untuk query param
   reports: ReportRow[];
   totalCount: number;
   verifiedCount: number;
@@ -69,7 +71,6 @@ const SOCIALS: Record<string, { instagram?: string; tiktok?: string }> = {
   },
 };
 
-// ── SOCIAL ICONS (SVG inline) ─────────────────────────────────────────────────
 function InstagramIcon() {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
@@ -89,6 +90,7 @@ function TiktokIcon() {
 // ── MAIN ─────────────────────────────────────────────────────────────────────
 export default function EwalletPageClient({
   walletData: data,
+  walletId,
   reports,
   totalCount,
   verifiedCount,
@@ -309,8 +311,9 @@ export default function EwalletPageClient({
                         <span className="text-[11px] text-slate-400">{report.dateFormatted}</span>
                       </td>
                       <td className="px-5 py-4 text-right">
+                        {/* FIX: pakai encodeSlug + ?type=ewallet&wallet=xxx */}
                         <Link
-                          href={`/check/${report.target_number}`}
+                          href={`/check/${encodeSlug(report.target_number)}?type=ewallet&wallet=${walletId}`}
                           className="inline-flex items-center justify-center w-7 h-7 rounded-[8px] bg-slate-100 text-slate-400 group-hover:bg-slate-900 group-hover:text-white transition-all"
                         >
                           <ArrowRight className="w-3.5 h-3.5" />
@@ -324,9 +327,10 @@ export default function EwalletPageClient({
               {/* Mobile list */}
               <div className="md:hidden divide-y divide-slate-100">
                 {reports.map((report, i) => (
+                  // FIX: pakai encodeSlug + ?type=ewallet&wallet=xxx
                   <Link
                     key={i}
-                    href={`/check/${report.target_number}`}
+                    href={`/check/${encodeSlug(report.target_number)}?type=ewallet&wallet=${walletId}`}
                     className="flex items-center justify-between px-4 py-3.5 hover:bg-slate-50/60 transition-colors"
                   >
                     <div>
@@ -367,7 +371,7 @@ export default function EwalletPageClient({
           )}
         </div>
 
-        {/* CTA CEK REKENING */}
+        {/* CTA */}
         <div className="bg-slate-900 rounded-[8px] p-7 sm:p-10 text-center shadow-sm">
           <p
             className="text-xl sm:text-2xl font-bold text-white mb-2 leading-tight uppercase tracking-tight"

@@ -1,21 +1,109 @@
 import { Hono } from 'hono';
+import { getSupabaseAdmin } from '../lib/supabase';
 import type { Env } from '../types';
 
 const search = new Hono<{ Bindings: Env }>();
 
+// ── Helpers ──────────────────────────────────────────────────────────────────
 async function verifyTurnstile(token: string, secretKey: string): Promise<boolean> {
   const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ secret: secretKey, response: token }),
   });
-  
+
   const data = await res.json() as { success: boolean; 'error-codes'?: string[] };
   if (!data.success) {
     console.error('[TURNSTILE ERROR]:', data['error-codes']);
   }
   return data.success;
 }
+
+// Decode JWT optional — kalau ada token valid, return userId. Kalau tidak, return null.
+async function getOptionalUserId(authHeader: string | undefined, env: Env): Promise<string | null> {
+  if (!authHeader?.startsWith('Bearer ')) return null;
+  const token = authHeader.slice(7).trim();
+  if (!token) return null;
+
+  try {
+    const supabase = getSupabaseAdmin(env);
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    if (error || !user) return null;
+    return user.id;
+  } catch {
+    return null;
+  }
+}
+
+// ── Search Rate Limiter Middleware ───────────────────────────────────────────
+// Anonymous : max 5 request/menit per IP
+// Login     : max 15 request/menit per user ID + max 15 per IP (dua-duanya dicek)
+search.use('*', async (c, next) => {
+  if (!c.env.LIMITER) {
+    console.warn('[SEARCH RATE LIMIT] KV LIMITER tidak tersedia. Rate limiting dinonaktifkan.');
+    return next();
+  }
+
+  const ip = c.req.header('CF-Connecting-IP') || 'anonymous';
+  const userId = await getOptionalUserId(c.req.header('Authorization'), c.env);
+  const isLoggedIn = !!userId;
+
+  const maxRequests = isLoggedIn ? 15 : 5;
+
+  try {
+    if (isLoggedIn) {
+      // ── Cek rate limit per user ID ─────────────────────────────────────
+      const userKey = `search_user_${userId}`;
+      const userCount = await c.env.LIMITER.get(userKey);
+      const userHits = userCount ? parseInt(userCount) : 0;
+
+      if (userHits >= maxRequests) {
+        return c.json({
+          success: false,
+          message: 'Batas pencarian tercapai (15/menit). Tunggu sebentar lalu coba lagi.',
+        }, 429);
+      }
+
+      // ── Cek rate limit per IP (untuk login) ────────────────────────────
+      const ipKey = `search_auth_ip_${ip}`;
+      const ipCount = await c.env.LIMITER.get(ipKey);
+      const ipHits = ipCount ? parseInt(ipCount) : 0;
+
+      if (ipHits >= maxRequests) {
+        return c.json({
+          success: false,
+          message: 'Terlalu banyak permintaan dari perangkat ini. Tunggu sebentar lalu coba lagi.',
+        }, 429);
+      }
+
+      // Increment keduanya sekaligus
+      await Promise.all([
+        c.env.LIMITER.put(userKey, (userHits + 1).toString(), { expirationTtl: 60 }),
+        c.env.LIMITER.put(ipKey, (ipHits + 1).toString(), { expirationTtl: 60 }),
+      ]);
+
+    } else {
+      // ── Cek rate limit per IP (untuk anonymous) ────────────────────────
+      const ipKey = `search_anon_ip_${ip}`;
+      const ipCount = await c.env.LIMITER.get(ipKey);
+      const ipHits = ipCount ? parseInt(ipCount) : 0;
+
+      if (ipHits >= maxRequests) {
+        return c.json({
+          success: false,
+          message: 'Batas pencarian tercapai (5/menit). Login untuk mendapatkan kuota lebih banyak, atau tunggu sebentar.',
+        }, 429);
+      }
+
+      await c.env.LIMITER.put(ipKey, (ipHits + 1).toString(), { expirationTtl: 60 });
+    }
+  } catch (err) {
+    console.error('[SEARCH RATE LIMIT] Error mengakses KV:', err);
+    // Kalau KV error, tetap lanjut daripada block semua user
+  }
+
+  return next();
+});
 
 // ── POST /api/search/verify-turnstile ────────────────────────────────────────
 search.post('/verify-turnstile', async (c) => {
@@ -26,9 +114,38 @@ search.post('/verify-turnstile', async (c) => {
       return c.json({ success: false, message: 'Token tidak ditemukan.' }, 400);
     }
 
+    // ── Cek apakah token Turnstile sudah pernah dipakai (blacklist) ──────
+    if (c.env.LIMITER) {
+      try {
+        const blacklistKey = `turnstile_used_${token}`;
+        const alreadyUsed = await c.env.LIMITER.get(blacklistKey);
+        if (alreadyUsed) {
+          return c.json({
+            success: false,
+            message: 'Token verifikasi sudah digunakan. Muat ulang halaman.',
+          }, 400);
+        }
+      } catch (err) {
+        console.error('[TURNSTILE BLACKLIST] Error cek KV:', err);
+        // Kalau KV error, tetap lanjut
+      }
+    }
+
+    // ── Verifikasi token ke Cloudflare ───────────────────────────────────
     const isValid = await verifyTurnstile(token, c.env.TURNSTILE_SECRET_KEY);
     if (!isValid) {
       return c.json({ success: false, message: 'Verifikasi keamanan gagal.' }, 400);
+    }
+
+    // ── Blacklist token yang sudah valid — hanya boleh dipakai 1x ────────
+    // TTL 5 menit (token Turnstile expired dalam 5 menit anyway)
+    if (c.env.LIMITER) {
+      try {
+        const blacklistKey = `turnstile_used_${token}`;
+        await c.env.LIMITER.put(blacklistKey, '1', { expirationTtl: 300 });
+      } catch (err) {
+        console.error('[TURNSTILE BLACKLIST] Error set KV:', err);
+      }
     }
 
     return c.json({ success: true });

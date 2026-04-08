@@ -32,6 +32,9 @@ interface ReportItem {
 interface Props {
   reports: ReportItem[];
   realNumber: string;
+  defaultType?: string;
+  defaultBankName?: string | null;   // FIX: nama bank dari query param (e.g. "BCA")
+  defaultWalletName?: string | null; // FIX: nama wallet dari query param (e.g. "GoPay")
   config: {
     nameBadgeBg: string;
     nameBadgeText: string;
@@ -52,7 +55,14 @@ const targetTypeLabel: Record<string, string> = {
   ewallet: 'E-Wallet',
 };
 
-export default function NumberCard({ reports, realNumber, config }: Props) {
+export default function NumberCard({
+  reports,
+  realNumber,
+  config,
+  defaultType = 'phone',
+  defaultBankName = null,
+  defaultWalletName = null,
+}: Props) {
   const allSocialAccounts: string[] = [];
   reports.forEach((r) => {
     if (Array.isArray(r.social_media_accounts)) {
@@ -73,10 +83,22 @@ export default function NumberCard({ reports, realNumber, config }: Props) {
 
   const suspectPhotoUrl = reports.find((r) => r.suspect_photo_url)?.suspect_photo_url ?? null;
   const targetName = reports[0]?.target_name ?? null;
-  const bankName = reports[0]?.bank_name ?? null;
-  const targetType = reports[0]?.target_type ?? 'phone';
-  const dangerLink = reports.find((r) => r.link_url)?.link_url ?? null;
 
+  // FIX: Prioritas label:
+  // 1. bank_name dari DB (paling akurat, dari laporan yang sudah masuk)
+  // 2. defaultBankName atau defaultWalletName dari query param
+  // 3. targetTypeLabel dari target_type DB atau defaultType
+  const bankNameFromDB = reports[0]?.bank_name ?? null;
+  const targetType = reports[0]?.target_type ?? defaultType;
+
+  const displayLabel = (() => {
+    if (bankNameFromDB) return bankNameFromDB;
+    if (defaultBankName) return defaultBankName;
+    if (defaultWalletName) return defaultWalletName;
+    return targetTypeLabel[targetType] ?? targetTypeLabel['phone'];
+  })();
+
+  const dangerLink = reports.find((r) => r.link_url)?.link_url ?? null;
   const category = reports[0]?.category ?? null;
   const platform = reports.find((r) => r.platform)?.platform ?? null;
   const totalLoss = reports.reduce((sum, r) => sum + (Number(r.loss_amount) || 0), 0);
@@ -101,8 +123,9 @@ export default function NumberCard({ reports, realNumber, config }: Props) {
                   a.n. {targetName}
                 </span>
               )}
+              {/* FIX: pakai displayLabel yang sudah menggabungkan semua prioritas */}
               <span className="text-[11px] px-3 py-1 rounded-full font-medium border border-slate-200 bg-slate-50 text-slate-500">
-                {bankName ?? targetTypeLabel[targetType] ?? 'Nomor HP'}
+                {displayLabel}
               </span>
             </div>
             {reports.length > 0 && (
@@ -110,7 +133,6 @@ export default function NumberCard({ reports, realNumber, config }: Props) {
             )}
           </div>
 
-          {/* FIX: <img> → <Image /> */}
           {suspectPhotoUrl && (
             <div className="shrink-0">
               <p className="text-[10px] text-slate-400 mb-1.5">Foto penipu</p>

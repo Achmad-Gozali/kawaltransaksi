@@ -7,6 +7,7 @@ import {
   Phone, Hash,
   Globe, ShieldCheck,
 } from 'lucide-react';
+import { encodeSlug } from '@/lib/utils';
 
 // ── TYPES ─────────────────────────────────────────────────────────────────────
 interface BankData {
@@ -39,6 +40,7 @@ interface CategoryCount {
 
 interface Props {
   bankData: BankData;
+  bankId: string; // FIX: tambah bankId untuk query param
   reports: ReportRow[];
   totalCount: number;
   verifiedCount: number;
@@ -49,6 +51,7 @@ interface Props {
 // ── MAIN ─────────────────────────────────────────────────────────────────────
 export default function BankPageClient({
   bankData: data,
+  bankId,
   reports,
   totalCount,
   verifiedCount,
@@ -124,10 +127,9 @@ export default function BankPageClient({
               </div>
             </div>
 
-            {/* Kanan — sidebar: kode bank + call center only */}
+            {/* Kanan — sidebar: kode bank + call center */}
             <div className="lg:col-span-1">
               <div className="bg-white rounded-[8px] border border-slate-200/80 shadow-sm overflow-hidden">
-                {/* Kode Bank */}
                 <div className="flex items-start gap-3 px-4 py-4 border-b border-slate-100">
                   <div className="w-7 h-7 bg-slate-50 border border-slate-100 rounded-[8px] flex items-center justify-center shrink-0 mt-0.5">
                     <Hash className="w-3.5 h-3.5 text-slate-400" />
@@ -140,7 +142,6 @@ export default function BankPageClient({
                   </div>
                 </div>
 
-                {/* Call Center */}
                 <div className="flex items-start gap-3 px-4 py-4">
                   <div className="w-7 h-7 bg-slate-50 border border-slate-100 rounded-[8px] flex items-center justify-center shrink-0 mt-0.5">
                     <Phone className="w-3.5 h-3.5 text-slate-400" />
@@ -166,7 +167,7 @@ export default function BankPageClient({
       {/* ── BODY ── */}
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-6">
 
-        {/* STATS — dipindah ke atas */}
+        {/* STATS */}
         <div className="grid grid-cols-3 gap-2">
           {[
             { value: totalCount, label: 'Total laporan', valueClass: 'text-slate-900' },
@@ -188,7 +189,7 @@ export default function BankPageClient({
           ))}
         </div>
 
-        {/* DAFTAR LAPORAN — dipindah ke bawah stats */}
+        {/* DAFTAR LAPORAN */}
         <div>
           <div className="flex items-center justify-between mb-2.5 px-0.5">
             <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 font-medium">
@@ -243,8 +244,9 @@ export default function BankPageClient({
                         <span className="text-[11px] text-slate-400">{report.dateFormatted}</span>
                       </td>
                       <td className="px-5 py-4 text-right">
+                        {/* FIX: pakai encodeSlug + ?type=bank&bank=xxx */}
                         <Link
-                          href={`/check/${report.target_number}`}
+                          href={`/check/${encodeSlug(report.target_number)}?type=bank&bank=${bankId}`}
                           className="inline-flex items-center justify-center w-7 h-7 rounded-[8px] bg-slate-100 text-slate-400 group-hover:bg-slate-900 group-hover:text-white transition-all"
                         >
                           <ArrowRight className="w-3.5 h-3.5" />
@@ -258,9 +260,10 @@ export default function BankPageClient({
               {/* Mobile list */}
               <div className="md:hidden divide-y divide-slate-100">
                 {reports.map((report, i) => (
+                  // FIX: pakai encodeSlug + ?type=bank&bank=xxx
                   <Link
                     key={i}
-                    href={`/check/${report.target_number}`}
+                    href={`/check/${encodeSlug(report.target_number)}?type=bank&bank=${bankId}`}
                     className="flex items-center justify-between px-4 py-3.5 hover:bg-slate-50/60 transition-colors"
                   >
                     <div>
@@ -301,7 +304,7 @@ export default function BankPageClient({
           )}
         </div>
 
-        {/* CTA — tombol ke halaman cek rekening */}
+        {/* CTA */}
         <div className="bg-slate-900 rounded-[8px] p-7 sm:p-10 text-center shadow-sm">
           <p
             className="text-xl sm:text-2xl font-bold text-white mb-2 leading-tight"

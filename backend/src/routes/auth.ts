@@ -7,13 +7,31 @@ const auth = new Hono<{ Bindings: Env }>();
 const LOCK_DURATION_MINUTES = 10;
 const MAX_ATTEMPTS = 5;
 
+// ── Helper: rate limit per key ────────────────────────────────────────────────
+async function checkRateLimit(
+  limiter: KVNamespace,
+  key: string,
+  maxCount: number,
+  ttlSeconds: number
+): Promise<{ blocked: boolean; count: number }> {
+  try {
+    const raw = await limiter.get(key);
+    const count = raw ? parseInt(raw) : 0;
+    if (count >= maxCount) return { blocked: true, count };
+    await limiter.put(key, (count + 1).toString(), { expirationTtl: ttlSeconds });
+    return { blocked: false, count: count + 1 };
+  } catch (err) {
+    console.error(`[RATE LIMIT] Error KV key=${key}:`, err);
+    return { blocked: false, count: 0 }; // fail open
+  }
+}
+
 // ── POST /api/auth/verify-recaptcha ──────────────────────────────────────────
 auth.post('/verify-recaptcha', async (c) => {
   try {
     const { token, action } = await c.req.json();
     if (!token) return c.json({ success: false, message: 'Token tidak ditemukan.' }, 400);
 
-    // FIX: Validasi action — hanya izinkan action yang dikenal
     const ALLOWED_ACTIONS = ['login', 'register'];
     if (!action || !ALLOWED_ACTIONS.includes(action)) {
       return c.json({ success: false, message: 'Action tidak valid.' }, 400);
@@ -25,7 +43,6 @@ auth.post('/verify-recaptcha', async (c) => {
 
     if (!data.success) return c.json({ success: false, message: 'Verifikasi reCAPTCHA gagal.' }, 400);
 
-    // FIX: Verifikasi action dari response Google harus cocok dengan yang dikirim frontend
     if (data.action && data.action !== action) {
       return c.json({ success: false, message: 'Token keamanan tidak valid untuk aksi ini.' }, 403);
     }
@@ -48,38 +65,62 @@ auth.post('/login', async (c) => {
     }
 
     const normalizedEmail = email.trim().toLowerCase();
+    const ip = c.req.header('CF-Connecting-IP') || 'anonymous';
+
+    // ── Rate limit per IP+email & per email saja ──────────────────────────────
+    if (c.env.LIMITER) {
+      const emailSlug = btoa(normalizedEmail).replace(/[^a-zA-Z0-9]/g, '').slice(0, 20);
+      const comboKey = `rl_login_${ip}_${emailSlug}`;
+      const emailOnlyKey = `rl_email_${emailSlug}`;
+
+      // 5 percobaan per IP+email dalam 5 menit
+      const comboCheck = await checkRateLimit(c.env.LIMITER, comboKey, 5, 300);
+      if (comboCheck.blocked) {
+        console.warn(`[LOGIN RL] IP+email diblokir — IP: ${ip}`);
+        return c.json({
+          success: false,
+          message: 'Terlalu banyak percobaan login. Tunggu beberapa menit.',
+          retry_after: 300,
+        }, 429);
+      }
+
+      // 10 percobaan per email dari semua IP dalam 5 menit (cegah distributed attack)
+      const emailCheck = await checkRateLimit(c.env.LIMITER, emailOnlyKey, 10, 300);
+      if (emailCheck.blocked) {
+        console.warn(`[LOGIN RL] Email diblokir dari semua IP — email: ${normalizedEmail}`);
+        return c.json({
+          success: false,
+          message: 'Terlalu banyak percobaan login. Tunggu beberapa menit.',
+          retry_after: 300,
+        }, 429);
+      }
+    }
+
     const supabaseAdmin = getSupabaseAdmin(c.env);
     const supabaseClient = getSupabaseClient(c.env);
 
-    // ── Cari profile by email langsung (fix: ganti listUsers) ────────────────
+    // ── Cari profile by email ─────────────────────────────────────────────────
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('id, failed_attempts, locked_until, is_banned')
       .eq('email', normalizedEmail)
       .single();
 
-    // Jika user ditemukan, cek status akun dulu sebelum attempt login
     if (profile && !profileError) {
       if (profile.is_banned) {
         return c.json({ success: false, message: 'Akun Anda telah dinonaktifkan. Hubungi admin.' }, 403);
       }
 
-      // ── Cek locked SEBELUM attempt login ───────────────────────────────────
+      // ── Cek locked SEBELUM attempt login ─────────────────────────────────
       if (profile.locked_until) {
         const lockedUntil = new Date(profile.locked_until);
         if (lockedUntil > new Date()) {
-          const remainingMs = lockedUntil.getTime() - Date.now();
-          const lockedUntilTime = lockedUntil.toLocaleTimeString('id-ID', {
-            hour: '2-digit',
-            minute: '2-digit',
-            timeZone: 'Asia/Jakarta',
-          });
+          const remainingSeconds = Math.ceil((lockedUntil.getTime() - Date.now()) / 1000);
           return c.json({
             success: false,
-            message: `Akun dikunci selama ${LOCK_DURATION_MINUTES} menit. Coba lagi pukul ${lockedUntilTime}.`,
+            message: 'Akun dikunci sementara karena terlalu banyak percobaan gagal.',
             locked: true,
             locked_until: profile.locked_until,
-            remaining_ms: remainingMs,
           }, 429);
         } else {
           // Lock sudah expire, reset
@@ -98,12 +139,11 @@ auth.post('/login', async (c) => {
     });
 
     if (signInError) {
-      // Jika user tidak ditemukan di profiles, return generic error
+      // Pesan error SAMA untuk semua kasus gagal — cegah enumerasi akun
       if (!profile || profileError) {
         return c.json({ success: false, message: 'Email atau kata sandi salah.' }, 401);
       }
 
-      // Refresh profile data terbaru setelah gagal login
       const { data: freshProfile } = await supabaseAdmin
         .from('profiles')
         .select('failed_attempts, locked_until, is_banned')
@@ -113,7 +153,7 @@ auth.post('/login', async (c) => {
       const currentAttempts = (freshProfile?.failed_attempts ?? 0) + 1;
       const remaining = MAX_ATTEMPTS - currentAttempts;
 
-      // ── Percobaan ke-5: langsung lock ──────────────────────────────────────
+      // ── Percobaan ke-5: langsung lock ────────────────────────────────────
       if (currentAttempts >= MAX_ATTEMPTS) {
         const lockedUntil = new Date(Date.now() + LOCK_DURATION_MINUTES * 60 * 1000);
         await supabaseAdmin
@@ -124,17 +164,11 @@ auth.post('/login', async (c) => {
           })
           .eq('id', profile.id);
 
-        const lockedUntilTime = lockedUntil.toLocaleTimeString('id-ID', {
-          hour: '2-digit',
-          minute: '2-digit',
-          timeZone: 'Asia/Jakarta',
-        });
         return c.json({
           success: false,
-          message: `Akun dikunci selama ${LOCK_DURATION_MINUTES} menit. Coba lagi pukul ${lockedUntilTime}.`,
+          message: 'Akun dikunci sementara karena terlalu banyak percobaan gagal. Coba lagi nanti.',
           locked: true,
           locked_until: lockedUntil.toISOString(),
-          remaining_ms: LOCK_DURATION_MINUTES * 60 * 1000,
         }, 429);
       }
 
@@ -143,23 +177,21 @@ auth.post('/login', async (c) => {
         .update({ failed_attempts: currentAttempts })
         .eq('id', profile.id);
 
-      // ── Percobaan ke-4: warning 1 lagi sebelum lock ────────────────────────
+      // ── Percobaan ke-4: warning ───────────────────────────────────────────
       if (remaining === 1) {
         return c.json({
           success: false,
-          message: 'Kata sandi salah. Tersisa 1 percobaan lagi sebelum akun dikunci!',
+          message: 'Email atau kata sandi salah. Hati-hati, akun akan dikunci jika terus gagal.',
           locked: false,
-          remaining_attempts: 1,
           warning: true,
         }, 401);
       }
 
-      // ── Percobaan 1-3: error biasa ─────────────────────────────────────────
+      // ── Percobaan 1-3: error generik ─────────────────────────────────────
       return c.json({
         success: false,
-        message: `Kata sandi salah. Tersisa ${remaining} percobaan lagi.`,
+        message: 'Email atau kata sandi salah.',
         locked: false,
-        remaining_attempts: remaining,
         warning: false,
       }, 401);
     }
@@ -177,6 +209,17 @@ auth.post('/login', async (c) => {
         return c.json({ success: false, message: 'Akun Anda telah dinonaktifkan. Hubungi admin.' }, 403);
       }
 
+      // Reset counter login di KV juga saat berhasil
+      if (c.env.LIMITER) {
+        try {
+          const emailSlug = btoa(normalizedEmail).replace(/[^a-zA-Z0-9]/g, '').slice(0, 20);
+          await c.env.LIMITER.delete(`rl_login_${ip}_${emailSlug}`);
+          await c.env.LIMITER.delete(`rl_email_${emailSlug}`);
+        } catch (err) {
+          console.error('[LOGIN RL] Gagal reset KV counter:', err);
+        }
+      }
+
       await supabaseAdmin
         .from('profiles')
         .update({ failed_attempts: 0, locked_until: null })
@@ -187,7 +230,6 @@ auth.post('/login', async (c) => {
       success: true,
       message: 'Login berhasil.',
       session: signInData.session,
-      user: signInData.user,
     });
 
   } catch (err) {

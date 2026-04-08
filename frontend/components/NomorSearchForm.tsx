@@ -5,6 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Phone, Loader2, ArrowRight, AlertCircle, ShieldCheck } from 'lucide-react';
 import { encodeSlug } from '@/lib/utils';
 import { Turnstile } from '@marsidev/react-turnstile';
+import { createClient } from '@/lib/supabase-browser';
 
 const SEARCH_COOLDOWN_MS = 2000;
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:5000';
@@ -35,6 +36,7 @@ export default function NomorSearchForm() {
   const [captchaError, setCaptchaError] = useState<string | null>(null);
   const lastSearchRef = useRef<number>(0);
   const router = useRouter();
+  const supabase = createClient();
 
   const error = touched ? getPhoneError(query) : null;
   const isValid = isValidPhoneNumber(query);
@@ -60,13 +62,27 @@ export default function NomorSearchForm() {
     setTimeout(() => setCooldown(false), SEARCH_COOLDOWN_MS);
 
     try {
-      // FIX: Verifikasi Turnstile di backend sebelum redirect
+      // Ambil access token kalau user sudah login, kalau tidak null
+      const { data: { session } } = await supabase.auth.getSession();
+      const accessToken = session?.access_token ?? null;
+
       const verifyRes = await fetch(`${BACKEND_URL}/api/search/verify-turnstile`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          // Kalau login, kirim token → dapat kuota 15/menit
+          // Kalau anonymous, tidak kirim header → dapat kuota 5/menit
+          ...(accessToken ? { 'Authorization': `Bearer ${accessToken}` } : {}),
+        },
         body: JSON.stringify({ token: turnstileToken }),
       });
       const verifyData = await verifyRes.json() as { success: boolean; message?: string };
+
+      if (verifyRes.status === 429) {
+        setCaptchaError(verifyData.message || 'Terlalu banyak pencarian. Tunggu sebentar lalu coba lagi.');
+        setIsLoading(false);
+        return;
+      }
 
       if (!verifyData.success) {
         setCaptchaError('Verifikasi keamanan gagal. Coba refresh halaman.');
@@ -74,7 +90,7 @@ export default function NomorSearchForm() {
         return;
       }
 
-      router.push(`/check/${encodeSlug(query)}`);
+      router.push(`/check/${encodeSlug(query)}?type=phone`);
     } catch {
       setCaptchaError('Gagal menghubungi server. Periksa koneksi internet.');
       setIsLoading(false);
@@ -119,7 +135,6 @@ export default function NomorSearchForm() {
             {isLoading ? (
               <Loader2 className="w-5 h-5 animate-spin" />
             ) : turnstileStatus === 'loading' ? (
-              // FIX: loading indicator saat Turnstile belum ready
               <><Loader2 className="w-4 h-4 animate-spin" /> Memuat...</>
             ) : (
               <>CARI DATABASE <ArrowRight className="w-4 h-4" /></>
@@ -127,7 +142,6 @@ export default function NomorSearchForm() {
           </button>
         </div>
 
-        {/* FIX: Turnstile dengan onError handler + status tracking */}
         <div className="mt-3 flex flex-col items-start sm:items-start gap-2">
           <Turnstile
             siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
@@ -146,7 +160,6 @@ export default function NomorSearchForm() {
               setCaptchaError('Widget keamanan gagal dimuat. Coba refresh halaman.');
             }}
           />
-          {/* FIX: Indikator status Turnstile */}
           {turnstileStatus === 'ready' && !captchaError && (
             <p className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1">
               <ShieldCheck className="w-3 h-3" /> Verifikasi keamanan selesai
@@ -159,7 +172,6 @@ export default function NomorSearchForm() {
           )}
         </div>
 
-        {/* Error validasi nomor */}
         {error && (
           <div className="mt-2.5 flex items-start gap-2.5 px-4 py-3 bg-red-50 border border-red-200 rounded-xl">
             <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
@@ -167,7 +179,6 @@ export default function NomorSearchForm() {
           </div>
         )}
 
-        {/* FIX: Error CAPTCHA */}
         {captchaError && (
           <div className="mt-2.5 flex items-start gap-2.5 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl">
             <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
