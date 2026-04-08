@@ -24,10 +24,9 @@ app.use('*', cors({
   credentials: true,
 }));
 
-// FIX: Rate limiter dengan guard — tidak silent fail kalau KV belum terpasang
+// FIX: Rate limiter dengan guard
 app.use('/api/*', async (c, next) => {
   if (!c.env.LIMITER) {
-    // FIX: Log warning tapi tetap lanjut — jangan block request karena misconfiguration
     console.warn('[RATE LIMIT] KV binding LIMITER tidak tersedia. Rate limiting dinonaktifkan.');
     return next();
   }
@@ -45,7 +44,6 @@ app.use('/api/*', async (c, next) => {
 
     await c.env.LIMITER.put(key, (count + 1).toString(), { expirationTtl: 60 });
   } catch (err) {
-    // FIX: Kalau KV error, log tapi jangan block request
     console.error('[RATE LIMIT] Error mengakses KV:', err);
   }
 

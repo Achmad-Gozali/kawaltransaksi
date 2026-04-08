@@ -9,7 +9,11 @@ async function verifyTurnstile(token: string, secretKey: string): Promise<boolea
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({ secret: secretKey, response: token }),
   });
-  const data = await res.json() as { success: boolean };
+  
+  const data = await res.json() as { success: boolean; 'error-codes'?: string[] };
+  if (!data.success) {
+    console.error('[TURNSTILE ERROR]:', data['error-codes']);
+  }
   return data.success;
 }
 
@@ -28,7 +32,8 @@ search.post('/verify-turnstile', async (c) => {
     }
 
     return c.json({ success: true });
-  } catch {
+  } catch (err) {
+    console.error('[SEARCH ROUTE ERROR]:', err);
     return c.json({ success: false, message: 'Terjadi kesalahan server.' }, 500);
   }
 });

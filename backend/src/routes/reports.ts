@@ -25,7 +25,7 @@ const VALID_CATEGORIES = [
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// ── TAMBAHAN: Validasi URL evidence ──────────────────────────────────────────
+// ── TAMBAHAN: Validasi URL evidence
 const ALLOWED_STORAGE_HOSTNAME = 'gqnajsdvwhaokxbdummj.supabase.co';
 const MAX_EVIDENCE_FILES = 10;
 
