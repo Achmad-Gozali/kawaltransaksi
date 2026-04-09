@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { Phone, Landmark, Wallet, ArrowUpRight } from 'lucide-react';
+import { Phone, Landmark, Wallet, ArrowRight } from 'lucide-react';
 import * as motion from 'motion/react-client';
 import { formatDateID, encodeSlug } from '@/lib/utils';
 
@@ -378,7 +378,7 @@ export default async function HomePage() {
                           {report.category}
                         </span>
                       </div>
-                      <ArrowUpRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 transition-colors shrink-0" />
+                      <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 transition-colors shrink-0" />
                     </div>
                   </Link>
                 </motion.div>

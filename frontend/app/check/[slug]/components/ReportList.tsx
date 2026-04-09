@@ -1,6 +1,5 @@
 import Image from 'next/image';
-import { ShieldCheck, ExternalLink, ImageIcon, Clock } from 'lucide-react';
-import { formatDateID } from '@/lib/utils';
+import { ShieldCheck, ExternalLink, ImageIcon, Clock, CheckCircle2, AlertCircle } from 'lucide-react';
 
 // ── HELPERS ───────────────────────────────────────────────────────────────────
 function cleanChronology(text: string): string {
@@ -58,24 +57,57 @@ export default function ReportList({ reports, hasWithdrawn = false }: Props) {
 
       {/* ── 1. Riwayat laporan ── */}
       <div>
-        <div className="mb-2.5 px-0.5">
+        <div className="mb-2.5 px-0.5 flex items-center justify-between">
           <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 font-medium">Riwayat laporan</p>
+          {reports.length > 0 && (
+            <p className="text-[10px] text-slate-400">{reports.length} laporan dari {reports.length} korban berbeda</p>
+          )}
         </div>
 
         {reports.length > 0 ? (
           <div className="space-y-3">
-            {reports.map((report) => (
-              <div key={report.id} className="bg-white rounded-xl border border-slate-200 px-5 py-4 hover:border-slate-300 transition-colors">
-                <div className="flex gap-4">
-                  <p className="flex-1 text-sm text-slate-600 leading-relaxed break-all overflow-hidden" style={{ fontFamily: 'var(--font-serif, Georgia, serif)' }}>
-                    &quot;{cleanChronology(report.chronology)}&quot;
-                  </p>
-                  <span className="text-[10px] text-slate-400 font-medium whitespace-nowrap shrink-0 mt-0.5">
-                    {formatDate(report.incident_date || report.created_at)}
-                  </span>
+            {reports.map((report, index) => {
+              const isVerified = report.status === 'verified';
+              return (
+                <div
+                  key={report.id}
+                  className={`bg-white rounded-xl border transition-colors overflow-hidden ${
+                    isVerified ? 'border-emerald-200' : 'border-slate-200 hover:border-slate-300'
+                  }`}
+                >
+                  {/* Header per laporan */}
+                  <div className={`flex items-center justify-between px-5 py-2.5 border-b ${
+                    isVerified ? 'bg-emerald-50 border-emerald-100' : 'bg-slate-50 border-slate-100'
+                  }`}>
+                    <div className="flex items-center gap-2">
+                      {isVerified ? (
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
+                      ) : (
+                        <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />
+                      )}
+                      <span className={`text-[10px] font-semibold uppercase tracking-wider ${
+                        isVerified ? 'text-emerald-700' : 'text-amber-600'
+                      }`}>
+                        Laporan #{index + 1} · {isVerified ? 'Terverifikasi' : 'Menunggu Verifikasi'}
+                      </span>
+                    </div>
+                    <span className="text-[10px] text-slate-400 font-medium">
+                      {formatDate(report.incident_date || report.created_at)}
+                    </span>
+                  </div>
+
+                  {/* Isi kronologi */}
+                  <div className="px-5 py-4">
+                    <p
+                      className="text-sm text-slate-600 leading-relaxed break-all overflow-hidden"
+                      style={{ fontFamily: 'var(--font-serif, Georgia, serif)' }}
+                    >
+                      &quot;{cleanChronology(report.chronology)}&quot;
+                    </p>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         ) : hasWithdrawn ? (
           <div className="bg-amber-50 rounded-xl border border-amber-200 p-10 text-center">
@@ -112,7 +144,6 @@ export default function ReportList({ reports, hasWithdrawn = false }: Props) {
                   rel="noopener noreferrer"
                   className="group relative aspect-square rounded-xl overflow-hidden border border-slate-200 bg-slate-50 hover:border-slate-400 transition-all"
                 >
-                  {/* FIX: <img> → <Image /> */}
                   <Image
                     src={url}
                     alt={`Bukti ${i + 1}`}

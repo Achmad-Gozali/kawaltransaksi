@@ -25,7 +25,6 @@ const VALID_CATEGORIES = [
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// ── Validasi URL evidence — hanya izinkan dari storage Supabase sendiri
 const ALLOWED_STORAGE_HOSTNAME = 'gqnajsdvwhaokxbdummj.supabase.co';
 const MAX_EVIDENCE_FILES = 10;
 
@@ -46,7 +45,6 @@ function sanitizeEvidenceUrls(urls: unknown): string[] {
     .slice(0, MAX_EVIDENCE_FILES) as string[];
 }
 
-// FIX: Validasi link_url — hanya izinkan http/https, tolak javascript: dan protocol berbahaya lainnya
 function isValidHttpUrl(url: unknown): string | null {
   if (typeof url !== 'string' || !url.trim()) return null;
   try {
@@ -57,9 +55,15 @@ function isValidHttpUrl(url: unknown): string | null {
   }
 }
 
+// FIX: Hapus replace slash (/&#x2F;) supaya platform tidak jadi "Twitter&#x2F;X"
 function sanitizeText(input: string): string {
-  return input.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;').replace(/'/g, '&#x27;').replace(/\//g, '&#x2F;').trim();
+  return input
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#x27;')
+    .trim();
 }
 
 function sanitizeChronology(input: string): string {
@@ -122,10 +126,27 @@ reports.post('/', authMiddleware, async (c) => {
     const oneDayAgo = new Date(Date.now() - 86400000).toISOString();
     const { count: todayCount } = await supabase.from('reports')
       .select('*', { count: 'exact', head: true })
-      .eq('reporter_id', userId).gte('created_at', oneDayAgo);
+      .eq('reporter_id', userId)
+      .gte('created_at', oneDayAgo);
 
     if ((todayCount ?? 0) >= 10) {
       return c.json({ success: false, message: 'Batas laporan harian tercapai.' }, 429);
+    }
+
+    // FIX: Cek duplikat — 1 user tidak boleh lapor nomor yang sama 2x
+    // (kecuali laporan sebelumnya sudah withdrawn)
+    const cleanNumberCheck = String(body.target_number).replace(/[^0-9]/g, '');
+    const { count: duplicateCount } = await supabase.from('reports')
+      .select('*', { count: 'exact', head: true })
+      .eq('reporter_id', userId)
+      .eq('target_number', cleanNumberCheck)
+      .neq('status', 'withdrawn');
+
+    if ((duplicateCount ?? 0) > 0) {
+      return c.json({
+        success: false,
+        message: 'Kamu sudah pernah melaporkan nomor ini sebelumnya.',
+      }, 409);
     }
 
     if (!body.target_type || !VALID_TARGET_TYPES.includes(body.target_type)) {
@@ -150,18 +171,15 @@ reports.post('/', authMiddleware, async (c) => {
     const sanitizedSocialAccounts = body.social_media_accounts
       ? sanitizeArray(body.social_media_accounts as string[]) : [];
 
-    // Validasi URL evidence — hanya terima URL dari storage Supabase sendiri
     const evidenceUrls = sanitizeEvidenceUrls(
       body.evidence_urls?.length > 0 ? body.evidence_urls : body.evidence_url ? [body.evidence_url] : []
     );
     const hasPhoto = evidenceUrls.length > 0;
 
-    // Validasi suspect_photo_url
     const suspectPhotoUrl = isValidEvidenceUrl(body.suspect_photo_url)
       ? body.suspect_photo_url as string
       : null;
 
-    // FIX: Validasi link_url — hanya izinkan http/https
     const sanitizedLinkUrl = isValidHttpUrl(body.link_url);
 
     let autoStatus: 'pending' | 'verified' = 'pending';
@@ -211,7 +229,7 @@ reports.post('/', authMiddleware, async (c) => {
       loss_amount: body.loss_amount || null,
       incident_date: body.incident_date || null,
       platform: sanitizedPlatform,
-      link_url: sanitizedLinkUrl, // FIX: pakai yang sudah divalidasi
+      link_url: sanitizedLinkUrl,
       social_media_accounts: sanitizedSocialAccounts,
       has_other_victims: body.has_other_victims || null,
       reported_to: body.reported_to ?? [],
@@ -312,13 +330,11 @@ reports.put('/:reportId', authMiddleware, async (c) => {
       return c.json({ success: false, message: 'Hanya laporan "Sedang Direvisi" yang dapat diedit.' }, 400);
     }
 
-    // Validasi URL evidence dan suspect photo saat edit
     const editedEvidenceUrls = sanitizeEvidenceUrls(body.evidence_urls);
     const editedSuspectPhotoUrl = isValidEvidenceUrl(body.suspect_photo_url)
       ? body.suspect_photo_url as string
       : null;
 
-    // FIX: Validasi link_url saat edit juga
     const editedLinkUrl = isValidHttpUrl(body.link_url);
 
     const sanitizedData = {
@@ -329,7 +345,7 @@ reports.put('/:reportId', authMiddleware, async (c) => {
       loss_amount: body.loss_amount || null,
       incident_date: body.incident_date || null,
       platform: body.platform ? sanitizeText(String(body.platform)) : null,
-      link_url: editedLinkUrl, // FIX: pakai yang sudah divalidasi
+      link_url: editedLinkUrl,
       social_media_accounts: body.social_media_accounts
         ? sanitizeArray(body.social_media_accounts as string[]) : [],
       has_other_victims: body.has_other_victims || null,

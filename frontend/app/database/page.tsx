@@ -1,7 +1,7 @@
 import { createServerClient } from '@supabase/ssr';
 import { cookies } from 'next/headers';
 import { formatDateID, encodeSlug } from '@/lib/utils';
-import { Phone, Building2, Wallet, ArrowUpRight, Search } from 'lucide-react';
+import { Phone, Building2, Wallet, ArrowRight, Search } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 
@@ -57,16 +57,21 @@ function getTargetMeta(type: string, bankName: string | null) {
   return { icon: Phone, label: 'Nomor HP', color: 'text-slate-600', bg: 'bg-slate-50', border: 'border-slate-200' };
 }
 
-function getStatusBadge(status: string) {
+// Status agregat: kalau ada 1 verified → verified, kalau semua pending → pending, dll
+function getAggregateStatus(verifiedCount: number, pendingCount: number): string {
+  if (verifiedCount > 0) return 'verified';
+  if (pendingCount > 0) return 'pending';
+  return 'withdrawn';
+}
+
+function getStatusBadge(status: string, reportCount: number) {
   switch (status) {
     case 'verified':
-      return { label: 'Terverifikasi', className: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
+      return { label: reportCount > 1 ? `${reportCount}x Terverifikasi` : 'Terverifikasi', className: 'bg-emerald-50 text-emerald-700 border-emerald-200' };
     case 'pending':
       return { label: 'Menunggu', className: 'bg-amber-50 text-amber-700 border-amber-200' };
     case 'withdrawn':
       return { label: 'Sedang Direvisi', className: 'bg-slate-100 text-slate-500 border-slate-200' };
-    case 'rejected':
-      return { label: 'Ditolak', className: 'bg-red-50 text-red-700 border-red-200' };
     default:
       return { label: status, className: 'bg-slate-50 text-slate-500 border-slate-200' };
   }
@@ -83,23 +88,67 @@ export default async function DatabasePage({
   const type = params.type ?? 'all';
   const page = parseInt(params.page ?? '1');
   const perPage = 12;
-  const from = (page - 1) * perPage;
-  const to = from + perPage - 1;
 
+  // Fetch semua laporan (non-rejected) untuk di-group
   let query = supabase
     .from('reports')
-    .select('id, target_number, target_name, target_type, bank_name, category, status, created_at', { count: 'exact' })
+    .select('id, target_number, target_name, target_type, bank_name, category, status, created_at')
     .in('status', ['verified', 'pending', 'withdrawn'])
-    .order('status', { ascending: true })
-    .order('created_at', { ascending: false })
-    .range(from, to);
+    .order('created_at', { ascending: false });
 
   if (type === 'phone') query = query.eq('target_type', 'phone');
   if (type === 'bank_account') query = query.eq('target_type', 'bank_account');
   if (type === 'ewallet') query = query.eq('target_type', 'ewallet');
 
-  const { data: reports, count } = await query;
-  const totalPages = Math.ceil((count ?? 0) / perPage);
+  const { data: allReports } = await query;
+
+  // Group by target_number
+  const grouped = new Map<string, {
+    target_number: string;
+    target_name: string | null;
+    target_type: string;
+    bank_name: string | null;
+    category: string | null;
+    latest_at: string;
+    total: number;
+    verified_count: number;
+    pending_count: number;
+  }>();
+
+  (allReports ?? []).forEach((r) => {
+    const existing = grouped.get(r.target_number);
+    if (!existing) {
+      grouped.set(r.target_number, {
+        target_number: r.target_number,
+        target_name: r.target_name,
+        target_type: r.target_type,
+        bank_name: r.bank_name,
+        category: r.category,
+        latest_at: r.created_at,
+        total: 1,
+        verified_count: r.status === 'verified' ? 1 : 0,
+        pending_count: r.status === 'pending' ? 1 : 0,
+      });
+    } else {
+      existing.total += 1;
+      if (r.status === 'verified') existing.verified_count += 1;
+      if (r.status === 'pending') existing.pending_count += 1;
+      // Ambil nama dari laporan verified jika ada
+      if (r.status === 'verified' && !existing.target_name) {
+        existing.target_name = r.target_name;
+      }
+    }
+  });
+
+  // Sort: verified duluan, lalu by latest
+  const groupedArray = Array.from(grouped.values()).sort((a, b) => {
+    if (b.verified_count !== a.verified_count) return b.verified_count - a.verified_count;
+    return new Date(b.latest_at).getTime() - new Date(a.latest_at).getTime();
+  });
+
+  const totalUniqueNumbers = groupedArray.length;
+  const totalPages = Math.ceil(totalUniqueNumbers / perPage);
+  const paginatedReports = groupedArray.slice((page - 1) * perPage, page * perPage);
 
   const buildUrl = (newParams: Record<string, string>) => {
     const p = new URLSearchParams({ type, page: '1', ...newParams });
@@ -130,7 +179,6 @@ export default async function DatabasePage({
       {/* ── Filter bar ── */}
       <section className="border-b border-slate-200 px-4 py-3 sticky top-16 bg-white z-10">
         <div className="max-w-5xl mx-auto flex flex-col gap-2 sm:flex-row sm:items-center">
-          {/* Filter buttons — scrollable di mobile */}
           <div className="flex items-center gap-1.5 overflow-x-auto pb-0.5 scrollbar-none">
             <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest shrink-0">Tipe:</span>
             {[
@@ -151,7 +199,7 @@ export default async function DatabasePage({
             ))}
           </div>
           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest sm:ml-auto">
-            {count ?? 0} laporan
+            {totalUniqueNumbers} nomor
           </span>
         </div>
       </section>
@@ -159,28 +207,29 @@ export default async function DatabasePage({
       {/* ── Report cards ── */}
       <section className="px-4 py-6 sm:py-10">
         <div className="max-w-5xl mx-auto">
-          {!reports || reports.length === 0 ? (
+          {paginatedReports.length === 0 ? (
             <div className="text-center py-24">
               <Search className="w-8 h-8 text-slate-300 mx-auto mb-3" />
               <p className="text-sm font-black text-slate-400 uppercase tracking-widest">Tidak ada laporan ditemukan</p>
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-              {reports.map((report) => {
+              {paginatedReports.map((report) => {
                 const meta = getTargetMeta(report.target_type, report.bank_name);
                 const Icon = meta.icon;
                 const logoSrc = getPlatformLogo(report.target_type, report.bank_name);
-                const badge = getStatusBadge(report.status);
+                const aggStatus = getAggregateStatus(report.verified_count, report.pending_count);
+                const badge = getStatusBadge(aggStatus, report.verified_count);
 
                 return (
-                  <Link key={report.id} href={`/check/${encodeSlug(report.target_number)}`}
+                  <Link key={report.target_number} href={`/check/${encodeSlug(report.target_number)}`}
                     className="flex flex-col bg-white border border-slate-200 p-4 sm:p-5 rounded-xl hover:border-slate-300 hover:shadow-md transition-all group active:scale-[0.98]">
                     {/* Top row: badge + date */}
                     <div className="flex justify-between items-start mb-3">
                       <span className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest rounded-full border ${badge.className}`}>
                         {badge.label}
                       </span>
-                      <span className="text-[10px] text-slate-400 font-medium shrink-0 ml-2">{formatDateID(report.created_at)}</span>
+                      <span className="text-[10px] text-slate-400 font-medium shrink-0 ml-2">{formatDateID(report.latest_at)}</span>
                     </div>
 
                     {/* Number + name */}
@@ -193,7 +242,7 @@ export default async function DatabasePage({
                       </p>
                     </div>
 
-                    {/* Bottom: platform + category + arrow */}
+                    {/* Bottom: platform + category + laporan count + arrow */}
                     <div className="flex items-center justify-between pt-3 border-t border-slate-100">
                       <div className="flex items-center gap-1.5 min-w-0">
                         <span className={`flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold border shrink-0 ${meta.bg} ${meta.color} ${meta.border}`}>
@@ -202,11 +251,18 @@ export default async function DatabasePage({
                             : <Icon className="w-3 h-3" />}
                           <span className="truncate max-w-[60px] sm:max-w-[80px]">{meta.label}</span>
                         </span>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate min-w-0">
-                          {report.category}
-                        </span>
+                        {report.total > 1 && (
+                          <span className="text-[10px] font-bold text-red-500 uppercase tracking-widest shrink-0">
+                            {report.total} laporan
+                          </span>
+                        )}
+                        {report.total === 1 && (
+                          <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate min-w-0">
+                            {report.category}
+                          </span>
+                        )}
                       </div>
-                      <ArrowUpRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 transition-colors shrink-0 ml-1" />
+                      <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 transition-colors shrink-0 ml-1" />
                     </div>
                   </Link>
                 );

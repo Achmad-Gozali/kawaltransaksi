@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowUpRight } from 'lucide-react';
+import { ArrowRight } from 'lucide-react';
 import type { Metadata } from 'next';
 import RekeningSearchForm from '@/components/RekeningSearchForm';
 import { createServerClient } from '@supabase/ssr';
@@ -146,7 +146,6 @@ export default async function CekRekeningPage() {
       <section className="bg-slate-50 pb-8 sm:pb-12">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 -mt-6 sm:-mt-14 relative z-10">
           <div className="bg-white border border-slate-200 rounded-xl shadow-md overflow-hidden">
-            {/* Mobile: 3 kolom compact */}
             <div className="grid grid-cols-3 sm:hidden divide-x divide-slate-100">
               {stats.map((stat, i) => (
                 <div key={i} className="flex flex-col items-center py-4 px-2 text-center">
@@ -156,7 +155,6 @@ export default async function CekRekeningPage() {
                 </div>
               ))}
             </div>
-            {/* Desktop */}
             <div className="hidden sm:grid grid-cols-3 divide-x divide-slate-100">
               {stats.map((stat, i) => (
                 <div key={i} className="flex items-start gap-4 px-8 py-8 text-left">
@@ -211,8 +209,8 @@ export default async function CekRekeningPage() {
                 <p className="text-[10px] sm:text-[11px] text-slate-500 leading-relaxed hidden sm:block">{bank.description}</p>
               </div>
               <div className="mt-3 sm:mt-5 pt-2 sm:pt-4 border-t border-slate-100 flex items-center justify-between">
-                <span className="text-[10px] sm:text-[11px] font-bold text-emerald-600 uppercase tracking-wider">Cek</span>
-                <ArrowUpRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-500" />
+                <span className="text-[10px] sm:text-[11px] font-bold text-emerald-600 uppercase tracking-wider">Cek Selengkapnya</span>
+                <ArrowRight className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-emerald-500" />
               </div>
             </Link>
           ))}
