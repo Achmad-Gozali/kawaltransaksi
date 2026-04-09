@@ -205,7 +205,6 @@ function AuthFormInner({ type }: AuthFormProps) {
     setIsLoading(true);
     try {
 
-      // ── REGISTER: lewat backend ───────────────────────────────────────────
       if (type === 'register') {
         const normalizedEmail = normalizeEmail(sanitizedEmail);
 
@@ -216,13 +215,14 @@ function AuthFormInner({ type }: AuthFormProps) {
             email: normalizedEmail,
             password,
             fullName: sanitizedFullName,
-            turnstileToken, // verifikasi Turnstile dilakukan di backend
+            turnstileToken,
           }),
         });
 
         const registerData = await registerRes.json().catch(() => ({})) as {
           success?: boolean;
           message?: string;
+          session?: { access_token: string; refresh_token: string };
         };
 
         if (!registerData.success) {
@@ -233,11 +233,21 @@ function AuthFormInner({ type }: AuthFormProps) {
           return;
         }
 
-        setSuccess('Akun berhasil dibuat! Silakan cek email untuk konfirmasi.');
+        // Auto login setelah register berhasil
+        if (registerData.session) {
+          await supabase.auth.setSession({
+            access_token: registerData.session.access_token,
+            refresh_token: registerData.session.refresh_token,
+          });
+        }
+
+        setSuccess('Akun berhasil dibuat! Mengalihkan...');
+        router.refresh();
+        setTimeout(() => router.push(redirectTo), 1000);
         return;
       }
 
-      // ── LOGIN: kirim turnstileToken langsung ke /api/auth/login ───────────
+      // LOGIN
       const loginRes = await fetch(`${BACKEND_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },

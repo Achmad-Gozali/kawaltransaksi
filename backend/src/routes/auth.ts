@@ -7,7 +7,6 @@ const auth = new Hono<{ Bindings: Env }>();
 const LOCK_DURATION_MINUTES = 10;
 const MAX_ATTEMPTS = 5;
 
-// ── Helper: verifikasi Turnstile token ke Cloudflare ─────────────────────────
 async function verifyTurnstile(token: string, secretKey: string): Promise<boolean> {
   try {
     const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
@@ -26,13 +25,11 @@ async function verifyTurnstile(token: string, secretKey: string): Promise<boolea
   }
 }
 
-// ── Helper: blacklist cek & set Turnstile token di KV ────────────────────────
 async function checkAndBlacklistTurnstile(
   limiter: KVNamespace | undefined,
   token: string
 ): Promise<{ blocked: boolean; message?: string }> {
   if (!limiter) return { blocked: false };
-
   try {
     const blacklistKey = `turnstile_used_${token}`;
     const alreadyUsed = await limiter.get(blacklistKey);
@@ -43,11 +40,10 @@ async function checkAndBlacklistTurnstile(
     return { blocked: false };
   } catch (err) {
     console.error('[TURNSTILE BLACKLIST] Error KV:', err);
-    return { blocked: false }; // fail open
+    return { blocked: false };
   }
 }
 
-// ── Helper: rate limit per key ────────────────────────────────────────────────
 async function checkRateLimit(
   limiter: KVNamespace,
   key: string,
@@ -62,11 +58,10 @@ async function checkRateLimit(
     return { blocked: false, count: count + 1 };
   } catch (err) {
     console.error(`[RATE LIMIT] Error KV key=${key}:`, err);
-    return { blocked: false, count: 0 }; // fail open
+    return { blocked: false, count: 0 };
   }
 }
 
-// ── POST /api/auth/verify-recaptcha ──────────────────────────────────────────
 auth.post('/verify-recaptcha', async (c) => {
   try {
     const { token, action } = await c.req.json();
@@ -96,12 +91,10 @@ auth.post('/verify-recaptcha', async (c) => {
   }
 });
 
-// ── POST /api/auth/register ───────────────────────────────────────────────────
 auth.post('/register', async (c) => {
   try {
     const { email, password, fullName, turnstileToken } = await c.req.json();
 
-    // ── Validasi input ────────────────────────────────────────────────────────
     if (!email || !password || !fullName) {
       return c.json({ success: false, message: 'Semua field wajib diisi.' }, 400);
     }
@@ -123,7 +116,6 @@ auth.post('/register', async (c) => {
 
     const ip = c.req.header('CF-Connecting-IP') || 'anonymous';
 
-    // ── Rate limit register per IP — 3 register per 10 menit ─────────────────
     if (c.env.LIMITER) {
       const registerKey = `rl_register_${ip}`;
       const registerCheck = await checkRateLimit(c.env.LIMITER, registerKey, 3, 600);
@@ -137,7 +129,6 @@ auth.post('/register', async (c) => {
       }
     }
 
-    // ── Verifikasi Turnstile ──────────────────────────────────────────────────
     const blacklistCheck = await checkAndBlacklistTurnstile(c.env.LIMITER, turnstileToken);
     if (blacklistCheck.blocked) {
       return c.json({ success: false, message: blacklistCheck.message }, 400);
@@ -149,9 +140,8 @@ auth.post('/register', async (c) => {
     }
 
     const supabaseAdmin = getSupabaseAdmin(c.env);
+    const supabaseClient = getSupabaseClient(c.env);
 
-    // ── Cek apakah email sudah terdaftar ─────────────────────────────────────
-    // Pesan generik untuk cegah enumerasi akun
     const { data: existingProfile } = await supabaseAdmin
       .from('profiles')
       .select('id')
@@ -165,11 +155,10 @@ auth.post('/register', async (c) => {
       }, 409);
     }
 
-    // ── Daftarkan user via Supabase Admin ─────────────────────────────────────
     const { data: signUpData, error: signUpError } = await supabaseAdmin.auth.admin.createUser({
       email: normalizedEmail,
       password,
-      email_confirm: false,
+      email_confirm: true,
       user_metadata: { full_name: sanitizedFullName },
     });
 
@@ -186,9 +175,16 @@ auth.post('/register', async (c) => {
       return c.json({ success: false, message: 'Terjadi kesalahan saat mendaftar. Coba lagi.' }, 500);
     }
 
+    // Auto login setelah register
+    const { data: signInData } = await supabaseClient.auth.signInWithPassword({
+      email: normalizedEmail,
+      password,
+    });
+
     return c.json({
       success: true,
-      message: 'Akun berhasil dibuat! Silakan cek email untuk konfirmasi.',
+      message: 'Akun berhasil dibuat!',
+      session: signInData?.session ?? null,
       userId: signUpData.user?.id,
     });
 
@@ -198,7 +194,6 @@ auth.post('/register', async (c) => {
   }
 });
 
-// ── POST /api/auth/login ──────────────────────────────────────────────────────
 auth.post('/login', async (c) => {
   try {
     const { email, password, turnstileToken } = await c.req.json();
@@ -207,7 +202,6 @@ auth.post('/login', async (c) => {
       return c.json({ success: false, message: 'Email dan kata sandi wajib diisi.' }, 400);
     }
 
-    // ── Verifikasi Turnstile ──────────────────────────────────────────────────
     if (!turnstileToken || typeof turnstileToken !== 'string' || turnstileToken.trim() === '') {
       return c.json({ success: false, message: 'Verifikasi keamanan wajib diselesaikan.' }, 400);
     }
@@ -225,7 +219,6 @@ auth.post('/login', async (c) => {
     const normalizedEmail = email.trim().toLowerCase();
     const ip = c.req.header('CF-Connecting-IP') || 'anonymous';
 
-    // ── Rate limit per IP+email & per email saja ──────────────────────────────
     if (c.env.LIMITER) {
       const emailSlug = btoa(normalizedEmail).replace(/[^a-zA-Z0-9]/g, '').slice(0, 20);
       const comboKey = `rl_login_${ip}_${emailSlug}`;
@@ -255,7 +248,6 @@ auth.post('/login', async (c) => {
     const supabaseAdmin = getSupabaseAdmin(c.env);
     const supabaseClient = getSupabaseClient(c.env);
 
-    // ── Cari profile by email ─────────────────────────────────────────────────
     const { data: profile, error: profileError } = await supabaseAdmin
       .from('profiles')
       .select('id, failed_attempts, locked_until, is_banned')
@@ -285,7 +277,6 @@ auth.post('/login', async (c) => {
       }
     }
 
-    // ── Coba login ────────────────────────────────────────────────────────────
     const { data: signInData, error: signInError } = await supabaseClient.auth.signInWithPassword({
       email: normalizedEmail,
       password,
@@ -345,7 +336,6 @@ auth.post('/login', async (c) => {
       }, 401);
     }
 
-    // ── Login berhasil ────────────────────────────────────────────────────────
     if (signInData.user) {
       const { data: freshProfile } = await supabaseAdmin
         .from('profiles')
