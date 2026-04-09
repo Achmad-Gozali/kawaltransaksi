@@ -204,38 +204,48 @@ function AuthFormInner({ type }: AuthFormProps) {
 
     setIsLoading(true);
     try {
-      const verifyRes = await fetch(`${BACKEND_URL}/api/search/verify-turnstile`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ token: turnstileToken }),
-      });
-      const verifyData = await verifyRes.json().catch(() => ({})) as { success?: boolean; message?: string };
 
-      if (!verifyData.success) {
-        setCaptchaError('Verifikasi keamanan gagal. Coba refresh halaman.');
-        setTurnstileToken(null);
-        turnstileRef.current?.reset();
-        setIsLoading(false);
-        return;
-      }
-
+      // ── REGISTER: lewat backend ───────────────────────────────────────────
       if (type === 'register') {
         const normalizedEmail = normalizeEmail(sanitizedEmail);
-        const { error: signUpError } = await supabase.auth.signUp({
-          email: normalizedEmail, password,
-          options: { data: { full_name: sanitizedFullName } },
+
+        const registerRes = await fetch(`${BACKEND_URL}/api/auth/register`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: normalizedEmail,
+            password,
+            fullName: sanitizedFullName,
+            turnstileToken, // verifikasi Turnstile dilakukan di backend
+          }),
         });
-        if (signUpError) throw signUpError;
-        setSuccess('Akun berhasil dibuat! Mengalihkan...');
-        router.refresh();
-        setTimeout(() => router.push(redirectTo), 1500);
+
+        const registerData = await registerRes.json().catch(() => ({})) as {
+          success?: boolean;
+          message?: string;
+        };
+
+        if (!registerData.success) {
+          setError(registerData.message ?? 'Terjadi kesalahan saat mendaftar.');
+          setTurnstileToken(null);
+          turnstileRef.current?.reset();
+          setIsLoading(false);
+          return;
+        }
+
+        setSuccess('Akun berhasil dibuat! Silakan cek email untuk konfirmasi.');
         return;
       }
 
+      // ── LOGIN: kirim turnstileToken langsung ke /api/auth/login ───────────
       const loginRes = await fetch(`${BACKEND_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: sanitizedEmail, password }),
+        body: JSON.stringify({
+          email: sanitizedEmail,
+          password,
+          turnstileToken,
+        }),
       });
       const loginData = await loginRes.json().catch(() => ({})) as {
         success?: boolean;
@@ -253,7 +263,6 @@ function AuthFormInner({ type }: AuthFormProps) {
           setIsWarning(false);
         } else if (loginData.warning) {
           setIsWarning(true);
-          // FIX: Tidak expose info sisa percobaan — pakai pesan dari backend langsung
           setError(loginData.message ?? 'Email atau kata sandi salah.');
         } else {
           setIsWarning(false);
@@ -475,7 +484,6 @@ function AuthFormInner({ type }: AuthFormProps) {
             : turnstileStatus === 'loading'
             ? <><Loader2 className="w-4 h-4 animate-spin" /> Memuat keamanan...</>
             : isWarning
-            // FIX: Hapus teks "Percobaan Terakhir" — tidak expose info sisa percobaan ke user
             ? <><AlertTriangle className="w-4 h-4" /> Coba Lagi</>
             : <>{type === 'login' ? 'Masuk' : 'Buat Akun'}<ArrowRight className="w-4 h-4 opacity-70" /></>
           }

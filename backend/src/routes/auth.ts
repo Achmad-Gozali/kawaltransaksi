@@ -7,6 +7,46 @@ const auth = new Hono<{ Bindings: Env }>();
 const LOCK_DURATION_MINUTES = 10;
 const MAX_ATTEMPTS = 5;
 
+// ── Helper: verifikasi Turnstile token ke Cloudflare ─────────────────────────
+async function verifyTurnstile(token: string, secretKey: string): Promise<boolean> {
+  try {
+    const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ secret: secretKey, response: token }),
+    });
+    const data = await res.json() as { success: boolean; 'error-codes'?: string[] };
+    if (!data.success) {
+      console.error('[TURNSTILE ERROR]:', data['error-codes']);
+    }
+    return data.success;
+  } catch (err) {
+    console.error('[TURNSTILE] Fetch error:', err);
+    return false;
+  }
+}
+
+// ── Helper: blacklist cek & set Turnstile token di KV ────────────────────────
+async function checkAndBlacklistTurnstile(
+  limiter: KVNamespace | undefined,
+  token: string
+): Promise<{ blocked: boolean; message?: string }> {
+  if (!limiter) return { blocked: false };
+
+  try {
+    const blacklistKey = `turnstile_used_${token}`;
+    const alreadyUsed = await limiter.get(blacklistKey);
+    if (alreadyUsed) {
+      return { blocked: true, message: 'Token verifikasi sudah digunakan. Muat ulang halaman.' };
+    }
+    await limiter.put(blacklistKey, '1', { expirationTtl: 300 });
+    return { blocked: false };
+  } catch (err) {
+    console.error('[TURNSTILE BLACKLIST] Error KV:', err);
+    return { blocked: false }; // fail open
+  }
+}
+
 // ── Helper: rate limit per key ────────────────────────────────────────────────
 async function checkRateLimit(
   limiter: KVNamespace,
@@ -56,12 +96,130 @@ auth.post('/verify-recaptcha', async (c) => {
   }
 });
 
+// ── POST /api/auth/register ───────────────────────────────────────────────────
+auth.post('/register', async (c) => {
+  try {
+    const { email, password, fullName, turnstileToken } = await c.req.json();
+
+    // ── Validasi input ────────────────────────────────────────────────────────
+    if (!email || !password || !fullName) {
+      return c.json({ success: false, message: 'Semua field wajib diisi.' }, 400);
+    }
+
+    if (!turnstileToken || typeof turnstileToken !== 'string' || turnstileToken.trim() === '') {
+      return c.json({ success: false, message: 'Verifikasi keamanan wajib diselesaikan.' }, 400);
+    }
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const sanitizedFullName = fullName.trim().replace(/[<>'"]/g, '');
+
+    if (sanitizedFullName.length < 2) {
+      return c.json({ success: false, message: 'Nama lengkap minimal 2 karakter.' }, 400);
+    }
+
+    if (password.length < 8) {
+      return c.json({ success: false, message: 'Kata sandi tidak memenuhi persyaratan keamanan.' }, 400);
+    }
+
+    const ip = c.req.header('CF-Connecting-IP') || 'anonymous';
+
+    // ── Rate limit register per IP — 3 register per 10 menit ─────────────────
+    if (c.env.LIMITER) {
+      const registerKey = `rl_register_${ip}`;
+      const registerCheck = await checkRateLimit(c.env.LIMITER, registerKey, 3, 600);
+      if (registerCheck.blocked) {
+        console.warn(`[REGISTER RL] IP diblokir — IP: ${ip}`);
+        return c.json({
+          success: false,
+          message: 'Terlalu banyak percobaan pendaftaran. Tunggu beberapa menit.',
+          retry_after: 600,
+        }, 429);
+      }
+    }
+
+    // ── Verifikasi Turnstile ──────────────────────────────────────────────────
+    const blacklistCheck = await checkAndBlacklistTurnstile(c.env.LIMITER, turnstileToken);
+    if (blacklistCheck.blocked) {
+      return c.json({ success: false, message: blacklistCheck.message }, 400);
+    }
+
+    const isValidTurnstile = await verifyTurnstile(turnstileToken, c.env.TURNSTILE_SECRET_KEY);
+    if (!isValidTurnstile) {
+      return c.json({ success: false, message: 'Verifikasi keamanan gagal. Muat ulang halaman.' }, 400);
+    }
+
+    const supabaseAdmin = getSupabaseAdmin(c.env);
+
+    // ── Cek apakah email sudah terdaftar ─────────────────────────────────────
+    // Pesan generik untuk cegah enumerasi akun
+    const { data: existingProfile } = await supabaseAdmin
+      .from('profiles')
+      .select('id')
+      .eq('email', normalizedEmail)
+      .single();
+
+    if (existingProfile) {
+      return c.json({
+        success: false,
+        message: 'Terjadi kesalahan saat mendaftar. Coba gunakan email lain atau masuk jika sudah punya akun.',
+      }, 409);
+    }
+
+    // ── Daftarkan user via Supabase Admin ─────────────────────────────────────
+    const { data: signUpData, error: signUpError } = await supabaseAdmin.auth.admin.createUser({
+      email: normalizedEmail,
+      password,
+      email_confirm: false,
+      user_metadata: { full_name: sanitizedFullName },
+    });
+
+    if (signUpError) {
+      console.error('[REGISTER] Supabase error:', signUpError.message);
+
+      if (signUpError.message.includes('already registered') || signUpError.message.includes('already exists')) {
+        return c.json({
+          success: false,
+          message: 'Terjadi kesalahan saat mendaftar. Coba gunakan email lain atau masuk jika sudah punya akun.',
+        }, 409);
+      }
+
+      return c.json({ success: false, message: 'Terjadi kesalahan saat mendaftar. Coba lagi.' }, 500);
+    }
+
+    return c.json({
+      success: true,
+      message: 'Akun berhasil dibuat! Silakan cek email untuk konfirmasi.',
+      userId: signUpData.user?.id,
+    });
+
+  } catch (err) {
+    console.error('[REGISTER] Error:', err);
+    return c.json({ success: false, message: 'Terjadi kesalahan server.' }, 500);
+  }
+});
+
 // ── POST /api/auth/login ──────────────────────────────────────────────────────
 auth.post('/login', async (c) => {
   try {
-    const { email, password } = await c.req.json();
+    const { email, password, turnstileToken } = await c.req.json();
+
     if (!email || !password) {
       return c.json({ success: false, message: 'Email dan kata sandi wajib diisi.' }, 400);
+    }
+
+    // ── Verifikasi Turnstile ──────────────────────────────────────────────────
+    if (!turnstileToken || typeof turnstileToken !== 'string' || turnstileToken.trim() === '') {
+      return c.json({ success: false, message: 'Verifikasi keamanan wajib diselesaikan.' }, 400);
+    }
+
+    const blacklistCheck = await checkAndBlacklistTurnstile(c.env.LIMITER, turnstileToken);
+    if (blacklistCheck.blocked) {
+      return c.json({ success: false, message: blacklistCheck.message }, 400);
+    }
+
+    const isValidTurnstile = await verifyTurnstile(turnstileToken, c.env.TURNSTILE_SECRET_KEY);
+    if (!isValidTurnstile) {
+      return c.json({ success: false, message: 'Verifikasi keamanan gagal. Muat ulang halaman.' }, 400);
     }
 
     const normalizedEmail = email.trim().toLowerCase();
@@ -73,7 +231,6 @@ auth.post('/login', async (c) => {
       const comboKey = `rl_login_${ip}_${emailSlug}`;
       const emailOnlyKey = `rl_email_${emailSlug}`;
 
-      // 5 percobaan per IP+email dalam 5 menit
       const comboCheck = await checkRateLimit(c.env.LIMITER, comboKey, 5, 300);
       if (comboCheck.blocked) {
         console.warn(`[LOGIN RL] IP+email diblokir — IP: ${ip}`);
@@ -84,7 +241,6 @@ auth.post('/login', async (c) => {
         }, 429);
       }
 
-      // 10 percobaan per email dari semua IP dalam 5 menit (cegah distributed attack)
       const emailCheck = await checkRateLimit(c.env.LIMITER, emailOnlyKey, 10, 300);
       if (emailCheck.blocked) {
         console.warn(`[LOGIN RL] Email diblokir dari semua IP — email: ${normalizedEmail}`);
@@ -111,11 +267,9 @@ auth.post('/login', async (c) => {
         return c.json({ success: false, message: 'Akun Anda telah dinonaktifkan. Hubungi admin.' }, 403);
       }
 
-      // ── Cek locked SEBELUM attempt login ─────────────────────────────────
       if (profile.locked_until) {
         const lockedUntil = new Date(profile.locked_until);
         if (lockedUntil > new Date()) {
-          const remainingSeconds = Math.ceil((lockedUntil.getTime() - Date.now()) / 1000);
           return c.json({
             success: false,
             message: 'Akun dikunci sementara karena terlalu banyak percobaan gagal.',
@@ -123,7 +277,6 @@ auth.post('/login', async (c) => {
             locked_until: profile.locked_until,
           }, 429);
         } else {
-          // Lock sudah expire, reset
           await supabaseAdmin
             .from('profiles')
             .update({ failed_attempts: 0, locked_until: null })
@@ -139,7 +292,6 @@ auth.post('/login', async (c) => {
     });
 
     if (signInError) {
-      // Pesan error SAMA untuk semua kasus gagal — cegah enumerasi akun
       if (!profile || profileError) {
         return c.json({ success: false, message: 'Email atau kata sandi salah.' }, 401);
       }
@@ -153,7 +305,6 @@ auth.post('/login', async (c) => {
       const currentAttempts = (freshProfile?.failed_attempts ?? 0) + 1;
       const remaining = MAX_ATTEMPTS - currentAttempts;
 
-      // ── Percobaan ke-5: langsung lock ────────────────────────────────────
       if (currentAttempts >= MAX_ATTEMPTS) {
         const lockedUntil = new Date(Date.now() + LOCK_DURATION_MINUTES * 60 * 1000);
         await supabaseAdmin
@@ -177,7 +328,6 @@ auth.post('/login', async (c) => {
         .update({ failed_attempts: currentAttempts })
         .eq('id', profile.id);
 
-      // ── Percobaan ke-4: warning ───────────────────────────────────────────
       if (remaining === 1) {
         return c.json({
           success: false,
@@ -187,7 +337,6 @@ auth.post('/login', async (c) => {
         }, 401);
       }
 
-      // ── Percobaan 1-3: error generik ─────────────────────────────────────
       return c.json({
         success: false,
         message: 'Email atau kata sandi salah.',
@@ -209,7 +358,6 @@ auth.post('/login', async (c) => {
         return c.json({ success: false, message: 'Akun Anda telah dinonaktifkan. Hubungi admin.' }, 403);
       }
 
-      // Reset counter login di KV juga saat berhasil
       if (c.env.LIMITER) {
         try {
           const emailSlug = btoa(normalizedEmail).replace(/[^a-zA-Z0-9]/g, '').slice(0, 20);
