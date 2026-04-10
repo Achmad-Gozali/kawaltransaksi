@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useMemo } from 'react';
+import { useState, useMemo, useRef } from 'react';
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, BarChart, Bar,
@@ -75,8 +75,8 @@ const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent
 export default function StatsChart({ rawReports }: StatsChartProps) {
   const [range, setRange] = useState<Range>('30');
 
-  // ── FIX: pindahin Date.now() keluar dari useMemo ──
-  const now = Date.now();
+  const nowRef = useRef(Date.now());
+  const now = nowRef.current;
 
   const filteredReports = useMemo(() => {
     if (range === 'all') return rawReports;
