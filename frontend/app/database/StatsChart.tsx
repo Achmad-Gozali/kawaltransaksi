@@ -75,23 +75,26 @@ const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent
 export default function StatsChart({ rawReports }: StatsChartProps) {
   const [range, setRange] = useState<Range>('30');
 
+  // ── FIX: pindahin Date.now() keluar dari useMemo ──
+  const now = Date.now();
+
   const filteredReports = useMemo(() => {
     if (range === 'all') return rawReports;
     const days = parseInt(range);
-    const cutoff = new Date();
+    const cutoff = new Date(now);
     cutoff.setDate(cutoff.getDate() - days);
     cutoff.setHours(0, 0, 0, 0);
     return rawReports.filter(r => new Date(r.created_at) >= cutoff);
-  }, [rawReports, range]);
+  }, [rawReports, range, now]);
 
   const trendData = useMemo(() => {
     const days = range === 'all'
-      ? Math.max(7, Math.ceil((Date.now() - new Date(rawReports[rawReports.length - 1]?.created_at ?? Date.now()).getTime()) / 86400000) + 1)
+      ? Math.max(7, Math.ceil((now - new Date(rawReports[rawReports.length - 1]?.created_at ?? now).getTime()) / 86400000) + 1)
       : parseInt(range);
     const cappedDays = Math.min(days, range === 'all' ? 60 : parseInt(range));
     const result: { date: string; count: number }[] = [];
     for (let i = cappedDays - 1; i >= 0; i--) {
-      const d = new Date();
+      const d = new Date(now);
       d.setDate(d.getDate() - i);
       const wibStr = toWIBDateString(d.toISOString());
       const label = formatShortDate(wibStr);
@@ -99,7 +102,7 @@ export default function StatsChart({ rawReports }: StatsChartProps) {
       result.push({ date: label, count });
     }
     return result;
-  }, [filteredReports, range, rawReports]);
+  }, [filteredReports, range, rawReports, now]);
 
   const categoryData = useMemo(() => {
     const count: Record<string, number> = {};
