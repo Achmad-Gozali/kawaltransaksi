@@ -243,7 +243,7 @@ function AuthFormInner({ type }: AuthFormProps) {
 
         setSuccess('Akun berhasil dibuat! Mengalihkan...');
         router.refresh();
-        setTimeout(() => router.push(redirectTo), 1000);
+        setTimeout(() => router.push(redirectTo), 500);
         return;
       }
 
