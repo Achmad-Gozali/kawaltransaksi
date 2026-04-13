@@ -3,6 +3,10 @@ main = "src/index.ts"
 compatibility_date = "2025-01-01"
 compatibility_flags = ["nodejs_compat"]
 
+routes = [
+  { pattern = "api.kawaltransaksi.com", custom_domain = true }
+]
+
 [vars]
 NODE_ENV = "production"
 TURNSTILE_SECRET_KEY = "0x4AAAAAAC17fXUhsrX8gqZGaPrc0uSFEfU"
