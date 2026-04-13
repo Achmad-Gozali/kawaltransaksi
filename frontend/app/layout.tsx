@@ -22,8 +22,16 @@ export const metadata: Metadata = {
   description: 'Cek nomor HP, rekening bank, dan e-wallet terindikasi penipuan secara gratis. Database laporan komunitas anti-penipuan Indonesia terlengkap.',
   metadataBase: new URL('https://kawaltransaksi.vercel.app/'),
   icons: {
-    icon: '/logo.png',
+    icon: [
+      { url: '/icons/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
+      { url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
+    ],
+    apple: [
+      { url: '/icons/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
+    ],
+    shortcut: '/icons/favicon-32x32.png',
   },
+  manifest: '/manifest.json',
   keywords: [
     'cek nomor penipu',
     'cek rekening penipu',
@@ -58,15 +66,20 @@ export const metadata: Metadata = {
   alternates: {
     canonical: 'https://kawaltransaksi.vercel.app/',
   },
+  // PWA meta untuk Apple
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: 'black-translucent',
+    title: 'KawalTransaksi',
+  },
 };
 
 export const viewport: Viewport = {
-  themeColor: '#ffffff',
+  themeColor: '#0f172a',
   width: 'device-width',
   initialScale: 1,
 };
 
-// Cache semua halaman 60 detik — halaman dengan force-dynamic tetap override ini
 export const revalidate = 60;
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {

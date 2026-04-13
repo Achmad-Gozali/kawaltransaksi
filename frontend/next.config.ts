@@ -1,4 +1,5 @@
 import type { NextConfig } from 'next';
+import withPWA from '@ducanh2912/next-pwa';
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
@@ -38,10 +39,9 @@ const nextConfig: NextConfig = {
       },
     ],
     formats: ['image/avif', 'image/webp'],
-    minimumCacheTTL: 86400, // 24 jam — gambar jarang berubah
+    minimumCacheTTL: 86400,
   },
 
-  // Prefetch agresif — halaman di-prefetch waktu link masuk viewport
   experimental: {
     optimisticClientCache: true,
   },
@@ -65,6 +65,8 @@ const nextConfig: NextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
+              // Tambah worker-src untuk service worker PWA
+              "worker-src 'self'",
               "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/ https://challenges.cloudflare.com https://*.challenges.cloudflare.com",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
@@ -78,28 +80,24 @@ const nextConfig: NextConfig = {
           },
         ],
       },
-      // Static assets — cache 1 tahun, immutable
       {
         source: '/_next/static/(.*)',
         headers: [
           { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
         ],
       },
-      // Next.js image optimization — cache 24 jam + stale 7 hari
       {
         source: '/_next/image(.*)',
         headers: [
           { key: 'Cache-Control', value: 'public, max-age=86400, stale-while-revalidate=604800' },
         ],
       },
-      // Font files — cache 1 tahun
       {
         source: '/fonts/(.*)',
         headers: [
           { key: 'Cache-Control', value: 'public, max-age=31536000, immutable' },
         ],
       },
-      // Static public assets (logo, gambar bank, ewallet)
       {
         source: '/(banks|ewallets|icons)/(.*)',
         headers: [
@@ -122,4 +120,13 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default nextConfig;
+export default withPWA({
+  dest: 'public',
+  cacheOnFrontEndNav: true,
+  aggressiveFrontEndNavCaching: true,
+  reloadOnOnline: true,
+  disable: process.env.NODE_ENV === 'development',
+  workboxOptions: {
+    disableDevLogs: true,
+  },
+})(nextConfig);

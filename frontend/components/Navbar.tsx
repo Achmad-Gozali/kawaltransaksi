@@ -5,7 +5,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter, usePathname } from 'next/navigation';
 import { createClient } from '@/lib/supabase-browser';
-import { LogOut, Menu, X, User, FileText, ChevronDown, Home, Phone, Building2, Flag, Database, Newspaper } from 'lucide-react';
+import { LogOut, Menu, X, User, FileText, ChevronDown, Home, Phone, Building2, Flag, Database, Newspaper, Download } from 'lucide-react';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 
 const publicMenuItems = [
@@ -25,16 +25,54 @@ const privateMenuItems = [
   { href: '/artikel',      label: 'Artikel',        icon: Newspaper },
 ];
 
+interface BeforeInstallPromptEvent extends Event {
+  prompt: () => Promise<void>;
+  userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+}
+
 export default function Navbar() {
   const [user, setUser]                     = useState<SupabaseUser | null>(null);
   const [isMenuOpen, setIsMenuOpen]         = useState(false);
   const [isProfileOpen, setIsProfileOpen]   = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isLoading, setIsLoading]           = useState(true);
+  const [installPrompt, setInstallPrompt]   = useState<BeforeInstallPromptEvent | null>(null);
+  const [isInstalled, setIsInstalled]       = useState(false);
   const router      = useRouter();
   const pathname    = usePathname();
   const supabase    = useMemo(() => createClient(), []);
   const dropdownRef = useRef<HTMLDivElement>(null);
+
+  // Tangkap event install PWA
+  useEffect(() => {
+    // Cek kalau udah diinstall (standalone mode)
+    if (window.matchMedia('(display-mode: standalone)').matches) {
+      setIsInstalled(true);
+      return;
+    }
+
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setInstallPrompt(e as BeforeInstallPromptEvent);
+    };
+
+    window.addEventListener('beforeinstallprompt', handler);
+    window.addEventListener('appinstalled', () => setIsInstalled(true));
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handler);
+    };
+  }, []);
+
+  const handleInstall = async () => {
+    if (!installPrompt) return;
+    await installPrompt.prompt();
+    const { outcome } = await installPrompt.userChoice;
+    if (outcome === 'accepted') {
+      setInstallPrompt(null);
+      setIsInstalled(true);
+    }
+  };
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data: { session } }) => {
@@ -147,6 +185,18 @@ export default function Navbar() {
 
             {/* AUTH — kanan (desktop) */}
             <div className="hidden lg:flex items-center gap-2 shrink-0 ml-auto">
+
+              {/* Tombol Install PWA — desktop, muncul kalau belum install */}
+              {!isInstalled && installPrompt && (
+                <button
+                  onClick={handleInstall}
+                  className="flex items-center gap-1.5 px-3 py-2 text-xs font-bold text-emerald-700 border border-emerald-200 bg-emerald-50 rounded-lg hover:bg-emerald-100 transition-colors"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  Install App
+                </button>
+              )}
+
               {isLoading ? (
                 <div className="w-24 h-9 bg-slate-100 animate-pulse rounded-lg" />
               ) : user ? (
@@ -252,6 +302,24 @@ export default function Navbar() {
                 </Link>
               ))}
             </div>
+
+            {/* Tombol Install PWA — mobile drawer, paling bawah */}
+            {!isInstalled && installPrompt && (
+              <div className="px-3 pb-4 pt-1 border-t border-slate-100">
+                <button
+                  onClick={() => { handleInstall(); setIsMenuOpen(false); }}
+                  className="w-full flex items-center gap-3 px-4 py-3 rounded-xl bg-emerald-50 hover:bg-emerald-100 transition-colors"
+                >
+                  <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center">
+                    <Download className="w-4 h-4 text-white" />
+                  </div>
+                  <div className="text-left">
+                    <p className="text-sm font-bold text-emerald-700">Install Aplikasi</p>
+                    <p className="text-xs text-emerald-600">Tambah ke layar utama</p>
+                  </div>
+                </button>
+              </div>
+            )}
           </div>
         </div>
       )}
