@@ -138,7 +138,8 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
   const hasOtherVictims = reports.some((r) => r.has_other_victims === 'yes');
 
   // ── Rule-based detection ──────────────────────────────────────────────────
-  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const nowMs = checkedAt.getTime();
+  const thirtyDaysAgo = new Date(nowMs - 30 * 24 * 60 * 60 * 1000);
   const recentReports = reports.filter((r) => new Date(r.created_at) >= thirtyDaysAgo);
   const uniquePlatforms = Array.from(new Set(reports.map((r) => r.platform).filter(Boolean)));
   const multiVictimCount = reports.filter((r) => r.has_other_victims === 'yes').length;
