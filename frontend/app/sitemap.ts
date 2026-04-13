@@ -2,7 +2,7 @@ import { MetadataRoute } from 'next';
 import { createClient } from '@/lib/supabase-server';
 import { encodeSlug } from '@/lib/utils';
 
-const BASE_URL = 'https://kawaltransaksi.vercel.app';
+const BASE_URL = 'https://kawaltransaksi.com/';
 
 export const revalidate = 3600; // regenerate sitemap tiap 1 jam
 

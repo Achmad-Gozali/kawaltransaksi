@@ -20,7 +20,7 @@ const robotoMono = Roboto_Mono({
 export const metadata: Metadata = {
   title: 'KawalTransaksi - Cek & Laporkan Nomor Penipu',
   description: 'Cek nomor HP, rekening bank, dan e-wallet terindikasi penipuan secara gratis. Database laporan komunitas anti-penipuan Indonesia terlengkap.',
-  metadataBase: new URL('https://kawaltransaksi.vercel.app/'),
+  metadataBase: new URL('https://kawaltransaksi.com/'),
   icons: {
     icon: [
       { url: '/icons/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
@@ -55,7 +55,7 @@ export const metadata: Metadata = {
     type: 'website',
     locale: 'id_ID',
     siteName: 'KawalTransaksi',
-    url: 'https://kawaltransaksi.vercel.app/',
+    url: 'https://kawaltransaksi.com/',
   },
   twitter: {
     card: 'summary_large_image',
@@ -64,7 +64,7 @@ export const metadata: Metadata = {
   },
   robots: { index: true, follow: true },
   alternates: {
-    canonical: 'https://kawaltransaksi.vercel.app/',
+    canonical: 'https://kawaltransaksi.com/',
   },
   // PWA meta untuk Apple
   appleWebApp: {

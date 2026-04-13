@@ -15,7 +15,7 @@ app.use('*', cors({
     const allowedOrigins = [
       'http://localhost:3000',
       'http://localhost:3001',
-      'https://kawaltransaksi.vercel.app',
+      'https://kawaltransaksi.com/',
       c.env.FRONTEND_URL,
     ].filter(Boolean);
     if (allowedOrigins.includes(origin ?? '')) return origin;
@@ -31,7 +31,7 @@ const originValidator = async (c: any, next: any) => {
   const allowedOrigins = [
     'http://localhost:3000',
     'http://localhost:3001',
-    'https://kawaltransaksi.vercel.app',
+    'https://kawaltransaksi.com/',
     c.env.FRONTEND_URL,
   ].filter(Boolean);
 
