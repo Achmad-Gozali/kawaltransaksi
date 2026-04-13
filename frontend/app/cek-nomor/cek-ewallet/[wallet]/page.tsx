@@ -101,26 +101,33 @@ export default async function EwalletDetailPage({ params }: PageProps) {
 
   const supabase = await createClient();
 
-  const [
-    { data: recentReports },
-    { count: totalCount },
-    { count: verifiedCount },
-    { count: pendingCount },
-    { data: categoryData },
-    { data: linkedReports },
-  ] = await Promise.all([
-    supabase.from('reports').select('target_number, target_name, status, created_at').ilike('bank_name', `%${data.dbName}%`).order('created_at', { ascending: false }).limit(6),
-    supabase.from('reports').select('*', { count: 'exact', head: true }).ilike('bank_name', `%${data.dbName}%`),
-    supabase.from('reports').select('*', { count: 'exact', head: true }).ilike('bank_name', `%${data.dbName}%`).eq('status', 'verified'),
-    supabase.from('reports').select('*', { count: 'exact', head: true }).ilike('bank_name', `%${data.dbName}%`).eq('status', 'pending'),
-    supabase.from('reports').select('category').ilike('bank_name', `%${data.dbName}%`),
-    // Query nomor tambahan dari target_numbers JSONB yang e-wallet-nya sesuai
-    supabase.from('reports').select('target_numbers, status, created_at').filter('target_numbers', 'cs', `[{"type":"ewallet","bank":"${data.dbName}"}]`).order('created_at', { ascending: false }).limit(20),
-  ]);
-
   type ReportRow = { target_number: string; target_name: string | null; status: string; created_at: string };
 
-  // Kumpulkan nomor dari target_numbers JSONB yang e-wallet-nya sesuai
+  const [
+    { data: primaryReports },
+    { data: linkedReports },
+    { data: categoryData },
+  ] = await Promise.all([
+    // Primary: laporan dengan bank_name sesuai ewallet
+    supabase
+      .from('reports')
+      .select('target_number, target_name, status, created_at')
+      .ilike('bank_name', `%${data.dbName}%`)
+      .order('created_at', { ascending: false }),
+    // Linked: laporan dengan nomor tambahan di target_numbers JSONB
+    supabase
+      .from('reports')
+      .select('target_numbers, status, created_at')
+      .filter('target_numbers', 'cs', `[{"type":"ewallet","bank":"${data.dbName}"}]`)
+      .order('created_at', { ascending: false }),
+    // Category breakdown
+    supabase
+      .from('reports')
+      .select('category')
+      .ilike('bank_name', `%${data.dbName}%`),
+  ]);
+
+  // Flatten linked JSONB entries jadi rows
   const linkedRows: ReportRow[] = [];
   (linkedReports ?? []).forEach((r: any) => {
     if (!Array.isArray(r.target_numbers)) return;
@@ -142,24 +149,23 @@ export default async function EwalletDetailPage({ params }: PageProps) {
   });
 
   // Merge primary + linked, deduplikasi by target_number
-  const linkedTotal = linkedRows.length;
-  const linkedVerified = linkedRows.filter(r => r.status === 'verified').length;
-  const linkedPending = linkedRows.filter(r => r.status === 'pending').length;
-
-  const finalTotalCount = (totalCount ?? 0) + linkedTotal;
-  const finalVerifiedCount = (verifiedCount ?? 0) + linkedVerified;
-  const finalPendingCount = (pendingCount ?? 0) + linkedPending;
-
+  // Ini satu-satunya source of truth untuk semua angka
   const seenNumbers = new Set<string>();
-  const allReportRows: ReportRow[] = [];
-  [...(recentReports ?? []), ...linkedRows].forEach((r: any) => {
+  const allRows: ReportRow[] = [];
+  [...(primaryReports ?? []), ...linkedRows].forEach((r: any) => {
     if (!seenNumbers.has(r.target_number)) {
       seenNumbers.add(r.target_number);
-      allReportRows.push(r);
+      allRows.push(r);
     }
   });
 
-  const reports = allReportRows.slice(0, 6).map((r) => ({
+  // Hitung dari deduplicated rows — tidak ada double counting
+  const totalCount = allRows.length;
+  const verifiedCount = allRows.filter(r => r.status === 'verified').length;
+  const pendingCount = allRows.filter(r => r.status === 'pending').length;
+
+  // Ambil 6 terbaru untuk display
+  const reports = allRows.slice(0, 6).map((r) => ({
     target_number: r.target_number,
     target_name: r.target_name,
     status: r.status,
@@ -181,9 +187,9 @@ export default async function EwalletDetailPage({ params }: PageProps) {
       walletId={walletKey}
       walletData={data}
       reports={reports}
-      totalCount={finalTotalCount}
-      verifiedCount={finalVerifiedCount}
-      pendingCount={finalPendingCount}
+      totalCount={totalCount}
+      verifiedCount={verifiedCount}
+      pendingCount={pendingCount}
       categoryBreakdown={categoryBreakdown}
     />
   );

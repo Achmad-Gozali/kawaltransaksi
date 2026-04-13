@@ -18,11 +18,11 @@ const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? '';
 function isLikelyHP(num: string): boolean {
   if (num.length === 0) return false;
   if (num.startsWith('08')) return true;
-  if (num.startsWith('8')) return true;
   if (num.startsWith('628')) return true;
-  if (num.startsWith('0') && num.length === 1) return true; // mungkin mau ketik 08
-  if (num.startsWith('6') && num.length === 1) return false; // belum tau
-  if (num.startsWith('62') && num.length === 2) return true; // mungkin mau ketik 628
+  // Masih ngetik, jangan warning dulu
+  if (num === '0') return false;
+  if (num === '6') return false;
+  if (num === '62') return false;
   return false;
 }
 
@@ -55,6 +55,9 @@ export default function RekeningSearchForm() {
   const handleSearch = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
+
+    // Guard — tidak bisa dibypass walau tombol di-enable paksa via DevTools
+    if (isWrongInput) return;
 
     if (!cleaned || cleaned.length < 6) {
       setError('Masukkan nomor rekening yang valid (minimal 6 digit).');

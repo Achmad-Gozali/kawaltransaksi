@@ -15,15 +15,38 @@ const BACKEND_URL = (() => {
 
 const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? '';
 
-function isLikelyRekening(num: string): boolean {
-  if (num.length === 0) return false;
-  if (num.startsWith('08')) return false;
-  if (num.startsWith('8')) return false;
-  if (num.startsWith('628')) return false;
-  if (num.startsWith('0')) return true;
-  if (num.startsWith('62') && !num.startsWith('628')) return true;
-  if (num.startsWith('6') && !num.startsWith('62')) return true;
-  return true;
+function validateHP(num: string): { valid: boolean; warning: string | null } {
+  if (num.length === 0) return { valid: false, warning: null };
+
+  // Masih ngetik prefix, jangan warning dulu
+  if (num === '0') return { valid: false, warning: null };
+  if (num === '6') return { valid: false, warning: null };
+  if (num === '62') return { valid: false, warning: null };
+
+  // Prefix valid Indo
+  const validPrefix =
+    num.startsWith('08') ||
+    num.startsWith('628');
+
+  if (!validPrefix) {
+    return {
+      valid: false,
+      warning: 'Nomor HP Indonesia harus diawali 08 atau 628.',
+    };
+  }
+
+  // Prefix benar tapi belum cukup panjang — belum valid, tapi juga jangan warning
+  if (num.length < 10) return { valid: false, warning: null };
+
+  // Panjang maksimal nomor HP Indo adalah 13 digit
+  if (num.length > 13) {
+    return {
+      valid: false,
+      warning: 'Nomor HP terlalu panjang. Maksimal 13 digit.',
+    };
+  }
+
+  return { valid: true, warning: null };
 }
 
 export default function NomorSearchForm() {
@@ -45,7 +68,7 @@ export default function NomorSearchForm() {
   }, []);
 
   const cleaned = query.replace(/\D/g, '');
-  const isWrongInput = isLikelyRekening(cleaned) && cleaned.length >= 1;
+  const { valid: isValidHP, warning } = validateHP(cleaned);
 
   const handleChange = (val: string) => {
     setQuery(val.replace(/\D/g, ''));
@@ -56,10 +79,9 @@ export default function NomorSearchForm() {
     e.preventDefault();
     setError(null);
 
-    if (!cleaned || cleaned.length < 5) {
-      setError('Masukkan nomor yang valid (minimal 5 digit).');
-      return;
-    }
+    // Guard — tidak bisa dibypass walau tombol di-enable paksa via DevTools
+    if (!isValidHP) return;
+
     if (!turnstileToken) {
       setError('Selesaikan verifikasi keamanan terlebih dahulu.');
       return;
@@ -104,7 +126,7 @@ export default function NomorSearchForm() {
             placeholder="Contoh: 081234567890"
             maxLength={15}
             className={`w-full pl-10 pr-4 py-3 bg-white border rounded-xl text-sm focus:outline-none focus:ring-2 transition-all ${
-              isWrongInput
+              warning
                 ? 'border-amber-400 focus:border-amber-400 focus:ring-amber-100'
                 : 'border-slate-200 focus:border-emerald-400 focus:ring-emerald-100'
             }`}
@@ -112,23 +134,17 @@ export default function NomorSearchForm() {
         </div>
         <button
           type="submit"
-          disabled={loading || !turnstileToken || isWrongInput}
+          disabled={loading || !turnstileToken || !isValidHP}
           className="px-5 py-3 bg-slate-900 text-white text-sm font-bold rounded-lg hover:bg-black disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95 flex items-center gap-2"
         >
           {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Cek'}
         </button>
       </div>
 
-      {isWrongInput && (
+      {warning && (
         <div className="flex items-start gap-2 text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded-lg px-3 py-2.5">
           <AlertTriangle className="w-3.5 h-3.5 shrink-0 mt-0.5" />
-          <span>
-            Sepertinya ini nomor rekening bank, bukan nomor HP.{' '}
-            <Link href="/cek-rekening" className="font-bold underline underline-offset-2 hover:text-amber-900">
-              Gunakan halaman Cek Rekening
-            </Link>{' '}
-            untuk hasil yang akurat.
-          </span>
+          <span>{warning}</span>
         </div>
       )}
 
