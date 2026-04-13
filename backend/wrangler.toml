@@ -10,6 +10,7 @@ routes = [
 [vars]
 NODE_ENV = "production"
 TURNSTILE_SECRET_KEY = "0x4AAAAAAC17fXUhsrX8gqZGaPrc0uSFEfU"
+FRONTEND_URL = "https://kawaltransaksi.com"
 
 [[kv_namespaces]]
 binding = "LIMITER"

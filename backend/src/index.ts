@@ -28,6 +28,8 @@ app.use('*', cors({
 
 // ── Origin validation ─────────────────────────────────────────────────────────
 const originValidator = async (c: any, next: any) => {
+
+  if (c.req.method === 'OPTIONS') return next();
   const allowedOrigins = [
     'http://localhost:3000',
     'http://localhost:3001',
