@@ -81,6 +81,7 @@ export interface Database {
           category: string;
           chronology: string;
           evidence_url: string | null;
+          evidence_urls: string[] | null;
           status: string;
           created_at: string;
           bank_name: string | null;
@@ -102,6 +103,7 @@ export interface Database {
           category: string;
           chronology: string;
           evidence_url?: string | null;
+          evidence_urls: string[] | null;
           status?: string;
           created_at?: string;
           bank_name?: string | null;
@@ -123,6 +125,7 @@ export interface Database {
           category?: string;
           chronology?: string;
           evidence_url?: string | null;
+          evidence_urls: string[] | null;
           status?: string;
           created_at?: string;
           bank_name?: string | null;

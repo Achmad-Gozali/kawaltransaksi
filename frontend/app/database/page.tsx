@@ -269,7 +269,7 @@ export default async function DatabasePage({
             <div className="flex items-center gap-2">
               <span className="text-xs text-slate-500">Hasil pencarian untuk</span>
               <span className="text-xs bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-md font-semibold">
-                "{q}"
+                &quot;{q}&quot;
               </span>
             </div>
           )}
