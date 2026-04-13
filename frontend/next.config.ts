@@ -1,5 +1,5 @@
 import type { NextConfig } from 'next';
-import withPWA from '@ducanh2912/next-pwa';
+import withSerwist from '@serwist/next';
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
@@ -65,7 +65,6 @@ const nextConfig: NextConfig = {
             key: 'Content-Security-Policy',
             value: [
               "default-src 'self'",
-              // Tambah worker-src untuk service worker PWA
               "worker-src 'self'",
               "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://www.google.com/recaptcha/ https://www.gstatic.com/recaptcha/ https://challenges.cloudflare.com https://*.challenges.cloudflare.com",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
@@ -120,15 +119,8 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withPWA({
-  dest: 'public',
-  cacheOnFrontEndNav: true,
-  aggressiveFrontEndNavCaching: true,
-  reloadOnOnline: true,
+export default withSerwist({
+  swSrc: 'app/sw.ts',
+  swDest: 'public/sw.js',
   disable: process.env.NODE_ENV === 'development',
-  workboxOptions: {
-    disableDevLogs: true,
-    runtimeCaching: [],
-  },
-  extendDefaultRuntimeCaching: false,
 })(nextConfig);
