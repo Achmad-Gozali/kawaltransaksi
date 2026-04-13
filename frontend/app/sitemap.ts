@@ -124,7 +124,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .limit(1000);
 
     const dynamicPages: MetadataRoute.Sitemap = (reports ?? []).map((r) => ({
-      url: `${BASE_URL}/check/${encodeSlug(r.target_number)}`,
+      url: `${BASE_URL}/check/${r.target_number}`,
       lastModified: new Date(r.created_at),
       changeFrequency: 'weekly' as const,
       priority: 0.7,
