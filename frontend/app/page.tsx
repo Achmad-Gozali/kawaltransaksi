@@ -259,8 +259,7 @@ export default async function HomePage() {
             Hati Tenang
           </h1>
           <p className="text-slate-500 text-sm md:text-base leading-relaxed max-w-sm mb-7 sm:mb-8">
-            Verifikasi nomor HP atau rekening bank dalam hitungan detik.
-            Bersama komunitas, kita hentikan penipuan digital.
+            Verifikasi nomor HP, rekening bank, dan e-wallet dalam hitungan detik. Bersama komunitas, kami berkomitmen untuk mewujudkan ekosistem transaksi digital yang lebih aman di Indonesia.
           </p>
           <div className="flex flex-col sm:flex-row gap-3">
             <Link
@@ -315,7 +314,7 @@ export default async function HomePage() {
             Apa itu KawalTransaksi?
           </h2>
           <p className="text-slate-500 text-sm max-w-xl mx-auto leading-relaxed">
-            KawalTransaksi adalah platform komunitas anti-penipuan digital Indonesia. Kami membantu kamu memverifikasi nomor HP, rekening bank, dan e-wallet sebelum bertransaksi. gratis, cepat, dan didukung laporan nyata dari komunitas.
+            KawalTransaksi adalah platform komunitas anti-penipuan digital Indonesia. Kami membantu Anda memverifikasi nomor HP, rekening bank, dan e-wallet sebelum bertransaksi — gratis, cepat, dan didukung laporan nyata dari komunitas.
           </p>
         </div>
       </section>
@@ -437,15 +436,15 @@ export default async function HomePage() {
             berikan kontribusi anda.
           </h2>
           <p className="text-slate-500 text-sm max-w-lg mx-auto mb-8 sm:mb-10 leading-relaxed">
-            jangan biarkan pelaku mencari korban berikutnya. laporkan nomor mencurigakan
-            untuk ekosistem digital yang lebih aman.
+            Bantu lindungi pengguna lain dengan melaporkan nomor yang mencurigakan.
+            Setiap laporan berkontribusi pada ekosistem digital yang lebih aman.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link
               href="/report"
               className="w-full sm:w-auto px-6 sm:px-7 py-3 sm:py-3.5 bg-emerald-600 text-white font-bold text-xs sm:text-sm tracking-widest uppercase rounded-xl hover:bg-emerald-500 transition-colors"
             >
-              entri laporan baru
+              Buat Laporan Baru
             </Link>
             <Link
               href="/register"

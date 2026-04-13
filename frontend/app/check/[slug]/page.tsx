@@ -296,14 +296,10 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
             {linkedReports.length > 0 && reports.length === 0 && (
               <div className={`rounded-lg overflow-hidden border ${linkedHasVerified ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}`}>
                 <div className={`px-5 py-4 flex items-start gap-3 border-b ${linkedHasVerified ? 'border-red-100' : 'border-amber-100'}`}>
-                  <AlertTriangle className={`w-5 h-5 shrink-0 mt-0.5 ${linkedHasVerified ? 'text-red-500' : 'text-amber-500'}`} />
                   <div>
-                    <p className={`text-sm font-semibold mb-0.5 ${linkedHasVerified ? 'text-red-900' : 'text-amber-900'}`}>
-                      {linkedHasVerified ? 'Nomor ini terkait pelaku terverifikasi!' : 'Nomor ini terkait laporan penipuan!'}
-                    </p>
                     <p className={`text-xs leading-relaxed ${linkedHasVerified ? 'text-red-700' : 'text-amber-700'}`}>
                       {linkedHasVerified
-                        ? 'Nomor ini disebutkan dalam laporan yang sudah diverifikasi oleh tim moderator. Pelaku yang sama terbukti menggunakan beberapa nomor berbeda — hindari bertransaksi dengan nomor ini.'
+                        ? 'Nomor ini disebutkan dalam laporan yang telah diverifikasi. Berdasarkan bukti yang ada, pelaku diketahui menggunakan beberapa nomor secara bergantian. Kami menyarankan untuk tidak melanjutkan transaksi.'
                         : 'Meski belum ada laporan langsung untuk nomor ini, nomor ini disebutkan sebagai nomor milik pelaku yang sudah dilaporkan. Pelaku yang sama diduga menggunakan beberapa nomor berbeda.'}
                     </p>
                   </div>
@@ -330,7 +326,7 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
                 <div className={`px-5 py-3 ${linkedHasVerified ? 'bg-red-100/30' : 'bg-amber-100/30'}`}>
                   <p className={`text-xs ${linkedHasVerified ? 'text-red-600' : 'text-amber-600'}`}>
                     {linkedHasVerified
-                      ? '⚠ Waspada! Penipu terbukti berganti nomor untuk menghindari deteksi.'
+                      ? 'Perhatian : Pelaku diketahui menggunakan beberapa nomor secara bergantian untuk menghindari deteksi sistem.'
                       : 'Waspada! Penipu sering berganti nomor untuk menghindari deteksi.'}
                   </p>
                 </div>

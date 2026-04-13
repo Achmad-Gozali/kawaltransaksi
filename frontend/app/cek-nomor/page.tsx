@@ -96,7 +96,7 @@ export default async function CekNomorPage() {
                 <span className="text-emerald-600 italic">Hindari Spammer.</span>
               </h1>
               <p className="text-slate-500 text-sm sm:text-base mb-6 sm:mb-12 max-w-xl mx-auto md:mx-0 leading-relaxed">
-                Identifikasi nomor WhatsApp atau telepon seluler yang mencurigakan sebelum merespon pesan atau tawaran yang tidak dikenal.
+                Periksa nomor HP atau WhatsApp sebelum merespon pesan dan tawaran yang tidak dikenal. Lindungi diri dari potensi penipuan digital.
               </p>
               <NomorSearchForm />
             </div>
@@ -145,7 +145,7 @@ export default async function CekNomorPage() {
             <div>
               <h2 className="text-base sm:text-xl font-black text-slate-900 mb-2 sm:mb-3">Apa itu Cek Nomor HP?</h2>
               <p className="text-slate-500 text-sm leading-relaxed">
-                Cek Nomor HP adalah layanan dari KawalTransaksi yang dapat mengidentifikasi apakah seseorang berpotensi melakukan penipuan atau tidak, berdasarkan keluhan dan laporan pengguna yang pernah bertransaksi dengan orang tersebut.
+                Layanan verifikasi nomor HP KawalTransaksi membantu Anda mengidentifikasi potensi risiko penipuan pada nomor yang tidak dikenal, berdasarkan laporan dan keluhan pengguna yang telah berinteraksi sebelumnya.
               </p>
             </div>
             <div className="bg-emerald-50 rounded-xl px-5 sm:px-8 py-5 sm:py-7">

@@ -97,7 +97,7 @@ export default async function CekRekeningPage() {
                 <span className="text-emerald-600 italic">Amankan Transaksi.</span>
               </h1>
               <p className="text-slate-500 text-sm sm:text-base mb-6 sm:mb-12 max-w-xl mx-auto md:mx-0 leading-relaxed">
-                Verifikasi kredibilitas nomor rekening tujuan sebelum melakukan transfer dana. Hindari risiko penipuan finansial dalam satu klik.
+                Periksa nomor rekening bank tujuan sebelum melakukan transfer dana. Kurangi risiko penipuan finansial dengan verifikasi cepat berbasis laporan komunitas.
               </p>
               <RekeningSearchForm />
             </div>
@@ -146,7 +146,7 @@ export default async function CekRekeningPage() {
             <div>
               <h2 className="text-base sm:text-xl font-black text-slate-900 mb-2 sm:mb-3">Apa itu Cek Rekening?</h2>
               <p className="text-slate-500 text-sm leading-relaxed">
-                Cek Rekening adalah layanan dari KawalTransaksi yang dapat mengidentifikasi apakah sebuah nomor rekening bank berpotensi digunakan untuk penipuan atau tidak, berdasarkan keluhan dan laporan pengguna yang pernah bertransaksi dengan rekening tersebut.
+                Layanan verifikasi rekening bank KawalTransaksi membantu Anda mengidentifikasi potensi risiko penipuan pada nomor rekening tujuan, berdasarkan laporan dan keluhan pengguna yang telah bertransaksi sebelumnya.
               </p>
             </div>
             <div className="bg-emerald-50 rounded-xl px-5 sm:px-8 py-5 sm:py-7">
