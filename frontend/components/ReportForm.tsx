@@ -24,48 +24,104 @@ const MAX_EVIDENCE_FILES = 10;
 const MAX_TARGET_NUMBERS = 5;
 
 const bankList = [
+  // Bank BUMN
   { value: 'BCA', label: 'BCA (Bank Central Asia)' },
   { value: 'BRI', label: 'BRI (Bank Rakyat Indonesia)' },
   { value: 'BNI', label: 'BNI (Bank Negara Indonesia)' },
   { value: 'Mandiri', label: 'Bank Mandiri' },
+  { value: 'BTN', label: 'BTN (Bank Tabungan Negara)' },
   { value: 'BSI', label: 'BSI (Bank Syariah Indonesia)' },
+  // Bank Swasta Besar
   { value: 'CIMB Niaga', label: 'CIMB Niaga' },
   { value: 'Danamon', label: 'Bank Danamon' },
   { value: 'Permata', label: 'Bank Permata' },
   { value: 'OCBC NISP', label: 'OCBC NISP' },
   { value: 'Panin', label: 'Bank Panin' },
   { value: 'Mega', label: 'Bank Mega' },
-  { value: 'BTN', label: 'BTN (Bank Tabungan Negara)' },
+  { value: 'Maybank', label: 'Maybank Indonesia' },
+  { value: 'Sinarmas', label: 'Bank Sinarmas' },
+  { value: 'BTPN', label: 'BTPN (Jenius)' },
+  { value: 'Bukopin', label: 'Bank Bukopin' },
+  { value: 'Commonwealth', label: 'Commonwealth Bank' },
+  { value: 'UOB', label: 'UOB Indonesia' },
+  { value: 'HSBC', label: 'HSBC Indonesia' },
+  // Bank Digital
   { value: 'Jago', label: 'Bank Jago' },
   { value: 'SeaBank', label: 'SeaBank' },
+  { value: 'Blu BCA', label: 'Blu by BCA Digital' },
+  { value: 'Motion Banking', label: 'Motion Banking (MNC Bank)' },
+  { value: 'Neo Commerce', label: 'Bank Neo Commerce' },
+  { value: 'Allo Bank', label: 'Allo Bank' },
+  { value: 'Superbank', label: 'Superbank' },
+  // Bank Daerah
+  { value: 'BJB', label: 'BJB (Bank Jabar Banten)' },
+  { value: 'Bank DKI', label: 'Bank DKI' },
+  { value: 'BPD Jateng', label: 'BPD Jawa Tengah' },
+  { value: 'BPD Jatim', label: 'BPD Jawa Timur' },
+  { value: 'BPD Bali', label: 'BPD Bali' },
   { value: 'Lainnya', label: 'Bank Lainnya' },
 ];
 
 const ewalletList = [
-  { value: 'Dana', label: 'Dana' },
+  // E-Wallet Utama
   { value: 'GoPay', label: 'GoPay' },
+  { value: 'Dana', label: 'DANA' },
   { value: 'OVO', label: 'OVO' },
   { value: 'ShopeePay', label: 'ShopeePay' },
   { value: 'LinkAja', label: 'LinkAja' },
+  // E-Wallet Lain
+  { value: 'iSaku', label: 'iSaku' },
+  { value: 'DOKU', label: 'DOKU Wallet' },
+  { value: 'Sakuku', label: 'Sakuku (BCA)' },
+  { value: 'TrueMoney', label: 'TrueMoney' },
+  { value: 'Flip', label: 'Flip' },
+  { value: 'PayLater Shopee', label: 'PayLater Shopee' },
+  { value: 'PayLater Tokopedia', label: 'PayLater Tokopedia' },
+  { value: 'Akulaku', label: 'Akulaku' },
+  { value: 'Kredivo', label: 'Kredivo' },
   { value: 'Lainnya', label: 'E-Wallet Lainnya' },
 ];
 
 const platformList = [
+  // Pesan & Chat
   { value: 'WhatsApp', label: 'WhatsApp' },
-  { value: 'Instagram', label: 'Instagram' },
-  { value: 'TikTok Shop', label: 'TikTok Shop' },
-  { value: 'Facebook', label: 'Facebook / Marketplace' },
   { value: 'Telegram', label: 'Telegram' },
+  { value: 'SMS', label: 'SMS' },
+  { value: 'Telepon', label: 'Telepon langsung' },
+  // Media Sosial
+  { value: 'Instagram', label: 'Instagram' },
+  { value: 'Facebook', label: 'Facebook / Marketplace' },
+  { value: 'TikTok', label: 'TikTok / TikTok Shop' },
   { value: 'Twitter/X', label: 'Twitter / X' },
+  { value: 'YouTube', label: 'YouTube' },
+  { value: 'LinkedIn', label: 'LinkedIn' },
+  // Marketplace
+  { value: 'Tokopedia', label: 'Tokopedia' },
+  { value: 'Shopee', label: 'Shopee' },
+  { value: 'Lazada', label: 'Lazada' },
+  { value: 'Bukalapak', label: 'Bukalapak' },
+  { value: 'OLX', label: 'OLX / Jual Beli Online' },
+  // Lainnya
+  { value: 'Email', label: 'Email' },
+  { value: 'Website', label: 'Website / Toko Online' },
   { value: 'Lainnya', label: 'Platform Lainnya' },
 ];
 
 const categoryList = [
-  { value: 'Jual Beli Online', label: 'Jual Beli Online' },
-  { value: 'Investasi Bodong', label: 'Investasi Bodong' },
-  { value: 'Pinjaman Online', label: 'Pinjaman Online' },
-  { value: 'Phishing / Soceng', label: 'Phishing / Social Engineering' },
-  { value: 'Modus Kurir/APK', label: 'Modus Kurir / File APK' },
+  // Paling umum
+  { value: 'Jual Beli Online', label: 'Jual Beli Online — barang tidak dikirim / tidak sesuai' },
+  { value: 'Investasi Bodong', label: 'Investasi Bodong — janji untung besar tapi uang raib' },
+  { value: 'Pinjaman Online', label: 'Pinjaman Online Ilegal — bunga mencekik / penagihan kasar' },
+  { value: 'Phishing / Soceng', label: 'Phishing / Soceng — minta OTP, PIN, atau data pribadi' },
+  { value: 'Modus Kurir/APK', label: 'Modus Kurir / File APK — disuruh install aplikasi mencurigakan' },
+  // Tambahan
+  { value: 'Arisan Online', label: 'Arisan Online Fiktif — uang arisan tidak dibayar' },
+  { value: 'Rental / Sewa Fiktif', label: 'Rental / Sewa Fiktif — kendaraan atau properti tidak ada' },
+  { value: 'Lowongan Kerja Palsu', label: 'Lowongan Kerja Palsu — minta uang pelatihan / seragam' },
+  { value: 'Pinjam Uang Tidak Bayar', label: 'Pinjam Uang Tidak Bayar — kenalan / teman online kabur' },
+  { value: 'Hadiah / Undian Palsu', label: 'Hadiah / Undian Palsu — minta bayar pajak hadiah duluan' },
+  { value: 'Jasa Tidak Dikerjakan', label: 'Jasa Tidak Dikerjakan — sudah bayar tapi tidak ada hasilnya' },
+  { value: 'Penipuan Percintaan', label: 'Penipuan Percintaan — kenalan online lalu minta uang' },
   { value: 'Lainnya', label: 'Lainnya' },
 ];
 
@@ -186,11 +242,6 @@ function TargetEntryCard({
           <span className="text-sm font-semibold text-slate-700">
             {isPrimary ? 'Nomor Utama' : `Nomor Tambahan ${index}`}
           </span>
-          {isPrimary && (
-            <span className="text-[10px] font-semibold text-emerald-600 bg-emerald-50 border border-emerald-100 px-2 py-0.5 rounded-full">
-              Primary
-            </span>
-          )}
         </div>
         {!isPrimary && onRemove && (
           <button type="button" onClick={onRemove}

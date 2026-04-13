@@ -21,6 +21,13 @@ const VALID_CATEGORIES = [
   'Pinjaman Online',
   'Phishing / Soceng',
   'Modus Kurir/APK',
+  'Arisan Online',
+  'Rental / Sewa Fiktif',
+  'Lowongan Kerja Palsu',
+  'Pinjam Uang Tidak Bayar',
+  'Hadiah / Undian Palsu',
+  'Jasa Tidak Dikerjakan',
+  'Penipuan Percintaan',
   'Lainnya',
 ] as const;
 
