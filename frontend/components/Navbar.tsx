@@ -47,7 +47,7 @@ export default function Navbar() {
   useEffect(() => {
     // Cek kalau udah diinstall (standalone mode)
     if (window.matchMedia('(display-mode: standalone)').matches) {
-      setIsInstalled(true);
+      setTimeout(() => setIsInstalled(true), 0);
       return;
     }
 
