@@ -181,6 +181,61 @@ function HowItWorksSteps() {
   );
 }
 
+// ── STATS CARD ────────────────────────────────────────────────────────────────
+function StatsCard({ stats }: { stats: Stats }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.4 }}
+      className="bg-white rounded-2xl border border-slate-200 shadow-lg shadow-slate-100 overflow-hidden"
+    >
+      {/* Desktop: 3 kolom | Mobile: 2 atas + 1 bawah full */}
+      <div className="grid grid-cols-2 sm:grid-cols-3 sm:divide-x divide-slate-100">
+        {/* Laporan */}
+        <div className="px-5 py-5 sm:px-8 sm:py-6 border-r border-b sm:border-b-0 border-slate-100">
+          <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
+            Laporan
+          </p>
+          <p className="text-2xl sm:text-4xl font-black text-slate-900 leading-none tabular-nums">
+            {stats.total}+
+          </p>
+          <p className="text-[9px] sm:text-[11px] text-slate-400 mt-1.5 leading-snug">
+            Kasus dilaporkan
+          </p>
+        </div>
+
+        {/* Verified */}
+        <div className="px-5 py-5 sm:px-8 sm:py-6 border-b sm:border-b-0 border-slate-100">
+          <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
+            Verified
+          </p>
+          <p className="text-2xl sm:text-4xl font-black text-emerald-600 leading-none tabular-nums">
+            {stats.verified}+
+          </p>
+          <p className="text-[9px] sm:text-[11px] text-slate-400 mt-1.5 leading-snug">
+            Terbukti penipuan
+          </p>
+        </div>
+
+        {/* Kerugian — full width di mobile, kolom biasa di desktop */}
+        <div className="col-span-2 sm:col-span-1 px-5 py-5 sm:px-8 sm:py-6 sm:border-l border-slate-100">
+          <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
+            Kerugian
+          </p>
+          <p className="text-2xl sm:text-4xl font-black text-red-500 leading-none tabular-nums">
+            {formatLoss(stats.totalLoss)}
+          </p>
+          <p className="text-[9px] sm:text-[11px] text-slate-400 mt-1.5 leading-snug">
+            Total kerugian dilaporkan
+          </p>
+        </div>
+      </div>
+    </motion.div>
+  );
+}
+
 // ── PAGE ──────────────────────────────────────────────────────────────────────
 export default async function HomePage() {
   const [recentReports, stats, user] = await Promise.all([
@@ -189,7 +244,6 @@ export default async function HomePage() {
     getUser(),
   ]);
 
-  // Kalau sudah login → langsung ke /database, belum login → ke /login?redirectTo=/database
   const lihatSemuaHref = user ? '/database' : '/login?redirectTo=/database';
 
   return (
@@ -237,63 +291,21 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* ── WAVE + FLOATING STATS CARD ── */}
+      {/* ── STATS CARD — desktop (floating) ── */}
       <div className="relative bg-white hidden sm:block">
         <svg viewBox="0 0 1440 100" preserveAspectRatio="none" className="w-full block" xmlns="http://www.w3.org/2000/svg">
           <path d="M0,0 C240,80 480,30 720,60 C960,90 1200,40 1440,65 L1440,100 L0,100 Z" fill="#f8fafc" />
         </svg>
         <div className="absolute bottom-0 left-0 right-0 translate-y-1/2 px-4 sm:px-6 z-10">
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-            className="max-w-4xl mx-auto bg-white rounded-2xl border border-slate-200 shadow-lg shadow-slate-100 grid grid-cols-3 divide-x divide-slate-100 overflow-hidden"
-          >
-            <div className="px-5 py-5 sm:px-8 sm:py-6">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Total laporan</p>
-              <p className="text-2xl sm:text-4xl font-black text-slate-900 leading-none tabular-nums">{stats.total}+</p>
-              <p className="text-[10px] sm:text-[11px] text-slate-400 mt-1.5">Dari seluruh Indonesia</p>
-            </div>
-            <div className="px-5 py-5 sm:px-8 sm:py-6">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Terverifikasi</p>
-              <p className="text-2xl sm:text-4xl font-black text-emerald-600 leading-none tabular-nums">{stats.verified}+</p>
-              <p className="text-[10px] sm:text-[11px] text-slate-400 mt-1.5">Dikonfirmasi moderator</p>
-            </div>
-            <div className="px-5 py-5 sm:px-8 sm:py-6">
-              <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Total kerugian</p>
-              <p className="text-2xl sm:text-4xl font-black text-red-500 leading-none tabular-nums">{formatLoss(stats.totalLoss)}</p>
-              <p className="text-[10px] sm:text-[11px] text-slate-400 mt-1.5">Dilaporkan komunitas</p>
-            </div>
-          </motion.div>
+          <div className="max-w-4xl mx-auto">
+            <StatsCard stats={stats} />
+          </div>
         </div>
       </div>
 
-      {/* Mobile: stats card inline */}
-      <div className="sm:hidden bg-white px-4 pb-6">
-        <svg viewBox="0 0 1440 50" preserveAspectRatio="none" className="w-full block" xmlns="http://www.w3.org/2000/svg">
-          <path d="M0,0 C240,40 480,10 720,30 C960,50 1200,20 1440,35 L1440,50 L0,50 Z" fill="#f8fafc" />
-        </svg>
-        <motion.div
-          initial={{ opacity: 0, y: 12 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true }}
-          transition={{ duration: 0.4 }}
-          className="bg-white rounded-2xl border border-slate-200 shadow-sm grid grid-cols-3 divide-x divide-slate-100 overflow-hidden"
-        >
-          <div className="px-3 py-4 text-center">
-            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Laporan</p>
-            <p className="text-xl font-black text-slate-900 leading-none tabular-nums">{stats.total}+</p>
-          </div>
-          <div className="px-3 py-4 text-center">
-            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Verified</p>
-            <p className="text-xl font-black text-emerald-600 leading-none tabular-nums">{stats.verified}+</p>
-          </div>
-          <div className="px-3 py-4 text-center">
-            <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">Kerugian</p>
-            <p className="text-xl font-black text-red-500 leading-none tabular-nums">{formatLoss(stats.totalLoss)}</p>
-          </div>
-        </motion.div>
+      {/* ── STATS CARD — mobile (inline) ── */}
+      <div className="sm:hidden bg-slate-50 px-4 pt-4 pb-6">
+        <StatsCard stats={stats} />
       </div>
 
       {/* ── 2. APA ITU KAWALTRANSAKSI ── */}
@@ -343,7 +355,6 @@ export default async function HomePage() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
           <div className="flex items-end justify-between mb-6 sm:mb-8">
             <h2 className="text-lg sm:text-2xl font-black tracking-tighter uppercase">laporan masuk terkini</h2>
-            {/* ✅ FIX: Sudah login → /database, belum login → /login?redirectTo=/database */}
             <Link
               href={lihatSemuaHref}
               className="text-[11px] font-bold text-slate-500 uppercase tracking-widest hover:text-emerald-600 transition-colors whitespace-nowrap"
