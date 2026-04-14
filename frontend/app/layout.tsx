@@ -2,7 +2,7 @@ import type { Metadata, Viewport } from 'next';
 import { Inter, Roboto_Mono } from 'next/font/google';
 import './globals.css';
 import SiteShell from '@/components/SiteShell';
-import { Analytics } from '@vercel/analytics/react';
+import { Analytics } from '@vercel/analytics/next';
 
 const inter = Inter({
   subsets: ['latin'],
