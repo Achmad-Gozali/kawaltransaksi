@@ -25,6 +25,7 @@
     "@tybys/wasm-util": "^0.10.1",
     "@upstash/ratelimit": "^2.0.8",
     "@upstash/redis": "^1.37.0",
+    "@vercel/analytics": "^2.0.1",
     "autoprefixer": "^10.4.21",
     "chart.js": "^4.5.1",
     "class-variance-authority": "^0.7.1",
