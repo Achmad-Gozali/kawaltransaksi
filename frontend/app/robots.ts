@@ -34,6 +34,6 @@ export default function robots(): MetadataRoute.Robots {
       },
     ],
     sitemap: `${BASE_URL}/sitemap.xml`,
-    host: BASE_URL,
+    // host field dihapus — bukan directive valid
   };
 }
