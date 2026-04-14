@@ -1,20 +1,13 @@
-// supabase-browser.ts
 import { createBrowserClient } from '@supabase/ssr';
 import type { Database } from '@/types/database';
 
 export function createClient() {
-  // Guard: jangan run di server
-  if (typeof window === 'undefined') {
-    throw new Error('supabase-browser hanya boleh dipakai di client side');
-  }
-
   return createBrowserClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,  // tetap perlu valid URL
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       global: {
         fetch: (url, options) => {
-          // Proxy semua request lewat /api/sb
           const proxiedUrl = url.toString().replace(
             process.env.NEXT_PUBLIC_SUPABASE_URL!,
             '/api/sb'
