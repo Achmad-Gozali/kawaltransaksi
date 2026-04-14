@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase-server';
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { ArrowLeft, ExternalLink, PlusCircle, AlertTriangle, Clock } from 'lucide-react';
+import { ArrowLeft, PlusCircle, AlertTriangle, Clock } from 'lucide-react';
 import { formatNum, decodeSlug } from '@/lib/utils';
 import ShareButtons from './ShareButtons';
 import NumberCard from './components/NumberCard';
@@ -48,32 +48,6 @@ const waspadaChecklist = [
   'Rekening atas nama berbeda dengan identitas penjual',
 ];
 
-const emergencyContacts = [
-  { name: 'OJK', desc: 'Otoritas Jasa Keuangan', phone: '157', url: 'https://konsumen.ojk.go.id', urlLabel: 'konsumen.ojk.go.id' },
-  { name: 'Polisi Siber', desc: 'Direktorat Siber Polri', phone: '110', url: 'https://patrolisiber.id', urlLabel: 'patrolisiber.id' },
-  { name: 'BRTI', desc: 'Badan Regulasi Telekomunikasi', phone: null, url: 'https://layanan.kominfo.go.id', urlLabel: 'layanan.kominfo.go.id' },
-];
-
-// ── Verifikasi tambahan — sumber resmi eksternal ──────────────────────────────
-const externalVerifications = [
-  { name: 'BI CEKLIK', desc: 'Cek rekening di Bank Indonesia', url: 'https://ceklik.bi.go.id' },
-  { name: 'CekRekening.id', desc: 'Database rekening penipu nasional', url: 'https://cekrekening.id' },
-  { name: 'Lapor OJK', desc: 'Aduan resmi ke OJK', url: 'https://konsumen.ojk.go.id/MinisiteDPLK/Pengaduan' },
-];
-
-const dangerSteps = [
-  { step: '01', title: 'Jangan transfer', desc: 'Batalkan segera rencana transfer ke nomor ini.' },
-  { step: '02', title: 'Simpan semua bukti', desc: 'Screenshot semua percakapan dan detail transaksi sebagai barang bukti.' },
-  { step: '03', title: 'Lapor ke platform', desc: 'Laporkan akun penipu ke platform tempat kamu berkomunikasi.' },
-  { step: '04', title: 'Lapor ke KawalTransaksi', desc: 'Tambahkan laporanmu agar komunitas lain terlindungi.' },
-];
-
-const warningSteps = [
-  { step: '01', title: 'Tunda transaksi', desc: 'Nomor ini sedang dalam investigasi. Tunda dulu transaksi sampai status jelas.' },
-  { step: '02', title: 'Minta verifikasi identitas', desc: 'Minta pihak lawan untuk membuktikan identitas asli.' },
-  { step: '03', title: 'Pantau perkembangan', desc: 'Cek kembali halaman ini dalam beberapa hari.' },
-];
-
 const bankNameMap: Record<string, string> = {
   bca: 'BCA', bri: 'BRI', bni: 'BNI', mandiri: 'Mandiri',
   cimb: 'CIMB Niaga', cimbniaga: 'CIMB Niaga',
@@ -99,7 +73,7 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
   if (!realNumber || !/^\d+$/.test(realNumber)) notFound();
 
   const defaultType = type === 'bank' ? 'bank_account' : type === 'ewallet' ? 'ewallet' : 'phone';
-  const hasTypeParam = !!type; // true kalau ada ?type= di URL
+  const hasTypeParam = !!type;
   const defaultBankName = bank ? (bankNameMap[bank] ?? null) : null;
   const defaultWalletName = wallet ? (walletNameMap[wallet] ?? null) : null;
 
@@ -137,7 +111,6 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
   const totalLoss = reports.reduce((sum, r) => sum + (Number(r.loss_amount) || 0), 0);
   const hasOtherVictims = reports.some((r) => r.has_other_victims === 'yes');
 
-  // ── Rule-based detection ──────────────────────────────────────────────────
   const nowMs = checkedAt.getTime();
   const thirtyDaysAgo = new Date(nowMs - 30 * 24 * 60 * 60 * 1000);
   const recentReports = reports.filter((r) => new Date(r.created_at) >= thirtyDaysAgo);
@@ -223,10 +196,9 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
         { label: 'Terverifikasi', done: status === 'danger' },
       ];
 
-  const actionSteps = status === 'danger' || linkedHasVerified ? dangerSteps : warningSteps;
-
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
+      {/* Mobile back nav */}
       <div className="sm:hidden bg-white border-b border-slate-100">
         <div className="px-4 py-3 flex items-center justify-between">
           <Link href="/cek-nomor" className="inline-flex items-center gap-2 text-slate-500 hover:text-slate-900 text-sm transition-colors">
@@ -236,18 +208,24 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
         </div>
       </div>
 
+      {/* Status bar */}
       <div className={`${config.barBg} px-4 sm:px-6 py-3`}>
-        <div className="max-w-5xl mx-auto flex items-center gap-3 flex-wrap">
+        <div className="max-w-5xl mx-auto flex items-center gap-2 flex-wrap">
           <div className={`w-2 h-2 rounded-full shrink-0 ${config.dotBg}`} />
           <span className={`text-xs font-semibold uppercase tracking-widest ${config.barLabel}`}>{config.verdict}</span>
-          <span className={`text-xs ${config.barDesc}`}>— {config.verdictSub}</span>
+          <span className={`text-xs ${config.barDesc} hidden sm:inline`}>— {config.verdictSub}</span>
           <span className="ml-auto flex items-center gap-1 text-[10px] text-slate-400">
             <Clock className="w-3 h-3" /> Dicek {formatTimestamp(checkedAt)}
           </span>
         </div>
+        {/* Mobile verdict sub */}
+        <div className="max-w-5xl mx-auto sm:hidden mt-1">
+          <span className={`text-xs ${config.barDesc}`}>{config.verdictSub}</span>
+        </div>
       </div>
 
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 pb-20">
+      <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 sm:py-6 pb-20">
+        {/* Stats grid */}
         {reports.length > 0 && (
           <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-4 sm:mb-6">
             <div className="bg-white rounded-lg border border-slate-200 p-3 sm:p-5">
@@ -269,8 +247,9 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
           </div>
         )}
 
-        <div className="grid lg:grid-cols-3 gap-6 items-start">
-          <div className="lg:col-span-2 space-y-5">
+        <div className="grid lg:grid-cols-3 gap-4 sm:gap-6 items-start">
+          {/* ── MAIN CONTENT ── */}
+          <div className="lg:col-span-2 space-y-4 sm:space-y-5">
             <NumberCard
               reports={reports}
               realNumber={realNumber}
@@ -281,7 +260,7 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
               hasTypeParam={hasTypeParam}
             />
 
-            {/* ── Rule-based risk badges ── */}
+            {/* Risk badges */}
             {riskBadges.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {riskBadges.map((badge, i) => (
@@ -292,22 +271,20 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
               </div>
             )}
 
-            {/* ── BANNER: Nomor terkait laporan lain ── */}
+            {/* Banner: nomor terkait laporan lain */}
             {linkedReports.length > 0 && reports.length === 0 && (
               <div className={`rounded-lg overflow-hidden border ${linkedHasVerified ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}`}>
-                <div className={`px-5 py-4 flex items-start gap-3 border-b ${linkedHasVerified ? 'border-red-100' : 'border-amber-100'}`}>
-                  <div>
-                    <p className={`text-xs leading-relaxed ${linkedHasVerified ? 'text-red-700' : 'text-amber-700'}`}>
-                      {linkedHasVerified
-                        ? 'Nomor ini disebutkan dalam laporan yang telah diverifikasi. Berdasarkan bukti yang ada, pelaku diketahui menggunakan beberapa nomor secara bergantian. Kami menyarankan untuk tidak melanjutkan transaksi.'
-                        : 'Meski belum ada laporan langsung untuk nomor ini, nomor ini disebutkan sebagai nomor milik pelaku yang sudah dilaporkan. Pelaku yang sama diduga menggunakan beberapa nomor berbeda.'}
-                    </p>
-                  </div>
+                <div className={`px-4 sm:px-5 py-4 border-b ${linkedHasVerified ? 'border-red-100' : 'border-amber-100'}`}>
+                  <p className={`text-xs leading-relaxed ${linkedHasVerified ? 'text-red-700' : 'text-amber-700'}`}>
+                    {linkedHasVerified
+                      ? 'Nomor ini disebutkan dalam laporan yang telah diverifikasi. Berdasarkan bukti yang ada, pelaku diketahui menggunakan beberapa nomor secara bergantian. Kami menyarankan untuk tidak melanjutkan transaksi.'
+                      : 'Meski belum ada laporan langsung untuk nomor ini, nomor ini disebutkan sebagai nomor milik pelaku yang sudah dilaporkan. Pelaku yang sama diduga menggunakan beberapa nomor berbeda.'}
+                  </p>
                 </div>
                 <div className={`divide-y ${linkedHasVerified ? 'divide-red-100' : 'divide-amber-100'}`}>
                   {linkedReports.map((r: any, i: number) => (
                     <a key={i} href={`/check/${r.target_number}`}
-                      className={`flex items-center justify-between px-5 py-3.5 transition-colors group ${linkedHasVerified ? 'hover:bg-red-100/40' : 'hover:bg-amber-100/40'}`}>
+                      className={`flex items-center justify-between px-4 sm:px-5 py-3.5 transition-colors group ${linkedHasVerified ? 'hover:bg-red-100/40' : 'hover:bg-amber-100/40'}`}>
                       <div>
                         <p className={`text-sm font-mono font-semibold tracking-wide ${linkedHasVerified ? 'text-red-900' : 'text-amber-900'}`}>
                           {r.target_number.replace(/(\d{4})(?=\d)/g, '$1 ')}
@@ -317,22 +294,23 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
                           {r.target_name ? ` · a.n. ${r.target_name}` : ''}
                         </p>
                       </div>
-                      <span className={`text-xs font-semibold transition-colors ${linkedHasVerified ? 'text-red-600 group-hover:text-red-800' : 'text-amber-700 group-hover:text-amber-900'}`}>
-                        Lihat laporan →
+                      <span className={`text-xs font-semibold whitespace-nowrap ${linkedHasVerified ? 'text-red-600 group-hover:text-red-800' : 'text-amber-700 group-hover:text-amber-900'}`}>
+                        Lihat →
                       </span>
                     </a>
                   ))}
                 </div>
-                <div className={`px-5 py-3 ${linkedHasVerified ? 'bg-red-100/30' : 'bg-amber-100/30'}`}>
+                <div className={`px-4 sm:px-5 py-3 ${linkedHasVerified ? 'bg-red-100/30' : 'bg-amber-100/30'}`}>
                   <p className={`text-xs ${linkedHasVerified ? 'text-red-600' : 'text-amber-600'}`}>
                     {linkedHasVerified
-                      ? 'Perhatian : Pelaku diketahui menggunakan beberapa nomor secara bergantian untuk menghindari deteksi sistem.'
+                      ? 'Perhatian: Pelaku diketahui menggunakan beberapa nomor secara bergantian untuk menghindari deteksi.'
                       : 'Waspada! Penipu sering berganti nomor untuk menghindari deteksi.'}
                   </p>
                 </div>
               </div>
             )}
 
+            {/* Tetap waspada — status safe */}
             {status === 'safe' && linkedReports.length === 0 && (
               <div>
                 <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-2.5 font-medium px-0.5">Tetap waspada</p>
@@ -366,11 +344,8 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
               linkedHasVerified={linkedHasVerified}
             />
 
-            {/* Nomor lain terkait pelaku ini */}
+            {/* Nomor lain terkait pelaku */}
             {(() => {
-              // Kumpulkan semua nomor terkait dari JSONB target_numbers
-              // Format baru: [{ number, type, bank }]
-              // Format lama: string (fallback)
               const relatedEntries: { number: string; type: string; bank: string | null; name: string | null }[] = [];
               const seenNumbers = new Set<string>();
 
@@ -380,12 +355,7 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
                   if (typeof item === 'object' && item !== null && item.number) {
                     if (item.number !== realNumber && !seenNumbers.has(item.number)) {
                       seenNumbers.add(item.number);
-                      relatedEntries.push({
-                        number: item.number,
-                        type: item.type ?? 'phone',
-                        bank: item.bank ?? null,
-                        name: item.name ?? null,
-                      });
+                      relatedEntries.push({ number: item.number, type: item.type ?? 'phone', bank: item.bank ?? null, name: item.name ?? null });
                     }
                   } else if (typeof item === 'string' && item !== realNumber && !seenNumbers.has(item)) {
                     seenNumbers.add(item);
@@ -396,7 +366,6 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
 
               if (relatedEntries.length === 0) return null;
 
-              // Bangun typeParam per nomor berdasarkan tipenya masing-masing
               const buildTypeParam = (type: string, bank: string | null) => {
                 if (type === 'bank_account') {
                   const bankKey = bank ? bank.toLowerCase().replace(/\s/g, '').replace(/[^a-z]/g, '') : '';
@@ -410,9 +379,7 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
               };
 
               const typeLabel: Record<string, string> = {
-                phone: 'Nomor HP',
-                bank_account: 'Rekening Bank',
-                ewallet: 'E-Wallet',
+                phone: 'Nomor HP', bank_account: 'Rekening Bank', ewallet: 'E-Wallet',
               };
 
               return (
@@ -435,15 +402,10 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
                               {entry.number.replace(/(\d{4})(?=\d)/g, '$1 ')}
                             </span>
                             <p className="text-[10px] text-slate-400 mt-0.5">
-                              {[
-                                entry.bank ? entry.bank : typeLabel[entry.type] ?? 'Nomor HP',
-                                entry.name ? `a.n. ${entry.name}` : null,
-                              ].filter(Boolean).join(' · ')}
+                              {[entry.bank ? entry.bank : typeLabel[entry.type] ?? 'Nomor HP', entry.name ? `a.n. ${entry.name}` : null].filter(Boolean).join(' · ')}
                             </p>
                           </div>
-                          <span className="text-xs text-emerald-600 font-semibold group-hover:underline">
-                            Cek →
-                          </span>
+                          <span className="text-xs text-emerald-600 font-semibold group-hover:underline whitespace-nowrap">Cek →</span>
                         </a>
                       ))}
                     </div>
@@ -452,27 +414,11 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
               );
             })()}
 
-            {status !== 'safe' && (
-              <div>
-                <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-2.5 font-medium px-0.5">Apa yang harus kamu lakukan?</p>
-                <div className="bg-white rounded-lg border border-slate-200 overflow-hidden divide-y divide-slate-100">
-                  {actionSteps.map((item) => (
-                    <div key={item.step} className="flex items-start gap-4 px-5 py-4 hover:bg-slate-50/60 transition-colors">
-                      <span className="text-[11px] text-slate-300 w-6 shrink-0 mt-0.5 font-medium tabular-nums">{item.step}</span>
-                      <div>
-                        <p className="text-xs font-medium text-slate-800 mb-1">{item.title}</p>
-                        <p className="text-xs text-slate-500 leading-relaxed">{item.desc}</p>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
+            {/* Status verifikasi */}
             {(allReports.length > 0 || linkedHasVerified) && !(hasWithdrawn && reports.length === 0) && (
               <div>
                 <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-2.5 font-medium px-0.5">Status verifikasi</p>
-                <div className="bg-white rounded-lg border border-slate-200 px-6 py-5">
+                <div className="bg-white rounded-lg border border-slate-200 px-4 sm:px-6 py-4 sm:py-5">
                   <div className="flex relative">
                     {verificationSteps.map((step, i) => (
                       <div key={i} className="relative flex flex-col items-center flex-1">
@@ -494,10 +440,25 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
                 </div>
               </div>
             )}
+
+            {/* CTA mobile — muncul hanya di mobile, di bawah konten utama */}
+            <div className="lg:hidden space-y-3">
+              <div className="bg-slate-900 rounded-lg p-4">
+                <p className="text-sm font-medium text-white mb-1">Pernah kena tipu nomor ini?</p>
+                <p className="text-xs text-slate-400 mb-3 leading-relaxed">Satu laporan dari kamu bisa melindungi ribuan orang.</p>
+                <Link href="/report" className="flex items-center justify-center gap-2 w-full py-2.5 bg-white hover:bg-slate-100 text-slate-900 text-xs font-medium rounded-lg transition-colors">
+                  <PlusCircle className="w-3.5 h-3.5" /> Buat laporan
+                </Link>
+              </div>
+              <div className="bg-white rounded-lg border border-slate-200 p-4">
+                <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-3 font-medium">Sebarkan peringatan</p>
+                <ShareButtons slug={slug} shareText={shareText} />
+              </div>
+            </div>
           </div>
 
-          {/* ── SIDEBAR KANAN ── */}
-          <div className="lg:col-span-1 space-y-4">
+          {/* ── SIDEBAR KANAN — desktop only ── */}
+          <div className="hidden lg:block lg:col-span-1 space-y-4">
             <div className="bg-slate-900 rounded-lg p-4 sm:p-5">
               <p className="text-sm font-medium text-white mb-1.5">Pernah kena tipu nomor ini?</p>
               <p className="text-xs text-slate-400 mb-4 leading-relaxed">Satu laporan dari kamu bisa melindungi ribuan orang.</p>
@@ -521,45 +482,6 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
                   </li>
                 ))}
               </ul>
-            </div>
-
-            {/* ── Verifikasi tambahan — sumber resmi ── */}
-            <div className="bg-white rounded-lg border border-slate-200 p-4 sm:p-5">
-              <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-1 font-medium">Verifikasi tambahan</p>
-              <p className="text-[10px] text-slate-400 mb-3 leading-relaxed">Cek juga di sumber resmi berikut untuk informasi lebih lengkap.</p>
-              <div className="space-y-2">
-                {externalVerifications.map((item, i) => (
-                  <a key={i} href={item.url} target="_blank" rel="noopener noreferrer"
-                    className="flex items-center justify-between py-2.5 px-3 rounded-lg border border-slate-100 hover:border-slate-200 hover:bg-slate-50 transition-all group">
-                    <div>
-                      <p className="text-xs font-semibold text-slate-700 group-hover:text-slate-900 transition-colors">{item.name}</p>
-                      <p className="text-[10px] text-slate-400 mt-0.5">{item.desc}</p>
-                    </div>
-                    <ExternalLink className="w-3 h-3 text-slate-300 group-hover:text-slate-500 transition-colors shrink-0 ml-2" />
-                  </a>
-                ))}
-              </div>
-            </div>
-
-            {/* ── Kontak darurat ── */}
-            <div className="bg-white rounded-lg border border-slate-200 p-4 sm:p-5">
-              <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-3 font-medium">Kontak darurat</p>
-              <div>
-                {emergencyContacts.map((contact, i) => (
-                  <div key={contact.name} className={`py-3 hover:bg-slate-50 -mx-1 px-1 sm:-mx-2 sm:px-2 rounded-lg transition-colors ${i < emergencyContacts.length - 1 ? 'border-b border-slate-100' : ''}`}>
-                    <div className="flex items-start justify-between gap-2 mb-1.5">
-                      <div>
-                        <p className="text-xs font-medium text-slate-800">{contact.name}</p>
-                        <p className="text-[10px] text-slate-400">{contact.desc}</p>
-                      </div>
-                      {contact.phone && <span className="text-sm font-medium text-slate-700 shrink-0 tabular-nums">{contact.phone}</span>}
-                    </div>
-                    <a href={contact.url} target="_blank" rel="noopener noreferrer" className="text-[10px] text-blue-500 hover:text-blue-700 flex items-center gap-1 transition-colors font-medium">
-                      {contact.urlLabel} <ExternalLink className="w-2.5 h-2.5" />
-                    </a>
-                  </div>
-                ))}
-              </div>
             </div>
           </div>
         </div>

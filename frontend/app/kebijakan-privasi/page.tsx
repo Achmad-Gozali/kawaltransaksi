@@ -90,7 +90,19 @@ export default function KebijakanPrivasiPage() {
 
           <section>
             <h2 className="text-base sm:text-lg font-bold text-zinc-900 mb-3">10. Hubungi Kami</h2>
-            <p className="text-sm text-zinc-500 leading-relaxed">Untuk pertanyaan seputar kebijakan privasi ini, silakan hubungi kami di <a href="mailto:support@kawaltransaksi.id" className="font-semibold text-zinc-900 hover:text-red-600 transition-colors underline underline-offset-2">support@kawaltransaksi.id</a> atau melalui halaman <Link href="/kontak" className="font-semibold text-zinc-900 hover:text-red-600 transition-colors underline underline-offset-2">Kontak</Link>.</p>
+            <p className="text-sm text-zinc-500 leading-relaxed">
+              Untuk pertanyaan seputar kebijakan privasi ini, silakan hubungi kami di{' '}
+              <a
+                href="https://mail.google.com/mail/?view=cm&to=kawaltransaksi@gmail.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold text-zinc-900 hover:text-red-600 transition-colors underline underline-offset-2"
+              >
+                kawaltransaksi@gmail.com
+              </a>
+              {' '}atau melalui halaman{' '}
+              <Link href="/kontak" className="font-semibold text-zinc-900 hover:text-red-600 transition-colors underline underline-offset-2">Kontak</Link>.
+            </p>
           </section>
         </div>
       </div>

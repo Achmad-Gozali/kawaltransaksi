@@ -74,7 +74,19 @@ export default function SyaratKetentuanPage() {
 
           <section>
             <h2 className="text-base sm:text-lg font-bold text-zinc-900 mb-3">10. Hubungi Kami</h2>
-            <p className="text-sm text-zinc-500 leading-relaxed">Apabila Anda memiliki pertanyaan terkait syarat dan ketentuan ini, silakan hubungi kami melalui halaman <Link href="/kontak" className="font-semibold text-zinc-900 hover:text-red-600 transition-colors underline underline-offset-2">Kontak</Link> atau kirim email ke <a href="mailto:support@kawaltransaksi.id" className="font-semibold text-zinc-900 hover:text-red-600 transition-colors underline underline-offset-2">support@kawaltransaksi.id</a>.</p>
+            <p className="text-sm text-zinc-500 leading-relaxed">
+              Apabila Anda memiliki pertanyaan terkait syarat dan ketentuan ini, silakan hubungi kami melalui halaman{' '}
+              <Link href="/kontak" className="font-semibold text-zinc-900 hover:text-red-600 transition-colors underline underline-offset-2">Kontak</Link>
+              {' '}atau kirim email ke{' '}
+              <a
+                href="https://mail.google.com/mail/?view=cm&to=kawaltransaksi@gmail.com"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="font-semibold text-zinc-900 hover:text-red-600 transition-colors underline underline-offset-2"
+              >
+                kawaltransaksi@gmail.com
+              </a>.
+            </p>
           </section>
         </div>
       </div>
