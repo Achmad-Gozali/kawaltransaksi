@@ -41,7 +41,6 @@ export default function Navbar() {
   const supabase    = useMemo(() => createClient(), []);
   const dropdownRef = useRef<HTMLDivElement>(null);
 
-  // Tangkap event install PWA — trigger native browser prompt otomatis
   useEffect(() => {
     if (window.matchMedia('(display-mode: standalone)').matches) return;
     const handler = (e: Event) => { e.preventDefault(); };
@@ -135,8 +134,9 @@ export default function Navbar() {
             {/* LOGO */}
             <Link href="/" className="flex items-center gap-2.5 shrink-0">
               <Image src="/logo.png" alt="KawalTransaksi" width={36} height={36} className="rounded-lg" priority />
+              {/* FIX: emerald-700 untuk kontras lebih baik di atas putih (ratio ~4.5:1) */}
               <span className="text-sm font-black tracking-tighter text-slate-900 uppercase">
-                Kawal<span className="text-emerald-600">Transaksi</span>
+                Kawal<span className="text-emerald-700">Transaksi</span>
               </span>
             </Link>
 
@@ -148,7 +148,7 @@ export default function Navbar() {
                   href={item.href}
                   className={`flex items-center gap-2 px-4 h-full text-sm font-bold uppercase tracking-wider transition-colors border-b-2 ${
                     isActive(item.href)
-                      ? 'text-emerald-700 border-emerald-600'
+                      ? 'text-emerald-700 border-emerald-700'
                       : 'text-slate-500 border-transparent hover:text-slate-900 hover:border-slate-300'
                   }`}
                 >
@@ -167,7 +167,7 @@ export default function Navbar() {
                     onClick={() => setIsDropdownOpen(!isDropdownOpen)}
                     className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-slate-50 transition-colors"
                   >
-                    <div className="w-10 h-10 rounded-full bg-emerald-600 flex items-center justify-center shrink-0">
+                    <div className="w-10 h-10 rounded-full bg-emerald-700 flex items-center justify-center shrink-0">
                       <span className="text-white text-sm font-black">{initials}</span>
                     </div>
                     <span className="text-base text-slate-700">
@@ -203,7 +203,7 @@ export default function Navbar() {
                   )}
                 </div>
               ) : (
-                <Link href="/login" className="px-5 py-2.5 bg-slate-900 text-white text-xs font-bold uppercase tracking-widest rounded-lg hover:bg-emerald-600 transition-colors">
+                <Link href="/login" className="px-5 py-2.5 bg-slate-900 text-white text-xs font-bold uppercase tracking-widest rounded-lg hover:bg-emerald-700 transition-colors">
                   Masuk Portal
                 </Link>
               )}
@@ -216,7 +216,7 @@ export default function Navbar() {
               ) : user ? (
                 <button
                   onClick={() => { setIsProfileOpen(true); setIsMenuOpen(false); }}
-                  className="w-8 h-8 rounded-full bg-emerald-600 flex items-center justify-center"
+                  className="w-8 h-8 rounded-full bg-emerald-700 flex items-center justify-center"
                 >
                   <span className="text-white text-xs font-black">{initials}</span>
                 </button>
@@ -239,8 +239,9 @@ export default function Navbar() {
             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
               <Link href="/" className="flex items-center gap-2">
                 <Image src="/logo.png" alt="KawalTransaksi" width={32} height={32} className="rounded-lg" />
+                {/* FIX: emerald-700 untuk kontras */}
                 <span className="text-sm font-black tracking-tighter text-slate-900 uppercase">
-                  Kawal<span className="text-emerald-600">Transaksi</span>
+                  Kawal<span className="text-emerald-700">Transaksi</span>
                 </span>
               </Link>
               <button onClick={() => setIsMenuOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100">
@@ -281,7 +282,7 @@ export default function Navbar() {
             </div>
 
             <div className="flex items-center gap-4 px-5 py-4 border-b border-slate-100">
-              <div className="w-12 h-12 rounded-full bg-emerald-600 flex items-center justify-center shrink-0">
+              <div className="w-12 h-12 rounded-full bg-emerald-700 flex items-center justify-center shrink-0">
                 <span className="text-white text-sm font-black">{initials}</span>
               </div>
               <div className="min-w-0">

@@ -41,7 +41,13 @@ export default function Footer() {
           </div>
 
           <div className="col-span-1 md:col-span-3">
-            <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-4">Layanan Utama</h4>
+            {/*
+              FIX: Ganti h4 → h2 karena di footer tidak ada h2/h3 sebelumnya.
+              Heading harus berurutan: h1 (hero) → h2 (section) → h3/h4 (sub-section).
+              Footer adalah section baru, jadi h2 adalah level yang benar di sini.
+              Style visual tetap sama (text-[11px] uppercase).
+            */}
+            <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-4">Layanan Utama</h2>
             <ul className="space-y-3">
               {layananUtama.map((item) => (
                 <li key={item.href}>
@@ -54,7 +60,7 @@ export default function Footer() {
           </div>
 
           <div className="col-span-1 md:col-span-3">
-            <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-4">Bantuan & Legal</h4>
+            <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-4">Bantuan &amp; Legal</h2>
             <ul className="space-y-3">
               {bantuanLegal.map((item) => (
                 <li key={item.href}>
@@ -67,7 +73,7 @@ export default function Footer() {
           </div>
 
           <div className="col-span-2 md:col-span-2">
-            <h4 className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-4">Social</h4>
+            <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-4">Social</h2>
             <div className="flex md:flex-col gap-3">
               <a href="https://www.tiktok.com/@alieee27_" target="_blank" rel="noopener noreferrer" className="flex items-center gap-2.5 text-xs font-bold text-slate-300 hover:text-white transition-colors">
                 <span className="w-8 h-8 border border-slate-600 rounded-lg flex items-center justify-center hover:border-slate-400 transition-colors shrink-0">

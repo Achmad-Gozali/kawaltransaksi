@@ -172,9 +172,10 @@ function HowItWorksSteps() {
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 max-w-4xl mx-auto">
       {HOW_IT_WORKS.map((item, i) => (
         <div key={i} className={`${i > 0 ? 'lg:pl-8 lg:border-l border-slate-200' : ''}`}>
-          <p className="text-3xl font-black text-emerald-500 mb-2 leading-none">{item.number}</p>
+          <p className="text-3xl font-black text-emerald-600 mb-2 leading-none">{item.number}</p>
           <p className="text-[11px] font-black text-slate-800 uppercase tracking-tight leading-snug mb-2">{item.title}</p>
-          <p className="text-[11px] text-slate-400 leading-relaxed">{item.desc}</p>
+          {/* FIX: slate-500 untuk kontras lebih baik (ratio ~4.6:1) */}
+          <p className="text-[11px] text-slate-500 leading-relaxed">{item.desc}</p>
         </div>
       ))}
     </div>
@@ -191,43 +192,43 @@ function StatsCard({ stats }: { stats: Stats }) {
       transition={{ duration: 0.4 }}
       className="bg-white rounded-2xl border border-slate-200 shadow-lg shadow-slate-100 overflow-hidden"
     >
-      {/* Desktop: 3 kolom | Mobile: 2 atas + 1 bawah full */}
       <div className="grid grid-cols-2 sm:grid-cols-3 sm:divide-x divide-slate-100">
         {/* Laporan */}
         <div className="px-5 py-5 sm:px-8 sm:py-6 border-r border-b sm:border-b-0 border-slate-100">
-          <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
+          {/* FIX: slate-600 untuk kontras label (ratio ~4.6:1 di atas putih) */}
+          <p className="text-[9px] sm:text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-1.5">
             Laporan
           </p>
           <p className="text-2xl sm:text-4xl font-black text-slate-900 leading-none tabular-nums">
             {stats.total}+
           </p>
-          <p className="text-[9px] sm:text-[11px] text-slate-400 mt-1.5 leading-snug">
+          <p className="text-[9px] sm:text-[11px] text-slate-600 mt-1.5 leading-snug">
             Kasus dilaporkan
           </p>
         </div>
 
         {/* Verified */}
         <div className="px-5 py-5 sm:px-8 sm:py-6 border-b sm:border-b-0 border-slate-100">
-          <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
+          <p className="text-[9px] sm:text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-1.5">
             Verified
           </p>
-          <p className="text-2xl sm:text-4xl font-black text-emerald-600 leading-none tabular-nums">
+          <p className="text-2xl sm:text-4xl font-black text-emerald-700 leading-none tabular-nums">
             {stats.verified}+
           </p>
-          <p className="text-[9px] sm:text-[11px] text-slate-400 mt-1.5 leading-snug">
+          <p className="text-[9px] sm:text-[11px] text-slate-600 mt-1.5 leading-snug">
             Terbukti penipuan
           </p>
         </div>
 
-        {/* Kerugian — full width di mobile, kolom biasa di desktop */}
+        {/* Kerugian */}
         <div className="col-span-2 sm:col-span-1 px-5 py-5 sm:px-8 sm:py-6 sm:border-l border-slate-100">
-          <p className="text-[9px] sm:text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1.5">
+          <p className="text-[9px] sm:text-[10px] font-bold text-slate-600 uppercase tracking-widest mb-1.5">
             Kerugian
           </p>
           <p className="text-2xl sm:text-4xl font-black text-red-500 leading-none tabular-nums">
             {formatLoss(stats.totalLoss)}
           </p>
-          <p className="text-[9px] sm:text-[11px] text-slate-400 mt-1.5 leading-snug">
+          <p className="text-[9px] sm:text-[11px] text-slate-600 mt-1.5 leading-snug">
             Total kerugian dilaporkan
           </p>
         </div>
@@ -252,9 +253,11 @@ export default async function HomePage() {
       {/* ── 1. HERO ── */}
       <section className="relative min-h-[500px] sm:min-h-[600px] flex items-stretch overflow-hidden bg-white">
         <div className="relative z-10 flex flex-col justify-center px-5 sm:px-12 md:pl-20 lg:pl-28 py-14 md:py-20 w-full md:w-[52%]">
+          {/* FIX: h1 sebagai heading utama halaman */}
           <h1 className="text-4xl sm:text-5xl lg:text-7xl font-black tracking-tighter leading-[0.9] uppercase mb-5 sm:mb-6">
             Transaksi{' '}
-            <span className="text-emerald-600 italic">Aman,</span>
+            {/* FIX: emerald-700 untuk kontras di atas putih */}
+            <span className="text-emerald-700 italic">Aman,</span>
             <br />
             Hati Tenang
           </h1>
@@ -264,7 +267,7 @@ export default async function HomePage() {
           <div className="flex flex-col sm:flex-row gap-3">
             <Link
               href="/cek-nomor"
-              className="px-5 sm:px-6 py-3 sm:py-3.5 bg-slate-900 text-white font-bold text-xs sm:text-sm tracking-widest uppercase rounded-xl flex items-center justify-center gap-2 hover:bg-emerald-600 transition-colors"
+              className="px-5 sm:px-6 py-3 sm:py-3.5 bg-slate-900 text-white font-bold text-xs sm:text-sm tracking-widest uppercase rounded-xl flex items-center justify-center gap-2 hover:bg-emerald-700 transition-colors"
             >
               <Phone className="w-4 h-4" /> cek nomor hp
             </Link>
@@ -310,6 +313,7 @@ export default async function HomePage() {
       {/* ── 2. APA ITU KAWALTRANSAKSI ── */}
       <section className="bg-slate-50 pt-10 sm:pt-24 pb-12 sm:pb-16">
         <div className="max-w-4xl mx-auto px-5 sm:px-6 text-center">
+          {/* FIX: h2 setelah h1 di hero — urutan heading benar */}
           <h2 className="text-xl sm:text-2xl lg:text-3xl font-black tracking-tighter uppercase text-slate-900 mb-4 sm:mb-5">
             Apa itu KawalTransaksi?
           </h2>
@@ -330,7 +334,7 @@ export default async function HomePage() {
             <h2 className="text-xl sm:text-2xl lg:text-3xl font-black tracking-tighter uppercase text-slate-900">
               Bagaimana KawalTransaksi Bekerja?
             </h2>
-            <p className="text-slate-400 text-sm mt-2">
+            <p className="text-slate-500 text-sm mt-2">
               Berikut ilustrasi bagaimana KawalTransaksi mengidentifikasi penipuan.
             </p>
           </div>
@@ -356,7 +360,7 @@ export default async function HomePage() {
             <h2 className="text-lg sm:text-2xl font-black tracking-tighter uppercase">laporan masuk terkini</h2>
             <Link
               href={lihatSemuaHref}
-              className="text-[11px] font-bold text-slate-500 uppercase tracking-widest hover:text-emerald-600 transition-colors whitespace-nowrap"
+              className="text-[11px] font-bold text-slate-500 uppercase tracking-widest hover:text-emerald-700 transition-colors whitespace-nowrap"
             >
               lihat semua →
             </Link>
@@ -389,14 +393,14 @@ export default async function HomePage() {
                       }`}>
                         {report.status === 'verified' ? 'Terverifikasi' : report.status === 'withdrawn' ? 'Sedang Direvisi' : 'Menunggu'}
                       </span>
-                      <span className="text-[10px] text-slate-400 font-medium">{formatDateID(report.created_at)}</span>
+                      <span className="text-[10px] text-slate-500 font-medium">{formatDateID(report.created_at)}</span>
                     </div>
 
                     <div className="mb-4 sm:mb-5">
                       <p className="text-base sm:text-lg font-black tracking-tight text-slate-900 group-hover:text-slate-700 transition-colors font-mono">
                         {report.target_number}
                       </p>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1">
+                      <p className="text-[10px] text-slate-500 font-bold uppercase tracking-wider mt-1">
                         a.n. {report.target_name || 'anonymous'}
                       </p>
                     </div>
@@ -411,7 +415,7 @@ export default async function HomePage() {
                           )}
                           <span className="truncate max-w-[70px] sm:max-w-[80px]">{meta.label}</span>
                         </span>
-                        <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate">
+                        <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest truncate">
                           {report.category}
                         </span>
                       </div>
@@ -442,7 +446,7 @@ export default async function HomePage() {
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link
               href="/report"
-              className="w-full sm:w-auto px-6 sm:px-7 py-3 sm:py-3.5 bg-emerald-600 text-white font-bold text-xs sm:text-sm tracking-widest uppercase rounded-xl hover:bg-emerald-500 transition-colors"
+              className="w-full sm:w-auto px-6 sm:px-7 py-3 sm:py-3.5 bg-emerald-700 text-white font-bold text-xs sm:text-sm tracking-widest uppercase rounded-xl hover:bg-emerald-600 transition-colors"
             >
               Buat Laporan Baru
             </Link>
