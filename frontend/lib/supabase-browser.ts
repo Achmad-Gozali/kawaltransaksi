@@ -3,11 +3,11 @@ import type { Database } from '@/types/database';
 
 export function createClient() {
   return createBrowserClient<Database>(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    '/api/sb',
     process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
     {
       auth: {
-        flowType: 'pkce', // ✅ FIX: Wajib PKCE untuk SSR
+        flowType: 'pkce',
         detectSessionInUrl: true,
         persistSession: true,
       },

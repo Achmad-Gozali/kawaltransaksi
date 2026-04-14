@@ -46,6 +46,15 @@ const nextConfig: NextConfig = {
     optimisticClientCache: true,
   },
 
+  async rewrites() {
+    return [
+      {
+        source: '/api/sb/:path*',
+        destination: `${process.env.NEXT_PUBLIC_SUPABASE_URL}/:path*`,
+      },
+    ];
+  },
+
   async headers() {
     return [
       {

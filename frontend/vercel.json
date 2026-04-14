@@ -3,7 +3,8 @@
     {
       "source": "/(.*)",
       "headers": [
-        { "key": "Server", "value": "webserver" }
+        { "key": "Server", "value": "webserver" },
+        { "key": "X-Powered-By", "value": "" }
       ]
     }
   ]
