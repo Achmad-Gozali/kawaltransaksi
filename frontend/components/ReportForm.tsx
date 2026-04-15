@@ -781,9 +781,15 @@ export default function ReportForm() {
                 </div>
                 <div>
                   <Label optional>Tanggal Kejadian</Label>
-                  <input type="date" max={new Date().toISOString().split('T')[0]} value={formData.incident_date}
-                    onChange={(e) => setFormData({ ...formData, incident_date: e.target.value })}
-                    className="w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-base text-slate-800 font-medium focus:bg-white focus:border-emerald-400 focus:ring-2 focus:ring-emerald-50 outline-none transition-all" />
+                    <input
+                      type="date"
+                        max={new Date().toISOString().split('T')[0]}
+                          value={formData.incident_date}
+                        onChange={(e) => setFormData({ ...formData, incident_date: e.target.value })}
+                      className={`w-full px-4 py-3 bg-slate-50 border border-slate-200 rounded-xl text-base font-medium focus:bg-white focus:border-emerald-400 focus:ring-2 focus:ring-emerald-50 outline-none transition-all [&::-webkit-datetime-edit]:text-slate-800 [&::-webkit-date-and-time-value]:text-slate-800 ${
+                    !formData.incident_date ? 'text-slate-300' : 'text-slate-800'
+                    }`}
+                    />
                 </div>
                 <div>
                   <Label optional>Platform</Label>

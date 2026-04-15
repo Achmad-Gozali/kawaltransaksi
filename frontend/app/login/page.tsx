@@ -51,7 +51,6 @@ export default async function LoginPage({
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tighter uppercase mb-2">
             Masuk Portal.
           </h1>
-          {/* ✅ Subtitle dinamis sesuai konteks */}
           <p className="text-sm text-slate-500 font-medium max-w-xs">
             {isFromDatabase
               ? 'Masuk untuk mengakses seluruh laporan penipuan terverifikasi.'
@@ -59,7 +58,7 @@ export default async function LoginPage({
           </p>
         </div>
 
-        {/* ── Error banner: Banned ── */}
+        {/* Error banner: Banned */}
         {isBanned && (
           <div className="mb-5 p-4 bg-red-50 border border-red-200 rounded-2xl flex items-start gap-3">
             <ShieldX className="w-5 h-5 text-red-500 shrink-0 mt-0.5" />
@@ -72,7 +71,7 @@ export default async function LoginPage({
           </div>
         )}
 
-        {/* ── Error banner: OAuth failed ── */}
+        {/* Error banner: OAuth failed */}
         {isOauthFailed && (
           <div className="mb-5 p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-start gap-3">
             <ShieldX className="w-5 h-5 text-amber-500 shrink-0 mt-0.5" />
@@ -86,10 +85,7 @@ export default async function LoginPage({
         )}
 
         {/* Card */}
-        <div className="bg-white border border-slate-200 rounded-2xl shadow-lg shadow-slate-900/5 p-6 sm:p-8 relative overflow-hidden">
-          {/* Top accent */}
-          <div className="absolute top-0 left-0 w-full h-1 bg-slate-900 rounded-t-2xl" />
-
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-lg shadow-slate-900/5 p-6 sm:p-8">
           <AuthForm type="login" />
 
           {/* Footer link */}

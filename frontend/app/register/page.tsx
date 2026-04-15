@@ -42,17 +42,13 @@ export default function RegisterPage() {
           <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tighter uppercase mb-2">
             Gabung Komunitas.
           </h1>
-          {/* ✅ Subtitle diubah */}
           <p className="text-sm text-slate-500 font-medium max-w-xs">
             Buat akunmu secara gratis dan mulai sekarang.
           </p>
         </div>
 
         {/* Card */}
-        <div className="bg-white border border-slate-200 rounded-2xl shadow-lg shadow-emerald-900/5 p-6 sm:p-8 relative overflow-hidden">
-          {/* Top accent emerald */}
-          <div className="absolute top-0 left-0 w-full h-1 bg-emerald-600 rounded-t-2xl" />
-
+        <div className="bg-white border border-slate-200 rounded-2xl shadow-lg shadow-emerald-900/5 p-6 sm:p-8">
           <AuthForm type="register" />
 
           {/* Footer link */}
