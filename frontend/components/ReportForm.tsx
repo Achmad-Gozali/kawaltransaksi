@@ -768,7 +768,7 @@ export default function ReportForm() {
           <Card>
             <div className="p-6">
               <SectionTitle title="Detail Tambahan" subtitle="Opsional — semakin lengkap semakin cepat diverifikasi" />
-              <div className="grid grid-cols-2 gap-4 mb-6">
+              <div className="grid grid-cols-2 gap-4 mb-6 items-end">
                 <div>
                   <Label optional>Kerugian</Label>
                   <div className="relative">
