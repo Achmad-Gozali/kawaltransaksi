@@ -1,5 +1,6 @@
 import type { NextConfig } from 'next';
 import withSerwist from '@serwist/next';
+import { withSentryConfig } from '@sentry/nextjs';
 
 const nextConfig: NextConfig = {
   reactStrictMode: true,
@@ -89,7 +90,7 @@ const nextConfig: NextConfig = {
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
               "img-src 'self' data: blob: https://*.supabase.co https://picsum.photos",
-              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.google.com/recaptcha/ https://*.cloudflare.com https://challenges.cloudflare.com https://*.challenges.cloudflare.com https://api.kawaltransaksi.com http://localhost:8787 https://static.cloudflareinsights.com",
+              "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://www.google.com/recaptcha/ https://*.cloudflare.com https://challenges.cloudflare.com https://*.challenges.cloudflare.com https://api.kawaltransaksi.com http://localhost:8787 https://static.cloudflareinsights.com https://*.sentry.io",
               "frame-src https://www.google.com/recaptcha/ https://recaptcha.google.com/ https://challenges.cloudflare.com https://*.challenges.cloudflare.com",
               "object-src 'none'",
               "base-uri 'self'",
@@ -146,8 +147,21 @@ const nextConfig: NextConfig = {
   },
 };
 
-export default withSerwist({
+const withSerwistConfig = withSerwist({
   swSrc: 'app/sw.ts',
   swDest: 'public/sw.js',
   disable: process.env.NODE_ENV === 'development',
-})(nextConfig);
+});
+
+export default withSentryConfig(withSerwistConfig(nextConfig), {
+  org: 'kawaltransaksi',
+  project: 'javascript-nextjs',
+  silent: !process.env.CI,
+  widenClientFileUpload: true,
+  webpack: {
+    automaticVercelMonitors: true,
+    treeshake: {
+      removeDebugLogging: true,
+    },
+  },
+});
