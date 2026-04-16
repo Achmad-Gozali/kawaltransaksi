@@ -132,7 +132,7 @@ auth.post('/register', async (c) => {
         type: 'magiclink',
           email: normalizedEmail,
           options: {
-        redirectTo: `${c.env.FRONTEND_URL}/auth/callback?next=/dashboard`,
+        redirectTo: `${c.env.FRONTEND_URL}/auth/confirm`,
       },
     });
 
