@@ -9,11 +9,30 @@ export default function ConfirmPage() {
   const supabase = createClient();
 
   useEffect(() => {
-    supabase.auth.onAuthStateChange((event, session) => {
-      if (event === 'SIGNED_IN' && session) {
-        router.push('/dashboard');
+    const handleHash = async () => {
+      const hash = window.location.hash;
+      if (hash) {
+        const params = new URLSearchParams(hash.substring(1));
+        const access_token = params.get('access_token');
+        const refresh_token = params.get('refresh_token');
+
+        if (access_token && refresh_token) {
+          await supabase.auth.setSession({ access_token, refresh_token });
+          router.push('/dashboard');
+          return;
+        }
       }
-    });
+
+      // Fallback: cek apakah udah ada session
+      const { data: { session } } = await supabase.auth.getSession();
+      if (session) {
+        router.push('/dashboard');
+      } else {
+        router.push('/login');
+      }
+    };
+
+    handleHash();
   }, []);
 
   return (
