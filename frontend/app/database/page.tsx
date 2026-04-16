@@ -298,6 +298,10 @@ export default async function DatabasePage({
                 const aggStatus = getAggregateStatus(report.verified_count, report.pending_count);
                 const badge = getStatusBadge(aggStatus, report.verified_count);
 
+                // Sembunyikan nama kalau belum ada verified report
+                const isVerified = report.verified_count > 0;
+                const displayName = isVerified ? report.target_name : null;
+
                 return (
                   <Link
                     key={report.target_number}
@@ -317,7 +321,7 @@ export default async function DatabasePage({
                         {report.target_number}
                       </p>
                       <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1 truncate">
-                        A.N. {report.target_name || 'Anonymous'}
+                        {displayName ? `A.N. ${displayName}` : isVerified ? 'A.N. Anonymous' : 'Identitas belum terverifikasi'}
                       </p>
                     </div>
                     <div className="flex items-center justify-between pt-3 border-t border-slate-100">

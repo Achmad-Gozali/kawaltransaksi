@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { ShieldCheck, Clock, CheckCircle2, AlertCircle, ShieldAlert, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { ShieldCheck, Clock, CheckCircle2, AlertCircle, ShieldAlert, X, ChevronLeft, ChevronRight, Info } from 'lucide-react';
 
 function cleanChronology(text: string): string {
   return text.replace(/^["'""]+|["'""]+$/g, '').trim();
@@ -71,7 +71,6 @@ function Lightbox({ urls, initialIndex, onClose }: { urls: string[]; initialInde
       className="fixed inset-0 z-[100] bg-black/90 flex items-center justify-center p-4"
       onClick={onClose}
     >
-      {/* Close button */}
       <button
         onClick={onClose}
         className="absolute top-4 right-4 w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors z-10"
@@ -79,12 +78,10 @@ function Lightbox({ urls, initialIndex, onClose }: { urls: string[]; initialInde
         <X className="w-5 h-5 text-white" />
       </button>
 
-      {/* Counter */}
       <div className="absolute top-4 left-1/2 -translate-x-1/2 text-white text-sm font-medium bg-black/40 px-3 py-1 rounded-full">
         {current + 1} / {urls.length}
       </div>
 
-      {/* Prev button */}
       {urls.length > 1 && (
         <button
           onClick={(e) => { e.stopPropagation(); setCurrent(prev => (prev > 0 ? prev - 1 : urls.length - 1)); }}
@@ -94,7 +91,6 @@ function Lightbox({ urls, initialIndex, onClose }: { urls: string[]; initialInde
         </button>
       )}
 
-      {/* Image */}
       <div
         className="relative max-w-3xl max-h-[80vh] w-full h-full"
         onClick={(e) => e.stopPropagation()}
@@ -106,7 +102,6 @@ function Lightbox({ urls, initialIndex, onClose }: { urls: string[]; initialInde
         />
       </div>
 
-      {/* Next button */}
       {urls.length > 1 && (
         <button
           onClick={(e) => { e.stopPropagation(); setCurrent(prev => (prev < urls.length - 1 ? prev + 1 : 0)); }}
@@ -116,7 +111,6 @@ function Lightbox({ urls, initialIndex, onClose }: { urls: string[]; initialInde
         </button>
       )}
 
-      {/* Thumbnail strip */}
       {urls.length > 1 && (
         <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 px-4">
           {urls.map((url, i) => (
@@ -204,6 +198,8 @@ function EvidenceGallery({ urls }: { urls: string[] }) {
 
 export default function ReportList({ reports, hasWithdrawn = false, hasLinkedReports = false, linkedHasVerified = false }: Props) {
   const allEvidenceUrls = getAllEvidenceUrls(reports);
+  const hasVerified = reports.some((r) => r.status === 'verified');
+  const allPending = reports.length > 0 && !hasVerified;
 
   return (
     <div className="space-y-5">
@@ -214,6 +210,16 @@ export default function ReportList({ reports, hasWithdrawn = false, hasLinkedRep
             <p className="text-[10px] text-slate-400">{reports.length} laporan dari {reports.length} korban berbeda</p>
           )}
         </div>
+
+        {/* Disclaimer kalau semua masih pending */}
+        {allPending && (
+          <div className="mb-3 flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+            <Info className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
+            <p className="text-[11px] text-amber-700 leading-relaxed">
+              Laporan ini bersumber dari komunitas dan <span className="font-semibold">belum diverifikasi</span> oleh moderator. Gunakan sebagai kewaspadaan awal, bukan sebagai bukti final.
+            </p>
+          </div>
+        )}
 
         {reports.length > 0 ? (
           <div className="space-y-3">

@@ -26,6 +26,7 @@ interface ReportItem {
   category?: string | null;
   platform?: string | null;
   loss_amount?: number | string | null;
+  status?: string | null;
 }
 
 interface Props {
@@ -64,6 +65,9 @@ export default function NumberCard({
   defaultWalletName = null,
   hasTypeParam = false,
 }: Props) {
+  // Cek apakah ada minimal 1 laporan verified
+  const hasVerified = reports.some((r) => r.status === 'verified');
+
   const allSocialAccounts: string[] = [];
   reports.forEach((r) => {
     if (Array.isArray(r.social_media_accounts)) {
@@ -82,8 +86,15 @@ export default function NumberCard({
     }
   });
 
-  const suspectPhotoUrl = reports.find((r) => r.suspect_photo_url)?.suspect_photo_url ?? null;
-  const targetName = reports[0]?.target_name ?? null;
+  // Sembunyikan foto & nama kalau belum ada verified
+  const suspectPhotoUrl = hasVerified
+    ? (reports.find((r) => r.suspect_photo_url)?.suspect_photo_url ?? null)
+    : null;
+
+  const targetName = hasVerified
+    ? (reports[0]?.target_name ?? null)
+    : null;
+
   const dangerLink = reports.find((r) => r.link_url)?.link_url ?? null;
   const category = reports[0]?.category ?? null;
   const platform = reports.find((r) => r.platform)?.platform ?? null;
@@ -120,6 +131,11 @@ export default function NumberCard({
               {targetName && (
                 <span className={`text-[11px] px-2.5 py-1 rounded-md font-medium border ${config.nameBadgeBg} ${config.nameBadgeText} ${config.nameBadgeBorder}`}>
                   a.n. {targetName}
+                </span>
+              )}
+              {!hasVerified && reports.length > 0 && (
+                <span className="text-[11px] px-2.5 py-1 rounded-md font-medium border border-amber-200 bg-amber-50 text-amber-700">
+                  Identitas belum dapat ditampilkan — laporan sedang diverifikasi
                 </span>
               )}
               {showLabel && (
@@ -173,6 +189,9 @@ export default function NumberCard({
                 <p className="text-xs font-medium text-red-600">
                   {new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(totalLoss)}
                 </p>
+                {!hasVerified && (
+                  <p className="text-[10px] text-slate-400 mt-0.5">belum dikonfirmasi</p>
+                )}
               </div>
             )}
           </div>
