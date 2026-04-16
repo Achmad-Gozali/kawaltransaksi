@@ -1,7 +1,7 @@
 import AuthForm from '@/components/AuthForm';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowLeft, ArrowRight, UserPlus } from 'lucide-react';
+import { ArrowLeft, UserPlus } from 'lucide-react';
 
 export default function RegisterPage() {
   return (
@@ -50,8 +50,8 @@ export default function RegisterPage() {
         {/* Card */}
         <div className="bg-white border border-slate-200 rounded-2xl shadow-lg shadow-emerald-900/5 p-6 sm:p-8">
           <AuthForm type="register" />
-          
-          </div> 
+        </div>
+
         {/* Legal Links */}
         <div className="mt-10 text-center text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em] flex items-center justify-center gap-4 sm:gap-6 flex-wrap">
           <Link href="/syarat-ketentuan" className="hover:text-emerald-600 transition-colors">

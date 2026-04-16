@@ -18,15 +18,14 @@ export default function ConfirmPage() {
 
         if (access_token && refresh_token) {
           await supabase.auth.setSession({ access_token, refresh_token });
-          router.push('/dashboard');
+          router.push('/');
           return;
         }
       }
 
-      // Fallback: cek apakah udah ada session
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
-        router.push('/dashboard');
+        router.push('/');
       } else {
         router.push('/login');
       }

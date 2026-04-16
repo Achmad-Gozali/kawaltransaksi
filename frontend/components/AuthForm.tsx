@@ -3,6 +3,7 @@
 import React, { useState, useEffect, Suspense, useRef } from 'react';
 import { createClient } from '@/lib/supabase-browser';
 import { useRouter, useSearchParams } from 'next/navigation';
+import Link from 'next/link';
 import {
   Loader2, AlertCircle, CheckCircle2, Mail, Lock,
   UserPlus, ArrowRight, Eye, EyeOff, XCircle, Timer, AlertTriangle, ShieldCheck,
@@ -138,28 +139,7 @@ function AuthFormInner({ type }: AuthFormProps) {
   const [turnstileStatus, setTurnstileStatus] = useState<'loading' | 'ready' | 'error'>('loading');
   const [captchaError, setCaptchaError] = useState<string | null>(null);
   const [verificationSent, setVerificationSent] = useState(false);
-
-const [resendCooldown, setResendCooldown] = useState(0);
-
-const handleResend = async () => {
-  setIsLoading(true);
-  const { error } = await supabase.auth.resend({
-    type: 'signup',
-    email,
-  });
-  setIsLoading(false);
-  if (error) {
-    setError(translateError(error.message));
-  } else {
-    setResendCooldown(60);
-    const interval = setInterval(() => {
-      setResendCooldown(prev => {
-        if (prev <= 1) { clearInterval(interval); return 0; }
-        return prev - 1;
-      });
-    }, 1000);
-  }
-};
+  const [resendCooldown, setResendCooldown] = useState(0);
 
   const turnstileRef = useRef<TurnstileInstance>(null);
 
@@ -199,6 +179,26 @@ const handleResend = async () => {
       options: { redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}` },
     });
     if (error) { setError(`Gagal masuk dengan ${provider}. Coba lagi.`); setOauthLoading(null); }
+  };
+
+  const handleResend = async () => {
+    setIsLoading(true);
+    const { error } = await supabase.auth.resend({
+      type: 'signup',
+      email,
+    });
+    setIsLoading(false);
+    if (error) {
+      setError(translateError(error.message));
+    } else {
+      setResendCooldown(60);
+      const interval = setInterval(() => {
+        setResendCooldown(prev => {
+          if (prev <= 1) { clearInterval(interval); return 0; }
+          return prev - 1;
+        });
+      }, 1000);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -329,8 +329,7 @@ const handleResend = async () => {
     ? <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
     : <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />;
 
-// Tampilan setelah register berhasil — suruh cek email
-  if (verificationSent) {
+if (verificationSent) {
     return (
       <div className="w-full text-center space-y-4">
         <div className="flex justify-center">
@@ -356,12 +355,12 @@ const handleResend = async () => {
           </button>
         </div>
         <div className="pt-2">
-          <a
+          <Link
             href="/login"
             className="text-xs font-black text-slate-800 hover:text-emerald-700 uppercase tracking-widest flex items-center justify-center gap-1 transition-colors"
           >
             Kembali ke Halaman Login <ArrowRight className="w-3 h-3" />
-          </a>
+          </Link>
         </div>
       </div>
     );
