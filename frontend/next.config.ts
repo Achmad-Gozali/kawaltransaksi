@@ -143,32 +143,6 @@ const nextConfig: NextConfig = {
         ignored: /.*/,
       };
     }
-
-    if (!dev) {
-      config.optimization = {
-        ...config.optimization,
-        splitChunks: {
-          chunks: 'all',
-          minSize: 20000,
-          maxSize: 80000,
-          cacheGroups: {
-            motion: {
-              test: /[\\/]node_modules[\\/]motion/,
-              name: 'motion',
-              chunks: 'async',
-              priority: 30,
-            },
-            commons: {
-              name: 'commons',
-              chunks: 'async',
-              minChunks: 2,
-              priority: 20,
-            },
-          },
-        },
-      };
-    }
-
     return config;
   },
 };
