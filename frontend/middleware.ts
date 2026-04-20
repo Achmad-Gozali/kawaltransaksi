@@ -22,7 +22,7 @@ export async function middleware(request: NextRequest) {
               ...options,
               httpOnly: true,
               secure: true,
-              sameSite: 'lax'
+              sameSite: 'lax',
             })
           );
         },
@@ -40,11 +40,32 @@ export async function middleware(request: NextRequest) {
   }
 
   if (pathname.startsWith('/admin') && user) {
-    const { data: profile } = await supabase.from('profiles').select('role').eq('id', user.id).single();
-    if (profile?.role !== 'admin') return NextResponse.redirect(new URL('/', request.url));
+    const cachedRole = request.cookies.get('user_role')?.value;
+
+    if (cachedRole && cachedRole !== 'admin') {
+      return NextResponse.redirect(new URL('/', request.url));
+    }
+
+    if (!cachedRole) {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', user.id)
+        .single();
+
+      if (profile?.role !== 'admin') {
+        return NextResponse.redirect(new URL('/', request.url));
+      }
+
+      supabaseResponse.cookies.set('user_role', profile.role, {
+        httpOnly: true,
+        secure: true,
+        sameSite: 'lax',
+        maxAge: 60 * 60, // 1 jam
+      });
+    }
   }
 
-  // Strip Vercel/Next.js fingerprint headers
   supabaseResponse.headers.delete('x-vercel-id');
   supabaseResponse.headers.delete('x-vercel-cache');
   supabaseResponse.headers.delete('x-vercel-ip-country');

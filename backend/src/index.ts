@@ -9,7 +9,6 @@ import type { Env } from './types';
 
 const app = new Hono<{ Bindings: Env }>();
 
-// ── CORS ──────────────────────────────────────────────────────────────────────
 app.use('*', cors({
   origin: (origin, c) => {
     const allowedOrigins = [
@@ -26,7 +25,6 @@ app.use('*', cors({
   credentials: true,
 }));
 
-// ── Origin validation ─────────────────────────────────────────────────────────
 const originValidator = async (c: any, next: any) => {
   if (c.req.method === 'OPTIONS') return next();
   const allowedOrigins = [
@@ -49,8 +47,9 @@ const originValidator = async (c: any, next: any) => {
 
 app.use('/api/auth/*', originValidator);
 app.use('/api/search/*', originValidator);
+app.use('/api/reports/*', originValidator);
+app.use('/api/admin/*', originValidator);
 
-// ── Helper: Log IP mencurigakan ke KV ────────────────────────────────────────
 export async function logSuspiciousIp(
   limiter: KVNamespace,
   ip: string,
@@ -64,13 +63,12 @@ export async function logSuspiciousIp(
       reason,
       endpoint,
       created_at: new Date().toISOString(),
-    }), { expirationTtl: 604800 }); // 7 hari
+    }), { expirationTtl: 604800 });
   } catch (err) {
     console.error('[IP LOG] Error:', err);
   }
 }
 
-// ── Helper: Auto blacklist IP kalau abuse ─────────────────────────────────────
 export async function autoBlacklistIfAbuse(
   limiter: KVNamespace,
   ip: string,
@@ -91,19 +89,18 @@ export async function autoBlacklistIfAbuse(
           reason,
           auto: true,
           created_at: new Date().toISOString(),
-        }), { expirationTtl: 86400 }); // 24 jam
+        }), { expirationTtl: 86400 });
         console.warn(`[AUTO BLACKLIST] IP di-blacklist: ${ip}, alasan: ${reason}`);
         await limiter.delete(abuseKey);
       }
     } else {
-      await limiter.put(abuseKey, newCount.toString(), { expirationTtl: 3600 }); // 1 jam
+      await limiter.put(abuseKey, newCount.toString(), { expirationTtl: 3600 });
     }
   } catch (err) {
     console.error('[AUTO BLACKLIST] Error:', err);
   }
 }
 
-// ── IP Blacklist check — semua /api/* ─────────────────────────────────────────
 app.use('/api/*', async (c, next) => {
   if (!c.env.LIMITER) return next();
 
@@ -131,7 +128,6 @@ app.use('/api/*', async (c, next) => {
   return next();
 });
 
-// ── Lapis 1: Cloudflare native rate limit — /api/auth/* ──────────────────────
 app.use('/api/auth/*', async (c, next) => {
   if (c.env.AUTH_RATE_LIMITER) {
     const ip = c.req.header('CF-Connecting-IP') || 'anonymous';
@@ -148,7 +144,6 @@ app.use('/api/auth/*', async (c, next) => {
   return next();
 });
 
-// ── Lapis 2: KV global rate limit — semua /api/* ─────────────────────────────
 app.use('/api/*', async (c, next) => {
   if (!c.env.LIMITER) {
     console.warn('[RATE LIMIT] KV binding LIMITER tidak tersedia.');
@@ -181,7 +176,6 @@ app.use('/api/*', async (c, next) => {
   return next();
 });
 
-// ── Lapis 3: KV auth rate limit — khusus /api/auth/* ─────────────────────────
 app.use('/api/auth/*', async (c, next) => {
   if (!c.env.LIMITER) return next();
 
@@ -212,7 +206,6 @@ app.use('/api/auth/*', async (c, next) => {
   return next();
 });
 
-// ── Lapis 4: KV search rate limit — khusus /api/search/* ─────────────────────
 app.use('/api/search/*', async (c, next) => {
   if (!c.env.LIMITER) return next();
 
@@ -242,10 +235,8 @@ app.use('/api/search/*', async (c, next) => {
   return next();
 });
 
-// ── Health check ──────────────────────────────────────────────────────────────
 app.get('/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }));
 
-// ── Routes ────────────────────────────────────────────────────────────────────
 app.route('/api/auth', authRoutes);
 app.route('/api/reports', reportsRoutes);
 app.route('/api/admin', adminRoutes);
@@ -258,7 +249,6 @@ app.onError((err, c) => {
   return c.json({ success: false, message: 'Terjadi kesalahan server.' }, 500);
 });
 
-// ── Cron Handler ──────────────────────────────────────────────────────────────
 export default {
   fetch: app.fetch,
   async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
