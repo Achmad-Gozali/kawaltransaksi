@@ -29,6 +29,20 @@ export async function GET(request: NextRequest) {
     }
   );
 
+  // Handle reset password — redirect ke halaman reset
+  if (token_hash && type === 'recovery') {
+    const { error } = await supabase.auth.verifyOtp({
+      token_hash,
+      type: 'recovery',
+    });
+
+    if (!error) {
+      return NextResponse.redirect(`${origin}/reset-kata-sandi`);
+    }
+
+    return NextResponse.redirect(`${origin}/lupa-kata-sandi?error=link_expired`);
+  }
+
   // Handle magic link / email verification (token_hash)
   if (token_hash && type) {
     const { error } = await supabase.auth.verifyOtp({

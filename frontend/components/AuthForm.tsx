@@ -183,10 +183,7 @@ function AuthFormInner({ type }: AuthFormProps) {
 
   const handleResend = async () => {
     setIsLoading(true);
-    const { error } = await supabase.auth.resend({
-      type: 'signup',
-      email,
-    });
+    const { error } = await supabase.auth.resend({ type: 'signup', email });
     setIsLoading(false);
     if (error) {
       setError(translateError(error.message));
@@ -229,22 +226,14 @@ function AuthFormInner({ type }: AuthFormProps) {
     try {
       if (type === 'register') {
         const normalizedEmail = normalizeEmail(sanitizedEmail);
-
         const registerRes = await fetch(`${BACKEND_URL}/api/auth/register`, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            email: normalizedEmail,
-            password,
-            fullName: sanitizedFullName,
-            turnstileToken,
-          }),
+          body: JSON.stringify({ email: normalizedEmail, password, fullName: sanitizedFullName, turnstileToken }),
         });
 
         const registerData = await registerRes.json().catch(() => ({})) as {
-          success?: boolean;
-          message?: string;
-          requiresVerification?: boolean;
+          success?: boolean; message?: string; requiresVerification?: boolean;
         };
 
         if (!registerData.success) {
@@ -264,18 +253,12 @@ function AuthFormInner({ type }: AuthFormProps) {
       const loginRes = await fetch(`${BACKEND_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          email: sanitizedEmail,
-          password,
-          turnstileToken,
-        }),
+        body: JSON.stringify({ email: sanitizedEmail, password, turnstileToken }),
       });
+
       const loginData = await loginRes.json().catch(() => ({})) as {
-        success?: boolean;
-        message?: string;
-        locked?: boolean;
-        locked_until?: string;
-        warning?: boolean;
+        success?: boolean; message?: string; locked?: boolean;
+        locked_until?: string; warning?: boolean;
         session?: { access_token: string; refresh_token: string };
       };
 
@@ -329,7 +312,7 @@ function AuthFormInner({ type }: AuthFormProps) {
     ? <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
     : <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />;
 
-if (verificationSent) {
+  if (verificationSent) {
     return (
       <div className="w-full text-center space-y-4">
         <div className="flex justify-center">
@@ -343,9 +326,7 @@ if (verificationSent) {
             Kami sudah kirim link verifikasi ke <span className="font-bold text-slate-700">{email}</span>.
             Klik link tersebut untuk mengaktifkan akun kamu.
           </p>
-          <p className="text-xs text-slate-400">
-            Tidak ada email? Cek folder spam atau sampah kamu.
-          </p>
+          <p className="text-xs text-slate-400">Tidak ada email? Cek folder spam atau sampah kamu.</p>
           <button
             onClick={handleResend}
             disabled={isLoading || resendCooldown > 0}
@@ -355,10 +336,7 @@ if (verificationSent) {
           </button>
         </div>
         <div className="pt-2">
-          <Link
-            href="/login"
-            className="text-xs font-black text-slate-800 hover:text-emerald-700 uppercase tracking-widest flex items-center justify-center gap-1 transition-colors"
-          >
+          <Link href="/login" className="text-xs font-black text-slate-800 hover:text-emerald-700 uppercase tracking-widest flex items-center justify-center gap-1 transition-colors">
             Kembali ke Halaman Login <ArrowRight className="w-3 h-3" />
           </Link>
         </div>
@@ -432,7 +410,17 @@ if (verificationSent) {
         </div>
 
         <div className="space-y-1.5">
-          <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Kata Sandi</label>
+          <div className="flex items-center justify-between">
+            <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Kata Sandi</label>
+            {type === 'login' && (
+              <Link
+                href="/lupa-kata-sandi"
+                className="text-[10px] font-bold text-slate-400 hover:text-red-600 transition-colors uppercase tracking-widest"
+              >
+                Lupa kata sandi?
+              </Link>
+            )}
+          </div>
           <div className="relative">
             <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
             <input
