@@ -55,6 +55,40 @@ export default function ResetKataSandiPage() {
 
   useEffect(() => {
     const checkSession = async () => {
+      // Cek token dari URL hash (format Supabase lama)
+      const hash = window.location.hash;
+      if (hash) {
+        const params = new URLSearchParams(hash.substring(1));
+        const access_token = params.get('access_token');
+        const refresh_token = params.get('refresh_token');
+        if (access_token && refresh_token) {
+          const { error } = await supabase.auth.setSession({ access_token, refresh_token });
+          if (!error) {
+            setSessionReady(true);
+            setCheckingSession(false);
+            return;
+          }
+        }
+      }
+
+      // Cek token dari URL search params (format Supabase baru)
+      const searchParams = new URLSearchParams(window.location.search);
+      const token_hash = searchParams.get('token_hash');
+      const type = searchParams.get('type');
+
+      if (token_hash && type === 'recovery') {
+        const { error } = await supabase.auth.verifyOtp({
+          token_hash,
+          type: 'recovery',
+        });
+        if (!error) {
+          setSessionReady(true);
+          setCheckingSession(false);
+          return;
+        }
+      }
+
+      // Cek session yang sudah ada
       const { data: { session } } = await supabase.auth.getSession();
       if (session) {
         setSessionReady(true);
@@ -63,6 +97,7 @@ export default function ResetKataSandiPage() {
       }
       setCheckingSession(false);
     };
+
     checkSession();
   }, []);
 
@@ -128,10 +163,7 @@ export default function ResetKataSandiPage() {
                 Kata sandi kamu sudah diperbarui. Kamu akan diarahkan ke halaman login...
               </p>
             </div>
-            <Link
-              href="/login"
-              className="inline-flex items-center gap-2 text-xs font-bold text-slate-700 hover:text-emerald-600 transition-colors uppercase tracking-widest"
-            >
+            <Link href="/login" className="inline-flex items-center gap-2 text-xs font-bold text-slate-700 hover:text-emerald-600 transition-colors uppercase tracking-widest">
               Masuk Sekarang <ArrowRight className="w-3 h-3" />
             </Link>
           </div>
@@ -144,7 +176,6 @@ export default function ResetKataSandiPage() {
     <div className="min-h-screen bg-zinc-50 flex items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
         <div className="bg-white border border-zinc-200 rounded-2xl p-8 shadow-sm">
-
           <div className="mb-6">
             <h1 className="text-xl font-black text-slate-900 uppercase tracking-tight mb-2">Buat Kata Sandi Baru</h1>
             <p className="text-sm text-slate-500 leading-relaxed">
@@ -161,9 +192,7 @@ export default function ResetKataSandiPage() {
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">
-                Kata Sandi Baru
-              </label>
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Kata Sandi Baru</label>
               <div className="relative">
                 <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
                 <input
@@ -174,16 +203,10 @@ export default function ResetKataSandiPage() {
                   onBlur={() => setPasswordFocused(false)}
                   placeholder="Min. 8 karakter, huruf besar, angka, simbol"
                   className="w-full pl-10 pr-11 py-3 bg-white border border-slate-200 rounded-xl focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all text-sm font-medium text-slate-900 placeholder:text-slate-400 shadow-sm"
-                  required
-                  minLength={8}
-                  autoComplete="new-password"
+                  required minLength={8} autoComplete="new-password"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-0.5"
-                  tabIndex={-1}
-                >
+                <button type="button" onClick={() => setShowPassword(!showPassword)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-0.5" tabIndex={-1}>
                   {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
@@ -205,9 +228,7 @@ export default function ResetKataSandiPage() {
                       {check.passed
                         ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                         : <XCircle className="w-3.5 h-3.5 text-slate-300 shrink-0" />}
-                      <span className={`text-[11px] font-medium ${check.passed ? 'text-emerald-700' : 'text-slate-400'}`}>
-                        {check.label}
-                      </span>
+                      <span className={`text-[11px] font-medium ${check.passed ? 'text-emerald-700' : 'text-slate-400'}`}>{check.label}</span>
                     </div>
                   ))}
                 </div>
@@ -215,9 +236,7 @@ export default function ResetKataSandiPage() {
             </div>
 
             <div className="space-y-1.5">
-              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">
-                Konfirmasi Kata Sandi Baru
-              </label>
+              <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Konfirmasi Kata Sandi Baru</label>
               <div className="relative">
                 <Lock className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none transition-colors ${passwordMatch ? 'text-emerald-500' : passwordMismatch ? 'text-red-400' : 'text-slate-400'}`} />
                 <input
@@ -226,15 +245,10 @@ export default function ResetKataSandiPage() {
                   onChange={(e) => setConfirmPassword(e.target.value)}
                   placeholder="Ulangi kata sandi baru"
                   className={`w-full pl-10 pr-11 py-3 bg-white border rounded-xl outline-none transition-all text-sm font-medium text-slate-900 placeholder:text-slate-400 shadow-sm focus:ring-2 ${passwordMatch ? 'border-emerald-400 focus:border-emerald-500 focus:ring-emerald-500/10' : passwordMismatch ? 'border-red-300 focus:border-red-400 focus:ring-red-500/10' : 'border-slate-200 focus:border-emerald-500 focus:ring-emerald-500/10'}`}
-                  required
-                  autoComplete="new-password"
+                  required autoComplete="new-password"
                 />
-                <button
-                  type="button"
-                  onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-0.5"
-                  tabIndex={-1}
-                >
+                <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                  className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-0.5" tabIndex={-1}>
                   {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                 </button>
               </div>
@@ -261,7 +275,6 @@ export default function ResetKataSandiPage() {
               }
             </button>
           </form>
-
         </div>
       </div>
     </div>
