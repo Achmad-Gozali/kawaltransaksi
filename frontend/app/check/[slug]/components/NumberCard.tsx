@@ -1,4 +1,6 @@
 import Image from 'next/image';
+import Link from 'next/link';
+import { Lock } from 'lucide-react';
 import { formatNum } from '@/lib/utils';
 
 function formatSosmed(acc: string): { label: string; isUrl: boolean; href: string } {
@@ -36,6 +38,7 @@ interface Props {
   defaultBankName?: string | null;
   defaultWalletName?: string | null;
   hasTypeParam?: boolean;
+  isLoggedIn?: boolean;
   config: {
     nameBadgeBg: string;
     nameBadgeText: string;
@@ -64,9 +67,12 @@ export default function NumberCard({
   defaultBankName = null,
   defaultWalletName = null,
   hasTypeParam = false,
+  isLoggedIn = false,
 }: Props) {
-  // Cek apakah ada minimal 1 laporan verified
   const hasVerified = reports.some((r) => r.status === 'verified');
+
+  // Foto & nama hanya tampil kalau verified DAN sudah login
+  const canSeeIdentity = hasVerified && isLoggedIn;
 
   const allSocialAccounts: string[] = [];
   reports.forEach((r) => {
@@ -86,14 +92,20 @@ export default function NumberCard({
     }
   });
 
-  // Sembunyikan foto & nama kalau belum ada verified
-  const suspectPhotoUrl = hasVerified
+  const suspectPhotoUrl = canSeeIdentity
     ? (reports.find((r) => r.suspect_photo_url)?.suspect_photo_url ?? null)
     : null;
 
-  const targetName = hasVerified
+  // Foto ada tapi user belum login (verified tapi blm login)
+  const hasPhotoButGated =
+    hasVerified && !isLoggedIn && !!reports.find((r) => r.suspect_photo_url)?.suspect_photo_url;
+
+  const targetName = canSeeIdentity
     ? (reports[0]?.target_name ?? null)
     : null;
+
+  // Nama ada tapi user belum login
+  const hasNameButGated = hasVerified && !isLoggedIn && !!reports[0]?.target_name;
 
   const dangerLink = reports.find((r) => r.link_url)?.link_url ?? null;
   const category = reports[0]?.category ?? null;
@@ -128,16 +140,31 @@ export default function NumberCard({
               {formatNum(realNumber)}
             </p>
             <div className="flex flex-wrap items-center gap-2">
+              {/* Nama — keliatan kalau verified + login */}
               {targetName && (
                 <span className={`text-[11px] px-2.5 py-1 rounded-md font-medium border ${config.nameBadgeBg} ${config.nameBadgeText} ${config.nameBadgeBorder}`}>
                   a.n. {targetName}
                 </span>
               )}
+
+              {/* Nama ada tapi belum login — tampil sensor */}
+              {hasNameButGated && (
+                <Link
+                  href="/login"
+                  className="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-md font-medium border border-slate-200 bg-slate-50 text-slate-400 hover:bg-slate-100 transition-colors"
+                >
+                  <Lock className="w-3 h-3" />
+                  a.n. ••••••
+                </Link>
+              )}
+
+              {/* Belum verified */}
               {!hasVerified && reports.length > 0 && (
                 <span className="text-[11px] px-2.5 py-1 rounded-md font-medium border border-amber-200 bg-amber-50 text-amber-700">
                   Identitas belum dapat ditampilkan — laporan sedang diverifikasi
                 </span>
               )}
+
               {showLabel && (
                 <span className="text-[11px] px-2.5 py-1 rounded-md font-medium border border-slate-200 bg-slate-50 text-slate-500">
                   {displayLabel}
@@ -149,6 +176,7 @@ export default function NumberCard({
             )}
           </div>
 
+          {/* Foto — keliatan kalau verified + login */}
           {suspectPhotoUrl && (
             <div className="shrink-0">
               <p className="text-[10px] text-slate-400 mb-1.5">Foto penipu</p>
@@ -164,6 +192,18 @@ export default function NumberCard({
                   Penipu
                 </span>
               </div>
+            </div>
+          )}
+
+          {/* Foto ada tapi belum login — tampil placeholder gembok */}
+          {hasPhotoButGated && (
+            <div className="shrink-0">
+              <p className="text-[10px] text-slate-400 mb-1.5">Foto penipu</p>
+              <Link href="/login">
+                <div className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-lg border border-slate-200 bg-slate-100 flex items-center justify-center hover:bg-slate-200 transition-colors">
+                  <Lock className="w-5 h-5 text-slate-400" />
+                </div>
+              </Link>
             </div>
           )}
         </div>

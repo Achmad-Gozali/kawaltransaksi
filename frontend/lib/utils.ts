@@ -1,8 +1,3 @@
-// ============================================
-// 📁 LOKASI: frontend/lib/utils.ts
-// ✅ UPDATE — tambah formatRupiah unified (replace duplikat di AdminDashboard, cek-nomor, cek-rekening)
-// ============================================
-
 import { clsx, type ClassValue } from 'clsx';
 import { twMerge } from 'tailwind-merge';
 
@@ -40,10 +35,7 @@ export function formatDateID(dateStr: string): string {
 }
 
 export function encodeSlug(text: string): string {
-  return Buffer.from(text).toString('base64')
-    .replace(/\+/g, '-')
-    .replace(/\//g, '_')
-    .replace(/=+$/, '');
+  return text.trim();
 }
 
 export function decodeSlug(slug: string): string {
@@ -60,11 +52,6 @@ export function decodeSlug(slug: string): string {
   }
 }
 
-// ── formatRupiah ──────────────────────────────────────────────────────────────
-// Unified helper — replace semua formatRupiah lokal di:
-// - AdminDashboard.tsx
-// - app/cek-nomor/page.tsx
-// - app/cek-rekening/page.tsx
 export function formatRupiah(amount: number | string): string {
   const n = Number(amount) || 0;
   if (n >= 1_000_000_000) {

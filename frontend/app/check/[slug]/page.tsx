@@ -2,7 +2,7 @@ import { notFound } from 'next/navigation';
 import { createClient } from '@/lib/supabase-server';
 import Link from 'next/link';
 import type { Metadata } from 'next';
-import { ArrowLeft, PlusCircle, AlertTriangle, Clock } from 'lucide-react';
+import { ArrowLeft, PlusCircle, AlertTriangle, Clock, Lock } from 'lucide-react';
 import { formatNum, decodeSlug } from '@/lib/utils';
 import ShareButtons from './ShareButtons';
 import NumberCard from './components/NumberCard';
@@ -63,6 +63,76 @@ const walletNameMap: Record<string, string> = {
   linkaja: 'LinkAja', lainnya: 'E-Wallet Lainnya',
 };
 
+// ── Gated Content Wrapper ──────────────────────────────────────────────────
+interface GatedProps {
+  isLoggedIn: boolean;
+  label: string;
+  children: React.ReactNode;
+  minHeight?: string;
+}
+
+function GatedContent({ isLoggedIn, label, children, minHeight }: GatedProps) {
+  if (isLoggedIn) return <>{children}</>;
+
+  return (
+    <div className="relative overflow-hidden rounded-lg" style={minHeight ? { minHeight } : {}}>
+      {/* Konten asli — blur ringan */}
+      <div className="blur-[2px] select-none pointer-events-none" aria-hidden="true">
+        {children}
+      </div>
+
+      {/* Overlay gradient tipis + lock */}
+      <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-white/30 via-white/60 to-white/80">
+        <div className="flex flex-col items-center gap-3 px-6 text-center">
+          <div className="w-10 h-10 rounded-full bg-slate-900 flex items-center justify-center shadow-lg">
+            <Lock className="w-4 h-4 text-white" />
+          </div>
+          <p className="text-sm font-semibold text-slate-800">{label}</p>
+          <Link
+            href="/login"
+            className="mt-1 inline-flex items-center gap-1.5 px-4 py-2 bg-slate-900 hover:bg-slate-700 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm"
+          >
+            Login untuk melihat
+          </Link>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// ── CTA + Share Card (gabungan) ────────────────────────────────────────────
+function CtaShareCard({ slug, shareText }: { slug: string; shareText: string }) {
+  return (
+    <div className="rounded-lg border border-slate-200 overflow-hidden">
+      {/* Lapor section */}
+      <div className="bg-slate-900 px-4 py-4 sm:px-5 sm:py-5">
+        <p className="text-sm font-semibold text-white mb-1">Pernah kena tipu nomor ini?</p>
+        <p className="text-xs text-slate-400 mb-3 leading-relaxed">
+          Satu laporan dari kamu bisa melindungi ribuan orang.
+        </p>
+        <Link
+          href="/report"
+          className="flex items-center justify-center gap-2 w-full py-2.5 bg-white hover:bg-slate-100 text-slate-900 text-xs font-semibold rounded-lg transition-colors"
+        >
+          <PlusCircle className="w-3.5 h-3.5" /> Buat laporan
+        </Link>
+      </div>
+
+      {/* Divider */}
+      <div className="border-t border-slate-700/40" />
+
+      {/* Share section */}
+      <div className="bg-white px-4 py-4 sm:px-5">
+        <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-3 font-medium">
+          Sebarkan peringatan
+        </p>
+        <ShareButtons slug={slug} shareText={shareText} />
+      </div>
+    </div>
+  );
+}
+
+// ── Main Page ──────────────────────────────────────────────────────────────
 export default async function CheckPage({ params, searchParams }: CheckPageProps) {
   const { slug } = await params;
   const { type, bank, wallet } = await searchParams;
@@ -79,6 +149,9 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
 
   const checkedAt = new Date();
   const supabase = await createClient();
+
+  const { data: { user } } = await supabase.auth.getUser();
+  const isLoggedIn = !!user;
 
   const { data, error } = await supabase
     .from('reports')
@@ -196,6 +269,40 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
         { label: 'Terverifikasi', done: status === 'danger' },
       ];
 
+  // ── Related numbers builder ──
+  const relatedEntries: { number: string; type: string; bank: string | null; name: string | null }[] = [];
+  const seenNumbers = new Set<string>();
+  allReports.forEach((r: any) => {
+    if (!Array.isArray(r.target_numbers)) return;
+    r.target_numbers.forEach((item: any) => {
+      if (typeof item === 'object' && item !== null && item.number) {
+        if (item.number !== realNumber && !seenNumbers.has(item.number)) {
+          seenNumbers.add(item.number);
+          relatedEntries.push({ number: item.number, type: item.type ?? 'phone', bank: item.bank ?? null, name: item.name ?? null });
+        }
+      } else if (typeof item === 'string' && item !== realNumber && !seenNumbers.has(item)) {
+        seenNumbers.add(item);
+        relatedEntries.push({ number: item, type: 'phone', bank: null, name: null });
+      }
+    });
+  });
+
+  const buildTypeParam = (type: string, bank: string | null) => {
+    if (type === 'bank_account') {
+      const bankKey = bank ? bank.toLowerCase().replace(/\s/g, '').replace(/[^a-z]/g, '') : '';
+      return `?type=bank${bankKey ? `&bank=${bankKey}` : ''}`;
+    }
+    if (type === 'ewallet') {
+      const walletKey = bank ? bank.toLowerCase().replace(/\s/g, '').replace(/[^a-z]/g, '') : '';
+      return `?type=ewallet${walletKey ? `&wallet=${walletKey}` : ''}`;
+    }
+    return '?type=phone';
+  };
+
+  const typeLabel: Record<string, string> = {
+    phone: 'Nomor HP', bank_account: 'Rekening Bank', ewallet: 'E-Wallet',
+  };
+
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
       {/* Mobile back nav */}
@@ -218,7 +325,6 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
             <Clock className="w-3 h-3" /> Dicek {formatTimestamp(checkedAt)}
           </span>
         </div>
-        {/* Mobile verdict sub */}
         <div className="max-w-5xl mx-auto sm:hidden mt-1">
           <span className={`text-xs ${config.barDesc}`}>{config.verdictSub}</span>
         </div>
@@ -247,9 +353,9 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
           </div>
         )}
 
-        <div className="grid lg:grid-cols-3 gap-4 sm:gap-6 items-start">
-          {/* ── MAIN CONTENT ── */}
-          <div className="lg:col-span-2 space-y-4 sm:space-y-5">
+        <div className="space-y-4 sm:space-y-5">
+
+            {/* 1. NumberCard */}
             <NumberCard
               reports={reports}
               realNumber={realNumber}
@@ -258,9 +364,10 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
               defaultBankName={defaultBankName}
               defaultWalletName={defaultWalletName}
               hasTypeParam={hasTypeParam}
+              isLoggedIn={isLoggedIn}
             />
 
-            {/* Risk badges */}
+            {/* 2. Risk badges */}
             {riskBadges.length > 0 && (
               <div className="flex flex-wrap gap-2">
                 {riskBadges.map((badge, i) => (
@@ -271,7 +378,7 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
               </div>
             )}
 
-            {/* Banner: nomor terkait laporan lain */}
+            {/* 3. Banner: nomor terkait laporan lain */}
             {linkedReports.length > 0 && reports.length === 0 && (
               <div className={`rounded-lg overflow-hidden border ${linkedHasVerified ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}`}>
                 <div className={`px-4 sm:px-5 py-4 border-b ${linkedHasVerified ? 'border-red-100' : 'border-amber-100'}`}>
@@ -310,7 +417,7 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
               </div>
             )}
 
-            {/* Tetap waspada — status safe */}
+            {/* 4. Tetap waspada — status safe */}
             {status === 'safe' && linkedReports.length === 0 && (
               <div>
                 <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-2.5 font-medium px-0.5">Tetap waspada</p>
@@ -337,52 +444,38 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
               </div>
             )}
 
-            <ReportList
-              reports={reports}
-              hasWithdrawn={hasWithdrawn}
-              hasLinkedReports={linkedReports.length > 0 && reports.length === 0}
-              linkedHasVerified={linkedHasVerified}
-            />
+            {/* 5. GATED: Kronologi & bukti */}
+            {reports.length > 0 && (
+              <GatedContent
+                isLoggedIn={isLoggedIn}
+                label="Login untuk lihat kronologi & bukti lengkap"
+                minHeight="200px"
+              >
+                <ReportList
+                  reports={reports}
+                  hasWithdrawn={hasWithdrawn}
+                  hasLinkedReports={linkedReports.length > 0 && reports.length === 0}
+                  linkedHasVerified={linkedHasVerified}
+                />
+              </GatedContent>
+            )}
 
-            {/* Nomor lain terkait pelaku */}
-            {(() => {
-              const relatedEntries: { number: string; type: string; bank: string | null; name: string | null }[] = [];
-              const seenNumbers = new Set<string>();
+            {reports.length === 0 && (
+              <ReportList
+                reports={reports}
+                hasWithdrawn={hasWithdrawn}
+                hasLinkedReports={linkedReports.length > 0 && reports.length === 0}
+                linkedHasVerified={linkedHasVerified}
+              />
+            )}
 
-              allReports.forEach((r: any) => {
-                if (!Array.isArray(r.target_numbers)) return;
-                r.target_numbers.forEach((item: any) => {
-                  if (typeof item === 'object' && item !== null && item.number) {
-                    if (item.number !== realNumber && !seenNumbers.has(item.number)) {
-                      seenNumbers.add(item.number);
-                      relatedEntries.push({ number: item.number, type: item.type ?? 'phone', bank: item.bank ?? null, name: item.name ?? null });
-                    }
-                  } else if (typeof item === 'string' && item !== realNumber && !seenNumbers.has(item)) {
-                    seenNumbers.add(item);
-                    relatedEntries.push({ number: item, type: 'phone', bank: null, name: null });
-                  }
-                });
-              });
-
-              if (relatedEntries.length === 0) return null;
-
-              const buildTypeParam = (type: string, bank: string | null) => {
-                if (type === 'bank_account') {
-                  const bankKey = bank ? bank.toLowerCase().replace(/\s/g, '').replace(/[^a-z]/g, '') : '';
-                  return `?type=bank${bankKey ? `&bank=${bankKey}` : ''}`;
-                }
-                if (type === 'ewallet') {
-                  const walletKey = bank ? bank.toLowerCase().replace(/\s/g, '').replace(/[^a-z]/g, '') : '';
-                  return `?type=ewallet${walletKey ? `&wallet=${walletKey}` : ''}`;
-                }
-                return '?type=phone';
-              };
-
-              const typeLabel: Record<string, string> = {
-                phone: 'Nomor HP', bank_account: 'Rekening Bank', ewallet: 'E-Wallet',
-              };
-
-              return (
+            {/* 6. GATED: Nomor lain terkait pelaku */}
+            {relatedEntries.length > 0 && (
+              <GatedContent
+                isLoggedIn={isLoggedIn}
+                label="Login untuk lihat nomor lain terkait pelaku"
+                minHeight="160px"
+              >
                 <div>
                   <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-2.5 font-medium px-0.5">
                     Nomor lain terkait pelaku ini
@@ -411,10 +504,10 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
                     </div>
                   </div>
                 </div>
-              );
-            })()}
+              </GatedContent>
+            )}
 
-            {/* Status verifikasi */}
+            {/* 7. Status verifikasi */}
             {(allReports.length > 0 || linkedHasVerified) && !(hasWithdrawn && reports.length === 0) && (
               <div>
                 <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-2.5 font-medium px-0.5">Status verifikasi</p>
@@ -441,50 +534,9 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
               </div>
             )}
 
-            {/* CTA mobile — muncul hanya di mobile, di bawah konten utama */}
-            <div className="lg:hidden space-y-3">
-              <div className="bg-slate-900 rounded-lg p-4">
-                <p className="text-sm font-medium text-white mb-1">Pernah kena tipu nomor ini?</p>
-                <p className="text-xs text-slate-400 mb-3 leading-relaxed">Satu laporan dari kamu bisa melindungi ribuan orang.</p>
-                <Link href="/report" className="flex items-center justify-center gap-2 w-full py-2.5 bg-white hover:bg-slate-100 text-slate-900 text-xs font-medium rounded-lg transition-colors">
-                  <PlusCircle className="w-3.5 h-3.5" /> Buat laporan
-                </Link>
-              </div>
-              <div className="bg-white rounded-lg border border-slate-200 p-4">
-                <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-3 font-medium">Sebarkan peringatan</p>
-                <ShareButtons slug={slug} shareText={shareText} />
-              </div>
-            </div>
+            {/* 8. CTA + Share */}
+            <CtaShareCard slug={slug} shareText={shareText} />
           </div>
-
-          {/* ── SIDEBAR KANAN — desktop only ── */}
-          <div className="hidden lg:block lg:col-span-1 space-y-4">
-            <div className="bg-slate-900 rounded-lg p-4 sm:p-5">
-              <p className="text-sm font-medium text-white mb-1.5">Pernah kena tipu nomor ini?</p>
-              <p className="text-xs text-slate-400 mb-4 leading-relaxed">Satu laporan dari kamu bisa melindungi ribuan orang.</p>
-              <Link href="/report" className="flex items-center justify-center gap-2 w-full py-2.5 bg-white hover:bg-slate-100 text-slate-900 text-xs font-medium rounded-lg transition-colors">
-                <PlusCircle className="w-3.5 h-3.5" /> Buat laporan
-              </Link>
-            </div>
-
-            <div className="bg-white rounded-lg border border-slate-200 p-4 sm:p-5">
-              <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-3 font-medium">Sebarkan peringatan</p>
-              <ShareButtons slug={slug} shareText={shareText} />
-            </div>
-
-            <div className="bg-white rounded-lg border border-slate-200 p-4 sm:p-5">
-              <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-3 font-medium">Tips keamanan</p>
-              <ul className="space-y-3">
-                {['Jangan pernah berikan kode OTP ke siapapun.', 'Gunakan rekening bersama / escrow resmi.', 'Verifikasi identitas sebelum transfer.'].map((tip, i) => (
-                  <li key={i} className="flex gap-3 text-xs text-slate-500 leading-relaxed">
-                    <span className="w-4 h-4 rounded-full bg-emerald-50 border border-emerald-200 text-emerald-600 text-[9px] font-bold flex items-center justify-center shrink-0 mt-0.5">{i + 1}</span>
-                    {tip}
-                  </li>
-                ))}
-              </ul>
-            </div>
-          </div>
-        </div>
       </div>
     </div>
   );

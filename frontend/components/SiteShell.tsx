@@ -13,6 +13,7 @@ NProgress.configure({ showSpinner: false, trickleSpeed: 200 });
 export default function SiteShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isAdmin = pathname?.startsWith('/admin');
+  const isAuth = pathname === '/login' || pathname === '/register';
   const [showBackToTop, setShowBackToTop] = useState(false);
   const prevPathname = useRef(pathname);
 
@@ -54,12 +55,11 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
           box-shadow: 0 0 10px #10b981, 0 0 5px #10b981 !important;
         }
       `}</style>
-      {!isAdmin && <Navbar />}
+      {!isAdmin && !isAuth && <Navbar />}
       <main className="flex-grow">{children}</main>
-      {!isAdmin && <Footer />}
+      {!isAdmin && !isAuth && <Footer />}
 
-      {/* Back to Top */}
-      {!isAdmin && showBackToTop && (
+      {!isAdmin && !isAuth && showBackToTop && (
         <button
           onClick={scrollToTop}
           className="fixed bottom-6 right-6 z-50 p-3 bg-slate-900 text-white rounded-full shadow-lg hover:bg-slate-700 transition-all active:scale-95"
