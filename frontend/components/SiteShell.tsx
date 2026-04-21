@@ -13,7 +13,7 @@ NProgress.configure({ showSpinner: false, trickleSpeed: 200 });
 export default function SiteShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const isAdmin = pathname?.startsWith('/admin');
-  const isAuth = pathname === '/login' || pathname === '/register';
+  const isAuth = pathname === '/login' || pathname === '/register' || pathname === '/lupa-kata-sandi' || pathname === '/reset-kata-sandi';
   const [showBackToTop, setShowBackToTop] = useState(false);
   const prevPathname = useRef(pathname);
 
