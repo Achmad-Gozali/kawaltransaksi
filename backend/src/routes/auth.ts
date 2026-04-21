@@ -10,6 +10,43 @@ const auth = new Hono<{ Bindings: Env }>();
 const LOCK_DURATION_MINUTES = 10;
 const MAX_ATTEMPTS = 5;
 
+// ── Breached password check ───────────────────────────────────────────────────
+async function checkBreachedPassword(password: string): Promise<{ breached: boolean; count: number }> {
+  try {
+    const encoder = new TextEncoder();
+    const data = encoder.encode(password);
+    const hashBuffer = await crypto.subtle.digest('SHA-1', data);
+    const hashArray = Array.from(new Uint8Array(hashBuffer));
+    const hashHex = hashArray.map(b => b.toString(16).padStart(2, '0')).join('').toUpperCase();
+
+    const prefix = hashHex.slice(0, 5);
+    const suffix = hashHex.slice(5);
+
+    const res = await fetch(`https://api.pwnedpasswords.com/range/${prefix}`, {
+      headers: { 'Add-Padding': 'true' },
+    });
+
+    if (!res.ok) return { breached: false, count: 0 };
+
+    const text = await res.text();
+    const lines = text.split('\n');
+
+    for (const line of lines) {
+      const [hashSuffix, countStr] = line.trim().split(':');
+      if (hashSuffix === suffix) {
+        const count = parseInt(countStr, 10);
+        return { breached: count > 0, count };
+      }
+    }
+
+    return { breached: false, count: 0 };
+  } catch (err) {
+    console.error('[BREACHED PASSWORD] Error:', err);
+    // Kalau API tidak bisa diakses, tetap lanjutkan register
+    return { breached: false, count: 0 };
+  }
+}
+
 async function hashToken(token: string): Promise<string> {
   const encoder = new TextEncoder();
   const data = encoder.encode(token);
@@ -78,6 +115,16 @@ auth.post('/register', async (c) => {
 
     if (password.length < 8) {
       return c.json({ success: false, message: 'Kata sandi tidak memenuhi persyaratan keamanan.' }, 400);
+    }
+
+    // ── Cek breached password ─────────────────────────────────────────────────
+    const breachResult = await checkBreachedPassword(password);
+    if (breachResult.breached) {
+      console.warn(`[BREACHED PASSWORD] Password bocor ${breachResult.count.toLocaleString()} kali`);
+      return c.json({
+        success: false,
+        message: `Kata sandi ini pernah bocor dalam pelanggaran data publik sebanyak ${breachResult.count.toLocaleString()} kali. Gunakan kata sandi yang berbeda untuk keamanan akun Anda.`,
+      }, 400);
     }
 
     const ip = c.req.header('CF-Connecting-IP') || 'anonymous';
@@ -374,7 +421,6 @@ auth.post('/forgot-password', async (c) => {
     const normalizedEmail = email.trim().toLowerCase();
     const ip = c.req.header('CF-Connecting-IP') || 'anonymous';
 
-    // Rate limit: maks 3 request per 10 menit per IP
     if (c.env.LIMITER) {
       const key = `rl_forgot_${ip}`;
       const check = await checkRateLimit(c.env.LIMITER, key, 3, 600);
@@ -388,14 +434,12 @@ auth.post('/forgot-password', async (c) => {
 
     const supabaseAdmin = getSupabaseAdmin(c.env);
 
-    // Cek apakah email terdaftar
     const { data: profile } = await supabaseAdmin
       .from('profiles')
       .select('id, full_name, email, is_banned')
       .eq('email', normalizedEmail)
       .single();
 
-    // Selalu return success meskipun email tidak ada — mencegah email enumeration
     if (!profile || profile.is_banned) {
       return c.json({
         success: true,
@@ -403,7 +447,6 @@ auth.post('/forgot-password', async (c) => {
       });
     }
 
-    // Generate reset password link
     const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
       type: 'recovery',
       email: normalizedEmail,
