@@ -1,7 +1,6 @@
 import { Hono } from 'hono';
 import { getSupabaseAdmin } from '../lib/supabase';
 import { verifyTurnstile } from '../lib/turnstile';
-import { validatePhone } from '../lib/abstract';
 import type { Env } from '../types';
 
 const search = new Hono<{ Bindings: Env }>();
@@ -133,69 +132,6 @@ search.post('/verify-turnstile', async (c) => {
     return c.json({ success: true });
   } catch (err) {
     console.error('[SEARCH ROUTE ERROR]:', err);
-    return c.json({ success: false, message: 'Terjadi kesalahan server.' }, 500);
-  }
-});
-
-// ── Phone Info Endpoint ────────────────────────────────────────────────────
-search.post('/phone-info', async (c) => {
-  try {
-    const { phone } = await c.req.json();
-
-    if (!phone || typeof phone !== 'string' || phone.trim() === '') {
-      return c.json({ success: false, message: 'Nomor HP tidak boleh kosong.' }, 400);
-    }
-
-    // Bersihkan & format nomor: 08xx → 628xx, +628xx → 628xx
-    const cleaned = phone.replace(/\D/g, '');
-    const formatted = cleaned.startsWith('0') ? '62' + cleaned.slice(1) : cleaned;
-
-    // Cek cache di KV dulu
-    const cacheKey = `phone_info_${formatted}`;
-    if (c.env.LIMITER) {
-      try {
-        const cached = await c.env.LIMITER.get(cacheKey);
-        if (cached) {
-          return c.json({ success: true, data: JSON.parse(cached), fromCache: true });
-        }
-      } catch (err) {
-        console.error('[PHONE INFO] Error baca KV cache:', err);
-      }
-    }
-
-    // Panggil Abstract API
-    const result = await validatePhone(formatted, c.env.ABSTRACT_API_KEY);
-
-    // Kalau gagal total
-    if (!result) {
-      return c.json({ success: false, message: 'Gagal menghubungi layanan validasi.' }, 404);
-    }
-
-    const data = {
-      valid: result.valid,
-      carrier: result.carrier || null,
-      type: result.type || null,
-      location: result.location || null,
-      format: result.format?.international || null,
-    };
-
-    // Kalau nggak ada info sama sekali, baru return error
-    if (!data.carrier && !data.location) {
-      return c.json({ success: false, message: 'Informasi nomor tidak tersedia.' }, 404);
-    }
-
-    // Simpan ke KV cache — TTL 30 hari
-    if (c.env.LIMITER) {
-      try {
-        await c.env.LIMITER.put(cacheKey, JSON.stringify(data), { expirationTtl: 2_592_000 });
-      } catch (err) {
-        console.error('[PHONE INFO] Error simpan KV cache:', err);
-      }
-    }
-
-    return c.json({ success: true, data, fromCache: false });
-  } catch (err) {
-    console.error('[PHONE INFO ERROR]:', err);
     return c.json({ success: false, message: 'Terjadi kesalahan server.' }, 500);
   }
 });

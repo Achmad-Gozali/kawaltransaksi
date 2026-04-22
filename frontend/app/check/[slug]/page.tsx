@@ -119,6 +119,98 @@ const walletNameMap: Record<string, string> = {
   linkaja: 'LinkAja', lainnya: 'E-Wallet Lainnya',
 };
 
+// ── Indonesian Carrier Detection ───────────────────────────────────────────
+interface CarrierInfo {
+  carrier: string;
+  type: 'mobile' | 'fixed' | 'unknown';
+}
+
+const INDONESIAN_PREFIXES: { prefix: string; carrier: string; type: 'mobile' | 'fixed' }[] = [
+  // ── Telkomsel ──────────────────────────────────────────────────
+  { prefix: '0811', carrier: 'Telkomsel', type: 'mobile' },
+  { prefix: '0812', carrier: 'Telkomsel', type: 'mobile' },
+  { prefix: '0813', carrier: 'Telkomsel', type: 'mobile' },
+  { prefix: '0821', carrier: 'Telkomsel', type: 'mobile' },
+  { prefix: '0822', carrier: 'Telkomsel', type: 'mobile' },
+  { prefix: '0823', carrier: 'Telkomsel', type: 'mobile' },
+  { prefix: '0851', carrier: 'Telkomsel', type: 'mobile' },
+  { prefix: '0852', carrier: 'Telkomsel', type: 'mobile' },
+  { prefix: '0853', carrier: 'Telkomsel', type: 'mobile' },
+
+  // ── Indosat Ooredoo Hutchison ──────────────────────────────────
+  { prefix: '0814', carrier: 'Indosat Ooredoo', type: 'mobile' },
+  { prefix: '0815', carrier: 'Indosat Ooredoo', type: 'mobile' },
+  { prefix: '0816', carrier: 'Indosat Ooredoo', type: 'mobile' },
+  { prefix: '0855', carrier: 'Indosat Ooredoo', type: 'mobile' },
+  { prefix: '0856', carrier: 'Indosat Ooredoo', type: 'mobile' },
+  { prefix: '0857', carrier: 'Indosat Ooredoo', type: 'mobile' },
+  { prefix: '0858', carrier: 'Indosat Ooredoo', type: 'mobile' },
+
+  // ── XL Axiata ─────────────────────────────────────────────────
+  { prefix: '0817', carrier: 'XL Axiata', type: 'mobile' },
+  { prefix: '0818', carrier: 'XL Axiata', type: 'mobile' },
+  { prefix: '0819', carrier: 'XL Axiata', type: 'mobile' },
+  { prefix: '0859', carrier: 'XL Axiata', type: 'mobile' },
+  { prefix: '0877', carrier: 'XL Axiata', type: 'mobile' },
+  { prefix: '0878', carrier: 'XL Axiata', type: 'mobile' },
+
+  // ── Axis (XL Axiata) ──────────────────────────────────────────
+  { prefix: '0831', carrier: 'Axis (XL)', type: 'mobile' },
+  { prefix: '0832', carrier: 'Axis (XL)', type: 'mobile' },
+  { prefix: '0833', carrier: 'Axis (XL)', type: 'mobile' },
+  { prefix: '0838', carrier: 'Axis (XL)', type: 'mobile' },
+
+  // ── Tri (3) Indonesia ─────────────────────────────────────────
+  { prefix: '0895', carrier: 'Tri (3)', type: 'mobile' },
+  { prefix: '0896', carrier: 'Tri (3)', type: 'mobile' },
+  { prefix: '0897', carrier: 'Tri (3)', type: 'mobile' },
+  { prefix: '0898', carrier: 'Tri (3)', type: 'mobile' },
+  { prefix: '0899', carrier: 'Tri (3)', type: 'mobile' },
+
+  // ── Smartfren ─────────────────────────────────────────────────
+  { prefix: '0881', carrier: 'Smartfren', type: 'mobile' },
+  { prefix: '0882', carrier: 'Smartfren', type: 'mobile' },
+  { prefix: '0883', carrier: 'Smartfren', type: 'mobile' },
+  { prefix: '0884', carrier: 'Smartfren', type: 'mobile' },
+  { prefix: '0885', carrier: 'Smartfren', type: 'mobile' },
+  { prefix: '0886', carrier: 'Smartfren', type: 'mobile' },
+  { prefix: '0887', carrier: 'Smartfren', type: 'mobile' },
+  { prefix: '0888', carrier: 'Smartfren', type: 'mobile' },
+  { prefix: '0889', carrier: 'Smartfren', type: 'mobile' },
+
+  // ── Telkom (fixed/PSTN) ───────────────────────────────────────
+  { prefix: '021', carrier: 'Telkom (Jakarta)', type: 'fixed' },
+  { prefix: '022', carrier: 'Telkom (Bandung)', type: 'fixed' },
+  { prefix: '024', carrier: 'Telkom (Semarang)', type: 'fixed' },
+  { prefix: '031', carrier: 'Telkom (Surabaya)', type: 'fixed' },
+  { prefix: '061', carrier: 'Telkom (Medan)', type: 'fixed' },
+  { prefix: '0274', carrier: 'Telkom (Yogyakarta)', type: 'fixed' },
+  { prefix: '0411', carrier: 'Telkom (Makassar)', type: 'fixed' },
+
+  // ── IndiHome / Telkom broadband voice ────────────────────────
+  { prefix: '0800', carrier: 'Telkom IndiHome', type: 'fixed' },
+
+  // ── MyRepublic / Biznet / operator kecil lain ─────────────────
+  { prefix: '0804', carrier: 'Layanan Korporat', type: 'fixed' },
+];
+
+function detectCarrier(phone: string): CarrierInfo | null {
+  let normalized = phone.replace(/\D/g, '');
+  if (normalized.startsWith('62')) normalized = '0' + normalized.slice(2);
+  if (normalized.startsWith('+62')) normalized = '0' + normalized.slice(3);
+
+  const sorted = [...INDONESIAN_PREFIXES].sort((a, b) => b.prefix.length - a.prefix.length);
+
+  for (const entry of sorted) {
+    if (normalized.startsWith(entry.prefix)) {
+      return { carrier: entry.carrier, type: entry.type };
+    }
+  }
+
+  return null;
+}
+
+// ── Gated Content Wrapper ──────────────────────────────────────────────────
 interface GatedProps {
   isLoggedIn: boolean;
   label: string;
@@ -152,6 +244,7 @@ function GatedContent({ isLoggedIn, label, children, minHeight }: GatedProps) {
   );
 }
 
+// ── CTA + Share Card ────────────────────────────────────────────────────────
 function CtaShareCard({ slug, shareText }: { slug: string; shareText: string }) {
   return (
     <div className="rounded-lg border border-slate-200 overflow-hidden">
@@ -178,6 +271,7 @@ function CtaShareCard({ slug, shareText }: { slug: string; shareText: string }) 
   );
 }
 
+// ── Main Page ──────────────────────────────────────────────────────────────
 export default async function CheckPage({ params, searchParams }: CheckPageProps) {
   const { slug } = await params;
   const { type, bank, wallet } = await searchParams;
@@ -235,12 +329,13 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
   const uniquePlatforms = Array.from(new Set(reports.map((r) => r.platform).filter(Boolean)));
   const multiVictimCount = reports.filter((r) => r.has_other_victims === 'yes').length;
 
+  const isPhoneNumber = defaultType === 'phone' && !defaultBankName && !defaultWalletName;
+  const carrierInfo = isPhoneNumber ? detectCarrier(realNumber) : null;
+
+  // ── Risk badges — "Kerugian besar" dihapus karena sudah tampil di stats grid
   const riskBadges: { label: string; color: string }[] = [];
   if (recentReports.length >= 3) {
     riskBadges.push({ label: `Dilaporkan ${recentReports.length}x dalam 30 hari`, color: 'bg-red-50 text-red-700 border-red-200' });
-  }
-  if (totalLoss >= 10_000_000) {
-    riskBadges.push({ label: `Kerugian besar — ${new Intl.NumberFormat('id-ID', { notation: 'compact', maximumFractionDigits: 1 }).format(totalLoss)}`, color: 'bg-orange-50 text-orange-700 border-orange-200' });
   }
   if (multiVictimCount >= 2) {
     riskBadges.push({ label: `${multiVictimCount} laporan sebut ada korban lain`, color: 'bg-amber-50 text-amber-700 border-amber-200' });
@@ -314,6 +409,7 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
         { label: 'Terverifikasi', done: status === 'danger' },
       ];
 
+  // ── Related numbers builder ──
   const relatedEntries: { number: string; type: string; bank: string | null; name: string | null }[] = [];
   const seenNumbers = new Set<string>();
   allReports.forEach((r: any) => {
@@ -349,6 +445,7 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
+      {/* Mobile back nav */}
       <div className="sm:hidden bg-white border-b border-slate-100">
         <div className="px-4 py-3 flex items-center justify-between">
           <Link href="/cek-nomor" className="inline-flex items-center gap-2 text-slate-500 hover:text-slate-900 text-sm transition-colors">
@@ -358,6 +455,7 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
         </div>
       </div>
 
+      {/* Status bar */}
       <div className={`${config.barBg} px-4 sm:px-6 py-3`}>
         <div className="max-w-5xl mx-auto flex items-center gap-2 flex-wrap">
           <div className={`w-2 h-2 rounded-full shrink-0 ${config.dotBg}`} />
@@ -373,6 +471,7 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
       </div>
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 sm:py-6 pb-20">
+        {/* Stats grid */}
         {reports.length > 0 && (
           <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-4 sm:mb-6">
             <div className="bg-white rounded-lg border border-slate-200 p-3 sm:p-5">
@@ -395,6 +494,8 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
         )}
 
         <div className="space-y-4 sm:space-y-5">
+
+          {/* 1. NumberCard */}
           <NumberCard
             reports={reports}
             realNumber={realNumber}
@@ -404,9 +505,10 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
             defaultWalletName={defaultWalletName}
             hasTypeParam={hasTypeParam}
             isLoggedIn={isLoggedIn}
-            carrierInfo={null}
+            carrierInfo={carrierInfo}
           />
 
+          {/* 2. Risk badges */}
           {riskBadges.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {riskBadges.map((badge, i) => (
@@ -417,6 +519,7 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
             </div>
           )}
 
+          {/* 3. Banner: nomor terkait laporan lain */}
           {linkedReports.length > 0 && reports.length === 0 && (
             <div className={`rounded-lg overflow-hidden border ${linkedHasVerified ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}`}>
               <div className={`px-4 sm:px-5 py-4 border-b ${linkedHasVerified ? 'border-red-100' : 'border-amber-100'}`}>
@@ -455,6 +558,7 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
             </div>
           )}
 
+          {/* 4. Tetap waspada — status safe */}
           {status === 'safe' && linkedReports.length === 0 && (
             <div>
               <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-2.5 font-medium px-0.5">Tetap waspada</p>
@@ -481,23 +585,47 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
             </div>
           )}
 
+          {/* 5. GATED: Kronologi & bukti */}
           {reports.length > 0 && (
-            <GatedContent isLoggedIn={isLoggedIn} label="Login untuk lihat kronologi & bukti lengkap" minHeight="200px">
-              <ReportList reports={reports} hasWithdrawn={hasWithdrawn} hasLinkedReports={linkedReports.length > 0 && reports.length === 0} linkedHasVerified={linkedHasVerified} />
+            <GatedContent
+              isLoggedIn={isLoggedIn}
+              label="Login untuk lihat kronologi & bukti lengkap"
+              minHeight="200px"
+            >
+              <ReportList
+                reports={reports}
+                hasWithdrawn={hasWithdrawn}
+                hasLinkedReports={linkedReports.length > 0 && reports.length === 0}
+                linkedHasVerified={linkedHasVerified}
+              />
             </GatedContent>
           )}
 
           {reports.length === 0 && (
-            <ReportList reports={reports} hasWithdrawn={hasWithdrawn} hasLinkedReports={linkedReports.length > 0 && reports.length === 0} linkedHasVerified={linkedHasVerified} />
+            <ReportList
+              reports={reports}
+              hasWithdrawn={hasWithdrawn}
+              hasLinkedReports={linkedReports.length > 0 && reports.length === 0}
+              linkedHasVerified={linkedHasVerified}
+            />
           )}
 
+          {/* 6. GATED: Nomor lain terkait pelaku */}
           {relatedEntries.length > 0 && (
-            <GatedContent isLoggedIn={isLoggedIn} label="Login untuk lihat nomor lain terkait pelaku" minHeight="160px">
+            <GatedContent
+              isLoggedIn={isLoggedIn}
+              label="Login untuk lihat nomor lain terkait pelaku"
+              minHeight="160px"
+            >
               <div>
-                <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-2.5 font-medium px-0.5">Nomor lain terkait pelaku ini</p>
+                <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-2.5 font-medium px-0.5">
+                  Nomor lain terkait pelaku ini
+                </p>
                 <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
                   <div className="px-4 py-3 border-b border-slate-100 bg-slate-50">
-                    <p className="text-xs text-slate-500 leading-relaxed">Pelapor menyebutkan bahwa pelaku yang sama juga menggunakan nomor-nomor berikut.</p>
+                    <p className="text-xs text-slate-500 leading-relaxed">
+                      Pelapor menyebutkan bahwa pelaku yang sama juga menggunakan nomor-nomor berikut.
+                    </p>
                   </div>
                   <div className="divide-y divide-slate-100">
                     {relatedEntries.map((entry, i) => (
@@ -520,6 +648,7 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
             </GatedContent>
           )}
 
+          {/* 7. Status verifikasi */}
           {(allReports.length > 0 || linkedHasVerified) && !(hasWithdrawn && reports.length === 0) && (
             <div>
               <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-2.5 font-medium px-0.5">Status verifikasi</p>
@@ -546,6 +675,7 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
             </div>
           )}
 
+          {/* 8. CTA + Share */}
           <CtaShareCard slug={slug} shareText={shareText} />
         </div>
       </div>

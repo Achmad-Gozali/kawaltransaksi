@@ -19,7 +19,6 @@ function isLikelyHP(num: string): boolean {
   if (num.length === 0) return false;
   if (num.startsWith('08')) return true;
   if (num.startsWith('628')) return true;
-  // Masih ngetik, jangan warning dulu
   if (num === '0') return false;
   if (num === '6') return false;
   if (num === '62') return false;
@@ -56,7 +55,6 @@ export default function RekeningSearchForm() {
     e.preventDefault();
     setError(null);
 
-    // Guard — tidak bisa dibypass walau tombol di-enable paksa via DevTools
     if (isWrongInput) return;
 
     if (!cleaned || cleaned.length < 6) {
@@ -95,28 +93,29 @@ export default function RekeningSearchForm() {
 
   return (
     <form onSubmit={handleSearch} className="w-full max-w-lg space-y-3">
-      <div className="flex gap-2">
-        <div className="relative flex-1">
-          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-          <input
-            ref={inputRef}
-            type="tel"
-            inputMode="numeric"
-            value={query}
-            onChange={(e) => handleChange(e.target.value)}
-            placeholder="Contoh: 1234567890"
-            maxLength={20}
-            className={`w-full pl-10 pr-4 py-3 bg-white border rounded-xl text-sm focus:outline-none focus:ring-2 transition-all ${
-              isWrongInput
-                ? 'border-amber-400 focus:border-amber-400 focus:ring-amber-100'
-                : 'border-slate-200 focus:border-emerald-400 focus:ring-emerald-100'
-            }`}
-          />
-        </div>
+      {/* Container kotak search — tombol di dalam */}
+      <div
+        className={`flex items-center gap-2 bg-white border-2 rounded-md px-3 py-2 transition-all ${
+          isWrongInput
+            ? 'border-amber-400 ring-2 ring-amber-100'
+            : 'border-slate-200 focus-within:border-emerald-400 focus-within:ring-2 focus-within:ring-emerald-100'
+        }`}
+      >
+        <Search className="w-4 h-4 text-slate-400 shrink-0 ml-1" />
+        <input
+          ref={inputRef}
+          type="tel"
+          inputMode="numeric"
+          value={query}
+          onChange={(e) => handleChange(e.target.value)}
+          placeholder="Contoh: 1234567890"
+          maxLength={20}
+          className="flex-1 bg-transparent text-sm text-slate-800 placeholder-slate-400 focus:outline-none py-1"
+        />
         <button
           type="submit"
           disabled={loading || !turnstileToken || isWrongInput}
-          className="px-5 py-3 bg-slate-900 text-white text-sm font-bold rounded-lg hover:bg-black disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95 flex items-center gap-2"
+          className="px-5 py-2 bg-slate-900 text-white text-sm font-bold rounded hover:bg-black disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95 flex items-center gap-2 shrink-0"
         >
           {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Cek'}
         </button>

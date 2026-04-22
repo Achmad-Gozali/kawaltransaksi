@@ -4,7 +4,6 @@ import Image from 'next/image';
 import Link from 'next/link';
 import { Lock, Signal } from 'lucide-react';
 import { formatNum } from '@/lib/utils';
-import { useState, useEffect } from 'react';
 
 function formatSosmed(acc: string): { label: string; isUrl: boolean; href: string } {
   const cleaned = acc.trim();
@@ -21,9 +20,8 @@ function truncateUrl(url: string, maxLen = 50): string {
 }
 
 interface CarrierInfo {
-  carrier: string | null;
-  type: string | null;
-  location: string | null;
+  carrier: string;
+  type: 'mobile' | 'fixed' | 'unknown';
 }
 
 interface ReportItem {
@@ -69,8 +67,6 @@ const targetTypeLabel: Record<string, string> = {
   ewallet: 'E-Wallet',
 };
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ?? '';
-
 export default function NumberCard({
   reports,
   realNumber,
@@ -80,33 +76,8 @@ export default function NumberCard({
   defaultWalletName = null,
   hasTypeParam = false,
   isLoggedIn = false,
-  carrierInfo: carrierInfoProp = null,
+  carrierInfo = null,
 }: Props) {
-  const [carrierInfo, setCarrierInfo] = useState<CarrierInfo | null>(carrierInfoProp);
-
-  const looksLikePhone = /^(08|628)\d{7,11}$/.test(realNumber);
-
-  useEffect(() => {
-    if (!looksLikePhone || carrierInfo) return;
-
-    const fetchCarrier = async () => {
-      try {
-        const res = await fetch(`${BACKEND_URL}/api/search/phone-info`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ phone: realNumber }),
-        });
-        if (!res.ok) return;
-        const json = await res.json() as { success: boolean; data?: CarrierInfo };
-        if (json.success && json.data) setCarrierInfo(json.data);
-      } catch {
-        // silent fail
-      }
-    };
-
-    fetchCarrier();
-  }, [realNumber, looksLikePhone]);
-
   const hasVerified = reports.some((r) => r.status === 'verified');
   const canSeeIdentity = hasVerified && isLoggedIn;
 
@@ -156,8 +127,7 @@ export default function NumberCard({
   const hasContext = reports.length > 0 || defaultBankName !== null || defaultWalletName !== null || hasTypeParam;
   const showLabel = hasContext && displayLabel !== null;
 
-  const showCarrier = carrierInfo && (carrierInfo.carrier || carrierInfo.location);
-  const carrierLabel = [carrierInfo?.carrier, carrierInfo?.location].filter(Boolean).join(' · ');
+  const carrierLabel = carrierInfo?.carrier ?? null;
 
   return (
     <div>
@@ -197,7 +167,7 @@ export default function NumberCard({
                 </span>
               )}
 
-              {showCarrier && (
+              {carrierLabel && (
                 <span className="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-md font-medium border border-slate-200 bg-slate-50 text-slate-500">
                   <Signal className="w-3 h-3 text-slate-400" />
                   {carrierLabel}
