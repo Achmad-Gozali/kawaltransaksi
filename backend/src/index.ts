@@ -29,6 +29,12 @@ app.use('*', cors({
 // ── Origin validation ─────────────────────────────────────────────────────────
 const originValidator = async (c: any, next: any) => {
   if (c.req.method === 'OPTIONS') return next();
+
+  const origin = c.req.header('Origin') || c.req.header('Referer') || '';
+
+  // Kalau nggak ada origin sama sekali, allow (server-to-server request)
+  if (origin.trim() === '') return next();
+
   const allowedOrigins = [
     'http://localhost:3000',
     'http://localhost:3001',
@@ -36,11 +42,9 @@ const originValidator = async (c: any, next: any) => {
     c.env.FRONTEND_URL,
   ].filter(Boolean);
 
-  const origin = c.req.header('Origin') || c.req.header('Referer') || '';
-  const hasOrigin = origin.trim() !== '';
   const isAllowed = allowedOrigins.some((allowed: string) => origin.startsWith(allowed));
 
-  if (hasOrigin && !isAllowed) {
+  if (!isAllowed) {
     console.warn(`[CSRF BLOCK] Origin tidak diizinkan: ${origin}`);
     return c.json({ success: false, message: 'Akses ditolak.' }, 403);
   }
@@ -52,12 +56,12 @@ app.use('/api/search/*', originValidator);
 
 // ── Request size limit ────────────────────────────────────────────────────────
 const SIZE_LIMITS: Record<string, number> = {
-  '/api/auth':    10 * 1024,        // 10KB  — login/register
-  '/api/reports': 512 * 1024,       // 512KB — submit laporan + foto
-  '/api/admin':   50 * 1024,        // 50KB  — aksi admin
-  '/api/search':  5 * 1024,         // 5KB   — query pencarian
+  '/api/auth':    10 * 1024,
+  '/api/reports': 512 * 1024,
+  '/api/admin':   50 * 1024,
+  '/api/search':  5 * 1024,
 };
-const DEFAULT_SIZE_LIMIT = 1 * 1024 * 1024; // 1MB — default semua endpoint
+const DEFAULT_SIZE_LIMIT = 1 * 1024 * 1024;
 
 app.use('/api/*', async (c, next) => {
   if (c.req.method === 'GET' || c.req.method === 'HEAD' || c.req.method === 'OPTIONS') {
@@ -79,17 +83,14 @@ app.use('/api/*', async (c, next) => {
 
     if (size > limit) {
       console.warn(`[SIZE LIMIT] Request terlalu besar: ${size} bytes, limit: ${limit} bytes, path: ${path}`);
-      return c.json({
-        success: false,
-        message: 'Ukuran request terlalu besar.',
-      }, 413);
+      return c.json({ success: false, message: 'Ukuran request terlalu besar.' }, 413);
     }
   }
 
   return next();
 });
 
-// ── IP Blacklist check — semua /api/* ─────────────────────────────────────────
+// ── IP Blacklist check ────────────────────────────────────────────────────────
 app.use('/api/*', async (c, next) => {
   if (!c.env.LIMITER) return next();
 
@@ -105,10 +106,7 @@ app.use('/api/*', async (c, next) => {
     if (isBlacklisted) {
       const data = JSON.parse(isBlacklisted);
       console.warn(`[BLACKLIST] IP diblokir: ${ip}, alasan: ${data.reason}`);
-      return c.json({
-        success: false,
-        message: 'Akses Anda telah diblokir sementara karena aktivitas mencurigakan. Coba lagi dalam 24 jam.',
-      }, 403);
+      return c.json({ success: false, message: 'Akses Anda telah diblokir sementara karena aktivitas mencurigakan. Coba lagi dalam 24 jam.' }, 403);
     }
   } catch (err) {
     console.error('[BLACKLIST] Error cek KV:', err);
@@ -117,24 +115,20 @@ app.use('/api/*', async (c, next) => {
   return next();
 });
 
-// ── Lapis 1: Cloudflare native rate limit — /api/auth/* ──────────────────────
+// ── Cloudflare native rate limit — /api/auth/* ────────────────────────────────
 app.use('/api/auth/*', async (c, next) => {
   if (c.env.AUTH_RATE_LIMITER) {
     const ip = c.req.header('CF-Connecting-IP') || 'anonymous';
     const { success } = await c.env.AUTH_RATE_LIMITER.limit({ key: ip });
     if (!success) {
       console.warn(`[CF RATE LIMIT] Native limit tercapai untuk IP: ${ip}`);
-      return c.json({
-        success: false,
-        message: 'Terlalu banyak permintaan. Coba lagi nanti.',
-        retry_after: 60,
-      }, 429);
+      return c.json({ success: false, message: 'Terlalu banyak permintaan. Coba lagi nanti.', retry_after: 60 }, 429);
     }
   }
   return next();
 });
 
-// ── Lapis 2: KV global rate limit — semua /api/* ─────────────────────────────
+// ── KV global rate limit ──────────────────────────────────────────────────────
 app.use('/api/*', async (c, next) => {
   if (!c.env.LIMITER) {
     console.warn('[RATE LIMIT] KV binding LIMITER tidak tersedia.');
@@ -153,10 +147,7 @@ app.use('/api/*', async (c, next) => {
       console.warn(`[RATE LIMIT] Global limit tercapai untuk IP: ${ip}`);
       await logSuspiciousIp(c.env.LIMITER, ip, 'Melewati global rate limit', path);
       await autoBlacklistIfAbuse(c.env.LIMITER, ip, 'Terlalu sering melewati global rate limit');
-      return c.json({
-        success: false,
-        message: 'Terlalu banyak permintaan. Coba lagi nanti.',
-      }, 429);
+      return c.json({ success: false, message: 'Terlalu banyak permintaan. Coba lagi nanti.' }, 429);
     }
 
     await c.env.LIMITER.put(key, (count + 1).toString(), { expirationTtl: 60 });
@@ -167,7 +158,7 @@ app.use('/api/*', async (c, next) => {
   return next();
 });
 
-// ── Lapis 3: KV auth rate limit — khusus /api/auth/* ─────────────────────────
+// ── KV auth rate limit ────────────────────────────────────────────────────────
 app.use('/api/auth/*', async (c, next) => {
   if (!c.env.LIMITER) return next();
 
@@ -183,11 +174,7 @@ app.use('/api/auth/*', async (c, next) => {
       console.warn(`[AUTH RATE LIMIT] IP diblokir sementara: ${ip}`);
       await logSuspiciousIp(c.env.LIMITER, ip, 'Melewati auth rate limit', path);
       await autoBlacklistIfAbuse(c.env.LIMITER, ip, 'Terlalu sering melewati auth rate limit');
-      return c.json({
-        success: false,
-        message: 'Terlalu banyak percobaan. Tunggu 1 menit sebelum mencoba lagi.',
-        retry_after: 60,
-      }, 429);
+      return c.json({ success: false, message: 'Terlalu banyak percobaan. Tunggu 1 menit sebelum mencoba lagi.', retry_after: 60 }, 429);
     }
 
     await c.env.LIMITER.put(key, (count + 1).toString(), { expirationTtl: 60 });
@@ -198,7 +185,7 @@ app.use('/api/auth/*', async (c, next) => {
   return next();
 });
 
-// ── Lapis 4: KV search rate limit — khusus /api/search/* ─────────────────────
+// ── KV search rate limit ──────────────────────────────────────────────────────
 app.use('/api/search/*', async (c, next) => {
   if (!c.env.LIMITER) return next();
 
@@ -213,11 +200,7 @@ app.use('/api/search/*', async (c, next) => {
     if (count >= 30) {
       console.warn(`[SEARCH RATE LIMIT] IP diblokir sementara: ${ip}`);
       await logSuspiciousIp(c.env.LIMITER, ip, 'Melewati search rate limit', path);
-      return c.json({
-        success: false,
-        message: 'Terlalu banyak permintaan pencarian. Tunggu 1 menit.',
-        retry_after: 60,
-      }, 429);
+      return c.json({ success: false, message: 'Terlalu banyak permintaan pencarian. Tunggu 1 menit.', retry_after: 60 }, 429);
     }
 
     await c.env.LIMITER.put(key, (count + 1).toString(), { expirationTtl: 60 });
@@ -228,7 +211,7 @@ app.use('/api/search/*', async (c, next) => {
   return next();
 });
 
-// ── Helper: Log IP mencurigakan ke KV ────────────────────────────────────────
+// ── Helper: Log IP mencurigakan ───────────────────────────────────────────────
 export async function logSuspiciousIp(
   limiter: KVNamespace,
   ip: string,
@@ -237,18 +220,13 @@ export async function logSuspiciousIp(
 ): Promise<void> {
   try {
     const logKey = `iplog_${ip}_${Date.now()}`;
-    await limiter.put(logKey, JSON.stringify({
-      ip,
-      reason,
-      endpoint,
-      created_at: new Date().toISOString(),
-    }), { expirationTtl: 604800 }); // 7 hari
+    await limiter.put(logKey, JSON.stringify({ ip, reason, endpoint, created_at: new Date().toISOString() }), { expirationTtl: 604800 });
   } catch (err) {
     console.error('[IP LOG] Error:', err);
   }
 }
 
-// ── Helper: Auto blacklist IP kalau abuse ─────────────────────────────────────
+// ── Helper: Auto blacklist ────────────────────────────────────────────────────
 export async function autoBlacklistIfAbuse(
   limiter: KVNamespace,
   ip: string,
@@ -264,17 +242,12 @@ export async function autoBlacklistIfAbuse(
       const blacklistKey = `blacklist_${ip}`;
       const existing = await limiter.get(blacklistKey);
       if (!existing) {
-        await limiter.put(blacklistKey, JSON.stringify({
-          ip,
-          reason,
-          auto: true,
-          created_at: new Date().toISOString(),
-        }), { expirationTtl: 86400 }); // 24 jam
+        await limiter.put(blacklistKey, JSON.stringify({ ip, reason, auto: true, created_at: new Date().toISOString() }), { expirationTtl: 86400 });
         console.warn(`[AUTO BLACKLIST] IP di-blacklist: ${ip}, alasan: ${reason}`);
         await limiter.delete(abuseKey);
       }
     } else {
-      await limiter.put(abuseKey, newCount.toString(), { expirationTtl: 3600 }); // 1 jam
+      await limiter.put(abuseKey, newCount.toString(), { expirationTtl: 3600 });
     }
   } catch (err) {
     console.error('[AUTO BLACKLIST] Error:', err);
