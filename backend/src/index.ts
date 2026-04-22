@@ -12,12 +12,14 @@ const app = new Hono<{ Bindings: Env }>();
 // ── CORS ──────────────────────────────────────────────────────────────────────
 app.use('*', cors({
   origin: (origin, c) => {
-    const allowedOrigins = [
-      'http://localhost:3000',
-      'http://localhost:3001',
-      'https://kawaltransaksi.com',
-      c.env.FRONTEND_URL,
-    ].filter(Boolean);
+const allowedOrigins = [
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'https://kawaltransaksi.com',
+    'https://kawaltransaksi-git-main-achmadgozali270505.vercel.app',
+    'https://kawaltransaksi.vercel.app',
+  c.env.FRONTEND_URL,
+].filter(Boolean);
     if (allowedOrigins.includes(origin ?? '')) return origin;
     return null;
   },
@@ -35,12 +37,14 @@ const originValidator = async (c: any, next: any) => {
   // Kalau nggak ada origin sama sekali, allow (server-to-server request)
   if (origin.trim() === '') return next();
 
-  const allowedOrigins = [
+const allowedOrigins = [
     'http://localhost:3000',
     'http://localhost:3001',
     'https://kawaltransaksi.com',
-    c.env.FRONTEND_URL,
-  ].filter(Boolean);
+    'https://kawaltransaksi-git-main-achmadgozali270505.vercel.app',
+    'https://kawaltransaksi.vercel.app',
+  c.env.FRONTEND_URL,
+].filter(Boolean);
 
   const isAllowed = allowedOrigins.some((allowed: string) => origin.startsWith(allowed));
 
