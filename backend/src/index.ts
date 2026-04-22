@@ -56,7 +56,7 @@ const allowedOrigins = [
 };
 
 app.use('/api/auth/*', originValidator);
-app.use('/api/search/*', originValidator);
+app.use('/api/search/verify-turnstile', originValidator);
 
 // ── Request size limit ────────────────────────────────────────────────────────
 const SIZE_LIMITS: Record<string, number> = {
