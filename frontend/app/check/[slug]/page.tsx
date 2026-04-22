@@ -128,6 +128,7 @@ interface CarrierInfo {
 
 async function getCarrierInfo(phone: string): Promise<CarrierInfo | null> {
   const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+  console.log('[CARRIER] start, phone:', phone, 'backendUrl:', backendUrl);
   if (!backendUrl) return null;
 
   try {
@@ -138,16 +139,15 @@ async function getCarrierInfo(phone: string): Promise<CarrierInfo | null> {
       cache: 'no-store',
     });
 
+    console.log('[CARRIER] res.ok:', res.ok, 'status:', res.status);
     if (!res.ok) return null;
 
-    const json = await res.json() as {
-      success: boolean;
-      data?: CarrierInfo;
-    };
-
+    const json = await res.json() as { success: boolean; data?: CarrierInfo };
+    console.log('[CARRIER] json:', JSON.stringify(json));
     if (!json.success || !json.data) return null;
     return json.data;
-  } catch {
+  } catch (err) {
+    console.error('[CARRIER] catch error:', err);
     return null;
   }
 }
