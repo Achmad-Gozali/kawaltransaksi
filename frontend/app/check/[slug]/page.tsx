@@ -119,43 +119,6 @@ const walletNameMap: Record<string, string> = {
   linkaja: 'LinkAja', lainnya: 'E-Wallet Lainnya',
 };
 
-// ── Carrier info fetcher (server-side, pakai KV cache via backend) ──────────
-interface CarrierInfo {
-  carrier: string | null;
-  type: string | null;
-  location: string | null;
-}
-
-async function getCarrierInfo(phone: string): Promise<CarrierInfo | null> {
-  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
-  console.log('[CARRIER] start, phone:', phone, 'backendUrl:', backendUrl);
-  if (!backendUrl) return null;
-
-  try {
-    const res = await fetch(`${backendUrl}/api/search/phone-info`, {
-      method: 'POST',
-      headers: { 
-        'Content-Type': 'application/json',
-        'X-Internal-Key': 'kawaltransaksi-internal-2024',
-      },
-      body: JSON.stringify({ phone }),
-      cache: 'no-store',
-    });
-
-    console.log('[CARRIER] res.ok:', res.ok, 'status:', res.status);
-    if (!res.ok) return null;
-
-    const json = await res.json() as { success: boolean; data?: CarrierInfo };
-    console.log('[CARRIER] json:', JSON.stringify(json));
-    if (!json.success || !json.data) return null;
-    return json.data;
-  } catch (err) {
-    console.error('[CARRIER] catch error:', err);
-    return null;
-  }
-}
-
-// ── Gated Content Wrapper ──────────────────────────────────────────────────
 interface GatedProps {
   isLoggedIn: boolean;
   label: string;
@@ -189,7 +152,6 @@ function GatedContent({ isLoggedIn, label, children, minHeight }: GatedProps) {
   );
 }
 
-// ── CTA + Share Card ────────────────────────────────────────────────────────
 function CtaShareCard({ slug, shareText }: { slug: string; shareText: string }) {
   return (
     <div className="rounded-lg border border-slate-200 overflow-hidden">
@@ -216,7 +178,6 @@ function CtaShareCard({ slug, shareText }: { slug: string; shareText: string }) 
   );
 }
 
-// ── Main Page ──────────────────────────────────────────────────────────────
 export default async function CheckPage({ params, searchParams }: CheckPageProps) {
   const { slug } = await params;
   const { type, bank, wallet } = await searchParams;
@@ -273,10 +234,6 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
   const recentReports = reports.filter((r) => new Date(r.created_at) >= thirtyDaysAgo);
   const uniquePlatforms = Array.from(new Set(reports.map((r) => r.platform).filter(Boolean)));
   const multiVictimCount = reports.filter((r) => r.has_other_victims === 'yes').length;
-
-  // ── Fetch carrier info hanya untuk nomor HP ─────────────────────────────
-  const isPhoneNumber = defaultType === 'phone' && !defaultBankName && !defaultWalletName;
-  const carrierInfo = isPhoneNumber ? await getCarrierInfo(realNumber) : null;
 
   const riskBadges: { label: string; color: string }[] = [];
   if (recentReports.length >= 3) {
@@ -357,7 +314,6 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
         { label: 'Terverifikasi', done: status === 'danger' },
       ];
 
-  // ── Related numbers builder ──
   const relatedEntries: { number: string; type: string; bank: string | null; name: string | null }[] = [];
   const seenNumbers = new Set<string>();
   allReports.forEach((r: any) => {
@@ -393,7 +349,6 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
 
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
-      {/* Mobile back nav */}
       <div className="sm:hidden bg-white border-b border-slate-100">
         <div className="px-4 py-3 flex items-center justify-between">
           <Link href="/cek-nomor" className="inline-flex items-center gap-2 text-slate-500 hover:text-slate-900 text-sm transition-colors">
@@ -403,7 +358,6 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
         </div>
       </div>
 
-      {/* Status bar */}
       <div className={`${config.barBg} px-4 sm:px-6 py-3`}>
         <div className="max-w-5xl mx-auto flex items-center gap-2 flex-wrap">
           <div className={`w-2 h-2 rounded-full shrink-0 ${config.dotBg}`} />
@@ -419,7 +373,6 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
       </div>
 
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 sm:py-6 pb-20">
-        {/* Stats grid */}
         {reports.length > 0 && (
           <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-4 sm:mb-6">
             <div className="bg-white rounded-lg border border-slate-200 p-3 sm:p-5">
@@ -442,8 +395,6 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
         )}
 
         <div className="space-y-4 sm:space-y-5">
-
-          {/* 1. NumberCard */}
           <NumberCard
             reports={reports}
             realNumber={realNumber}
@@ -453,10 +404,9 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
             defaultWalletName={defaultWalletName}
             hasTypeParam={hasTypeParam}
             isLoggedIn={isLoggedIn}
-            carrierInfo={carrierInfo}
+            carrierInfo={null}
           />
 
-          {/* 2. Risk badges */}
           {riskBadges.length > 0 && (
             <div className="flex flex-wrap gap-2">
               {riskBadges.map((badge, i) => (
@@ -467,7 +417,6 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
             </div>
           )}
 
-          {/* 3. Banner: nomor terkait laporan lain */}
           {linkedReports.length > 0 && reports.length === 0 && (
             <div className={`rounded-lg overflow-hidden border ${linkedHasVerified ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}`}>
               <div className={`px-4 sm:px-5 py-4 border-b ${linkedHasVerified ? 'border-red-100' : 'border-amber-100'}`}>
@@ -506,7 +455,6 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
             </div>
           )}
 
-          {/* 4. Tetap waspada — status safe */}
           {status === 'safe' && linkedReports.length === 0 && (
             <div>
               <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-2.5 font-medium px-0.5">Tetap waspada</p>
@@ -533,47 +481,23 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
             </div>
           )}
 
-          {/* 5. GATED: Kronologi & bukti */}
           {reports.length > 0 && (
-            <GatedContent
-              isLoggedIn={isLoggedIn}
-              label="Login untuk lihat kronologi & bukti lengkap"
-              minHeight="200px"
-            >
-              <ReportList
-                reports={reports}
-                hasWithdrawn={hasWithdrawn}
-                hasLinkedReports={linkedReports.length > 0 && reports.length === 0}
-                linkedHasVerified={linkedHasVerified}
-              />
+            <GatedContent isLoggedIn={isLoggedIn} label="Login untuk lihat kronologi & bukti lengkap" minHeight="200px">
+              <ReportList reports={reports} hasWithdrawn={hasWithdrawn} hasLinkedReports={linkedReports.length > 0 && reports.length === 0} linkedHasVerified={linkedHasVerified} />
             </GatedContent>
           )}
 
           {reports.length === 0 && (
-            <ReportList
-              reports={reports}
-              hasWithdrawn={hasWithdrawn}
-              hasLinkedReports={linkedReports.length > 0 && reports.length === 0}
-              linkedHasVerified={linkedHasVerified}
-            />
+            <ReportList reports={reports} hasWithdrawn={hasWithdrawn} hasLinkedReports={linkedReports.length > 0 && reports.length === 0} linkedHasVerified={linkedHasVerified} />
           )}
 
-          {/* 6. GATED: Nomor lain terkait pelaku */}
           {relatedEntries.length > 0 && (
-            <GatedContent
-              isLoggedIn={isLoggedIn}
-              label="Login untuk lihat nomor lain terkait pelaku"
-              minHeight="160px"
-            >
+            <GatedContent isLoggedIn={isLoggedIn} label="Login untuk lihat nomor lain terkait pelaku" minHeight="160px">
               <div>
-                <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-2.5 font-medium px-0.5">
-                  Nomor lain terkait pelaku ini
-                </p>
+                <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-2.5 font-medium px-0.5">Nomor lain terkait pelaku ini</p>
                 <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
                   <div className="px-4 py-3 border-b border-slate-100 bg-slate-50">
-                    <p className="text-xs text-slate-500 leading-relaxed">
-                      Pelapor menyebutkan bahwa pelaku yang sama juga menggunakan nomor-nomor berikut.
-                    </p>
+                    <p className="text-xs text-slate-500 leading-relaxed">Pelapor menyebutkan bahwa pelaku yang sama juga menggunakan nomor-nomor berikut.</p>
                   </div>
                   <div className="divide-y divide-slate-100">
                     {relatedEntries.map((entry, i) => (
@@ -596,7 +520,6 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
             </GatedContent>
           )}
 
-          {/* 7. Status verifikasi */}
           {(allReports.length > 0 || linkedHasVerified) && !(hasWithdrawn && reports.length === 0) && (
             <div>
               <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-2.5 font-medium px-0.5">Status verifikasi</p>
@@ -623,7 +546,6 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
             </div>
           )}
 
-          {/* 8. CTA + Share */}
           <CtaShareCard slug={slug} shareText={shareText} />
         </div>
       </div>
