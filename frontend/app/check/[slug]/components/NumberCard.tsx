@@ -1,6 +1,6 @@
 import Image from 'next/image';
 import Link from 'next/link';
-import { Lock } from 'lucide-react';
+import { Lock, Signal } from 'lucide-react';
 import { formatNum } from '@/lib/utils';
 
 function formatSosmed(acc: string): { label: string; isUrl: boolean; href: string } {
@@ -15,6 +15,12 @@ function formatSosmed(acc: string): { label: string; isUrl: boolean; href: strin
 function truncateUrl(url: string, maxLen = 50): string {
   if (url.length <= maxLen) return url;
   return url.slice(0, maxLen) + '...';
+}
+
+interface CarrierInfo {
+  carrier: string | null;
+  type: string | null;
+  location: string | null;
 }
 
 interface ReportItem {
@@ -39,6 +45,7 @@ interface Props {
   defaultWalletName?: string | null;
   hasTypeParam?: boolean;
   isLoggedIn?: boolean;
+  carrierInfo?: CarrierInfo | null;
   config: {
     nameBadgeBg: string;
     nameBadgeText: string;
@@ -68,10 +75,10 @@ export default function NumberCard({
   defaultWalletName = null,
   hasTypeParam = false,
   isLoggedIn = false,
+  carrierInfo = null,
 }: Props) {
   const hasVerified = reports.some((r) => r.status === 'verified');
 
-  // Foto & nama hanya tampil kalau verified DAN sudah login
   const canSeeIdentity = hasVerified && isLoggedIn;
 
   const allSocialAccounts: string[] = [];
@@ -96,7 +103,6 @@ export default function NumberCard({
     ? (reports.find((r) => r.suspect_photo_url)?.suspect_photo_url ?? null)
     : null;
 
-  // Foto ada tapi user belum login (verified tapi blm login)
   const hasPhotoButGated =
     hasVerified && !isLoggedIn && !!reports.find((r) => r.suspect_photo_url)?.suspect_photo_url;
 
@@ -104,7 +110,6 @@ export default function NumberCard({
     ? (reports[0]?.target_name ?? null)
     : null;
 
-  // Nama ada tapi user belum login
   const hasNameButGated = hasVerified && !isLoggedIn && !!reports[0]?.target_name;
 
   const dangerLink = reports.find((r) => r.link_url)?.link_url ?? null;
@@ -124,6 +129,13 @@ export default function NumberCard({
 
   const hasContext = reports.length > 0 || defaultBankName !== null || defaultWalletName !== null || hasTypeParam;
   const showLabel = hasContext && displayLabel !== null;
+
+  // Format carrier info untuk ditampilin
+  const showCarrier = carrierInfo && (carrierInfo.carrier || carrierInfo.location);
+  const carrierLabel = [
+    carrierInfo?.carrier,
+    carrierInfo?.location,
+  ].filter(Boolean).join(' · ');
 
   return (
     <div>
@@ -147,7 +159,7 @@ export default function NumberCard({
                 </span>
               )}
 
-              {/* Nama ada tapi belum login — tampil sensor */}
+              {/* Nama ada tapi belum login */}
               {hasNameButGated && (
                 <Link
                   href="/login"
@@ -168,6 +180,14 @@ export default function NumberCard({
               {showLabel && (
                 <span className="text-[11px] px-2.5 py-1 rounded-md font-medium border border-slate-200 bg-slate-50 text-slate-500">
                   {displayLabel}
+                </span>
+              )}
+
+              {/* Badge carrier/provider */}
+              {showCarrier && (
+                <span className="inline-flex items-center gap-1.5 text-[11px] px-2.5 py-1 rounded-md font-medium border border-slate-200 bg-slate-50 text-slate-500">
+                  <Signal className="w-3 h-3 text-slate-400" />
+                  {carrierLabel}
                 </span>
               )}
             </div>
@@ -195,7 +215,7 @@ export default function NumberCard({
             </div>
           )}
 
-          {/* Foto ada tapi belum login — tampil placeholder gembok */}
+          {/* Foto ada tapi belum login */}
           {hasPhotoButGated && (
             <div className="shrink-0">
               <p className="text-[10px] text-slate-400 mb-1.5">Foto penipu</p>

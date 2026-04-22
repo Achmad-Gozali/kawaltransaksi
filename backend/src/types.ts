@@ -9,6 +9,7 @@ export interface Env {
   FRONTEND_URL: string;
   NODE_ENV: string;
   RESEND_API_KEY: string;
+  ABSTRACT_API_KEY: string;
 
   // Cloudflare KV
   LIMITER: KVNamespace;

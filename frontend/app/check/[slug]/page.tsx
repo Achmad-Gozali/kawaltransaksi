@@ -119,6 +119,40 @@ const walletNameMap: Record<string, string> = {
   linkaja: 'LinkAja', lainnya: 'E-Wallet Lainnya',
 };
 
+// ── Carrier info fetcher (server-side, pakai KV cache via backend) ──────────
+interface CarrierInfo {
+  carrier: string | null;
+  type: string | null;
+  location: string | null;
+}
+
+async function getCarrierInfo(phone: string): Promise<CarrierInfo | null> {
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL;
+  if (!backendUrl) return null;
+
+  try {
+    const res = await fetch(`${backendUrl}/api/search/phone-info`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ phone }),
+      // next.js cache — revalidate tiap 30 hari
+      next: { revalidate: 2_592_000 },
+    });
+
+    if (!res.ok) return null;
+
+    const json = await res.json() as {
+      success: boolean;
+      data?: CarrierInfo;
+    };
+
+    if (!json.success || !json.data) return null;
+    return json.data;
+  } catch {
+    return null;
+  }
+}
+
 // ── Gated Content Wrapper ──────────────────────────────────────────────────
 interface GatedProps {
   isLoggedIn: boolean;
@@ -132,12 +166,9 @@ function GatedContent({ isLoggedIn, label, children, minHeight }: GatedProps) {
 
   return (
     <div className="relative overflow-hidden rounded-lg" style={minHeight ? { minHeight } : {}}>
-      {/* Konten asli — blur ringan */}
       <div className="blur-[2px] select-none pointer-events-none" aria-hidden="true">
         {children}
       </div>
-
-      {/* Overlay gradient tipis + lock */}
       <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-white/30 via-white/60 to-white/80">
         <div className="flex flex-col items-center gap-3 px-6 text-center">
           <div className="w-10 h-10 rounded-full bg-slate-900 flex items-center justify-center shadow-lg">
@@ -156,11 +187,10 @@ function GatedContent({ isLoggedIn, label, children, minHeight }: GatedProps) {
   );
 }
 
-// ── CTA + Share Card (gabungan) ────────────────────────────────────────────
+// ── CTA + Share Card ────────────────────────────────────────────────────────
 function CtaShareCard({ slug, shareText }: { slug: string; shareText: string }) {
   return (
     <div className="rounded-lg border border-slate-200 overflow-hidden">
-      {/* Lapor section */}
       <div className="bg-slate-900 px-4 py-4 sm:px-5 sm:py-5">
         <p className="text-sm font-semibold text-white mb-1">Pernah kena tipu nomor ini?</p>
         <p className="text-xs text-slate-400 mb-3 leading-relaxed">
@@ -173,11 +203,7 @@ function CtaShareCard({ slug, shareText }: { slug: string; shareText: string }) 
           <PlusCircle className="w-3.5 h-3.5" /> Buat laporan
         </Link>
       </div>
-
-      {/* Divider */}
       <div className="border-t border-slate-700/40" />
-
-      {/* Share section */}
       <div className="bg-white px-4 py-4 sm:px-5">
         <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-3 font-medium">
           Sebarkan peringatan
@@ -245,6 +271,10 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
   const recentReports = reports.filter((r) => new Date(r.created_at) >= thirtyDaysAgo);
   const uniquePlatforms = Array.from(new Set(reports.map((r) => r.platform).filter(Boolean)));
   const multiVictimCount = reports.filter((r) => r.has_other_victims === 'yes').length;
+
+  // ── Fetch carrier info hanya untuk nomor HP ─────────────────────────────
+  const isPhoneNumber = defaultType === 'phone' && !defaultBankName && !defaultWalletName;
+  const carrierInfo = isPhoneNumber ? await getCarrierInfo(realNumber) : null;
 
   const riskBadges: { label: string; color: string }[] = [];
   if (recentReports.length >= 3) {
@@ -421,6 +451,7 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
             defaultWalletName={defaultWalletName}
             hasTypeParam={hasTypeParam}
             isLoggedIn={isLoggedIn}
+            carrierInfo={carrierInfo}
           />
 
           {/* 2. Risk badges */}
