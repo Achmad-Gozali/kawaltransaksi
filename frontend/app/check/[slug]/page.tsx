@@ -135,8 +135,7 @@ async function getCarrierInfo(phone: string): Promise<CarrierInfo | null> {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ phone }),
-      // next.js cache — revalidate tiap 30 hari
-      next: { revalidate: 2_592_000 },
+      cache: 'no-store',
     });
 
     if (!res.ok) return null;
