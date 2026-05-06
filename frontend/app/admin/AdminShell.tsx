@@ -23,33 +23,18 @@ const navItems = [
   { id: 'blacklist', label: 'IP Blacklist', icon: ShieldX,          href: '/admin?tab=blacklist' },
 ];
 
-export default function AdminShell({ email, children }: AdminShellProps) {
-  const [collapsed, setCollapsed]       = useState(false);
-  const [mobileOpen, setMobileOpen]     = useState(false);
-  const [globalSearch, setGlobalSearch] = useState('');
-  const router       = useRouter();
-  const searchParams = useSearchParams();
-  const supabase     = createClient();
-  const activeTab    = searchParams.get('tab') || 'dashboard';
+// ✅ NavContent dipindah ke level module, di luar AdminShell
+interface NavContentProps {
+  onNavClick?: () => void;
+  collapsed: boolean;
+  activeTab: string;
+  email: string;
+  initial: string;
+  onLogout: () => void;
+}
 
-  const handleLogout = async () => {
-    await supabase.auth.signOut();
-    router.push('/');
-  };
-
-  const handleGlobalSearch = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (globalSearch.trim()) {
-      router.push(`/admin?tab=laporan&search=${encodeURIComponent(globalSearch.trim())}`);
-      setGlobalSearch('');
-      setMobileOpen(false);
-    }
-  };
-
-  const initial = (email || 'A').charAt(0).toUpperCase();
-
-  // Shared nav content untuk desktop & mobile
-  const NavContent = ({ onNavClick }: { onNavClick?: () => void }) => (
+function NavContent({ onNavClick, collapsed, activeTab, email, initial, onLogout }: NavContentProps) {
+  return (
     <>
       <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
         {navItems.map((item) => {
@@ -96,7 +81,7 @@ export default function AdminShell({ email, children }: AdminShellProps) {
             <div className="flex-1 min-w-0">
               <p className="text-[12px] font-medium text-slate-700 truncate">{email}</p>
               <button
-                onClick={handleLogout}
+                onClick={onLogout}
                 className="text-[11px] text-slate-400 hover:text-red-500 flex items-center gap-1 transition-colors"
               >
                 <LogOut className="w-3 h-3" /> Logout
@@ -107,6 +92,34 @@ export default function AdminShell({ email, children }: AdminShellProps) {
       </div>
     </>
   );
+}
+
+export default function AdminShell({ email, children }: AdminShellProps) {
+  const [collapsed, setCollapsed]       = useState(false);
+  const [mobileOpen, setMobileOpen]     = useState(false);
+  const [globalSearch, setGlobalSearch] = useState('');
+  const router       = useRouter();
+  const searchParams = useSearchParams();
+  const supabase     = createClient();
+  const activeTab    = searchParams.get('tab') || 'dashboard';
+  const initial      = (email || 'A').charAt(0).toUpperCase();
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.push('/');
+  };
+
+  const handleGlobalSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (globalSearch.trim()) {
+      router.push(`/admin?tab=laporan&search=${encodeURIComponent(globalSearch.trim())}`);
+      setGlobalSearch('');
+      setMobileOpen(false);
+    }
+  };
+
+  // Props yang dipakai kedua sidebar
+  const navProps = { collapsed, activeTab, email, initial, onLogout: handleLogout };
 
   return (
     <div className="min-h-screen bg-slate-50 flex">
@@ -125,7 +138,6 @@ export default function AdminShell({ email, children }: AdminShellProps) {
         transition-transform duration-250 ease-out
         ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}
       `}>
-        {/* Logo mobile */}
         <div className="flex items-center justify-between h-16 border-b border-slate-100 px-4 shrink-0">
           <div className="flex items-center gap-3">
             <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center shrink-0">
@@ -146,7 +158,8 @@ export default function AdminShell({ email, children }: AdminShellProps) {
           </button>
         </div>
 
-        <NavContent onNavClick={() => setMobileOpen(false)} />
+        {/* ✅ Pass semua props secara eksplisit */}
+        <NavContent {...navProps} onNavClick={() => setMobileOpen(false)} />
       </aside>
 
       {/* ── DESKTOP SIDEBAR ── */}
@@ -155,7 +168,6 @@ export default function AdminShell({ email, children }: AdminShellProps) {
         transition-all duration-200 ease-out
         ${collapsed ? 'w-[64px]' : 'w-[240px]'}
       `}>
-        {/* Logo desktop */}
         <div className={`flex items-center h-16 border-b border-slate-100 shrink-0 px-4 ${collapsed ? 'justify-center px-0' : 'gap-3'}`}>
           <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center shrink-0">
             <Shield className="w-4 h-4 text-white" />
@@ -170,9 +182,9 @@ export default function AdminShell({ email, children }: AdminShellProps) {
           )}
         </div>
 
-        <NavContent />
+        {/* ✅ Pass semua props secara eksplisit */}
+        <NavContent {...navProps} />
 
-        {/* Collapse toggle */}
         <button
           onClick={() => setCollapsed(!collapsed)}
           className="flex items-center justify-center h-10 border-t border-slate-100 text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition-colors"
@@ -183,26 +195,18 @@ export default function AdminShell({ email, children }: AdminShellProps) {
 
       {/* ── MAIN CONTENT ── */}
       <div className={`flex-1 flex flex-col min-h-screen transition-all duration-200 ${collapsed ? 'lg:ml-[64px]' : 'lg:ml-[240px]'}`}>
-
-        {/* Top header */}
         <header className="h-14 sm:h-16 bg-white border-b border-slate-200 flex items-center justify-between px-3 sm:px-6 shrink-0 sticky top-0 z-30">
-          
-          {/* Hamburger — mobile only */}
           <button
             onClick={() => setMobileOpen(true)}
             className="lg:hidden w-9 h-9 flex items-center justify-center rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
           >
             <Menu className="w-5 h-5" />
           </button>
-
-          {/* Logo — mobile only */}
           <div className="flex items-center gap-2 lg:hidden">
             <span className="text-sm font-bold text-slate-900">
               Kawal<span className="text-emerald-600">Transaksi</span>
             </span>
           </div>
-
-          {/* Search */}
           <form onSubmit={handleGlobalSearch} className="flex-1 max-w-lg mx-3 sm:mx-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
@@ -220,8 +224,6 @@ export default function AdminShell({ email, children }: AdminShellProps) {
               )}
             </div>
           </form>
-
-          {/* User avatar */}
           <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-xs font-bold text-emerald-700 shrink-0">
             {initial}
           </div>
