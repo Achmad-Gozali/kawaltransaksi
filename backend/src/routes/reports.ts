@@ -19,18 +19,51 @@ const THRESHOLD = {
 
 const VALID_TARGET_TYPES = ["phone", "bank_account", "ewallet"] as const;
 const VALID_CATEGORIES = [
+  // ── PENIPUAN BELANJA ──
   "Jual Beli Online",
+  "Toko Online Palsu",
+  "Barang Tidak Sesuai",
+  "COD Palsu",
+  "Dropship Fiktif",
+
+  // ── PENIPUAN INVESTASI & KEUANGAN ──
   "Investasi Bodong",
+  "Trading Palsu",
+  "Arisan Online",
   "Pinjaman Online",
+  "Koperasi Bodong",
+  "Binary Option",
+  "Kripto Palsu",
+  "Money Game",
+  "MLM Ilegal",
+
+  // ── PENIPUAN IDENTITAS & DATA ──
   "Phishing / Soceng",
   "Modus Kurir/APK",
-  "Arisan Online",
-  "Rental / Sewa Fiktif",
+  "Impersonasi",
+  "SIM Swap",
+  "Pencurian Data",
+
+  // ── PENIPUAN JASA & PEKERJAAN ──
   "Lowongan Kerja Palsu",
+  "Jasa Tidak Dikerjakan",
+  "Freelance Palsu",
+  "Kerja Online Palsu",
+  "Joki / Titip Beli Palsu",
+
+  // ── PENIPUAN RENTAL & PROPERTI ──
+  "Rental / Sewa Fiktif",
+  "Kos / Kontrakan Palsu",
+  "Tiket Palsu",
+
+  // ── PENIPUAN SOSIAL ──
+  "Penipuan Percintaan",
   "Pinjam Uang Tidak Bayar",
   "Hadiah / Undian Palsu",
-  "Jasa Tidak Dikerjakan",
-  "Penipuan Percintaan",
+  "Donasi Palsu",
+  "Pura-pura Kecelakaan",
+  "Penipuan Umroh/Haji",
+
   "Lainnya",
 ] as const;
 
