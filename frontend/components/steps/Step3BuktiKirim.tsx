@@ -2,8 +2,7 @@
 
 import Image from 'next/image';
 import {
-  Upload, X, Loader2, Sparkles, CheckCircle2,
-  ShieldCheck, ShieldX, ShieldEllipsis,
+  Upload, X, Loader2, Sparkles, ShieldCheck, ShieldX, ShieldEllipsis,
 } from 'lucide-react';
 import { Turnstile } from '@marsidev/react-turnstile';
 import { Card, SectionTitle } from '../ui/primitives';
@@ -14,9 +13,10 @@ import type { EvidenceFile } from '../report/types';
 interface Step3Props {
   evidenceFiles: EvidenceFile[];
   turnstileStatus: 'idle' | 'success' | 'error';
+  isAnalyzingAll: boolean;
   onEvidenceFileChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onRemoveEvidenceFile: (index: number) => void;
-  onAIImageAnalysis: (index: number) => void;
+  onAnalyzeAll: () => void;
   onTurnstileSuccess: (token: string) => void;
   onTurnstileExpire: () => void;
   onTurnstileError: () => void;
@@ -25,22 +25,43 @@ interface Step3Props {
 export function Step3BuktiKirim({
   evidenceFiles,
   turnstileStatus,
+  isAnalyzingAll,
   onEvidenceFileChange,
   onRemoveEvidenceFile,
-  onAIImageAnalysis,
+  onAnalyzeAll,
   onTurnstileSuccess,
   onTurnstileExpire,
   onTurnstileError,
 }: Step3Props) {
+  const hasUnanalyzed = evidenceFiles.some((f) => !f.analysis);
+  const hasFiles = evidenceFiles.length > 0;
+
   return (
     <div className="space-y-4">
 
       <Card>
         <div className="p-5">
-          <SectionTitle
-            title="Bukti Foto"
-            subtitle={`Upload hingga ${MAX_EVIDENCE_FILES} foto · Screenshot percakapan, struk transfer · JPG, PNG · maks 5MB per file`}
-          />
+          <div className="flex items-start justify-between gap-3 mb-5">
+            <SectionTitle
+              title="Bukti Foto"
+              subtitle={`Upload hingga ${MAX_EVIDENCE_FILES} foto · Screenshot percakapan, struk transfer · JPG, PNG · maks 5MB per file`}
+            />
+            {hasFiles && hasUnanalyzed && (
+              <button
+                type="button"
+                onClick={onAnalyzeAll}
+                disabled={isAnalyzingAll}
+                className="flex items-center gap-1.5 px-3 py-2 bg-slate-900 text-white rounded-xl text-xs font-semibold disabled:opacity-50 shrink-0 active:scale-95 transition-all"
+              >
+                {isAnalyzingAll ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <Sparkles className="w-3.5 h-3.5" />
+                )}
+                {isAnalyzingAll ? 'Menganalisis...' : 'Analisis AI'}
+              </button>
+            )}
+          </div>
 
           {evidenceFiles.length > 0 && (
             <div className="space-y-3 mb-4">
@@ -68,28 +89,18 @@ export function Step3BuktiKirim({
                       Foto {index + 1}
                     </span>
                   </div>
-                  <div className="px-4 py-3 flex justify-between items-center gap-3">
+                  <div className="px-4 py-3 flex items-center justify-between gap-3">
                     <span className="text-sm text-slate-400 truncate min-w-0">
                       {item.file.name}
                     </span>
-                    {!item.analysis ? (
-                      <button
-                        type="button"
-                        onClick={() => onAIImageAnalysis(index)}
-                        disabled={item.isAnalyzing}
-                        className="flex items-center gap-1.5 px-3 py-1.5 bg-slate-900 text-white rounded-lg text-xs font-semibold disabled:opacity-50 shrink-0 active:scale-95"
-                      >
-                        {item.isAnalyzing ? (
-                          <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                        ) : (
-                          <>
-                            <Sparkles className="w-3.5 h-3.5" /> Scan AI
-                          </>
-                        )}
-                      </button>
-                    ) : (
-                      <span className="text-sm text-emerald-600 font-semibold flex items-center gap-1.5 shrink-0">
-                        <CheckCircle2 className="w-4 h-4" /> Teranalisis
+                    {item.isAnalyzing && (
+                      <span className="flex items-center gap-1.5 text-xs text-slate-400 shrink-0">
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" /> Menganalisis...
+                      </span>
+                    )}
+                    {item.analysis && !item.isAnalyzing && (
+                      <span className="text-xs text-emerald-600 font-semibold shrink-0">
+                        Teranalisis
                       </span>
                     )}
                   </div>
@@ -128,52 +139,31 @@ export function Step3BuktiKirim({
         </div>
       </Card>
 
-      <Card>
-        <div className="p-5">
-          <div className="flex items-center gap-4 mb-5">
-            <div
-              className={`w-12 h-12 rounded-2xl flex items-center justify-center shrink-0 transition-all ${
-                turnstileStatus === 'success'
-                  ? 'bg-emerald-50 border border-emerald-100'
-                  : turnstileStatus === 'error'
-                  ? 'bg-red-50 border border-red-100'
-                  : 'bg-slate-50 border border-slate-100'
-              }`}
-            >
-              {turnstileStatus === 'success' ? (
-                <ShieldCheck className="w-6 h-6 text-emerald-500" />
-              ) : turnstileStatus === 'error' ? (
-                <ShieldX className="w-6 h-6 text-red-400" />
-              ) : (
-                <ShieldEllipsis className="w-6 h-6 text-slate-400" />
-              )}
-            </div>
-            <div className="flex-1 min-w-0">
-              <p className="text-base font-semibold text-slate-800">Verifikasi Keamanan</p>
-              <p className="text-sm text-slate-400 mt-0.5 leading-snug">
-                {turnstileStatus === 'success'
-                  ? 'Verifikasi berhasil — siap kirim laporan'
-                  : turnstileStatus === 'error'
-                  ? 'Verifikasi gagal, coba refresh halaman'
-                  : 'Selesaikan verifikasi untuk mengirim laporan'}
-              </p>
-            </div>
-            {turnstileStatus === 'success' && (
-              <span className="text-xs font-semibold text-emerald-600 bg-emerald-50 border border-emerald-100 px-3 py-1.5 rounded-xl shrink-0">
-                ✓ Terverifikasi
-              </span>
-            )}
-          </div>
-          <div className="flex items-center justify-center bg-slate-50 rounded-xl py-4 border border-slate-100 overflow-hidden">
-            <Turnstile
-              siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
-              onSuccess={(token: string) => onTurnstileSuccess(token)}
-              onExpire={onTurnstileExpire}
-              onError={onTurnstileError}
-            />
-          </div>
-        </div>
-      </Card>
+      {/* Turnstile minimal */}
+      <div className="flex flex-col items-center gap-2">
+        <Turnstile
+          siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
+          onSuccess={(token: string) => onTurnstileSuccess(token)}
+          onExpire={onTurnstileExpire}
+          onError={onTurnstileError}
+        />
+        {turnstileStatus === 'success' && (
+          <p className="text-xs text-emerald-600 font-semibold flex items-center gap-1.5">
+            <ShieldCheck className="w-3.5 h-3.5" /> Verifikasi berhasil
+          </p>
+        )}
+        {turnstileStatus === 'error' && (
+          <p className="text-xs text-red-500 font-semibold flex items-center gap-1.5">
+            <ShieldX className="w-3.5 h-3.5" /> Verifikasi gagal, refresh halaman
+          </p>
+        )}
+        {turnstileStatus === 'idle' && (
+          <p className="text-xs text-slate-400 flex items-center gap-1.5">
+            <ShieldEllipsis className="w-3.5 h-3.5" /> Selesaikan verifikasi untuk kirim laporan
+          </p>
+        )}
+      </div>
+
     </div>
   );
 }

@@ -73,6 +73,7 @@ export default function ReportForm() {
   // AI analysis
   const [textAnalysis, setTextAnalysis] = useState<TextAnalysis | null>(null);
   const [isAnalyzingText, setIsAnalyzingText] = useState(false);
+  const [isAnalyzingAll, setIsAnalyzingAll] = useState(false);
 
   // ── Target handlers ────────────────────────────────────────────────────────
   const updateTarget = (index: number, updated: TargetEntry) =>
@@ -197,6 +198,16 @@ export default function ReportForm() {
     }
   };
 
+  const handleAnalyzeAll = async () => {
+    setIsAnalyzingAll(true);
+    for (let i = 0; i < evidenceFiles.length; i++) {
+      if (!evidenceFiles[i].analysis) {
+        await handleAIImageAnalysis(i);
+      }
+    }
+    setIsAnalyzingAll(false);
+  };
+
   const handleAITextAnalysis = async () => {
     if (formData.chronology.trim().length < 20) return;
     setIsAnalyzingText(true);
@@ -264,7 +275,6 @@ export default function ReportForm() {
         return;
       }
 
-      // Upload evidence files
       const uploadedUrls: string[] = [];
       for (let i = 0; i < evidenceFiles.length; i++) {
         setUploadProgress(`Mengupload foto ${i + 1} dari ${evidenceFiles.length}...`);
@@ -277,7 +287,6 @@ export default function ReportForm() {
         }
       }
 
-      // Upload suspect photo
       let suspectPhotoUrl: string | null = null;
       if (suspectPhoto) {
         setUploadProgress('Mengupload foto profil penipu...');
@@ -290,7 +299,6 @@ export default function ReportForm() {
         }
       }
 
-      // Build AI photo result payload
       const scannedFile = evidenceFiles.find((f) => f.analysis !== null);
       const aiPhotoResult: PhotoScanPayload | null = scannedFile?.analysis
         ? {
@@ -487,9 +495,10 @@ export default function ReportForm() {
           <Step3BuktiKirim
             evidenceFiles={evidenceFiles}
             turnstileStatus={turnstileStatus}
+            isAnalyzingAll={isAnalyzingAll}
             onEvidenceFileChange={handleEvidenceFileChange}
             onRemoveEvidenceFile={removeEvidenceFile}
-            onAIImageAnalysis={handleAIImageAnalysis}
+            onAnalyzeAll={handleAnalyzeAll}
             onTurnstileSuccess={(token: string) => {
               setTurnstileToken(token);
               setTurnstileStatus('success');
