@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase-browser';
 import {
   LayoutDashboard, FileText, BarChart2, Users,
   Home, LogOut, ChevronLeft, ChevronRight,
-  Search, X, Shield, ShieldX,
+  Search, X, Shield, ShieldX, Menu,
 } from 'lucide-react';
 
 interface AdminShellProps {
@@ -24,7 +24,8 @@ const navItems = [
 ];
 
 export default function AdminShell({ email, children }: AdminShellProps) {
-  const [collapsed, setCollapsed] = useState(false);
+  const [collapsed, setCollapsed]       = useState(false);
+  const [mobileOpen, setMobileOpen]     = useState(false);
   const [globalSearch, setGlobalSearch] = useState('');
   const router       = useRouter();
   const searchParams = useSearchParams();
@@ -41,22 +42,120 @@ export default function AdminShell({ email, children }: AdminShellProps) {
     if (globalSearch.trim()) {
       router.push(`/admin?tab=laporan&search=${encodeURIComponent(globalSearch.trim())}`);
       setGlobalSearch('');
+      setMobileOpen(false);
     }
   };
 
   const initial = (email || 'A').charAt(0).toUpperCase();
 
+  // Shared nav content untuk desktop & mobile
+  const NavContent = ({ onNavClick }: { onNavClick?: () => void }) => (
+    <>
+      <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
+        {navItems.map((item) => {
+          const Icon     = item.icon;
+          const isActive = activeTab === item.id;
+          return (
+            <Link
+              key={item.id}
+              href={item.href}
+              onClick={onNavClick}
+              className={`
+                flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-150
+                ${collapsed && !onNavClick ? 'justify-center px-0 mx-1' : ''}
+                ${isActive
+                  ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-200'
+                  : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}
+              `}
+            >
+              <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+              {(!collapsed || onNavClick) && <span>{item.label}</span>}
+            </Link>
+          );
+        })}
+
+        <div className="pt-3 mt-3 border-t border-slate-100">
+          <Link
+            href="/"
+            onClick={onNavClick}
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all ${collapsed && !onNavClick ? 'justify-center px-0 mx-1' : ''}`}
+          >
+            <Home className="w-4 h-4 shrink-0" />
+            {(!collapsed || onNavClick) && <span>Kembali ke Site</span>}
+          </Link>
+        </div>
+      </nav>
+
+      {/* User info */}
+      <div className={`border-t border-slate-100 p-3 shrink-0 ${collapsed && !onNavClick ? 'flex justify-center' : ''}`}>
+        <div className="flex items-center gap-2.5">
+          <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-xs font-bold text-emerald-700 shrink-0">
+            {initial}
+          </div>
+          {(!collapsed || onNavClick) && (
+            <div className="flex-1 min-w-0">
+              <p className="text-[12px] font-medium text-slate-700 truncate">{email}</p>
+              <button
+                onClick={handleLogout}
+                className="text-[11px] text-slate-400 hover:text-red-500 flex items-center gap-1 transition-colors"
+              >
+                <LogOut className="w-3 h-3" /> Logout
+              </button>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  );
+
   return (
     <div className="min-h-screen bg-slate-50 flex">
 
-      {/* ── SIDEBAR — desktop only ── */}
+      {/* ── MOBILE SIDEBAR OVERLAY ── */}
+      {mobileOpen && (
+        <div
+          className="lg:hidden fixed inset-0 bg-black/40 z-40 backdrop-blur-sm"
+          onClick={() => setMobileOpen(false)}
+        />
+      )}
+
+      {/* ── MOBILE SIDEBAR DRAWER ── */}
+      <aside className={`
+        lg:hidden fixed top-0 left-0 h-full w-[280px] bg-white border-r border-slate-200 z-50 flex flex-col
+        transition-transform duration-250 ease-out
+        ${mobileOpen ? 'translate-x-0' : '-translate-x-full'}
+      `}>
+        {/* Logo mobile */}
+        <div className="flex items-center justify-between h-16 border-b border-slate-100 px-4 shrink-0">
+          <div className="flex items-center gap-3">
+            <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center shrink-0">
+              <Shield className="w-4 h-4 text-white" />
+            </div>
+            <div>
+              <p className="text-[13px] font-bold text-slate-900 leading-tight">
+                Kawal<span className="text-emerald-600">Transaksi</span>
+              </p>
+              <p className="text-[10px] text-slate-400">Admin Panel</p>
+            </div>
+          </div>
+          <button
+            onClick={() => setMobileOpen(false)}
+            className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-colors"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+
+        <NavContent onNavClick={() => setMobileOpen(false)} />
+      </aside>
+
+      {/* ── DESKTOP SIDEBAR ── */}
       <aside className={`
         hidden lg:flex fixed top-0 left-0 h-full bg-white border-r border-slate-200 z-50 flex-col
         transition-all duration-200 ease-out
         ${collapsed ? 'w-[64px]' : 'w-[240px]'}
       `}>
-
-        {/* Logo */}
+        {/* Logo desktop */}
         <div className={`flex items-center h-16 border-b border-slate-100 shrink-0 px-4 ${collapsed ? 'justify-center px-0' : 'gap-3'}`}>
           <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center shrink-0">
             <Shield className="w-4 h-4 text-white" />
@@ -71,39 +170,7 @@ export default function AdminShell({ email, children }: AdminShellProps) {
           )}
         </div>
 
-        {/* Nav */}
-        <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
-          {navItems.map((item) => {
-            const Icon     = item.icon;
-            const isActive = activeTab === item.id;
-            return (
-              <Link
-                key={item.id}
-                href={item.href}
-                className={`
-                  flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-150
-                  ${collapsed ? 'justify-center px-0 mx-1' : ''}
-                  ${isActive
-                    ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-200'
-                    : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}
-                `}
-              >
-                <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
-                {!collapsed && <span>{item.label}</span>}
-              </Link>
-            );
-          })}
-
-          <div className="pt-3 mt-3 border-t border-slate-100">
-            <Link
-              href="/"
-              className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all ${collapsed ? 'justify-center px-0 mx-1' : ''}`}
-            >
-              <Home className="w-4 h-4 shrink-0" />
-              {!collapsed && <span>Kembali ke Site</span>}
-            </Link>
-          </div>
-        </nav>
+        <NavContent />
 
         {/* Collapse toggle */}
         <button
@@ -112,26 +179,6 @@ export default function AdminShell({ email, children }: AdminShellProps) {
         >
           {collapsed ? <ChevronRight className="w-4 h-4" /> : <ChevronLeft className="w-4 h-4" />}
         </button>
-
-        {/* User info */}
-        <div className={`border-t border-slate-100 p-3 shrink-0 ${collapsed ? 'flex justify-center' : ''}`}>
-          <div className="flex items-center gap-2.5">
-            <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-xs font-bold text-emerald-700 shrink-0">
-              {initial}
-            </div>
-            {!collapsed && (
-              <div className="flex-1 min-w-0">
-                <p className="text-[12px] font-medium text-slate-700 truncate">{email}</p>
-                <button
-                  onClick={handleLogout}
-                  className="text-[11px] text-slate-400 hover:text-red-500 flex items-center gap-1 transition-colors"
-                >
-                  <LogOut className="w-3 h-3" /> Logout
-                </button>
-              </div>
-            )}
-          </div>
-        </div>
       </aside>
 
       {/* ── MAIN CONTENT ── */}
@@ -139,13 +186,23 @@ export default function AdminShell({ email, children }: AdminShellProps) {
 
         {/* Top header */}
         <header className="h-14 sm:h-16 bg-white border-b border-slate-200 flex items-center justify-between px-3 sm:px-6 shrink-0 sticky top-0 z-30">
+          
+          {/* Hamburger — mobile only */}
+          <button
+            onClick={() => setMobileOpen(true)}
+            className="lg:hidden w-9 h-9 flex items-center justify-center rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors"
+          >
+            <Menu className="w-5 h-5" />
+          </button>
+
+          {/* Logo — mobile only */}
           <div className="flex items-center gap-2 lg:hidden">
-            <div className="w-7 h-7 bg-emerald-600 rounded-lg flex items-center justify-center">
-              <Shield className="w-3.5 h-3.5 text-white" />
-            </div>
-            <span className="text-sm font-bold text-slate-900">Kawal<span className="text-emerald-600">Transaksi</span></span>
+            <span className="text-sm font-bold text-slate-900">
+              Kawal<span className="text-emerald-600">Transaksi</span>
+            </span>
           </div>
 
+          {/* Search */}
           <form onSubmit={handleGlobalSearch} className="flex-1 max-w-lg mx-3 sm:mx-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
@@ -164,52 +221,16 @@ export default function AdminShell({ email, children }: AdminShellProps) {
             </div>
           </form>
 
-          <div className="hidden lg:flex items-center gap-2 shrink-0">
-            <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-xs font-bold text-emerald-700">
-              {initial}
-            </div>
-            <span className="text-xs text-slate-500 max-w-[160px] truncate">{email}</span>
-          </div>
-
-          <div className="flex lg:hidden items-center shrink-0">
-            <div className="w-7 h-7 rounded-full bg-emerald-100 flex items-center justify-center text-xs font-bold text-emerald-700">
-              {initial}
-            </div>
+          {/* User avatar */}
+          <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-xs font-bold text-emerald-700 shrink-0">
+            {initial}
           </div>
         </header>
 
-        <main className="flex-1 p-3 sm:p-5 lg:p-8 pb-24 lg:pb-8">
+        <main className="flex-1 p-3 sm:p-5 lg:p-8 pb-6">
           {children}
         </main>
       </div>
-
-      {/* ── BOTTOM NAV — mobile only ── */}
-      <nav className="lg:hidden fixed bottom-0 left-0 right-0 bg-white border-t border-slate-200 z-50 flex items-stretch">
-        {navItems.map((item) => {
-          const Icon     = item.icon;
-          const isActive = activeTab === item.id;
-          return (
-            <Link
-              key={item.id}
-              href={item.href}
-              className={`flex-1 flex flex-col items-center justify-center py-2.5 gap-1 transition-colors ${
-                isActive ? 'text-emerald-600' : 'text-slate-400 hover:text-slate-600'
-              }`}
-            >
-              <Icon className="w-5 h-5" />
-              <span className="text-[9px] font-semibold uppercase tracking-wider">{item.label}</span>
-            </Link>
-          );
-        })}
-        <button
-          onClick={handleLogout}
-          className="flex-1 flex flex-col items-center justify-center py-2.5 gap-1 text-slate-400 hover:text-red-500 transition-colors"
-        >
-          <LogOut className="w-5 h-5" />
-          <span className="text-[9px] font-semibold uppercase tracking-wider">Keluar</span>
-        </button>
-      </nav>
-
     </div>
   );
 }

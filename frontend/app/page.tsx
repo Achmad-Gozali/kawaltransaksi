@@ -399,32 +399,35 @@ export default async function HomePage() {
         <path d="M0,80 C360,20 720,65 1080,25 C1260,5 1380,45 1440,30 L1440,80 Z" fill="#ffffff" />
       </svg>
 
-      {/* ── 5. CTA ── */}
-      <section className="bg-white">
-        <div className="max-w-5xl mx-auto px-5 sm:px-6 py-16 sm:py-24 text-center">
-          <h2 className="text-2xl sm:text-4xl md:text-5xl font-black tracking-tighter uppercase text-slate-900 mb-4">
-            berikan kontribusi anda.
-          </h2>
-          <p className="text-slate-500 text-sm max-w-lg mx-auto mb-8 sm:mb-10 leading-relaxed">
-            Bantu lindungi pengguna lain dengan melaporkan nomor yang mencurigakan.
-            Setiap laporan berkontribusi pada ekosistem digital yang lebih aman.
-          </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Link
-              href="/report"
-              className="w-full sm:w-auto px-6 sm:px-7 py-3 sm:py-3.5 bg-emerald-700 text-white font-bold text-xs sm:text-sm tracking-widest uppercase rounded-xl hover:bg-emerald-600 transition-colors"
-            >
-              Buat Laporan Baru
-            </Link>
-            <Link
-              href="/register"
-              className="w-full sm:w-auto px-6 sm:px-7 py-3 sm:py-3.5 border-2 border-slate-200 text-slate-900 font-bold text-xs sm:text-sm tracking-widest uppercase rounded-xl hover:border-slate-900 transition-colors"
-            >
-              gabung komunitas
-            </Link>
-          </div>
-        </div>
-      </section>
+{/* ── 5. CTA ── */}
+<section className="bg-white">
+  <div className="max-w-5xl mx-auto px-5 sm:px-6 py-16 sm:py-24 text-center">
+    <h2 className="text-2xl sm:text-4xl md:text-5xl font-black tracking-tighter uppercase text-slate-900 mb-4">
+      berikan kontribusi anda.
+    </h2>
+    <p className="text-slate-500 text-sm max-w-lg mx-auto mb-8 sm:mb-10 leading-relaxed">
+      Bantu lindungi pengguna lain dengan melaporkan nomor yang mencurigakan.
+      Setiap laporan berkontribusi pada ekosistem digital yang lebih aman.
+    </p>
+    <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+      <Link href="/report" className="w-full sm:w-auto px-6 sm:px-7 py-3 sm:py-3.5 bg-emerald-700 text-white font-bold text-xs sm:text-sm tracking-widest uppercase rounded-xl hover:bg-emerald-600 transition-colors">
+        Buat Laporan Baru
+      </Link>
+      <Link href="/register" className="w-full sm:w-auto px-6 sm:px-7 py-3 sm:py-3.5 border-2 border-slate-200 text-slate-900 font-bold text-xs sm:text-sm tracking-widest uppercase rounded-xl hover:border-slate-900 transition-colors">
+        gabung komunitas
+      </Link>
+    </div>
+
+    {/* ← Tambah ini */}
+    <p className="text-xs text-slate-400 mt-8">
+      Dengan mendaftar, kamu menyetujui{' '}
+      <Link href="/syarat-ketentuan" className="underline hover:text-slate-600">Syarat Ketentuan</Link>
+      {' '}dan{' '}
+      <Link href="/kebijakan-privasi" className="underline hover:text-slate-600">Kebijakan Privasi</Link>
+      {' '}kami.
+    </p>
+  </div>
+</section>
 
     </main>
   );
