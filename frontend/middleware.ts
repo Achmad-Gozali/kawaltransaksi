@@ -2,6 +2,22 @@ import { createServerClient } from '@supabase/ssr';
 import { NextResponse, type NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
+  const pathname = request.nextUrl.pathname;
+
+  // ── MAINTENANCE MODE ──────────────────────────────────────────────────────
+  const isMaintenance = process.env.MAINTENANCE_MODE === 'true';
+  const isMaintenancePage = pathname.startsWith('/maintenance');
+  const isStaticAsset = pathname.startsWith('/_next') || pathname.startsWith('/api');
+
+  if (isMaintenance && !isMaintenancePage && !isStaticAsset) {
+    return NextResponse.redirect(new URL('/maintenance', request.url));
+  }
+
+  if (!isMaintenance && isMaintenancePage) {
+    return NextResponse.redirect(new URL('/', request.url));
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+
   let supabaseResponse = NextResponse.next({
     request: { headers: request.headers },
   });
@@ -31,7 +47,6 @@ export async function middleware(request: NextRequest) {
   );
 
   const { data: { user } } = await supabase.auth.getUser();
-  const pathname = request.nextUrl.pathname;
 
   if (['/dashboard', '/admin'].some(path => pathname.startsWith(path)) && !user) {
     const url = new URL('/login', request.url);
@@ -61,7 +76,7 @@ export async function middleware(request: NextRequest) {
         httpOnly: true,
         secure: true,
         sameSite: 'lax',
-        maxAge: 60 * 60, // 1 jam
+        maxAge: 60 * 60,
       });
     }
   }
