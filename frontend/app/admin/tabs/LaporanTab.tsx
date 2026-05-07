@@ -1,5 +1,3 @@
-// frontend/app/admin/tabs/LaporanTab.tsx
-
 'use client';
 
 import { useState, useMemo } from 'react';
@@ -100,7 +98,7 @@ export default function LaporanTab({
 
   const handleExportCSV = () => {
     const rows = [
-      ['ID', 'Nomor', 'Nama', 'Tipe', 'Bank', 'Kategori', 'Platform', 'Link URL', 'Sosmed', 'Korban Lain', 'Lapor Ke', 'Kerugian', 'Tgl Kejadian', 'Nama Toko', 'Provinsi', 'Status', 'Pelapor', 'Tgl Lapor'],
+      ['ID', 'Nomor', 'Nama', 'Tipe', 'Bank', 'Kategori', 'Platform', 'Link URL', 'Sosmed', 'Korban Lain', 'Lapor Ke', 'Kerugian', 'Tgl Kejadian', 'Nama Toko', 'Provinsi', 'Nomor Terkait', 'Status', 'Pelapor', 'Tgl Lapor'],
       ...reports.map(r => [
         r.id, r.target_number, r.target_name ?? '', r.target_type, r.bank_name ?? '',
         r.category, r.platform ?? '', r.link_url ?? '',
@@ -110,6 +108,7 @@ export default function LaporanTab({
         r.incident_date ?? '',
         r.store_name ?? '',
         r.suspect_city ?? '',
+        (r.target_numbers ?? []).map(t => t.number).join(';'),
         r.status, r.reporter_email, r.created_at,
       ]),
     ];
@@ -118,6 +117,12 @@ export default function LaporanTab({
     a.href = URL.createObjectURL(new Blob([csv], { type: 'text/csv' }));
     a.download = `laporan-${todayStr}.csv`;
     a.click();
+  };
+
+  const getEvidenceUrls = (report: Report): string[] => {
+    if (report.evidence_urls && report.evidence_urls.length > 0) return report.evidence_urls.filter(Boolean) as string[];
+    if (report.evidence_url) return [report.evidence_url];
+    return [];
   };
 
   return (
@@ -260,6 +265,8 @@ export default function LaporanTab({
             const isSel = selectedIds.has(report.id);
             const hasSocmed = (report.social_media_accounts ?? []).filter(Boolean).length > 0;
             const hasReportedTo = (report.reported_to ?? []).filter(Boolean).length > 0;
+            const evidenceUrls = getEvidenceUrls(report);
+            const relatedNumbers = (report.target_numbers ?? []).filter(t => t.number !== report.target_number);
 
             return (
               <div
@@ -292,6 +299,9 @@ export default function LaporanTab({
                         {report.has_other_victims === 'yes' && (
                           <span className="text-[10px] px-2 py-0.5 bg-orange-50 text-orange-600 border border-orange-200 rounded-lg font-semibold">👥 Multi korban</span>
                         )}
+                        {relatedNumbers.length > 0 && (
+                          <span className="text-[10px] px-2 py-0.5 bg-slate-100 text-slate-500 rounded-lg font-medium">+{relatedNumbers.length} nomor terkait</span>
+                        )}
                       </div>
                       <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-400">
                         <span className="bg-slate-100 px-2 py-0.5 rounded-lg font-medium text-slate-500">{report.category}</span>
@@ -300,6 +310,11 @@ export default function LaporanTab({
                         {report.platform ? <span className="bg-slate-100 px-2 py-0.5 rounded-lg text-slate-500">{report.platform}</span> : null}
                         {report.store_name ? <span className="flex items-center gap-1 bg-slate-100 px-2 py-0.5 rounded-lg text-slate-500"><Store className="w-2.5 h-2.5" />{report.store_name}</span> : null}
                         {report.suspect_city ? <span className="flex items-center gap-1 bg-slate-100 px-2 py-0.5 rounded-lg text-slate-500"><MapPin className="w-2.5 h-2.5" />{report.suspect_city}</span> : null}
+                        {evidenceUrls.length > 0 && (
+                          <span className="flex items-center gap-1 bg-slate-100 px-2 py-0.5 rounded-lg text-slate-500">
+                            <Eye className="w-2.5 h-2.5" />{evidenceUrls.length} foto
+                          </span>
+                        )}
                       </div>
                       {hasSocmed && (
                         <div className="flex flex-wrap gap-1 mt-1.5">
@@ -363,6 +378,8 @@ export default function LaporanTab({
                 {/* Expanded detail */}
                 {isExp && (
                   <div className="border-t border-slate-100 px-4 sm:px-5 py-5 bg-slate-50/60 space-y-5">
+
+                    {/* Foto penipu */}
                     {report.suspect_photo_url && (
                       <div className="flex items-start gap-4 p-4 bg-red-50 border border-red-100 rounded-xl">
                         <div className="relative w-16 h-16 shrink-0">
@@ -379,6 +396,8 @@ export default function LaporanTab({
                         </div>
                       </div>
                     )}
+
+                    {/* Detail grid */}
                     <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-4 gap-3">
                       {[
                         { label: 'Pelapor',      value: report.reporter_email,   className: '' },
@@ -405,6 +424,28 @@ export default function LaporanTab({
                         </div>
                       )}
                     </div>
+
+                    {/* Nomor terkait */}
+                    {relatedNumbers.length > 0 && (
+                      <div>
+                        <p className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold mb-2 flex items-center gap-1.5">
+                          <Phone className="w-3 h-3" /> Nomor Terkait Pelaku
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {relatedNumbers.map((t, i) => (
+                            <a key={i} href={`/check/${t.number}`} target="_blank" rel="noopener noreferrer"
+                              className="px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-mono text-slate-700 hover:border-slate-400 transition-colors flex items-center gap-1.5">
+                              {t.number}
+                              {t.bank && <span className="text-slate-400">· {t.bank}</span>}
+                              {t.name && <span className="text-slate-400">· {t.name}</span>}
+                              <ExternalLink className="w-2.5 h-2.5 text-slate-400" />
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Akun sosmed */}
                     {hasSocmed && (
                       <div>
                         <p className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold mb-2 flex items-center gap-1.5">
@@ -421,6 +462,8 @@ export default function LaporanTab({
                         </div>
                       </div>
                     )}
+
+                    {/* Sudah lapor ke */}
                     {hasReportedTo && (
                       <div>
                         <p className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold mb-2 flex items-center gap-1.5">
@@ -435,19 +478,40 @@ export default function LaporanTab({
                         </div>
                       </div>
                     )}
+
+                    {/* Kronologi */}
                     <div>
                       <p className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold mb-2">Kronologi</p>
                       <div className="bg-white border border-slate-100 rounded-xl p-4">
-                        <p className="text-sm text-slate-600 leading-relaxed">{report.chronology}</p>
+                        <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">{report.chronology}</p>
                       </div>
                     </div>
-                    <div className="flex gap-4 pt-1">
-                      {report.evidence_url && (
-                        <a href={report.evidence_url} target="_blank" rel="noopener noreferrer"
-                          className="text-xs text-slate-500 hover:text-slate-900 flex items-center gap-1.5 font-medium transition-colors">
-                          <Eye className="w-3.5 h-3.5" />Lihat Bukti
-                        </a>
-                      )}
+
+                    {/* Bukti foto */}
+                    {evidenceUrls.length > 0 && (
+                      <div>
+                        <p className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold mb-2 flex items-center gap-1.5">
+                          <Eye className="w-3 h-3" /> Bukti Foto ({evidenceUrls.length})
+                        </p>
+                        <div className="flex flex-wrap gap-2">
+                          {evidenceUrls.map((url, i) => (
+                            <a key={i} href={url} target="_blank" rel="noopener noreferrer"
+                              className="relative w-24 h-24 rounded-xl overflow-hidden border border-slate-200 hover:border-slate-400 transition-colors block group">
+                              <Image src={url} alt={`Bukti ${i + 1}`} fill className="object-cover" unoptimized />
+                              <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
+                                <ExternalLink className="w-4 h-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
+                              </div>
+                              <span className="absolute bottom-1 left-1 text-[9px] bg-black/50 text-white px-1.5 py-0.5 rounded font-medium">
+                                {i + 1}
+                              </span>
+                            </a>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Footer link */}
+                    <div className="flex gap-4 pt-1 border-t border-slate-100">
                       <a href={`/check/${report.target_number}`} target="_blank" rel="noopener noreferrer"
                         className="text-xs text-slate-400 hover:text-slate-700 flex items-center gap-1.5 transition-colors">
                         <ExternalLink className="w-3.5 h-3.5" />Halaman Publik

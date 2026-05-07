@@ -1,5 +1,3 @@
-// frontend/app/admin/types.ts
-
 export interface Report {
   id: string;
   reporter_email: string;
@@ -9,6 +7,13 @@ export interface Report {
   category: string;
   chronology: string;
   evidence_url: string | null;
+  evidence_urls?: string[] | null;
+  target_numbers?: {
+    number: string;
+    type: string;
+    bank: string | null;
+    name: string | null;
+  }[] | null;
   status: string;
   created_at: string;
   bank_name?: string | null;
