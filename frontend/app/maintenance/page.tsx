@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import Image from 'next/image';
 
 export const metadata: Metadata = {
   title: 'Maintenance - KawalTransaksi',
@@ -10,14 +11,15 @@ export default function MaintenancePage() {
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center px-4">
       <div className="max-w-md w-full text-center space-y-5">
 
-        {/* Icon */}
+        {/* Image */}
         <div className="flex justify-center">
-          <div className="w-20 h-20 bg-amber-50 border border-amber-100 rounded-3xl flex items-center justify-center">
-            <svg xmlns="http://www.w3.org/2000/svg" className="w-10 h-10 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M12 22C6.477 22 2 17.523 2 12S6.477 2 12 2s10 4.477 10 10-4.477 10-10 10z"/>
-              <path d="M12 8v4M12 16h.01"/>
-            </svg>
-          </div>
+          <Image
+            src="/maintenance.png"
+            alt="Sedang Maintenance"
+            width={280}
+            height={280}
+            priority
+          />
         </div>
 
         {/* Text */}
