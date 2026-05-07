@@ -8,12 +8,7 @@ export interface Report {
   chronology: string;
   evidence_url: string | null;
   evidence_urls?: string[] | null;
-  target_numbers?: {
-    number: string;
-    type: string;
-    bank: string | null;
-    name: string | null;
-  }[] | null;
+  target_numbers?: any[] | null;  // ← pakai any[] karena Supabase return Json
   status: string;
   created_at: string;
   bank_name?: string | null;
