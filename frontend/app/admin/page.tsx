@@ -81,7 +81,7 @@ export default async function AdminPage() {
     }>
       <AdminDashboard
         stats={stats}
-        reports={reports ?? []}
+        reports={(reports ?? []) as any[]}
         users={users ?? []}
         token={token}
       />
