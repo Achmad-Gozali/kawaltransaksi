@@ -9,6 +9,7 @@ export const metadata: Metadata = {
 };
 
 export default function MaintenancePage() {
+  const estimate = process.env.NEXT_PUBLIC_MAINTENANCE_ESTIMATE ?? '30 menit - 1 jam';
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center px-4 py-8">
       <div className="w-full max-w-xl text-center">
@@ -24,7 +25,7 @@ export default function MaintenancePage() {
           <p className="text-slate-500 text-sm sm:text-base leading-relaxed">Kami sedang melakukan peningkatan sistem untuk memberikan pengalaman yang lebih baik untuk Anda.</p>
         </div>
         <div className="text-sm sm:text-base text-slate-500 mb-6">
-          <span>Estimasi selesai: <span className="font-bold text-emerald-700">1 - 3 jam</span></span>
+          <span>Estimasi selesai: <span className="font-bold text-emerald-700">{estimate}</span></span>
         </div>
         <div className="flex items-center justify-center gap-3 flex-wrap mb-6">
           <a href="/maintenance" className="flex items-center gap-2 px-7 py-3.5 bg-emerald-700 text-white text-sm sm:text-base font-bold rounded-xl hover:bg-emerald-800 transition-colors"><RefreshCw className="w-4 h-4" />Refresh Halaman</a>
