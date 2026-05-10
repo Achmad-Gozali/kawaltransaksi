@@ -31,25 +31,64 @@ app.get("/:slug", async (c) => {
 
 export default app;
 
+// ── Tema edukasi per kategori ─────────────────────────────────────────────────
 const EDUCATION_THEMES: Record<string, string[]> = {
-  "Jual Beli Online": ["ciri-ciri penjual palsu di marketplace", "cara aman belanja online", "modus penipuan COD yang marak"],
-  "Phishing / Soceng": ["cara mengenali link phishing", "modus social engineering terbaru", "tips melindungi akun dari phishing"],
-  "Investasi Bodong": ["ciri-ciri investasi bodong", "cara menghindari money game", "tips sebelum berinvestasi online"],
-  "Lowongan Kerja Palsu": ["cara mengenali lowongan kerja palsu", "modus penipuan rekrutmen online", "tips aman mencari kerja online"],
-  "Penipuan Percintaan": ["modus romance scam yang marak", "cara mengenali akun palsu di media sosial", "tips aman berkenalan online"],
-  "Pinjaman Online": ["ciri-ciri pinjol ilegal", "cara melaporkan pinjol ilegal", "tips aman meminjam uang online"],
-  "default": ["tips aman bertransaksi online", "cara melindungi data pribadi di internet", "modus penipuan online yang perlu diwaspadai"],
+  "Jual Beli Online": [
+    "ciri-ciri penjual palsu di marketplace",
+    "cara aman belanja online",
+    "modus penipuan COD yang marak",
+  ],
+  "Phishing / Soceng": [
+    "cara mengenali link phishing",
+    "modus social engineering terbaru",
+    "tips melindungi akun dari phishing",
+  ],
+  "Investasi Bodong": [
+    "ciri-ciri investasi bodong",
+    "cara menghindari money game",
+    "tips sebelum berinvestasi online",
+  ],
+  "Lowongan Kerja Palsu": [
+    "cara mengenali lowongan kerja palsu",
+    "modus penipuan rekrutmen online",
+    "tips aman mencari kerja online",
+  ],
+  "Penipuan Percintaan": [
+    "modus romance scam yang marak",
+    "cara mengenali akun palsu di media sosial",
+    "tips aman berkenalan online",
+  ],
+  "Pinjaman Online": [
+    "ciri-ciri pinjol ilegal",
+    "cara melaporkan pinjol ilegal",
+    "tips aman meminjam uang online",
+  ],
+  "default": [
+    "tips aman bertransaksi online",
+    "cara melindungi data pribadi di internet",
+    "modus penipuan online yang perlu diwaspadai",
+  ],
 };
 
 function getEducationAngle(topCategory: string | null, topPlatform: string | null): string {
   const themes = topCategory && EDUCATION_THEMES[topCategory]
     ? EDUCATION_THEMES[topCategory]
     : EDUCATION_THEMES["default"];
-  const randomTheme = themes[Math.floor(Math.random() * themes.length)];
-  const platformContext = topPlatform ? ` khususnya yang terjadi di ${topPlatform}` : '';
-  return `${randomTheme}${platformContext}`;
+  const theme = themes[Math.floor(Math.random() * themes.length)];
+  return topPlatform ? `${theme} khususnya yang terjadi di ${topPlatform}` : theme;
 }
 
+// ── Normalisasi format konten dari Groq ───────────────────────────────────────
+function fixArticleFormat(raw: string): string {
+  return raw
+    .replace(/([^\n])\n(## )/g, '$1\n\n$2')   // baris kosong sebelum heading
+    .replace(/(## [^\n]+)\n([^\n])/g, '$1\n\n$2') // baris kosong setelah heading
+    .replace(/\*\*/g, '')                          // hapus bold markdown
+    .replace(/\n{3,}/g, '\n\n')                    // max 2 baris kosong berturut
+    .trim();
+}
+
+// ── Generate artikel mingguan (dipanggil cron & manual) ───────────────────────
 export async function generateWeeklyArticle(env: Env): Promise<void> {
   const supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
 
@@ -65,7 +104,7 @@ export async function generateWeeklyArticle(env: Env): Promise<void> {
     .in("status", ["verified", "pending"]);
 
   if (!reports || reports.length === 0) {
-    console.log("[CRON] Tidak ada laporan minggu ini, skip generate artikel.");
+    console.log("[CRON] Tidak ada laporan minggu ini, skip.");
     return;
   }
 
@@ -76,69 +115,84 @@ export async function generateWeeklyArticle(env: Env): Promise<void> {
   const platformCount: Record<string, number> = {};
   const bankCount: Record<string, number> = {};
 
-  reports.forEach((r) => {
+  for (const r of reports) {
     if (r.category) categoryCount[r.category] = (categoryCount[r.category] ?? 0) + 1;
     if (r.platform) platformCount[r.platform] = (platformCount[r.platform] ?? 0) + 1;
     if (r.bank_name) bankCount[r.bank_name] = (bankCount[r.bank_name] ?? 0) + 1;
-  });
+  }
 
-  const topCategory = Object.entries(categoryCount).sort((a, b) => b[1] - a[1])[0];
-  const topPlatform = Object.entries(platformCount).sort((a, b) => b[1] - a[1])[0];
-  const topBank = Object.entries(bankCount).sort((a, b) => b[1] - a[1])[0];
+  const sorted = (obj: Record<string, number>) =>
+    Object.entries(obj).sort((a, b) => b[1] - a[1]);
 
-  const categoryList = Object.entries(categoryCount).sort((a, b) => b[1] - a[1]).map(([name, count]) => `- ${name}: ${count} laporan`).join("\n");
-  const platformList = Object.entries(platformCount).sort((a, b) => b[1] - a[1]).map(([name, count]) => `- ${name}: ${count} laporan`).join("\n");
-  const bankList = Object.entries(bankCount).sort((a, b) => b[1] - a[1]).map(([name, count]) => `- ${name}: ${count} rekening`).join("\n");
+  const topCategory = sorted(categoryCount)[0];
+  const topPlatform = sorted(platformCount)[0];
+  const topBank = sorted(bankCount)[0];
 
-  const totalLossFormatted = new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(totalLoss);
+  const toList = (entries: [string, number][], suffix: string) =>
+    entries.map(([name, count]) => `- ${name}: ${count} ${suffix}`).join("\n") || "- Tidak ada data";
+
+  const totalLossFormatted = new Intl.NumberFormat("id-ID", {
+    style: "currency", currency: "IDR", maximumFractionDigits: 0,
+  }).format(totalLoss);
+
   const weekStr = `${periodStart.toLocaleDateString("id-ID", { day: "numeric", month: "long" })} – ${periodEnd.toLocaleDateString("id-ID", { day: "numeric", month: "long", year: "numeric" })}`;
 
-  // ── Generate artikel laporan mingguan ─────────────────────────────────────
-  const promptLaporan = `Kamu adalah analis keamanan digital dari platform KawalTransaksi, platform komunitas anti-penipuan Indonesia.
+  const groqHeaders = {
+    "Content-Type": "application/json",
+    Authorization: `Bearer ${env.GROQ_API_KEY}`,
+  };
 
-Berikut data laporan penipuan yang masuk minggu ${weekStr}:
-Total laporan: ${totalReports}
-Total kerugian: ${totalLossFormatted}
+  // ── Artikel laporan mingguan ──────────────────────────────────────────────
+  const promptLaporan = `Kamu adalah analis keamanan digital dari KawalTransaksi, platform komunitas anti-penipuan Indonesia.
+
+Data laporan penipuan minggu ${weekStr}:
+- Total laporan: ${totalReports}
+- Total kerugian: ${totalLossFormatted}
 
 Kategori penipuan:
-${categoryList || "- Tidak ada data"}
+${toList(sorted(categoryCount), "laporan")}
 
 Platform yang digunakan penipu:
-${platformList || "- Tidak ada data"}
+${toList(sorted(platformCount), "laporan")}
 
 Bank/e-wallet yang digunakan penipu:
-${bankList || "- Tidak ada data"}
+${toList(sorted(bankCount), "rekening")}
 
-Tulis artikel analisis pola penipuan minggu ini dalam bahasa Indonesia yang mudah dipahami masyarakat umum.
+Tulis artikel analisis pola penipuan minggu ini dalam bahasa Indonesia yang mudah dipahami.
 
-Format artikel dalam Markdown:
+Gunakan format Markdown berikut, dengan baris kosong di antara setiap section:
+
 ## Ringkasan Minggu Ini
-(2-3 kalimat ringkasan situasi minggu ini)
 
 ## Modus yang Paling Marak
-(jelaskan pola yang ditemukan berdasarkan data, gunakan **bold** untuk kata kunci penting)
 
 ## Platform yang Digunakan Penipu
-(analisis kenapa platform ini dipilih penipu)
 
 ## Tips Waspada
-(3-4 tips spesifik, gunakan format list dengan -)
+(gunakan format list dengan -)
 
 ## Penutup
-(ajakan untuk selalu cek nomor sebelum transaksi)
 
-Panjang artikel: 400-600 kata. Gunakan bahasa informatif tapi mudah dipahami.`;
+Panjang: 400-600 kata. Jangan gunakan asterisk bold (**teks**). Pisahkan setiap section dengan baris kosong.`;
 
-  const groqResLaporan = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+  const resLaporan = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${env.GROQ_API_KEY}` },
-    body: JSON.stringify({ model: "llama-3.3-70b-versatile", messages: [{ role: "user", content: promptLaporan }], max_tokens: 1500, temperature: 0.7 }),
+    headers: groqHeaders,
+    body: JSON.stringify({
+      model: "llama-3.3-70b-versatile",
+      messages: [{ role: "user", content: promptLaporan }],
+      max_tokens: 1500,
+      temperature: 0.7,
+    }),
   });
 
-  if (groqResLaporan.ok) {
-    const groqData = (await groqResLaporan.json()) as any;
-    const content = groqData.choices?.[0]?.message?.content ?? "";
-    if (content) {
+  if (resLaporan.ok) {
+    const groqData = (await resLaporan.json()) as any;
+    const rawContent = groqData.choices?.[0]?.message?.content ?? "";
+    if (rawContent) {
+      const content = fixArticleFormat(rawContent);
+      const summary = content.replace(/^##.*$/gm, '').trim().split('\n').filter(Boolean)[0] ?? "";
+
       const startDay = periodStart.getDate();
       const endDay = periodEnd.getDate();
       const endMonthYear = periodEnd.toLocaleDateString("id-ID", { month: "long", year: "numeric" });
@@ -148,7 +202,6 @@ Panjang artikel: 400-600 kata. Gunakan bahasa informatif tapi mudah dipahami.`;
       const title = `Laporan Penipuan ${startLabel}–${endDay} ${endMonthYear}`;
       const endMonthSlug = periodEnd.toLocaleDateString("id-ID", { month: "long" }).toLowerCase().replace(/ /g, "-");
       const slug = `laporan-${startDay}-${endDay}-${endMonthSlug}-${periodEnd.getFullYear()}`;
-      const summary = content.replace(/^##.*$/gm, '').replace(/\*\*/g, '').trim().split('\n').filter(Boolean)[0] ?? "";
 
       await supabase.from("articles").upsert({
         title, slug, content, summary,
@@ -160,63 +213,66 @@ Panjang artikel: 400-600 kata. Gunakan bahasa informatif tapi mudah dipahami.`;
         top_platform: topPlatform?.[0] ?? null,
         top_bank: topBank?.[0] ?? null,
         published_at: new Date().toISOString(),
-        status: 'draft',
+        status: "draft",
         cover_image: null,
       }, { onConflict: "slug" });
 
-      console.log(`[CRON] Artikel laporan berhasil di-generate: ${title}`);
+      console.log(`[CRON] Artikel laporan: ${title}`);
     }
   }
 
-  // ── Generate artikel edukasi (opsi C) ────────────────────────────────────
+  // ── Artikel edukasi ───────────────────────────────────────────────────────
   const educationAngle = getEducationAngle(topCategory?.[0] ?? null, topPlatform?.[0] ?? null);
 
-  const promptEdukasi = `Kamu adalah analis keamanan digital dari platform KawalTransaksi, platform komunitas anti-penipuan Indonesia.
+  const promptEdukasi = `Kamu adalah analis keamanan digital dari KawalTransaksi, platform komunitas anti-penipuan Indonesia.
 
-Minggu ini, modus penipuan yang paling banyak dilaporkan adalah "${topCategory?.[0] ?? 'penipuan online'}" dan platform yang paling sering digunakan penipu adalah "${topPlatform?.[0] ?? 'media sosial'}".
+Minggu ini modus terbanyak adalah "${topCategory?.[0] ?? 'penipuan online'}" via "${topPlatform?.[0] ?? 'media sosial'}".
 
-Tulis artikel edukasi yang informatif tentang: ${educationAngle}
+Tulis artikel edukasi tentang: ${educationAngle}
 
-Format artikel dalam Markdown:
+Gunakan format Markdown berikut, dengan baris kosong di antara setiap section:
+
 ## Pendahuluan
-(2-3 kalimat pembuka yang menarik perhatian pembaca)
 
 ## Bagaimana Modus Ini Bekerja
-(jelaskan langkah-langkah modus penipuan ini dengan detail, gunakan **bold** untuk kata kunci penting)
 
 ## Tanda-tanda yang Perlu Diwaspadai
-(4-5 tanda bahaya, gunakan format list dengan -)
+(gunakan format list dengan -)
 
 ## Langkah Pencegahan
-(4-5 langkah konkret yang bisa dilakukan, gunakan format list dengan -)
+(gunakan format list dengan -)
 
 ## Apa yang Harus Dilakukan Jika Sudah Menjadi Korban
-(panduan singkat)
 
 ## Penutup
-(ajakan untuk selalu cek nomor di KawalTransaksi sebelum transaksi)
 
-Panjang artikel: 500-700 kata. Gunakan bahasa yang informatif, mudah dipahami, dan engaging.`;
+Panjang: 500-700 kata. Jangan gunakan asterisk bold (**teks**). Pisahkan setiap section dengan baris kosong.`;
 
-  const groqResEdukasi = await fetch("https://api.groq.com/openai/v1/chat/completions", {
+  const resEdukasi = await fetch("https://api.groq.com/openai/v1/chat/completions", {
     method: "POST",
-    headers: { "Content-Type": "application/json", Authorization: `Bearer ${env.GROQ_API_KEY}` },
-    body: JSON.stringify({ model: "llama-3.3-70b-versatile", messages: [{ role: "user", content: promptEdukasi }], max_tokens: 1500, temperature: 0.8 }),
+    headers: groqHeaders,
+    body: JSON.stringify({
+      model: "llama-3.3-70b-versatile",
+      messages: [{ role: "user", content: promptEdukasi }],
+      max_tokens: 1500,
+      temperature: 0.8,
+    }),
   });
 
-  if (groqResEdukasi.ok) {
-    const groqData = (await groqResEdukasi.json()) as any;
-    const content = groqData.choices?.[0]?.message?.content ?? "";
-    if (content) {
-      const titleEdukasi = `${educationAngle.charAt(0).toUpperCase() + educationAngle.slice(1)}`;
+  if (resEdukasi.ok) {
+    const groqData = (await resEdukasi.json()) as any;
+    const rawContent = groqData.choices?.[0]?.message?.content ?? "";
+    if (rawContent) {
+      const content = fixArticleFormat(rawContent);
+      const summary = content.replace(/^##.*$/gm, '').trim().split('\n').filter(Boolean)[0] ?? "";
+      const titleEdukasi = educationAngle.charAt(0).toUpperCase() + educationAngle.slice(1);
       const slugEdukasi = `edukasi-${educationAngle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}-${periodEnd.getFullYear()}-${periodEnd.getMonth() + 1}-${periodEnd.getDate()}`;
-      const summaryEdukasi = content.replace(/^##.*$/gm, '').replace(/\*\*/g, '').trim().split('\n').filter(Boolean)[0] ?? "";
 
       await supabase.from("articles").upsert({
         title: titleEdukasi,
         slug: slugEdukasi,
         content,
-        summary: summaryEdukasi,
+        summary,
         period_start: periodStart.toISOString(),
         period_end: periodEnd.toISOString(),
         total_reports: null,
@@ -225,11 +281,11 @@ Panjang artikel: 500-700 kata. Gunakan bahasa yang informatif, mudah dipahami, d
         top_platform: topPlatform?.[0] ?? null,
         top_bank: null,
         published_at: new Date().toISOString(),
-        status: 'draft',
+        status: "draft",
         cover_image: null,
       }, { onConflict: "slug" });
 
-      console.log(`[CRON] Artikel edukasi berhasil di-generate: ${titleEdukasi}`);
+      console.log(`[CRON] Artikel edukasi: ${titleEdukasi}`);
     }
   }
 }

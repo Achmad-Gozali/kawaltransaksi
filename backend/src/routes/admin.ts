@@ -257,7 +257,7 @@ admin.get('/articles', authMiddleware, requireAdmin, async (c) => {
     const supabase = getSupabaseAdmin(c.env);
     const { data, error } = await supabase
       .from('articles')
-      .select('id, title, slug, summary, status, cover_image, published_at, total_reports, top_category, created_at')
+      .select('id, title, slug, summary, content, status, cover_image, published_at, total_reports, top_category, created_at')
       .order('created_at', { ascending: false });
     if (error) throw error;
     return c.json({ success: true, data });
@@ -284,6 +284,44 @@ admin.patch('/articles/:id', authMiddleware, requireAdmin, async (c) => {
     return c.json({ success: true });
   } catch {
     return c.json({ success: false, message: 'Gagal update artikel.' }, 500);
+  }
+});
+
+// ── POST /api/admin/articles/generate ────────────────────────────────────────
+admin.post('/articles/generate', authMiddleware, requireAdmin, async (c) => {
+  try {
+    const { generateWeeklyArticle } = await import('./articles');
+    await generateWeeklyArticle(c.env);
+    return c.json({ success: true, message: 'Artikel berhasil di-generate.' });
+  } catch (err: any) {
+    return c.json({ success: false, message: err?.message || 'Gagal generate artikel.' }, 500);
+  }
+});
+
+// ── POST /api/admin/articles ──────────────────────────────────────────────────
+admin.post('/articles', authMiddleware, requireAdmin, async (c) => {
+  try {
+    const body = await c.req.json();
+    const { title, content, summary, top_category } = body;
+    if (!title || !content || !summary) {
+      return c.json({ success: false, message: 'Title, content, dan summary wajib diisi.' }, 400);
+    }
+    const slug = `${title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}-${Date.now()}`;
+    const supabase = getSupabaseAdmin(c.env);
+    const { data, error } = await supabase.from('articles').insert({
+      title,
+      content,
+      summary,
+      slug,
+      top_category: top_category || null,
+      status: 'draft',
+      published_at: new Date().toISOString(),
+      created_at: new Date().toISOString(),
+    }).select('id').single();
+    if (error) throw error;
+    return c.json({ success: true, data });
+  } catch {
+    return c.json({ success: false, message: 'Gagal membuat artikel.' }, 500);
   }
 });
 

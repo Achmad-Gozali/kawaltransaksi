@@ -41,6 +41,16 @@ function estimateReadTime(content: string): string {
   return `${minutes} menit baca`;
 }
 
+function renderInline(text: string) {
+  const parts = text.split(/(\*\*[^*]+\*\*)/g);
+  return parts.map((part, i) => {
+    if (part.startsWith('**') && part.endsWith('**')) {
+      return <strong key={i}>{part.slice(2, -2)}</strong>;
+    }
+    return part;
+  });
+}
+
 function renderContent(content: string) {
   const blocks = content.split('\n\n');
   return blocks.map((block, i) => {
@@ -61,7 +71,7 @@ function renderContent(content: string) {
         <ul key={i} className="space-y-2 pl-5 my-2">
           {items.map((item, j) => (
             <li key={j} className="text-slate-700 text-sm sm:text-base leading-relaxed list-disc">
-              {item.replace(/^-\s*/, '')}
+              {renderInline(item.replace(/^-\s*/, ''))}
             </li>
           ))}
         </ul>
@@ -70,7 +80,7 @@ function renderContent(content: string) {
 
     return (
       <p key={i} className="text-slate-700 text-sm sm:text-base leading-relaxed">
-        {trimmed}
+        {renderInline(trimmed)}
       </p>
     );
   });
@@ -116,7 +126,7 @@ export default async function ArtikelDetailPage({ params }: Props) {
                 <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 text-slate-500">{article.total_reports} laporan masuk</span>
               )}
               {(article.total_loss ?? 0) > 0 && (
-                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-50 text-red-500">{formatLoss(article.total_loss!)} kerugian</span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-red-50 text-red-500">{formatLoss(article.total_loss!)}</span>
               )}
             </div>
 

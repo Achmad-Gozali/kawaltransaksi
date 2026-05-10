@@ -28,10 +28,11 @@ function formatLoss(amount: number): string {
 export default async function ArtikelPage() {
   const supabase = await createClient();
   const { data: articles } = await (supabase
-    .from('articles')
+    .from('articles') as any)
     .select('id, title, slug, summary, total_reports, total_loss, published_at, cover_image, content, top_category')
+    .eq('status', 'published')
     .order('published_at', { ascending: false })
-    .limit(20) as any);
+    .limit(20);
 
   return (
     <main className="bg-white min-h-screen font-sans">
