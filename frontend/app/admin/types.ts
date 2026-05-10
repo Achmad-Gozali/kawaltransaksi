@@ -8,7 +8,7 @@ export interface Report {
   chronology: string;
   evidence_url: string | null;
   evidence_urls?: string[] | null;
-  target_numbers?: any[] | null;  // ← pakai any[] karena Supabase return Json
+  target_numbers?: any[] | null;
   status: string;
   created_at: string;
   bank_name?: string | null;
@@ -35,6 +35,20 @@ export interface AdminUser {
   updated_at: string | null;
 }
 
+export interface AdminArticle {
+  id: string;
+  title: string;
+  slug: string;
+  summary: string;
+  content?: string;
+  status: string;
+  cover_image: string | null;
+  published_at: string;
+  total_reports: number | null;
+  top_category: string | null;
+  created_at: string;
+}
+
 export interface BlacklistEntry {
   ip: string;
   reason: string;
@@ -57,7 +71,7 @@ export interface Stats {
   rejected: number;
 }
 
-export type Tab = 'dashboard' | 'laporan' | 'statistik' | 'pengguna' | 'blacklist';
+export type Tab = 'dashboard' | 'laporan' | 'statistik' | 'pengguna' | 'blacklist' | 'artikel';
 export type StatusFilter = 'semua' | 'pending' | 'verified' | 'rejected' | 'withdrawn';
 
 export const reportedToLabel: Record<string, string> = {

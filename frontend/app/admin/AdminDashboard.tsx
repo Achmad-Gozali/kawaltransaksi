@@ -1,5 +1,3 @@
-// frontend/app/admin/AdminDashboard.tsx
-
 'use client';
 
 import { Suspense } from 'react';
@@ -9,13 +7,11 @@ import LaporanTab from './tabs/LaporanTab';
 import StatistikTab from './tabs/StatistikTab';
 import PenggunaTab from './tabs/PenggunaTab';
 import BlacklistTab from './tabs/BlacklistTab';
+import ArtikelTab from './tabs/ArtikelTab';
 import type { Stats, Report, AdminUser, Tab } from './types';
 
 function DashboardInner({
-  stats,
-  reports,
-  users,
-  token,
+  stats, reports, users, token,
 }: {
   stats: Stats;
   reports: Report[];
@@ -32,6 +28,7 @@ function DashboardInner({
     case 'statistik':  return <StatistikTab stats={stats} reports={reports} />;
     case 'pengguna':   return <PenggunaTab users={users} />;
     case 'blacklist':  return <BlacklistTab token={token} />;
+    case 'artikel':    return <ArtikelTab token={token} />;
     default:           return <DashboardTab stats={stats} reports={reports} />;
   }
 }

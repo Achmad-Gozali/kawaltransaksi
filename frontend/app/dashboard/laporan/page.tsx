@@ -54,9 +54,6 @@ export default async function LaporanPage() {
           className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5"
         >
           <div>
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-900 text-white text-[10px] font-bold uppercase tracking-[0.2em] mb-4">
-              <User className="w-3 h-3" /> Laporan Saya
-            </div>
             <h1 className="text-3xl font-extrabold text-zinc-900 tracking-tight">Riwayat Laporan</h1>
             <p className="text-zinc-400 text-sm mt-1 truncate max-w-xs">{user.email}</p>
           </div>

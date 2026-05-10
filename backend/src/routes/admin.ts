@@ -251,4 +251,40 @@ admin.get('/iplogs', authMiddleware, requireAdmin, async (c) => {
   }
 });
 
+// ── GET /api/admin/articles ───────────────────────────────────────────────────
+admin.get('/articles', authMiddleware, requireAdmin, async (c) => {
+  try {
+    const supabase = getSupabaseAdmin(c.env);
+    const { data, error } = await supabase
+      .from('articles')
+      .select('id, title, slug, summary, status, cover_image, published_at, total_reports, top_category, created_at')
+      .order('created_at', { ascending: false });
+    if (error) throw error;
+    return c.json({ success: true, data });
+  } catch {
+    return c.json({ success: false, message: 'Gagal mengambil artikel.' }, 500);
+  }
+});
+
+// ── PATCH /api/admin/articles/:id ─────────────────────────────────────────────
+admin.patch('/articles/:id', authMiddleware, requireAdmin, async (c) => {
+  try {
+    const id = c.req.param('id');
+    if (!UUID_REGEX.test(id)) return c.json({ success: false, message: 'ID tidak valid.' }, 400);
+    const body = await c.req.json();
+    const allowed = ['title', 'content', 'summary', 'status', 'cover_image'];
+    const update: Record<string, any> = {};
+    for (const key of allowed) {
+      if (key in body) update[key] = body[key];
+    }
+    if (Object.keys(update).length === 0) return c.json({ success: false, message: 'Tidak ada field yang diupdate.' }, 400);
+    const supabase = getSupabaseAdmin(c.env);
+    const { error } = await supabase.from('articles').update(update).eq('id', id);
+    if (error) throw error;
+    return c.json({ success: true });
+  } catch {
+    return c.json({ success: false, message: 'Gagal update artikel.' }, 500);
+  }
+});
+
 export default admin;
