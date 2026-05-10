@@ -97,14 +97,6 @@ export default async function ArtikelDetailPage({ params }: Props) {
 
   return (
     <main className="bg-white min-h-screen font-sans">
-
-      {article.cover_image && (
-        <div className="relative w-full h-64 sm:h-96 overflow-hidden">
-          <Image src={article.cover_image} alt={article.title} fill className="object-cover" priority />
-          <div className="absolute inset-0 bg-gradient-to-t from-black/50 to-transparent" />
-        </div>
-      )}
-
       <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="flex gap-12">
 
@@ -129,6 +121,13 @@ export default async function ArtikelDetailPage({ params }: Props) {
             </div>
 
             <h1 className="text-2xl sm:text-4xl font-black tracking-tighter text-slate-900 mb-6 leading-tight">{article.title}</h1>
+
+            {article.cover_image && (
+              <div className="relative w-full aspect-video rounded-2xl overflow-hidden mb-8">
+                <Image src={article.cover_image} alt={article.title} fill className="object-cover" priority />
+              </div>
+            )}
+
             <div className="h-px bg-slate-100 mb-8" />
 
             <div className="space-y-5">
