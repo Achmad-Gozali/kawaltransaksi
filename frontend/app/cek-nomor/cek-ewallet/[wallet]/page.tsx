@@ -77,6 +77,8 @@ const ewalletData: Record<string, {
   },
 };
 
+const BASE_URL = 'https://kawaltransaksi.com';
+
 interface PageProps {
   params: Promise<{ wallet: string }>;
 }
@@ -108,26 +110,22 @@ export default async function EwalletDetailPage({ params }: PageProps) {
     { data: linkedReports },
     { data: categoryData },
   ] = await Promise.all([
-    // Primary: laporan dengan bank_name sesuai ewallet
     supabase
       .from('reports')
       .select('target_number, target_name, status, created_at')
       .ilike('bank_name', `%${data.dbName}%`)
       .order('created_at', { ascending: false }),
-    // Linked: laporan dengan nomor tambahan di target_numbers JSONB
     supabase
       .from('reports')
       .select('target_numbers, status, created_at')
       .filter('target_numbers', 'cs', `[{"type":"ewallet","bank":"${data.dbName}"}]`)
       .order('created_at', { ascending: false }),
-    // Category breakdown
     supabase
       .from('reports')
       .select('category')
       .ilike('bank_name', `%${data.dbName}%`),
   ]);
 
-  // Flatten linked JSONB entries jadi rows
   const linkedRows: ReportRow[] = [];
   (linkedReports ?? []).forEach((r: any) => {
     if (!Array.isArray(r.target_numbers)) return;
@@ -148,8 +146,6 @@ export default async function EwalletDetailPage({ params }: PageProps) {
     });
   });
 
-  // Merge primary + linked, deduplikasi by target_number
-  // Ini satu-satunya source of truth untuk semua angka
   const seenNumbers = new Set<string>();
   const allRows: ReportRow[] = [];
   [...(primaryReports ?? []), ...linkedRows].forEach((r: any) => {
@@ -159,12 +155,10 @@ export default async function EwalletDetailPage({ params }: PageProps) {
     }
   });
 
-  // Hitung dari deduplicated rows — tidak ada double counting
   const totalCount = allRows.length;
   const verifiedCount = allRows.filter(r => r.status === 'verified').length;
   const pendingCount = allRows.filter(r => r.status === 'pending').length;
 
-  // Ambil 6 terbaru untuk display
   const reports = allRows.slice(0, 6).map((r) => ({
     target_number: r.target_number,
     target_name: r.target_name,
@@ -182,15 +176,39 @@ export default async function EwalletDetailPage({ params }: PageProps) {
     .map(([category, count]) => ({ category, count }))
     .sort((a, b) => b.count - a.count);
 
+  const structuredData = {
+    '@context': 'https://schema.org',
+    '@type': 'WebPage',
+    name: `Cek Akun ${data.name} - KawalTransaksi`,
+    description: `Verifikasi nomor ${data.fullName} sebelum transfer. Cek apakah akun ${data.name} terindikasi penipuan.`,
+    url: `${BASE_URL}/cek-nomor/cek-ewallet/${walletKey}`,
+    about: {
+      '@type': 'FinancialProduct',
+      name: data.fullName,
+      provider: {
+        '@type': 'Organization',
+        name: data.fullName,
+        telephone: data.callCenter,
+        url: data.website,
+      },
+    },
+  };
+
   return (
-    <EwalletPageClient
-      walletId={walletKey}
-      walletData={data}
-      reports={reports}
-      totalCount={totalCount}
-      verifiedCount={verifiedCount}
-      pendingCount={pendingCount}
-      categoryBreakdown={categoryBreakdown}
-    />
+    <>
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
+      <EwalletPageClient
+        walletId={walletKey}
+        walletData={data}
+        reports={reports}
+        totalCount={totalCount}
+        verifiedCount={verifiedCount}
+        pendingCount={pendingCount}
+        categoryBreakdown={categoryBreakdown}
+      />
+    </>
   );
 }
