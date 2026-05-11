@@ -36,14 +36,24 @@ export default async function ArtikelPage() {
 
   return (
     <main className="bg-white min-h-screen font-sans">
-      <section className="bg-slate-50 px-4 pt-10 pb-8 sm:pt-16 sm:pb-12">
-        <div className="max-w-5xl mx-auto">
-          <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-3">Diperbarui setiap minggu</p>
-          <h1 className="text-3xl sm:text-5xl font-black tracking-tighter uppercase mb-3 leading-tight">Artikel Penipuan</h1>
-          <p className="text-xs sm:text-sm text-slate-500 max-w-xl leading-relaxed">Laporan dan edukasi seputar penipuan online di Indonesia, diperbarui setiap minggu.</p>
+      {/* Header dengan wave bottom */}
+      <div className="relative bg-slate-50 pb-16">
+        <div className="px-4 pt-10 pb-4 sm:pt-16 sm:pb-6">
+          <div className="max-w-5xl mx-auto">
+            <p className="text-[10px] font-bold text-emerald-600 uppercase tracking-widest mb-3">Diperbarui setiap minggu</p>
+            <h1 className="text-3xl sm:text-5xl font-black tracking-tighter uppercase mb-3 leading-tight">Artikel Penipuan</h1>
+            <p className="text-xs sm:text-sm text-slate-500 max-w-xl leading-relaxed">Laporan dan edukasi seputar penipuan online di Indonesia, diperbarui setiap minggu.</p>
+          </div>
         </div>
-      </section>
+        {/* Wave SVG */}
+        <div className="absolute bottom-0 left-0 w-full overflow-hidden leading-none">
+          <svg viewBox="0 0 1440 60" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" className="w-full h-12 sm:h-16">
+            <path d="M0,30 C360,60 1080,0 1440,30 L1440,60 L0,60 Z" fill="white" />
+          </svg>
+        </div>
+      </div>
 
+      {/* Grid artikel */}
       <section className="px-4 py-10 sm:py-14">
         <div className="max-w-5xl mx-auto">
           {!articles || articles.length === 0 ? (
@@ -55,10 +65,14 @@ export default async function ArtikelPage() {
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
               {articles.map((article: any) => (
                 <Link key={article.id} href={`/artikel/${article.slug}`}
-                  className="group flex flex-col bg-white border border-slate-100 rounded-2xl overflow-hidden hover:shadow-lg hover:border-slate-200 transition-all duration-200">
-                  {article.cover_image && (
+                  className="group flex flex-col bg-white border border-slate-200 rounded-2xl overflow-hidden hover:shadow-xl hover:border-slate-300 hover:-translate-y-1 transition-all duration-200 shadow-sm">
+                  {article.cover_image ? (
                     <div className="relative w-full h-48 overflow-hidden">
                       <Image src={article.cover_image} alt={article.title} fill className="object-cover group-hover:scale-105 transition-transform duration-300" />
+                    </div>
+                  ) : (
+                    <div className="w-full h-48 bg-slate-100 flex items-center justify-center">
+                      <span className="text-slate-300 text-2xl font-black">KT</span>
                     </div>
                   )}
                   <div className="flex flex-col flex-1 p-5">
@@ -71,7 +85,7 @@ export default async function ArtikelPage() {
                       {article.title}
                     </h2>
                     <p className="text-xs text-slate-400 leading-relaxed line-clamp-2 mb-4">{article.summary}</p>
-                    <div className="flex items-center justify-between mt-auto">
+                    <div className="flex items-center justify-between mt-auto pt-3 border-t border-slate-100">
                       <div className="flex items-center gap-2 flex-wrap">
                         <span className="text-[10px] text-slate-400">{formatDate(article.published_at)}</span>
                         <span className="text-slate-200">·</span>

@@ -15,10 +15,10 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const supabase = await createClient();
   const { data } = await (supabase
-    .from('articles')
+    .from('articles') as any)
     .select('title, summary, cover_image')
     .eq('slug', slug)
-    .single() as any);
+    .single();
   if (!data) return { title: 'Artikel tidak ditemukan - KawalTransaksi' };
   return {
     title: `${data.title} - KawalTransaksi`,
@@ -70,7 +70,7 @@ function renderContent(content: string) {
       return (
         <ul key={i} className="space-y-2 pl-5 my-2">
           {items.map((item, j) => (
-            <li key={j} className="text-slate-700 text-sm sm:text-base leading-relaxed list-disc">
+            <li key={j} className="text-slate-700 text-sm sm:text-base leading-relaxed list-disc font-normal">
               {renderInline(item.replace(/^-\s*/, ''))}
             </li>
           ))}
@@ -79,7 +79,7 @@ function renderContent(content: string) {
     }
 
     return (
-      <p key={i} className="text-slate-700 text-sm sm:text-base leading-relaxed">
+      <p key={i} className="text-slate-700 text-sm sm:text-base leading-relaxed font-normal">
         {renderInline(trimmed)}
       </p>
     );
@@ -91,30 +91,29 @@ export default async function ArtikelDetailPage({ params }: Props) {
   const supabase = await createClient();
 
   const { data: article } = await (supabase
-    .from('articles')
+    .from('articles') as any)
     .select('*')
     .eq('slug', slug)
-    .single() as any);
+    .eq('status', 'published')
+    .single();
 
   if (!article) notFound();
 
   const { data: others } = await (supabase
-    .from('articles')
-    .select('title, slug, published_at, cover_image')
+    .from('articles') as any)
+    .select('title, slug, published_at, cover_image, summary, top_category')
+    .eq('status', 'published')
     .neq('slug', slug)
     .order('published_at', { ascending: false })
-    .limit(4) as any);
+    .limit(3);
 
   return (
     <main className="bg-white min-h-screen font-sans">
       <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="flex gap-12">
 
+          {/* Konten utama */}
           <div className="flex-1 min-w-0">
-            <Link href="/artikel" className="inline-flex items-center gap-1.5 text-[10px] font-bold text-slate-400 hover:text-slate-900 uppercase tracking-widest transition-colors mb-6">
-              ← Semua Artikel
-            </Link>
-
             <div className="flex items-center gap-2 mb-4 flex-wrap">
               {article.top_category && (
                 <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-emerald-50 text-emerald-600">{article.top_category}</span>
@@ -144,6 +143,7 @@ export default async function ArtikelDetailPage({ params }: Props) {
               {renderContent(article.content)}
             </div>
 
+            {/* CTA */}
             <div className="mt-12 rounded-2xl overflow-hidden border border-slate-200">
               <div className="bg-slate-900 px-6 py-7 sm:px-8 sm:py-8">
                 <p className="text-[10px] font-bold text-emerald-400 uppercase tracking-widest mb-2">Verifikasi Sebelum Bertransaksi</p>
@@ -155,8 +155,39 @@ export default async function ArtikelDetailPage({ params }: Props) {
                 </div>
               </div>
             </div>
+
+            {/* Artikel Lainnya */}
+            {others && others.length > 0 && (
+              <div className="mt-16">
+                <p className="text-xl font-black text-slate-900 tracking-tight mb-8">Artikel Lainnya</p>
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
+                  {others.map((a: any) => (
+                    <Link key={a.slug} href={`/artikel/${a.slug}`}
+                      className="group flex flex-col bg-white border border-slate-200 rounded-2xl overflow-hidden hover:shadow-xl hover:border-slate-300 hover:-translate-y-1 transition-all duration-200 shadow-sm">
+                      {a.cover_image ? (
+                        <div className="relative w-full h-40 overflow-hidden">
+                          <Image src={a.cover_image} alt={a.title} fill className="object-cover group-hover:scale-105 transition-transform duration-300" />
+                        </div>
+                      ) : (
+                        <div className="w-full h-40 bg-slate-100 flex items-center justify-center">
+                          <span className="text-slate-300 text-xl font-black">KT</span>
+                        </div>
+                      )}
+                      <div className="p-4 flex flex-col flex-1">
+                        {a.top_category && (
+                          <span className="text-[10px] font-bold text-emerald-600 mb-2">{a.top_category}</span>
+                        )}
+                        <p className="text-sm font-black text-slate-800 group-hover:text-emerald-600 transition-colors leading-snug line-clamp-2 flex-1">{a.title}</p>
+                        <p className="text-[10px] text-slate-400 mt-3">{formatDate(a.published_at)}</p>
+                      </div>
+                    </Link>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
+          {/* Sidebar — hanya desktop */}
           {others && others.length > 0 && (
             <aside className="hidden lg:block w-72 shrink-0">
               <SidebarArtikel articles={others} />

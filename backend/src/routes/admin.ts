@@ -325,4 +325,18 @@ admin.post('/articles', authMiddleware, requireAdmin, async (c) => {
   }
 });
 
+// ── DELETE /api/admin/articles/:id ───────────────────────────────────────────
+admin.delete('/articles/:id', authMiddleware, requireAdmin, async (c) => {
+  try {
+    const id = c.req.param('id');
+    if (!UUID_REGEX.test(id)) return c.json({ success: false, message: 'ID tidak valid.' }, 400);
+    const supabase = getSupabaseAdmin(c.env);
+    const { error } = await supabase.from('articles').delete().eq('id', id);
+    if (error) throw error;
+    return c.json({ success: true });
+  } catch {
+    return c.json({ success: false, message: 'Gagal menghapus artikel.' }, 500);
+  }
+});
+
 export default admin;
