@@ -86,6 +86,8 @@ function renderContent(content: string) {
   });
 }
 
+const SITE_URL = 'https://kawaltransaksi-605520424162.asia-southeast1.run.app';
+
 export default async function ArtikelDetailPage({ params }: Props) {
   const { slug } = await params;
   const supabase = await createClient();
@@ -107,8 +109,79 @@ export default async function ArtikelDetailPage({ params }: Props) {
     .order('published_at', { ascending: false })
     .limit(3);
 
+  const articleUrl = `${SITE_URL}/artikel/${slug}`;
+
+  const structuredData = {
+    '@context': 'https://schema.org',
+    '@type': 'Article',
+    headline: article.title,
+    description: article.summary,
+    url: articleUrl,
+    datePublished: article.published_at,
+    dateModified: article.updated_at ?? article.published_at,
+    author: {
+      '@type': 'Organization',
+      name: 'KawalTransaksi',
+      url: SITE_URL,
+    },
+    publisher: {
+      '@type': 'Organization',
+      name: 'KawalTransaksi',
+      url: SITE_URL,
+      logo: {
+        '@type': 'ImageObject',
+        url: `${SITE_URL}/icons/icon-192x192.png`,
+      },
+    },
+    mainEntityOfPage: {
+      '@type': 'WebPage',
+      '@id': articleUrl,
+    },
+    ...(article.cover_image && {
+      image: {
+        '@type': 'ImageObject',
+        url: article.cover_image,
+      },
+    }),
+  };
+
+  const breadcrumbData = {
+    '@context': 'https://schema.org',
+    '@type': 'BreadcrumbList',
+    itemListElement: [
+      {
+        '@type': 'ListItem',
+        position: 1,
+        name: 'Beranda',
+        item: SITE_URL,
+      },
+      {
+        '@type': 'ListItem',
+        position: 2,
+        name: 'Artikel',
+        item: `${SITE_URL}/artikel`,
+      },
+      {
+        '@type': 'ListItem',
+        position: 3,
+        name: article.title,
+        item: articleUrl,
+      },
+    ],
+  };
+
   return (
     <main className="bg-white min-h-screen font-sans">
+      {/* Structured Data */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbData) }}
+      />
+
       <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="flex gap-12">
 
