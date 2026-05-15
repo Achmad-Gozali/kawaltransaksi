@@ -1,6 +1,7 @@
 import { Hono } from 'hono';
 import { authMiddleware } from '../middleware/auth';
 import { getSupabaseAdmin } from '../lib/supabase';
+import { sendReportStatusChangedEmail } from '../lib/resend';
 import type { Env } from '../types';
 
 const admin = new Hono<{ Bindings: Env; Variables: { userId: string; userEmail: string } }>();
@@ -85,9 +86,46 @@ admin.patch('/reports/:id/status', authMiddleware, requireAdmin, async (c) => {
         message: `Status tidak valid. Nilai yang diizinkan: ${VALID_STATUSES.join(', ')}.`,
       }, 400);
     }
+
     const supabase = getSupabaseAdmin(c.env);
+
+    // Ambil data laporan + profil pelapor untuk keperluan email
+    const { data: report, error: fetchError } = await supabase
+      .from('reports')
+      .select('id, target_number, reporter_id')
+      .eq('id', id)
+      .single();
+
+    if (fetchError || !report) {
+      return c.json({ success: false, message: 'Laporan tidak ditemukan.' }, 404);
+    }
+
     const { error } = await supabase.from('reports').update({ status }).eq('id', id);
     if (error) throw error;
+
+    // ── Kirim email notifikasi ke pelapor (fire & forget) ────────────────────
+    try {
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('full_name, email')
+        .eq('id', report.reporter_id)
+        .single();
+
+      if (profile?.email) {
+        const reportUrl = `https://kawaltransaksi.com/check/${report.target_number}`;
+        sendReportStatusChangedEmail({
+          to: profile.email,
+          fullName: profile.full_name ?? 'Pengguna',
+          targetNumber: report.target_number,
+          newStatus: status,
+          reportUrl,
+          apiKey: c.env.RESEND_API_KEY,
+        }).catch((err) => console.error('[EMAIL] Gagal kirim email status laporan:', err));
+      }
+    } catch (emailErr) {
+      console.error('[EMAIL] Error saat kirim email status laporan:', emailErr);
+    }
+
     return c.json({ success: true });
   } catch {
     return c.json({ success: false, message: 'Terjadi kesalahan server.' }, 500);

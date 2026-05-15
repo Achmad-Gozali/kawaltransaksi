@@ -10,6 +10,7 @@ routes = [
 [vars]
 NODE_ENV = "production"
 FRONTEND_URL = "https://kawaltransaksi.com"
+ADMIN_EMAIL = "kawaltransaksi@gmail.com"
 # TURNSTILE_SECRET_KEY & SUPABASE secrets → gunakan: wrangler secret put
 
 [[kv_namespaces]]

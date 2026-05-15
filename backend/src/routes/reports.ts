@@ -3,6 +3,7 @@ import { authMiddleware } from '../middleware/auth';
 import { getSupabaseAdmin } from '../lib/supabase';
 import { analyzeChronologyText, analyzeEvidenceImage, AnalysisResult } from '../lib/groq';
 import { verifyTurnstile } from '../lib/turnstile';
+import { sendReportCreatedEmail, sendNewReportAdminEmail } from '../lib/resend';
 import type { Env } from '../types';
 
 const reports = new Hono<{
@@ -540,6 +541,46 @@ reports.post("/", authMiddleware, async (c) => {
         { success: false, message: "Gagal menyimpan laporan." },
         500,
       );
+    }
+
+    // ── Kirim email notifikasi (fire & forget, tidak blokir response) ─────────
+    try {
+      const { data: profile } = await supabase
+        .from("profiles")
+        .select("full_name, email")
+        .eq("id", userId)
+        .single();
+
+      const reportUrl = `https://kawaltransaksi.com/check/${cleanNumber}`;
+      const adminPanelUrl = `https://kawaltransaksi.com/admin`;
+
+      if (profile?.email) {
+        // Email ke user: konfirmasi laporan diterima
+        sendReportCreatedEmail({
+          to: profile.email,
+          fullName: profile.full_name ?? 'Pengguna',
+          targetNumber: cleanNumber,
+          category: body.category,
+          status: autoStatus,
+          reportUrl,
+          apiKey: c.env.RESEND_API_KEY,
+        }).catch((err) => console.error('[EMAIL] Gagal kirim email laporan ke user:', err));
+      }
+
+      // Email ke admin: laporan baru masuk
+      if (c.env.ADMIN_EMAIL) {
+        sendNewReportAdminEmail({
+          adminEmail: c.env.ADMIN_EMAIL,
+          reporterName: profile?.full_name ?? 'Pengguna',
+          targetNumber: cleanNumber,
+          category: body.category,
+          status: autoStatus,
+          reportUrl: adminPanelUrl,
+          apiKey: c.env.RESEND_API_KEY,
+        }).catch((err) => console.error('[EMAIL] Gagal kirim email laporan ke admin:', err));
+      }
+    } catch (emailErr) {
+      console.error('[EMAIL] Error saat kirim email notifikasi:', emailErr);
     }
 
     return c.json(
