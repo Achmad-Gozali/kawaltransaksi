@@ -14,10 +14,12 @@ const reports = new Hono<{
 // ── Konstanta ─────────────────────────────────────────────────────────────────
 
 const THRESHOLD = {
-  CHRONOLOGY_SCORE_MIN: 90,
-  CHRONOLOGY_LENGTH_MIN: 150,
-  PHOTO_AUTHENTICITY_MIN: 90,
-  PHOTO_RELEVANCE_MIN: 90,
+  CHRONOLOGY_SCORE_MIN: 95,
+  CHRONOLOGY_LENGTH_MIN: 300,
+  PHOTO_AUTHENTICITY_MIN: 95,
+  PHOTO_RELEVANCE_MIN: 95,
+  PHOTO_REQUIRED: true,
+  PHOTO_MIN_COUNT: 1,
 };
 
 const LIMITS = {
@@ -32,6 +34,9 @@ const LIMITS = {
   SOCIAL_ACCOUNTS_COUNT: 10,
   LOSS_AMOUNT_MAX: 999_999_999_999,
   STORE_NAME: 150,
+  // Rate limit analisis AI per user per hari
+  ANALYZE_TEXT_PER_DAY: 5,
+  ANALYZE_IMAGE_PER_DAY: 5,
 };
 
 const ALLOWED_STORAGE_HOSTNAMES = [
@@ -45,18 +50,12 @@ const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12
 const VALID_TARGET_TYPES = ["phone", "bank_account", "ewallet"] as const;
 
 const VALID_CATEGORIES = [
-  // Penipuan belanja
   "Jual Beli Online", "Toko Online Palsu", "Barang Tidak Sesuai", "COD Palsu", "Dropship Fiktif",
-  // Penipuan investasi & keuangan
   "Investasi Bodong", "Trading Palsu", "Arisan Online", "Pinjaman Online", "Koperasi Bodong",
   "Binary Option", "Kripto Palsu", "Money Game", "MLM Ilegal",
-  // Penipuan identitas & data
   "Phishing / Soceng", "Modus Kurir/APK", "Impersonasi", "SIM Swap", "Pencurian Data",
-  // Penipuan jasa & pekerjaan
   "Lowongan Kerja Palsu", "Jasa Tidak Dikerjakan", "Freelance Palsu", "Kerja Online Palsu", "Joki / Titip Beli Palsu",
-  // Penipuan rental & properti
   "Rental / Sewa Fiktif", "Kos / Kontrakan Palsu", "Tiket Palsu",
-  // Penipuan sosial
   "Penipuan Percintaan", "Pinjam Uang Tidak Bayar", "Hadiah / Undian Palsu",
   "Donasi Palsu", "Pura-pura Kecelakaan", "Penipuan Umroh/Haji",
   "Lainnya",
@@ -133,12 +132,15 @@ function determineAutoStatus(params: {
   riskLevel: "low" | "medium" | "high";
   photoResult: AnalysisResult | null;
   hasPhoto: boolean;
+  photoCount: number;
 }): "pending" | "verified" {
-  const { chronologyScore, chronologyLength, riskLevel, photoResult, hasPhoto } = params;
+  const { chronologyScore, chronologyLength, riskLevel, photoResult, hasPhoto, photoCount } = params;
 
   if (chronologyLength < THRESHOLD.CHRONOLOGY_LENGTH_MIN) return "pending";
   if (chronologyScore < THRESHOLD.CHRONOLOGY_SCORE_MIN) return "pending";
   if (riskLevel !== "high") return "pending";
+  if (THRESHOLD.PHOTO_REQUIRED && !hasPhoto) return "pending";
+  if (photoCount < THRESHOLD.PHOTO_MIN_COUNT) return "pending";
 
   if (hasPhoto && photoResult) {
     if (photoResult.authenticity_score < THRESHOLD.PHOTO_AUTHENTICITY_MIN) return "pending";
@@ -148,8 +150,30 @@ function determineAutoStatus(params: {
     return "verified";
   }
 
-  if (!hasPhoto && chronologyScore >= 95) return "verified";
   return "pending";
+}
+
+// ── Cek rate limit analisis per user per hari via KV ─────────────────────────
+
+async function checkAnalyzeRateLimit(
+  limiter: KVNamespace | undefined,
+  userId: string,
+  type: 'text' | 'image',
+  maxPerDay: number
+): Promise<{ blocked: boolean; count: number }> {
+  if (!limiter) return { blocked: false, count: 0 };
+  try {
+    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    const key = `analyze_${type}_${userId}_${today}`;
+    const raw = await limiter.get(key);
+    const count = raw ? parseInt(raw) : 0;
+    if (count >= maxPerDay) return { blocked: true, count };
+    const ttl = 86400; // 24 jam
+    await limiter.put(key, (count + 1).toString(), { expirationTtl: ttl });
+    return { blocked: false, count: count + 1 };
+  } catch {
+    return { blocked: false, count: 0 };
+  }
 }
 
 // ── POST /api/reports ─────────────────────────────────────────────────────────
@@ -160,7 +184,6 @@ reports.post("/", authMiddleware, async (c) => {
     const body = await c.req.json();
     const supabase = getSupabaseAdmin(c.env);
 
-    // Verifikasi Turnstile
     if (!body.turnstile_token) {
       return c.json({ success: false, message: "Verifikasi CAPTCHA diperlukan." }, 400);
     }
@@ -169,7 +192,6 @@ reports.post("/", authMiddleware, async (c) => {
       return c.json({ success: false, message: "Verifikasi CAPTCHA gagal." }, 400);
     }
 
-    // Validasi panjang input
     const rawNumber = String(body.target_number ?? "").replace(/[^0-9]/g, "");
     if (rawNumber.length > LIMITS.TARGET_NUMBER) {
       return c.json({ success: false, message: `Nomor terlalu panjang. Maks ${LIMITS.TARGET_NUMBER} karakter.` }, 400);
@@ -216,7 +238,6 @@ reports.post("/", authMiddleware, async (c) => {
       }
     }
 
-    // Validasi tipe & kategori
     if (!body.target_type || !VALID_TARGET_TYPES.includes(body.target_type)) {
       return c.json({ success: false, message: `Jenis laporan tidak valid. Nilai yang diizinkan: ${VALID_TARGET_TYPES.join(", ")}.` }, 400);
     }
@@ -224,7 +245,6 @@ reports.post("/", authMiddleware, async (c) => {
       return c.json({ success: false, message: `Kategori tidak valid.` }, 400);
     }
 
-    // Rate limit: maks 3 laporan per jam
     const oneHourAgo = new Date(Date.now() - 3600000).toISOString();
     const { count: hourCount } = await supabase
       .from("reports")
@@ -236,7 +256,6 @@ reports.post("/", authMiddleware, async (c) => {
       return c.json({ success: false, message: "Terlalu banyak laporan dalam 1 jam. Coba lagi nanti." }, 429);
     }
 
-    // Rate limit: maks 10 laporan per hari
     const oneDayAgo = new Date(Date.now() - 86400000).toISOString();
     const { count: todayCount } = await supabase
       .from("reports")
@@ -248,7 +267,6 @@ reports.post("/", authMiddleware, async (c) => {
       return c.json({ success: false, message: "Batas laporan harian tercapai." }, 429);
     }
 
-    // Cek duplikat
     const cleanNumberCheck = String(body.target_number).replace(/[^0-9]/g, "");
     const { count: duplicateCount } = await supabase
       .from("reports")
@@ -261,7 +279,6 @@ reports.post("/", authMiddleware, async (c) => {
       return c.json({ success: false, message: "Kamu sudah pernah melaporkan nomor ini sebelumnya." }, 409);
     }
 
-    // Sanitasi input
     const cleanNumber = String(body.target_number).replace(/[^0-9]/g, "");
     const sanitizedTargetName = body.target_name ? sanitizeText(String(body.target_name)) : null;
     const sanitizedChronology = sanitizeChronology(String(body.chronology));
@@ -272,7 +289,6 @@ reports.post("/", authMiddleware, async (c) => {
     const sanitizedSuspectCity = body.suspect_city ? sanitizeText(String(body.suspect_city)) : null;
     const sanitizedLinkUrl = isValidHttpUrl(body.link_url);
 
-    // Target numbers
     const rawTargetNumbers = Array.isArray(body.target_numbers) ? body.target_numbers : [];
     const cleanTargetNumbers = rawTargetNumbers
       .map((item: unknown) => {
@@ -299,7 +315,6 @@ reports.post("/", authMiddleware, async (c) => {
       });
     }
 
-    // Evidence URLs
     const evidenceUrls = sanitizeEvidenceUrls(
       body.evidence_urls?.length > 0
         ? body.evidence_urls
@@ -308,7 +323,6 @@ reports.post("/", authMiddleware, async (c) => {
     const hasPhoto = evidenceUrls.length > 0;
     const suspectPhotoUrl = isValidEvidenceUrl(body.suspect_photo_url) ? (body.suspect_photo_url as string) : null;
 
-    // Analisis otomatis
     let autoStatus: "pending" | "verified" = "pending";
     try {
       const textResult = await analyzeChronologyText(sanitizedChronology, c.env.GROQ_API_KEY);
@@ -337,12 +351,12 @@ reports.post("/", authMiddleware, async (c) => {
         riskLevel: textResult.risk_level,
         photoResult,
         hasPhoto,
+        photoCount: evidenceUrls.length,
       });
     } catch {
       /* tetap pending */
     }
 
-    // Insert laporan
     const { error } = await supabase.from("reports").insert({
       reporter_id: userId,
       target_number: cleanNumber,
@@ -372,7 +386,6 @@ reports.post("/", authMiddleware, async (c) => {
       return c.json({ success: false, message: "Gagal menyimpan laporan." }, 500);
     }
 
-    // Kirim email notifikasi (fire & forget)
     try {
       const { data: profile } = await supabase
         .from("profiles")
@@ -419,6 +432,22 @@ reports.post("/", authMiddleware, async (c) => {
 
 reports.post("/analyze/image", authMiddleware, async (c) => {
   try {
+    const userId = c.get("userId");
+
+    // Rate limit: maks 5x analisis foto per user per hari
+    const { blocked, count } = await checkAnalyzeRateLimit(
+      c.env.LIMITER,
+      userId,
+      'image',
+      LIMITS.ANALYZE_IMAGE_PER_DAY
+    );
+    if (blocked) {
+      return c.json({
+        success: false,
+        message: `Batas analisis foto tercapai (${LIMITS.ANALYZE_IMAGE_PER_DAY}x per hari). Coba lagi besok.`,
+      }, 429);
+    }
+
     const formData = await c.req.formData();
     const file = formData.get("file") as File | null;
 
@@ -435,7 +464,7 @@ reports.post("/analyze/image", authMiddleware, async (c) => {
     const base64 = btoa(binary);
 
     const result = await analyzeEvidenceImage(base64, file.type, c.env.GROQ_API_KEY);
-    return c.json({ success: true, data: result });
+    return c.json({ success: true, data: result, remaining: LIMITS.ANALYZE_IMAGE_PER_DAY - count });
   } catch (err) {
     console.error("[REPORTS] Analyze image error:", err);
     return c.json({ success: false, message: "Sistem analisis sedang tidak tersedia." }, 500);
@@ -446,6 +475,22 @@ reports.post("/analyze/image", authMiddleware, async (c) => {
 
 reports.post("/analyze/text", authMiddleware, async (c) => {
   try {
+    const userId = c.get("userId");
+
+    // Rate limit: maks 5x analisis teks per user per hari
+    const { blocked, count } = await checkAnalyzeRateLimit(
+      c.env.LIMITER,
+      userId,
+      'text',
+      LIMITS.ANALYZE_TEXT_PER_DAY
+    );
+    if (blocked) {
+      return c.json({
+        success: false,
+        message: `Batas analisis kronologi tercapai (${LIMITS.ANALYZE_TEXT_PER_DAY}x per hari). Coba lagi besok.`,
+      }, 429);
+    }
+
     const { chronology } = await c.req.json();
 
     if (!chronology || typeof chronology !== "string" || chronology.trim().length < 20) {
@@ -457,7 +502,7 @@ reports.post("/analyze/text", authMiddleware, async (c) => {
 
     const sanitized = sanitizeChronology(chronology);
     const result = await analyzeChronologyText(sanitized, c.env.GROQ_API_KEY);
-    return c.json({ success: true, data: result });
+    return c.json({ success: true, data: result, remaining: LIMITS.ANALYZE_TEXT_PER_DAY - count });
   } catch {
     return c.json({ success: false, message: "Sistem analisis sedang tidak tersedia." }, 500);
   }
@@ -511,7 +556,6 @@ reports.put("/:reportId", authMiddleware, async (c) => {
 
     const body = await c.req.json();
 
-    // Validasi panjang input
     const chronologyRaw = String(body.chronology ?? "");
     if (chronologyRaw.trim().length < LIMITS.CHRONOLOGY_MIN) {
       return c.json({ success: false, message: `Kronologi minimal ${LIMITS.CHRONOLOGY_MIN} karakter.` }, 400);
