@@ -40,7 +40,6 @@ const ALLOWED_STORAGE_HOSTNAMES = [
 ];
 
 const MAX_EVIDENCE_FILES = 10;
-
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 const VALID_TARGET_TYPES = ["phone", "bank_account", "ewallet"] as const;
@@ -223,6 +222,18 @@ reports.post("/", authMiddleware, async (c) => {
     }
     if (!body.category || !VALID_CATEGORIES.includes(body.category)) {
       return c.json({ success: false, message: `Kategori tidak valid.` }, 400);
+    }
+
+    // Rate limit: maks 3 laporan per jam
+    const oneHourAgo = new Date(Date.now() - 3600000).toISOString();
+    const { count: hourCount } = await supabase
+      .from("reports")
+      .select("*", { count: "exact", head: true })
+      .eq("reporter_id", userId)
+      .gte("created_at", oneHourAgo);
+
+    if ((hourCount ?? 0) >= 3) {
+      return c.json({ success: false, message: "Terlalu banyak laporan dalam 1 jam. Coba lagi nanti." }, 429);
     }
 
     // Rate limit: maks 10 laporan per hari

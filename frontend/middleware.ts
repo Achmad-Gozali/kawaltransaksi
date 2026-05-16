@@ -55,30 +55,29 @@ export async function middleware(request: NextRequest) {
   }
 
   if (pathname.startsWith('/admin') && user) {
-    const cachedRole = request.cookies.get('user_role')?.value;
+    // Selalu query DB untuk cek role terkini — tidak cache cookie
+    // Ini mencegah edge case admin di-demote tapi cookie lama masih valid
+    const { data: profile } = await supabase
+      .from('profiles')
+      .select('role')
+      .eq('id', user.id)
+      .single();
 
-    if (cachedRole && cachedRole !== 'admin') {
-      return NextResponse.redirect(new URL('/', request.url));
+    if (profile?.role !== 'admin') {
+      // Hapus cookie user_role kalau ada
+      supabaseResponse = NextResponse.redirect(new URL('/', request.url));
+      supabaseResponse.cookies.delete('user_role');
+      return supabaseResponse;
     }
 
-    if (!cachedRole) {
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', user.id)
-        .single();
-
-      if (profile?.role !== 'admin') {
-        return NextResponse.redirect(new URL('/', request.url));
-      }
-
-      supabaseResponse.cookies.set('user_role', profile.role, {
-        httpOnly: true,
-        secure: true,
-        sameSite: 'lax',
-        maxAge: 60 * 60,
-      });
-    }
+    // Set cookie user_role dengan TTL pendek (15 menit) sebagai hint UI saja
+    // Bukan untuk keputusan keamanan — keamanan tetap dari query DB di atas
+    supabaseResponse.cookies.set('user_role', profile.role, {
+      httpOnly: true,
+      secure: true,
+      sameSite: 'lax',
+      maxAge: 60 * 15,
+    });
   }
 
   supabaseResponse.headers.delete('x-vercel-id');

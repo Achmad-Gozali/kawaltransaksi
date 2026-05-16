@@ -30,7 +30,8 @@ const originValidator = async (c: any, next: any) => {
   if (c.req.method === 'OPTIONS') return next();
 
   // Skip untuk internal server-to-server request
-  if (c.req.header('X-Internal-Key') === 'kawaltransaksi-internal-2024') return next();
+  const internalKey = c.req.header('X-Internal-Key');
+  if (internalKey && internalKey === c.env.INTERNAL_API_KEY) return next();
 
   const origin = c.req.header('Origin') || c.req.header('Referer') || '';
   if (origin.trim() === '') return next();
@@ -59,7 +60,7 @@ const SIZE_LIMITS: Record<string, number> = {
   '/api/reports': 512 * 1024,
   '/api/admin':   50 * 1024,
   '/api/search':  5 * 1024,
-  '/api/upload':  6 * 1024 * 1024, // 6MB (sedikit lebih dari max file 5MB)
+  '/api/upload':  6 * 1024 * 1024,
 };
 const DEFAULT_SIZE_LIMIT = 1 * 1024 * 1024;
 
