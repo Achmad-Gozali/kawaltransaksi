@@ -10,6 +10,10 @@ export interface Env {
   NODE_ENV: string;
   RESEND_API_KEY: string;
   ADMIN_EMAIL: string;
+  R2_PUBLIC_URL: string;
+
+  // Cloudflare R2
+  BUCKET: R2Bucket;
 
   // Cloudflare KV
   LIMITER: KVNamespace;

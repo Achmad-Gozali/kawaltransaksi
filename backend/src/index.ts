@@ -5,6 +5,7 @@ import reportsRoutes from './routes/reports';
 import adminRoutes from './routes/admin';
 import searchRoutes from './routes/search';
 import articlesRoutes, { generateWeeklyArticle } from './routes/articles';
+import uploadRoutes from './routes/upload';
 import type { Env } from './types';
 
 const app = new Hono<{ Bindings: Env }>();
@@ -58,6 +59,7 @@ const SIZE_LIMITS: Record<string, number> = {
   '/api/reports': 512 * 1024,
   '/api/admin':   50 * 1024,
   '/api/search':  5 * 1024,
+  '/api/upload':  6 * 1024 * 1024, // 6MB (sedikit lebih dari max file 5MB)
 };
 const DEFAULT_SIZE_LIMIT = 1 * 1024 * 1024;
 
@@ -90,7 +92,6 @@ app.use('/api/*', async (c, next) => {
     const blacklistKey = `blacklist_${ip}`;
     const isBlacklisted = await c.env.LIMITER.get(blacklistKey);
     if (isBlacklisted) {
-      const data = JSON.parse(isBlacklisted);
       return c.json({ success: false, message: 'Akses Anda telah diblokir sementara.' }, 403);
     }
   } catch (err) {
@@ -206,6 +207,7 @@ app.route('/api/reports', reportsRoutes);
 app.route('/api/admin', adminRoutes);
 app.route('/api/search', searchRoutes);
 app.route('/api/articles', articlesRoutes);
+app.route('/api/upload', uploadRoutes);
 
 app.notFound((c) => c.json({ success: false, message: 'Endpoint tidak ditemukan.' }, 404));
 app.onError((err, c) => {

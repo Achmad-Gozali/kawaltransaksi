@@ -3,6 +3,12 @@ import { createClient } from '@/lib/supabase-browser';
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png'];
 
+const BACKEND_URL = (() => {
+  const url = process.env.NEXT_PUBLIC_BACKEND_URL;
+  if (!url) throw new Error('NEXT_PUBLIC_BACKEND_URL is not defined');
+  return url;
+})();
+
 // ── Validasi magic bytes di browser ──────────────────────────────────────────
 async function validateFileSignature(file: File): Promise<boolean> {
   const buffer = await file.arrayBuffer();
@@ -32,7 +38,7 @@ async function stripExif(file: File): Promise<File> {
         const ctx = canvas.getContext('2d');
         if (!ctx) {
           URL.revokeObjectURL(objectUrl);
-          resolve(file); // fallback ke file asli kalau canvas tidak support
+          resolve(file);
           return;
         }
 
@@ -45,7 +51,7 @@ async function stripExif(file: File): Promise<File> {
           (blob) => {
             URL.revokeObjectURL(objectUrl);
             if (!blob) {
-              resolve(file); // fallback ke file asli
+              resolve(file);
               return;
             }
             const strippedFile = new File([blob], file.name, {
@@ -72,7 +78,7 @@ async function stripExif(file: File): Promise<File> {
   });
 }
 
-// ── Upload satu file ke Supabase Storage ─────────────────────────────────────
+// ── Upload satu file ke R2 via backend ───────────────────────────────────────
 export async function uploadToStorage(file: File): Promise<string> {
   // Validasi ukuran
   if (file.size > MAX_FILE_SIZE) {
@@ -93,30 +99,29 @@ export async function uploadToStorage(file: File): Promise<string> {
   // Strip EXIF metadata sebelum upload
   const cleanFile = await stripExif(file);
 
+  // Ambil token dari session
   const supabase = createClient();
-
-  // Ambil user ID dari session
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) throw new Error('Sesi habis. Silakan login ulang.');
 
-  const userId = session.user.id;
-  const ext = cleanFile.type === 'image/png' ? 'png' : 'jpg';
-  const fileName = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+  const formData = new FormData();
+  formData.append('file', cleanFile);
 
-  const { error } = await supabase.storage
-    .from('reports')
-    .upload(fileName, cleanFile, {
-      contentType: cleanFile.type,
-      upsert: false,
-    });
+  const res = await fetch(`${BACKEND_URL}/api/upload`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${session.access_token}`,
+    },
+    body: formData,
+  });
 
-  if (error) throw new Error(`Gagal mengupload file: ${error.message}`);
+  if (!res.ok) {
+    const err = await res.json() as { message?: string };
+    throw new Error(err.message ?? 'Gagal mengupload file.');
+  }
 
-  const { data: { publicUrl } } = supabase.storage
-    .from('reports')
-    .getPublicUrl(fileName);
-
-  return publicUrl;
+  const data = await res.json() as { success: boolean; url: string };
+  return data.url;
 }
 
 // ── Upload multiple files sekaligus ──────────────────────────────────────────

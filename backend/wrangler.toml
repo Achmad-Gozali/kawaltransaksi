@@ -11,11 +11,18 @@ routes = [
 NODE_ENV = "production"
 FRONTEND_URL = "https://kawaltransaksi.com"
 ADMIN_EMAIL = "kawaltransaksi@gmail.com"
+R2_PUBLIC_URL = "https://cdn.kawaltransaksi.com"
 # TURNSTILE_SECRET_KEY & SUPABASE secrets → gunakan: wrangler secret put
+# R2_ACCESS_KEY_ID & R2_SECRET_ACCESS_KEY → gunakan: wrangler secret put
 
 [[kv_namespaces]]
 binding = "LIMITER"
 id = "a218c09fba30472abde923a131764ba0"
+
+# ── R2 Bucket ─────────────────────────────────────────────────────────────────
+[[r2_buckets]]
+binding = "BUCKET"
+bucket_name = "kawaltransaksi"
 
 # ── Cloudflare native rate limiting ───────────────────────────────────────────
 [[unsafe.bindings]]
