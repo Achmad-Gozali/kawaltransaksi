@@ -7,8 +7,8 @@ import { formatDateID, encodeSlug } from '@/lib/utils';
 import StatsChart from './StatsChart';
 import SearchBar from './SearchBar';
 
-export const dynamic = 'force-dynamic';
-export const revalidate = 0;
+// Cache 60 detik — data tidak harus selalu realtime
+export const revalidate = 60;
 
 const ewalletNames = ['gopay', 'dana', 'ovo', 'shopeepay', 'linkaja'];
 
@@ -62,6 +62,19 @@ function getStatusBadge(status: string, reportCount: number) {
   }
 }
 
+function buildPaginationPages(current: number, total: number): (number | '...')[] {
+  if (total <= 7) return Array.from({ length: total }, (_, i) => i + 1);
+  const pages: (number | '...')[] = [];
+  if (current <= 4) {
+    pages.push(1, 2, 3, 4, 5, '...', total);
+  } else if (current >= total - 3) {
+    pages.push(1, '...', total - 4, total - 3, total - 2, total - 1, total);
+  } else {
+    pages.push(1, '...', current - 1, current, current + 1, '...', total);
+  }
+  return pages;
+}
+
 export default async function LaporanPublikPage({
   searchParams,
 }: {
@@ -75,15 +88,17 @@ export default async function LaporanPublikPage({
   const type = params.type ?? 'all';
   const sort = params.sort ?? 'latest';
   const q = params.q ?? '';
-  const page = parseInt(params.page ?? '1');
+  const page = Math.max(1, parseInt(params.page ?? '1'));
   const perPage = 12;
 
+  // ── Query stats (untuk chart) — fetch minimal kolom ──────────────────────
   const { data: allReportsForStats } = await supabase
     .from('reports')
     .select('target_type, bank_name, category, status, created_at')
     .in('status', ['verified', 'pending', 'withdrawn'])
     .order('created_at', { ascending: true });
 
+  // ── Query laporan untuk list — fetch minimal kolom ────────────────────────
   let query = supabase
     .from('reports')
     .select('id, target_number, target_name, target_type, bank_name, category, status, created_at')
@@ -97,6 +112,7 @@ export default async function LaporanPublikPage({
 
   const { data: allReports } = await query;
 
+  // ── Grouping di server (bukan di DB karena Supabase free tidak support window functions) ──
   const grouped = new Map<string, {
     target_number: string;
     target_name: string | null;
@@ -145,8 +161,10 @@ export default async function LaporanPublikPage({
 
   const totalUniqueNumbers = groupedArray.length;
   const totalPages = Math.ceil(totalUniqueNumbers / perPage);
-  const paginatedReports = groupedArray.slice((page - 1) * perPage, page * perPage);
+  const safePage = Math.min(page, Math.max(1, totalPages));
+  const paginatedReports = groupedArray.slice((safePage - 1) * perPage, safePage * perPage);
   const totalReports = (allReportsForStats ?? []).length;
+  const paginationPages = buildPaginationPages(safePage, totalPages);
 
   const buildUrl = (newParams: Record<string, string>) => {
     const p = new URLSearchParams({ type, sort, q, page: '1', ...newParams });
@@ -160,6 +178,7 @@ export default async function LaporanPublikPage({
   return (
     <main className="bg-white text-slate-900 font-sans min-h-screen">
 
+      {/* ── Header ─────────────────────────────────────────────────────────── */}
       <section className="bg-slate-50 px-4 pt-10 pb-8 sm:pt-14 sm:pb-10">
         <div className="max-w-5xl mx-auto">
           <h1 className="text-2xl sm:text-4xl font-black tracking-tighter uppercase mb-2 leading-tight">
@@ -176,6 +195,7 @@ export default async function LaporanPublikPage({
         <path d="M0,50 C360,10 720,40 1080,15 C1260,2 1380,30 1440,50 Z" fill="#ffffff" />
       </svg>
 
+      {/* ── Statistik ──────────────────────────────────────────────────────── */}
       <section className="px-4 pt-6 pb-2">
         <div className="max-w-5xl mx-auto">
           <div className="flex items-center gap-2 mb-4">
@@ -189,10 +209,12 @@ export default async function LaporanPublikPage({
         </div>
       </section>
 
+      {/* ── Filter & Search ────────────────────────────────────────────────── */}
       <section className="px-4 mt-8 pb-4 border-y border-slate-100 bg-white sticky top-16 z-10">
         <div className="max-w-5xl mx-auto space-y-4 py-4">
           <SearchBar defaultValue={q} type={type} sort={sort} />
-          <div className="flex items-start gap-6 flex-wrap sm:flex-nowrap">
+          <div className="flex items-start gap-4 sm:gap-6 flex-wrap sm:flex-nowrap">
+            {/* Filter tipe */}
             <div className="flex flex-col gap-2">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Tipe</span>
               <div className="flex items-center gap-1.5 flex-wrap">
@@ -216,6 +238,7 @@ export default async function LaporanPublikPage({
 
             <div className="hidden sm:block w-px self-stretch bg-slate-100 mt-5" />
 
+            {/* Sort */}
             <div className="flex flex-col gap-2">
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">Urutkan</span>
               <div className="flex items-center gap-1.5">
@@ -235,9 +258,10 @@ export default async function LaporanPublikPage({
               </div>
             </div>
 
+            {/* Info & reset */}
             <div className="sm:ml-auto flex items-end pb-0.5 gap-3">
               <span className="text-xs font-bold text-slate-400 uppercase tracking-widest">
-                {totalUniqueNumbers} nomor
+                {totalUniqueNumbers} nomor unik
               </span>
               {(q || type !== 'all' || sort !== 'latest') && (
                 <Link href="/laporan-publik" className="text-xs text-slate-400 hover:text-red-500 font-semibold transition-colors">
@@ -258,6 +282,7 @@ export default async function LaporanPublikPage({
         </div>
       </section>
 
+      {/* ── Grid Laporan ───────────────────────────────────────────────────── */}
       <section className="px-4 py-6 sm:py-8">
         <div className="max-w-5xl mx-auto">
           {paginatedReports.length === 0 ? (
@@ -330,23 +355,68 @@ export default async function LaporanPublikPage({
             </div>
           )}
 
+          {/* ── Pagination ──────────────────────────────────────────────────── */}
           {totalPages > 1 && (
-            <div className="flex justify-center items-center gap-2 mt-8">
-              {page > 1 && (
-                <Link href={buildUrl({ page: String(page - 1) })} scroll={false}
-                  className="px-4 py-2 text-xs font-bold uppercase tracking-widest border border-slate-200 rounded-lg hover:border-slate-400 transition-colors">
-                  ← Prev
-                </Link>
-              )}
-              <span className="text-xs font-bold text-slate-400 uppercase tracking-widest px-3">
-                {page} / {totalPages}
-              </span>
-              {page < totalPages && (
-                <Link href={buildUrl({ page: String(page + 1) })} scroll={false}
-                  className="px-4 py-2 text-xs font-bold uppercase tracking-widest border border-slate-200 rounded-lg hover:border-slate-400 transition-colors">
-                  Next →
-                </Link>
-              )}
+            <div className="mt-8 sm:mt-10">
+              {/* Info halaman */}
+              <p className="text-center text-xs text-slate-400 font-medium mb-4">
+                Menampilkan {(safePage - 1) * perPage + 1}–{Math.min(safePage * perPage, totalUniqueNumbers)} dari {totalUniqueNumbers} nomor
+              </p>
+
+              {/* Tombol pagination */}
+              <div className="flex justify-center items-center gap-1.5 flex-wrap">
+                {/* Prev */}
+                {safePage > 1 ? (
+                  <Link
+                    href={buildUrl({ page: String(safePage - 1) })}
+                    scroll={false}
+                    className="px-3 py-2 text-xs font-bold border border-slate-200 rounded-lg hover:border-slate-400 hover:bg-slate-50 transition-all"
+                  >
+                    ←
+                  </Link>
+                ) : (
+                  <span className="px-3 py-2 text-xs font-bold border border-slate-100 rounded-lg text-slate-300 cursor-not-allowed">
+                    ←
+                  </span>
+                )}
+
+                {/* Nomor halaman */}
+                {paginationPages.map((p, i) =>
+                  p === '...' ? (
+                    <span key={`dots-${i}`} className="px-2 py-2 text-xs text-slate-300 font-bold">
+                      ···
+                    </span>
+                  ) : (
+                    <Link
+                      key={p}
+                      href={buildUrl({ page: String(p) })}
+                      scroll={false}
+                      className={`w-9 h-9 flex items-center justify-center text-xs font-bold rounded-lg border transition-all ${
+                        p === safePage
+                          ? 'bg-slate-900 text-white border-slate-900'
+                          : 'border-slate-200 text-slate-600 hover:border-slate-400 hover:bg-slate-50'
+                      }`}
+                    >
+                      {p}
+                    </Link>
+                  )
+                )}
+
+                {/* Next */}
+                {safePage < totalPages ? (
+                  <Link
+                    href={buildUrl({ page: String(safePage + 1) })}
+                    scroll={false}
+                    className="px-3 py-2 text-xs font-bold border border-slate-200 rounded-lg hover:border-slate-400 hover:bg-slate-50 transition-all"
+                  >
+                    →
+                  </Link>
+                ) : (
+                  <span className="px-3 py-2 text-xs font-bold border border-slate-100 rounded-lg text-slate-300 cursor-not-allowed">
+                    →
+                  </span>
+                )}
+              </div>
             </div>
           )}
         </div>
