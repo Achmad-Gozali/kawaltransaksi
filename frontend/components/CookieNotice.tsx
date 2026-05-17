@@ -1,21 +1,35 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import { Cookie } from 'lucide-react';
+
+// Lazy load icon supaya tidak masuk bundle utama
+import dynamic from 'next/dynamic';
+const Cookie = dynamic(() => import('lucide-react').then((m) => ({ default: m.Cookie })), {
+  ssr: false,
+});
 
 export default function CookieNotice() {
   const [visible, setVisible] = useState(false);
 
   useEffect(() => {
-    const accepted = localStorage.getItem('cookie_notice_accepted');
-    if (!accepted) {
-      const timer = setTimeout(() => setVisible(true), 1000);
-      return () => clearTimeout(timer);
-    }
+    // Delay lebih panjang supaya LCP selesai dulu sebelum notice muncul
+    const timer = setTimeout(() => {
+      try {
+        const accepted = localStorage.getItem('cookie_notice_accepted');
+        if (!accepted) setVisible(true);
+      } catch {
+        // ignore localStorage error (private mode, dll)
+      }
+    }, 3000);
+    return () => clearTimeout(timer);
   }, []);
 
   const handleAccept = () => {
-    localStorage.setItem('cookie_notice_accepted', '1');
+    try {
+      localStorage.setItem('cookie_notice_accepted', '1');
+    } catch {
+      // ignore
+    }
     setVisible(false);
   };
 

@@ -2,14 +2,21 @@ import type { Metadata, Viewport } from 'next';
 import { Inter, Roboto_Mono } from 'next/font/google';
 import './globals.css';
 import SiteShell from '@/components/SiteShell';
-import { Analytics } from '@vercel/analytics/next'
-import CookieNotice from '@/components/CookieNotice';
+import { Analytics } from '@vercel/analytics/next';
+import dynamic from 'next/dynamic';
+
+// Dynamic import supaya CookieNotice tidak ikut bundle utama & tidak jadi LCP element
+const CookieNotice = dynamic(() => import('@/components/CookieNotice'), {
+  ssr: false,
+});
 
 const inter = Inter({
   subsets: ['latin'],
   display: 'swap',
   preload: true,
   variable: '--font-inter',
+  // Preload hanya weight yang dipakai supaya tidak load semua variant
+  weight: ['400', '500', '600', '700'],
 });
 
 const robotoMono = Roboto_Mono({
@@ -17,6 +24,7 @@ const robotoMono = Roboto_Mono({
   weight: ['400', '500'],
   display: 'swap',
   variable: '--font-dm-mono',
+  preload: false, // mono font tidak critical, load belakangan
 });
 
 export const metadata: Metadata = {
@@ -170,7 +178,9 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
       >
         <div className="fixed inset-0 -z-10 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px] [mask-image:radial-gradient(ellipse_50%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-50" />
         <SiteShell>{children}</SiteShell>
-        <Analytics />
+        {/* Analytics di-defer supaya tidak bloking LCP */}
+        <Analytics mode="auto" />
+        {/* CookieNotice di-lazy load, muncul 3 detik setelah LCP */}
         <CookieNotice />
       </body>
     </html>

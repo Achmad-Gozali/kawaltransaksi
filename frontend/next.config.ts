@@ -51,6 +51,8 @@ const nextConfig: NextConfig = {
 
   experimental: {
     optimisticClientCache: true,
+    // Optimasi package imports supaya tree-shaking lebih efektif
+    optimizePackageImports: ['lucide-react', 'motion', '@radix-ui/react-icons'],
   },
 
   async rewrites() {
@@ -156,12 +158,55 @@ const nextConfig: NextConfig = {
   output: 'standalone',
   transpilePackages: ['motion'],
 
-  webpack: (config, { dev }) => {
+  webpack: (config, { dev, webpack }) => {
     if (dev && process.env.DISABLE_HMR === 'true') {
       config.watchOptions = {
         ignored: /.*/,
       };
     }
+
+    // Target modern browsers supaya polyfill legacy tidak di-include
+    // Ini fix "JavaScript lama" warning di PageSpeed
+    config.target = ['web', 'es2017'];
+
+    // Optimasi bundle dengan mengurangi chunk yang tidak perlu
+    if (!dev) {
+      config.optimization = {
+        ...config.optimization,
+        moduleIds: 'deterministic',
+        splitChunks: {
+          ...config.optimization?.splitChunks,
+          chunks: 'all',
+          cacheGroups: {
+            // Pisahkan vendor besar supaya lebih efisien di-cache
+            framework: {
+              name: 'framework',
+              chunks: 'all',
+              test: /[\\/]node_modules[\\/](react|react-dom|scheduler)[\\/]/,
+              priority: 40,
+              enforce: true,
+            },
+            // Lucide icons - lazy load per icon
+            lucide: {
+              name: 'lucide',
+              chunks: 'all',
+              test: /[\\/]node_modules[\\/]lucide-react[\\/]/,
+              priority: 30,
+              enforce: true,
+            },
+          },
+        },
+      };
+
+      // Ignore moment.js locales kalau ada (common bloat)
+      config.plugins.push(
+        new webpack.IgnorePlugin({
+          resourceRegExp: /^\.\/locale$/,
+          contextRegExp: /moment$/,
+        })
+      );
+    }
+
     return config;
   },
 };
