@@ -7,9 +7,8 @@ import { createClient } from '@/lib/supabase-browser';
 import {
   LayoutDashboard, FileText, BarChart2, Users,
   Home, LogOut, ChevronLeft, ChevronRight,
-  Search, X, Shield, ShieldX, Menu, Newspaper,
+  Search, X, Shield, ShieldX, Menu, Newspaper, MessageCircle,
 } from 'lucide-react';
-
 
 interface AdminShellProps {
   email: string;
@@ -18,14 +17,14 @@ interface AdminShellProps {
 
 const navItems = [
   { id: 'dashboard', label: 'Dashboard',    icon: LayoutDashboard, href: '/admin?tab=dashboard' },
-  { id: 'laporan',   label: 'Laporan',      icon: FileText,         href: '/admin?tab=laporan' },
-  { id: 'artikel',   label: 'Artikel',      icon: Newspaper,        href: '/admin?tab=artikel' },
-  { id: 'statistik', label: 'Statistik',    icon: BarChart2,        href: '/admin?tab=statistik' },
-  { id: 'pengguna',  label: 'Pengguna',     icon: Users,            href: '/admin?tab=pengguna' },
-  { id: 'blacklist', label: 'IP Blacklist', icon: ShieldX,          href: '/admin?tab=blacklist' },
+  { id: 'laporan',   label: 'Laporan',      icon: FileText,        href: '/admin?tab=laporan'   },
+  { id: 'artikel',   label: 'Artikel',      icon: Newspaper,       href: '/admin?tab=artikel'   },
+  { id: 'statistik', label: 'Statistik',    icon: BarChart2,       href: '/admin?tab=statistik' },
+  { id: 'pengguna',  label: 'Pengguna',     icon: Users,           href: '/admin?tab=pengguna'  },
+  { id: 'blacklist', label: 'IP Blacklist', icon: ShieldX,         href: '/admin?tab=blacklist' },
+  { id: 'feedback',  label: 'Feedback',     icon: MessageCircle,   href: '/admin?tab=feedback'  },
 ];
 
-// ✅ NavContent dipindah ke level module, di luar AdminShell
 interface NavContentProps {
   onNavClick?: () => void;
   collapsed: boolean;
@@ -120,13 +119,12 @@ export default function AdminShell({ email, children }: AdminShellProps) {
     }
   };
 
-  // Props yang dipakai kedua sidebar
   const navProps = { collapsed, activeTab, email, initial, onLogout: handleLogout };
 
   return (
     <div className="min-h-screen bg-slate-50 flex">
 
-      {/* ── MOBILE SIDEBAR OVERLAY ── */}
+      {/* ── Mobile sidebar overlay ── */}
       {mobileOpen && (
         <div
           className="lg:hidden fixed inset-0 bg-black/40 z-40 backdrop-blur-sm"
@@ -134,7 +132,7 @@ export default function AdminShell({ email, children }: AdminShellProps) {
         />
       )}
 
-      {/* ── MOBILE SIDEBAR DRAWER ── */}
+      {/* ── Mobile sidebar drawer ── */}
       <aside className={`
         lg:hidden fixed top-0 left-0 h-full w-[280px] bg-white border-r border-slate-200 z-50 flex flex-col
         transition-transform duration-250 ease-out
@@ -159,12 +157,10 @@ export default function AdminShell({ email, children }: AdminShellProps) {
             <X className="w-4 h-4" />
           </button>
         </div>
-
-        {/* ✅ Pass semua props secara eksplisit */}
         <NavContent {...navProps} onNavClick={() => setMobileOpen(false)} />
       </aside>
 
-      {/* ── DESKTOP SIDEBAR ── */}
+      {/* ── Desktop sidebar ── */}
       <aside className={`
         hidden lg:flex fixed top-0 left-0 h-full bg-white border-r border-slate-200 z-50 flex-col
         transition-all duration-200 ease-out
@@ -183,10 +179,7 @@ export default function AdminShell({ email, children }: AdminShellProps) {
             </div>
           )}
         </div>
-
-        {/* ✅ Pass semua props secara eksplisit */}
         <NavContent {...navProps} />
-
         <button
           onClick={() => setCollapsed(!collapsed)}
           className="flex items-center justify-center h-10 border-t border-slate-100 text-slate-400 hover:text-slate-700 hover:bg-slate-50 transition-colors"
@@ -195,7 +188,7 @@ export default function AdminShell({ email, children }: AdminShellProps) {
         </button>
       </aside>
 
-      {/* ── MAIN CONTENT ── */}
+      {/* ── Main content ── */}
       <div className={`flex-1 flex flex-col min-h-screen transition-all duration-200 ${collapsed ? 'lg:ml-[64px]' : 'lg:ml-[240px]'}`}>
         <header className="h-14 sm:h-16 bg-white border-b border-slate-200 flex items-center justify-between px-3 sm:px-6 shrink-0 sticky top-0 z-30">
           <button

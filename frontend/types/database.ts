@@ -1,11 +1,14 @@
 // ============================================
 // 📁 LOKASI: types/database.ts
-// ✅ UPDATE: Tambah store_name & suspect_city
+// ✅ UPDATE: Tambah tabel feedback
 // ============================================
 
-export type TargetType = 'phone' | 'bank_account' | 'ewallet';
-export type ReportStatus = 'pending' | 'verified' | 'rejected' | 'withdrawn';
-export type UserRole = 'user' | 'admin' | 'moderator';
+export type TargetType    = 'phone' | 'bank_account' | 'ewallet';
+export type ReportStatus  = 'pending' | 'verified' | 'rejected' | 'withdrawn';
+export type UserRole      = 'user' | 'admin' | 'moderator';
+export type FeedbackCategory = 'bug' | 'feature' | 'ui_ux' | 'other';
+export type FeedbackUrgency  = 'low' | 'medium' | 'high' | 'critical';
+export type FeedbackStatus   = 'pending' | 'in_review' | 'fixed' | 'closed';
 
 export interface Profile {
   id: string;
@@ -27,6 +30,22 @@ export interface Report {
   chronology: string;
   evidence_url: string | null;
   status: ReportStatus;
+  created_at: string;
+}
+
+export interface Feedback {
+  id: string;
+  user_id: string | null;
+  user_email: string | null;
+  category: FeedbackCategory;
+  title: string;
+  description: string;
+  page_url: string | null;
+  urgency: FeedbackUrgency;
+  screenshot_urls: string[];
+  status: FeedbackStatus;
+  admin_reply: string | null;
+  replied_at: string | null;
   created_at: string;
 }
 
@@ -71,6 +90,7 @@ export interface Database {
         };
         Relationships: [];
       };
+
       reports: {
         Row: {
           id: string;
@@ -146,6 +166,7 @@ export interface Database {
         };
         Relationships: [];
       };
+
       articles: {
         Row: {
           id: string;
@@ -191,10 +212,61 @@ export interface Database {
         };
         Relationships: [];
       };
+
+      feedback: {
+        Row: {
+          id: string;
+          user_id: string | null;
+          user_email: string | null;
+          category: string;
+          title: string;
+          description: string;
+          page_url: string | null;
+          urgency: string;
+          screenshot_urls: string[];
+          status: string;
+          admin_reply: string | null;
+          replied_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id?: string | null;
+          user_email?: string | null;
+          category: string;
+          title: string;
+          description: string;
+          page_url?: string | null;
+          urgency?: string;
+          screenshot_urls?: string[];
+          status?: string;
+          admin_reply?: string | null;
+          replied_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string | null;
+          user_email?: string | null;
+          category?: string;
+          title?: string;
+          description?: string;
+          page_url?: string | null;
+          urgency?: string;
+          screenshot_urls?: string[];
+          status?: string;
+          admin_reply?: string | null;
+          replied_at?: string | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
     };
+
     Views: {
       [_ in never]: never;
     };
+
     Functions: {
       get_category_counts: {
         Args: Record<string, never>;
@@ -237,10 +309,12 @@ export interface Database {
         Returns: undefined;
       };
     };
+
     Enums: {
-      target_type_enum: 'phone' | 'bank_account';
+      target_type_enum:   'phone' | 'bank_account';
       report_status_enum: 'pending' | 'verified' | 'rejected' | 'withdrawn';
     };
+
     CompositeTypes: {
       [_ in never]: never;
     };

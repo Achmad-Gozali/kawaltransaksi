@@ -71,7 +71,7 @@ export interface Stats {
   rejected: number;
 }
 
-export type Tab = 'dashboard' | 'laporan' | 'statistik' | 'pengguna' | 'blacklist' | 'artikel';
+export type Tab = 'dashboard' | 'laporan' | 'statistik' | 'pengguna' | 'blacklist' | 'artikel' | 'feedback';
 export type StatusFilter = 'semua' | 'pending' | 'verified' | 'rejected' | 'withdrawn';
 
 export const reportedToLabel: Record<string, string> = {

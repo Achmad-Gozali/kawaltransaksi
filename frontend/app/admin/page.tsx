@@ -2,8 +2,11 @@ import { Suspense } from 'react';
 import { createClient as createSupabaseAdmin } from '@supabase/supabase-js';
 import { createClient } from '@/lib/supabase-server';
 import AdminDashboard from './AdminDashboard';
+import type { FeedbackItem } from './tabs/FeedbackTab';
 
 export const dynamic = 'force-dynamic';
+
+// ── Fetch users ───────────────────────────────────────────────────────────────
 
 async function fetchUsers() {
   const supabase = createSupabaseAdmin(
@@ -30,10 +33,34 @@ async function fetchUsers() {
 
   return profiles.map((p: any) => ({
     ...p,
-    created_at: p.updated_at,
+    created_at:   p.updated_at,
     report_count: reportCounts[p.id] || 0,
   }));
 }
+
+// ── Fetch feedbacks ───────────────────────────────────────────────────────────
+
+async function fetchFeedbacks(): Promise<FeedbackItem[]> {
+  const supabase = createSupabaseAdmin(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.SUPABASE_SERVICE_ROLE_KEY!,
+    { auth: { autoRefreshToken: false, persistSession: false } }
+  );
+
+  const { data, error } = await supabase
+    .from('feedback')
+    .select('*')
+    .order('created_at', { ascending: false });
+
+  if (error) {
+    console.error('[ADMIN] Gagal fetch feedback:', error.message);
+    return [];
+  }
+
+  return (data ?? []) as FeedbackItem[];
+}
+
+// ── Page ──────────────────────────────────────────────────────────────────────
 
 export default async function AdminPage() {
   const supabase = await createClient();
@@ -41,7 +68,6 @@ export default async function AdminPage() {
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) return null;
 
-  // Ambil session untuk token
   const { data: { session } } = await supabase.auth.getSession();
   const token = session?.access_token ?? '';
 
@@ -52,6 +78,7 @@ export default async function AdminPage() {
     { count: rejectedCount },
     { data: reports },
     users,
+    feedbacks,
   ] = await Promise.all([
     supabase.from('reports').select('*', { count: 'exact', head: true }),
     supabase.from('reports').select('*', { count: 'exact', head: true }).eq('status', 'pending'),
@@ -59,11 +86,12 @@ export default async function AdminPage() {
     supabase.from('reports').select('*', { count: 'exact', head: true }).eq('status', 'rejected'),
     supabase.rpc('get_reports_admin'),
     fetchUsers(),
+    fetchFeedbacks(),
   ]);
 
   const stats = {
-    total: totalReports || 0,
-    pending: pendingCount || 0,
+    total:    totalReports || 0,
+    pending:  pendingCount  || 0,
     verified: verifiedCount || 0,
     rejected: rejectedCount || 0,
   };
@@ -83,6 +111,7 @@ export default async function AdminPage() {
         stats={stats}
         reports={(reports ?? []) as any[]}
         users={users ?? []}
+        feedbacks={feedbacks}
         token={token}
       />
     </Suspense>

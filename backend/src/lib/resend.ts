@@ -159,7 +159,6 @@ export async function sendReportCreatedEmail({
         <img src="https://kawaltransaksi.com/logo.png" alt="KawalTransaksi" width="48" style="border-radius: 12px; margin-bottom: 24px;" />
         <h1 style="font-size: 22px; font-weight: 900; margin: 0 0 8px;">Laporan Berhasil Dikirim</h1>
         <p style="color: #475569; margin: 0 0 24px;">Halo, <strong>${fullName}</strong>. Terima kasih telah berkontribusi dalam melindungi masyarakat dari penipuan digital. Laporan kamu sangat berarti bagi kami.</p>
-
         <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
           <p style="margin: 0 0 4px; font-size: 12px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">Nomor yang dilaporkan</p>
           <p style="margin: 0 0 16px; font-size: 20px; font-weight: 800; letter-spacing: 1px; color: #0f172a;">${targetNumber}</p>
@@ -168,11 +167,8 @@ export async function sendReportCreatedEmail({
           <p style="margin: 0 0 8px; font-size: 12px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">Status laporan</p>
           ${statusBadge}
         </div>
-
         <p style="color: #475569; margin: 0 0 24px; font-size: 14px; line-height: 1.7;">${statusDesc}</p>
-
         <a href="${reportUrl}" style="display: inline-block; background: #10b981; color: white; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: 700; font-size: 14px;">Lihat Detail Laporan</a>
-
         <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 32px 0;" />
         <p style="font-size: 12px; color: #94a3b8;">Email ini dikirim otomatis. Jangan balas email ini. Jika ada pertanyaan, hubungi kami di <a href="mailto:kawaltransaksi@gmail.com" style="color: #10b981;">kawaltransaksi@gmail.com</a>.</p>
       </div>
@@ -215,7 +211,6 @@ export async function sendReportStatusChangedEmail({
       color: '#a16207',
       bg: '#fef9c3',
       desc: 'Laporan kamu kembali masuk ke antrian verifikasi dan sedang ditinjau ulang oleh tim kami. Kami akan menginformasikan hasilnya secepatnya.',
-      action: undefined,
     },
     withdrawn: {
       label: '🔄 Sedang Direvisi',
@@ -231,25 +226,21 @@ export async function sendReportStatusChangedEmail({
   await sendEmail({
     to,
     apiKey,
-    subject: `Pembaruan status laporan kamu — KawalTransaksi`,
+    subject: 'Pembaruan status laporan kamu — KawalTransaksi',
     html: `
       <div style="font-family: sans-serif; max-width: 520px; margin: 0 auto; padding: 32px; color: #1e293b;">
         <img src="https://kawaltransaksi.com/logo.png" alt="KawalTransaksi" width="48" style="border-radius: 12px; margin-bottom: 24px;" />
         <h1 style="font-size: 22px; font-weight: 900; margin: 0 0 8px;">Status Laporan Diperbarui</h1>
         <p style="color: #475569; margin: 0 0 24px;">Halo, <strong>${fullName}</strong>. Ada kabar terbaru mengenai laporan yang kamu ajukan.</p>
-
         <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
           <p style="margin: 0 0 4px; font-size: 12px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">Nomor yang dilaporkan</p>
           <p style="margin: 0 0 16px; font-size: 20px; font-weight: 800; letter-spacing: 1px; color: #0f172a;">${targetNumber}</p>
           <p style="margin: 0 0 8px; font-size: 12px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">Status terbaru</p>
           <span style="background: ${cfg.bg}; color: ${cfg.color}; padding: 4px 12px; border-radius: 999px; font-size: 13px; font-weight: 700;">${cfg.label}</span>
         </div>
-
         <p style="color: #475569; margin: 0 0 16px; font-size: 14px; line-height: 1.7;">${cfg.desc}</p>
         ${cfg.action ? `<p style="color: #475569; margin: 0 0 24px; font-size: 14px; line-height: 1.7;">${cfg.action}</p>` : '<div style="margin-bottom: 24px;"></div>'}
-
         <a href="${reportUrl}" style="display: inline-block; background: #10b981; color: white; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: 700; font-size: 14px;">Lihat Detail Laporan</a>
-
         <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 32px 0;" />
         <p style="font-size: 12px; color: #94a3b8;">Email ini dikirim otomatis. Jangan balas email ini. Jika ada pertanyaan, hubungi kami di <a href="mailto:kawaltransaksi@gmail.com" style="color: #10b981;">kawaltransaksi@gmail.com</a>.</p>
       </div>
@@ -287,7 +278,6 @@ export async function sendNewReportAdminEmail({
         <img src="https://kawaltransaksi.com/logo.png" alt="KawalTransaksi" width="48" style="border-radius: 12px; margin-bottom: 24px;" />
         <h1 style="font-size: 22px; font-weight: 900; margin: 0 0 8px;">Laporan Baru Masuk</h1>
         <p style="color: #475569; margin: 0 0 24px;">Terdapat laporan baru yang memerlukan perhatian kamu di panel admin.</p>
-
         <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
           <p style="margin: 0 0 4px; font-size: 12px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">Dilaporkan oleh</p>
           <p style="margin: 0 0 16px; font-size: 15px; font-weight: 600; color: #0f172a;">${reporterName}</p>
@@ -298,11 +288,52 @@ export async function sendNewReportAdminEmail({
           <p style="margin: 0 0 8px; font-size: 12px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">Status otomatis</p>
           ${statusLabel}
         </div>
-
         <a href="${reportUrl}" style="display: inline-block; background: #1d4ed8; color: white; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: 700; font-size: 14px;">Buka di Panel Admin</a>
-
         <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 32px 0;" />
         <p style="font-size: 12px; color: #94a3b8;">Email ini dikirim otomatis oleh sistem KawalTransaksi.</p>
+      </div>
+    `,
+  });
+}
+
+// ── Feedback email ────────────────────────────────────────────────────────────
+
+export async function sendFeedbackReplyEmail({
+  to,
+  title,
+  adminReply,
+  apiKey,
+}: {
+  to: string;
+  title: string;
+  adminReply: string;
+  apiKey: string;
+}) {
+  await sendEmail({
+    to,
+    apiKey,
+    subject: 'Tim KawalTransaksi membalas feedback kamu',
+    html: `
+      <div style="font-family: sans-serif; max-width: 520px; margin: 0 auto; padding: 32px; color: #1e293b;">
+        <img src="https://kawaltransaksi.com/logo.png" alt="KawalTransaksi" width="48" style="border-radius: 12px; margin-bottom: 24px;" />
+        <h1 style="font-size: 22px; font-weight: 900; margin: 0 0 8px;">Ada Balasan untuk Feedback Kamu</h1>
+        <p style="color: #475569; margin: 0 0 24px;">Tim KawalTransaksi telah merespons feedback yang kamu kirimkan.</p>
+
+        <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+          <p style="margin: 0 0 4px; font-size: 12px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">Feedback kamu</p>
+          <p style="margin: 0 0 20px; font-size: 15px; font-weight: 600; color: #0f172a;">${title}</p>
+          <p style="margin: 0 0 4px; font-size: 12px; color: #94a3b8; text-transform: uppercase; letter-spacing: 0.5px;">Balasan dari tim</p>
+          <p style="margin: 0; font-size: 14px; color: #1e293b; line-height: 1.7; white-space: pre-wrap;">${adminReply}</p>
+        </div>
+
+        <p style="color: #475569; margin: 0 0 24px; font-size: 14px; line-height: 1.7;">
+          Terima kasih sudah meluangkan waktu untuk memberikan masukan. Feedback kamu sangat membantu kami dalam terus meningkatkan KawalTransaksi.
+        </p>
+
+        <a href="https://kawaltransaksi.com" style="display: inline-block; background: #10b981; color: white; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: 700; font-size: 14px;">Kunjungi KawalTransaksi</a>
+
+        <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 32px 0;" />
+        <p style="font-size: 12px; color: #94a3b8;">Email ini dikirim otomatis. Jangan balas email ini. Jika ada pertanyaan lain, kirim feedback baru melalui tombol di website kami.</p>
       </div>
     `,
   });

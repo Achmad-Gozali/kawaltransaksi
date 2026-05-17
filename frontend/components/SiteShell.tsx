@@ -5,6 +5,7 @@ import { useEffect, useState, useRef } from 'react';
 import { ArrowUp } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
+import FeedbackButton from '@/components/FeedbackButton';
 import NProgress from 'nprogress';
 import 'nprogress/nprogress.css';
 
@@ -12,9 +13,10 @@ NProgress.configure({ showSpinner: false, trickleSpeed: 200 });
 
 export default function SiteShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
-  const isAdmin = pathname?.startsWith('/admin');
-  const isAuth = pathname === '/login' || pathname === '/register' || pathname === '/lupa-kata-sandi' || pathname === '/reset-kata-sandi';
+  const isAdmin       = pathname?.startsWith('/admin');
+  const isAuth        = pathname === '/login' || pathname === '/register' || pathname === '/lupa-kata-sandi' || pathname === '/reset-kata-sandi';
   const isMaintenance = pathname?.startsWith('/maintenance');
+
   const [showBackToTop, setShowBackToTop] = useState(false);
   const prevPathname = useRef(pathname);
 
@@ -45,6 +47,8 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
 
   const scrollToTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
 
+  const hideChrome = isAdmin || isAuth || isMaintenance;
+
   return (
     <>
       <style>{`
@@ -56,11 +60,16 @@ export default function SiteShell({ children }: { children: React.ReactNode }) {
           box-shadow: 0 0 10px #10b981, 0 0 5px #10b981 !important;
         }
       `}</style>
-      {!isAdmin && !isAuth && !isMaintenance && <Navbar />}
-      <main className="flex-grow">{children}</main>
-      {!isAdmin && !isAuth && !isMaintenance && <Footer />}
 
-      {!isAdmin && !isAuth && !isMaintenance && showBackToTop && (
+      {!hideChrome && <Navbar />}
+      <main className="flex-grow">{children}</main>
+      {!hideChrome && <Footer />}
+
+      {/* Feedback button — tampil di semua halaman kecuali admin/auth/maintenance */}
+      {!hideChrome && <FeedbackButton />}
+
+      {/* Back to top — posisi kiri dari FeedbackButton */}
+      {!hideChrome && showBackToTop && (
         <button
           onClick={scrollToTop}
           className="fixed bottom-6 right-6 z-50 p-3 bg-slate-900 text-white rounded-full shadow-lg hover:bg-slate-700 transition-all active:scale-95"

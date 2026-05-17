@@ -6,9 +6,12 @@ import adminRoutes from './routes/admin';
 import searchRoutes from './routes/search';
 import articlesRoutes, { generateWeeklyArticle } from './routes/articles';
 import uploadRoutes from './routes/upload';
+import feedbackRoutes from './routes/feedback';
 import type { Env } from './types';
 
 const app = new Hono<{ Bindings: Env }>();
+
+// ── CORS ──────────────────────────────────────────────────────────────────────
 
 app.use('*', cors({
   origin: (origin, c) => {
@@ -25,6 +28,8 @@ app.use('*', cors({
   allowHeaders: ['Content-Type', 'Authorization', 'X-Internal-Key'],
   credentials: true,
 }));
+
+// ── Origin / CSRF validator ───────────────────────────────────────────────────
 
 const originValidator = async (c: any, next: any) => {
   if (c.req.method === 'OPTIONS') return next();
@@ -44,7 +49,6 @@ const originValidator = async (c: any, next: any) => {
   ].filter(Boolean);
 
   const isAllowed = allowedOrigins.some((allowed: string) => origin.startsWith(allowed));
-
   if (!isAllowed) {
     console.warn(`[CSRF BLOCK] Origin tidak diizinkan: ${origin}`);
     return c.json({ success: false, message: 'Akses ditolak.' }, 403);
@@ -55,12 +59,15 @@ const originValidator = async (c: any, next: any) => {
 app.use('/api/auth/*', originValidator);
 app.use('/api/search/*', originValidator);
 
+// ── Request size limits ───────────────────────────────────────────────────────
+
 const SIZE_LIMITS: Record<string, number> = {
-  '/api/auth':    10 * 1024,
-  '/api/reports': 512 * 1024,
-  '/api/admin':   50 * 1024,
-  '/api/search':  5 * 1024,
-  '/api/upload':  6 * 1024 * 1024,
+  '/api/auth':     10 * 1024,
+  '/api/reports':  512 * 1024,
+  '/api/admin':    50 * 1024,
+  '/api/search':   5 * 1024,
+  '/api/upload':   6 * 1024 * 1024,
+  '/api/feedback': 10 * 1024,
 };
 const DEFAULT_SIZE_LIMIT = 1 * 1024 * 1024;
 
@@ -83,6 +90,8 @@ app.use('/api/*', async (c, next) => {
   return next();
 });
 
+// ── IP blacklist check ────────────────────────────────────────────────────────
+
 app.use('/api/*', async (c, next) => {
   if (!c.env.LIMITER) return next();
   const ip = c.req.header('CF-Connecting-IP') || 'anonymous';
@@ -101,6 +110,8 @@ app.use('/api/*', async (c, next) => {
   return next();
 });
 
+// ── Auth rate limiter (native CF) ─────────────────────────────────────────────
+
 app.use('/api/auth/*', async (c, next) => {
   if (c.env.AUTH_RATE_LIMITER) {
     const ip = c.req.header('CF-Connecting-IP') || 'anonymous';
@@ -112,14 +123,16 @@ app.use('/api/auth/*', async (c, next) => {
   return next();
 });
 
+// ── Global rate limit (KV) ────────────────────────────────────────────────────
+
 app.use('/api/*', async (c, next) => {
   if (!c.env.LIMITER) return next();
-  const ip = c.req.header('CF-Connecting-IP') || 'anonymous';
-  const key = `rl_global_${ip}`;
+  const ip   = c.req.header('CF-Connecting-IP') || 'anonymous';
+  const key  = `rl_global_${ip}`;
   const path = new URL(c.req.url).pathname;
   try {
     const current = await c.env.LIMITER.get(key);
-    const count = current ? parseInt(current) : 0;
+    const count   = current ? parseInt(current) : 0;
     if (count >= 20) {
       await logSuspiciousIp(c.env.LIMITER, ip, 'Melewati global rate limit', path);
       await autoBlacklistIfAbuse(c.env.LIMITER, ip, 'Terlalu sering melewati global rate limit');
@@ -132,14 +145,16 @@ app.use('/api/*', async (c, next) => {
   return next();
 });
 
+// ── Auth endpoint rate limit (KV) ─────────────────────────────────────────────
+
 app.use('/api/auth/*', async (c, next) => {
   if (!c.env.LIMITER) return next();
-  const ip = c.req.header('CF-Connecting-IP') || 'anonymous';
-  const key = `rl_auth_ip_${ip}`;
+  const ip   = c.req.header('CF-Connecting-IP') || 'anonymous';
+  const key  = `rl_auth_ip_${ip}`;
   const path = new URL(c.req.url).pathname;
   try {
     const current = await c.env.LIMITER.get(key);
-    const count = current ? parseInt(current) : 0;
+    const count   = current ? parseInt(current) : 0;
     if (count >= 5) {
       await logSuspiciousIp(c.env.LIMITER, ip, 'Melewati auth rate limit', path);
       await autoBlacklistIfAbuse(c.env.LIMITER, ip, 'Terlalu sering melewati auth rate limit');
@@ -152,14 +167,16 @@ app.use('/api/auth/*', async (c, next) => {
   return next();
 });
 
+// ── Search rate limit (KV) ────────────────────────────────────────────────────
+
 app.use('/api/search/*', async (c, next) => {
   if (!c.env.LIMITER) return next();
-  const ip = c.req.header('CF-Connecting-IP') || 'anonymous';
-  const key = `rl_search_${ip}`;
+  const ip   = c.req.header('CF-Connecting-IP') || 'anonymous';
+  const key  = `rl_search_${ip}`;
   const path = new URL(c.req.url).pathname;
   try {
     const current = await c.env.LIMITER.get(key);
-    const count = current ? parseInt(current) : 0;
+    const count   = current ? parseInt(current) : 0;
     if (count >= 30) {
       await logSuspiciousIp(c.env.LIMITER, ip, 'Melewati search rate limit', path);
       return c.json({ success: false, message: 'Terlalu banyak permintaan pencarian. Tunggu 1 menit.', retry_after: 60 }, 429);
@@ -170,6 +187,8 @@ app.use('/api/search/*', async (c, next) => {
   }
   return next();
 });
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 export async function logSuspiciousIp(limiter: KVNamespace, ip: string, reason: string, endpoint: string): Promise<void> {
   try {
@@ -183,12 +202,12 @@ export async function logSuspiciousIp(limiter: KVNamespace, ip: string, reason: 
 export async function autoBlacklistIfAbuse(limiter: KVNamespace, ip: string, reason: string): Promise<void> {
   try {
     const abuseKey = `abuse_count_${ip}`;
-    const current = await limiter.get(abuseKey);
-    const count = current ? parseInt(current) : 0;
+    const current  = await limiter.get(abuseKey);
+    const count    = current ? parseInt(current) : 0;
     const newCount = count + 1;
     if (newCount >= 5) {
       const blacklistKey = `blacklist_${ip}`;
-      const existing = await limiter.get(blacklistKey);
+      const existing     = await limiter.get(blacklistKey);
       if (!existing) {
         await limiter.put(blacklistKey, JSON.stringify({ ip, reason, auto: true, created_at: new Date().toISOString() }), { expirationTtl: 86400 });
         await limiter.delete(abuseKey);
@@ -201,20 +220,29 @@ export async function autoBlacklistIfAbuse(limiter: KVNamespace, ip: string, rea
   }
 }
 
+// ── Health check ──────────────────────────────────────────────────────────────
+
 app.get('/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }));
 
-app.route('/api/auth', authRoutes);
-app.route('/api/reports', reportsRoutes);
-app.route('/api/admin', adminRoutes);
-app.route('/api/search', searchRoutes);
+// ── Routes ────────────────────────────────────────────────────────────────────
+
+app.route('/api/auth',     authRoutes);
+app.route('/api/reports',  reportsRoutes);
+app.route('/api/admin',    adminRoutes);
+app.route('/api/search',   searchRoutes);
 app.route('/api/articles', articlesRoutes);
-app.route('/api/upload', uploadRoutes);
+app.route('/api/upload',   uploadRoutes);
+app.route('/api/feedback', feedbackRoutes);  // ← feedback route
+
+// ── Error handlers ────────────────────────────────────────────────────────────
 
 app.notFound((c) => c.json({ success: false, message: 'Endpoint tidak ditemukan.' }, 404));
 app.onError((err, c) => {
   console.error('[ERROR]:', err.message);
   return c.json({ success: false, message: 'Terjadi kesalahan server.' }, 500);
 });
+
+// ── Export ────────────────────────────────────────────────────────────────────
 
 export default {
   fetch: app.fetch,
