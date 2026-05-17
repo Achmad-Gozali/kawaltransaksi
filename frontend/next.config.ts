@@ -2,10 +2,17 @@ import type { NextConfig } from 'next';
 import withSerwist from '@serwist/next';
 import { withSentryConfig } from '@sentry/nextjs';
 
+// ✅ FIX: polyfill self untuk Node.js saat build
+if (typeof globalThis.self === 'undefined') {
+  (globalThis as unknown as { self: typeof globalThis }).self = globalThis;
+}
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   compress: true,
   poweredByHeader: false,
+
+  serverExternalPackages: ['@sentry/nextjs', '@sentry/core', '@sentry/node'],
 
   generateBuildId: async () => {
     return `build-${Date.now()}`;
@@ -51,7 +58,6 @@ const nextConfig: NextConfig = {
 
   experimental: {
     optimisticClientCache: true,
-    // Optimasi package imports supaya tree-shaking lebih efektif
     optimizePackageImports: ['lucide-react', 'motion', '@radix-ui/react-icons'],
   },
 
@@ -158,18 +164,25 @@ const nextConfig: NextConfig = {
   output: 'standalone',
   transpilePackages: ['motion'],
 
-  webpack: (config, { dev, webpack }) => {
+  webpack: (config, { dev, isServer, webpack }) => {
     if (dev && process.env.DISABLE_HMR === 'true') {
       config.watchOptions = {
         ignored: /.*/,
       };
     }
 
-    // Target modern browsers supaya polyfill legacy tidak di-include
-    // Ini fix "JavaScript lama" warning di PageSpeed
-    config.target = ['web', 'es2017'];
+    if (isServer) {
+      // ✅ FIX: DefinePlugin untuk server build saja
+      config.plugins.push(
+        new webpack.DefinePlugin({
+          'self': 'globalThis',
+        })
+      );
+    } else {
+      // ✅ target web hanya untuk client build, BUKAN server
+      config.target = ['web', 'es2017'];
+    }
 
-    // Optimasi bundle dengan mengurangi chunk yang tidak perlu
     if (!dev) {
       config.optimization = {
         ...config.optimization,
@@ -178,7 +191,6 @@ const nextConfig: NextConfig = {
           ...config.optimization?.splitChunks,
           chunks: 'all',
           cacheGroups: {
-            // Pisahkan vendor besar supaya lebih efisien di-cache
             framework: {
               name: 'framework',
               chunks: 'all',
@@ -186,7 +198,6 @@ const nextConfig: NextConfig = {
               priority: 40,
               enforce: true,
             },
-            // Lucide icons - lazy load per icon
             lucide: {
               name: 'lucide',
               chunks: 'all',
@@ -198,7 +209,6 @@ const nextConfig: NextConfig = {
         },
       };
 
-      // Ignore moment.js locales kalau ada (common bloat)
       config.plugins.push(
         new webpack.IgnorePlugin({
           resourceRegExp: /^\.\/locale$/,

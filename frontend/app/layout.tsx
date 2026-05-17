@@ -3,7 +3,6 @@ import { Inter, Roboto_Mono } from 'next/font/google';
 import './globals.css';
 import SiteShell from '@/components/SiteShell';
 import { Analytics } from '@vercel/analytics/next';
-import CookieNotice from '@/components/CookieNotice';
 
 const inter = Inter({
   subsets: ['latin'],
@@ -101,8 +100,6 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-export const revalidate = 60;
-
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="id" className={`scroll-smooth ${inter.variable} ${robotoMono.variable}`}>
@@ -113,7 +110,6 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         <div className="fixed inset-0 -z-10 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px] [mask-image:radial-gradient(ellipse_50%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-50" />
         <SiteShell>{children}</SiteShell>
         <Analytics mode="auto" />
-        <CookieNotice />
       </body>
     </html>
   );
