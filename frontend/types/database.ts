@@ -1,6 +1,6 @@
 // ============================================
-// 📁 LOKASI: types/database.ts
-// ✅ UPDATE: Tambah RPC get_stats, get_laporan_publik, get_laporan_stats
+// 📁 LOKASI: frontend/types/database.ts
+// ✅ UPDATE: Sinkronisasi lengkap dengan struktur tabel Supabase
 // ============================================
 
 export type TargetType    = 'phone' | 'bank_account' | 'ewallet';
@@ -9,6 +9,7 @@ export type UserRole      = 'user' | 'admin' | 'moderator';
 export type FeedbackCategory = 'bug' | 'feature' | 'ui_ux' | 'other';
 export type FeedbackUrgency  = 'low' | 'medium' | 'high' | 'critical';
 export type FeedbackStatus   = 'pending' | 'in_review' | 'fixed' | 'closed';
+export type ArticleStatus = 'draft' | 'published';
 
 export interface Profile {
   id: string;
@@ -167,6 +168,11 @@ export interface Database {
         Relationships: [];
       };
 
+      // ✅ UPDATE: sinkronisasi lengkap dengan kolom DB Supabase
+      // Kolom aktual: id, title, slug, summary, content, published_at,
+      // total_reports, total_loss, top_category, top_platform, top_bank,
+      // period_start, period_end, created_at, cover_image, status
+      // TIDAK ADA kolom updated_at di tabel ini
       articles: {
         Row: {
           id: string;
@@ -175,11 +181,15 @@ export interface Database {
           summary: string;
           content: string;
           published_at: string;
+          status: string;
+          cover_image: string | null;
           total_reports: number | null;
           total_loss: number | null;
           top_category: string | null;
           top_platform: string | null;
           top_bank: string | null;
+          period_start: string | null;
+          period_end: string | null;
           created_at: string;
         };
         Insert: {
@@ -189,11 +199,15 @@ export interface Database {
           summary: string;
           content: string;
           published_at?: string;
+          status?: string;
+          cover_image?: string | null;
           total_reports?: number | null;
           total_loss?: number | null;
           top_category?: string | null;
           top_platform?: string | null;
           top_bank?: string | null;
+          period_start?: string | null;
+          period_end?: string | null;
           created_at?: string;
         };
         Update: {
@@ -203,11 +217,15 @@ export interface Database {
           summary?: string;
           content?: string;
           published_at?: string;
+          status?: string;
+          cover_image?: string | null;
           total_reports?: number | null;
           total_loss?: number | null;
           top_category?: string | null;
           top_platform?: string | null;
           top_bank?: string | null;
+          period_start?: string | null;
+          period_end?: string | null;
           created_at?: string;
         };
         Relationships: [];

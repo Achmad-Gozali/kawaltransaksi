@@ -5,7 +5,11 @@ import Image from 'next/image';
 import type { Metadata } from 'next';
 import SidebarArtikel from './SidebarArtikel';
 
-export const revalidate = 0;
+// ✅ FIX: revalidate 1 jam, bukan 0
+export const revalidate = 3600;
+
+// ✅ FIX: URL production yang benar
+const SITE_URL = 'https://kawaltransaksi.com';
 
 interface Props {
   params: Promise<{ slug: string }>;
@@ -14,12 +18,16 @@ interface Props {
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const supabase = await createClient();
-  const { data } = await (supabase
-    .from('articles') as any)
+
+  // ✅ FIX: hapus cast `as any`
+  const { data } = await supabase
+    .from('articles')
     .select('title, summary, cover_image')
     .eq('slug', slug)
     .single();
+
   if (!data) return { title: 'Artikel tidak ditemukan - KawalTransaksi' };
+
   return {
     title: `${data.title} - KawalTransaksi`,
     description: data.summary,
@@ -86,14 +94,13 @@ function renderContent(content: string) {
   });
 }
 
-const SITE_URL = 'https://kawaltransaksi-605520424162.asia-southeast1.run.app';
-
 export default async function ArtikelDetailPage({ params }: Props) {
   const { slug } = await params;
   const supabase = await createClient();
 
-  const { data: article } = await (supabase
-    .from('articles') as any)
+  // ✅ FIX: hapus cast `as any`
+  const { data: article } = await supabase
+    .from('articles')
     .select('*')
     .eq('slug', slug)
     .eq('status', 'published')
@@ -101,8 +108,9 @@ export default async function ArtikelDetailPage({ params }: Props) {
 
   if (!article) notFound();
 
-  const { data: others } = await (supabase
-    .from('articles') as any)
+  // ✅ FIX: hapus cast `as any`
+  const { data: others } = await supabase
+    .from('articles')
     .select('title, slug, published_at, cover_image, summary, top_category')
     .eq('status', 'published')
     .neq('slug', slug)
@@ -118,7 +126,7 @@ export default async function ArtikelDetailPage({ params }: Props) {
     description: article.summary,
     url: articleUrl,
     datePublished: article.published_at,
-    dateModified: article.updated_at ?? article.published_at,
+    dateModified: article.published_at,
     author: {
       '@type': 'Organization',
       name: 'KawalTransaksi',
@@ -149,38 +157,16 @@ export default async function ArtikelDetailPage({ params }: Props) {
     '@context': 'https://schema.org',
     '@type': 'BreadcrumbList',
     itemListElement: [
-      {
-        '@type': 'ListItem',
-        position: 1,
-        name: 'Beranda',
-        item: SITE_URL,
-      },
-      {
-        '@type': 'ListItem',
-        position: 2,
-        name: 'Artikel',
-        item: `${SITE_URL}/artikel`,
-      },
-      {
-        '@type': 'ListItem',
-        position: 3,
-        name: article.title,
-        item: articleUrl,
-      },
+      { '@type': 'ListItem', position: 1, name: 'Beranda', item: SITE_URL },
+      { '@type': 'ListItem', position: 2, name: 'Artikel', item: `${SITE_URL}/artikel` },
+      { '@type': 'ListItem', position: 3, name: article.title, item: articleUrl },
     ],
   };
 
   return (
     <main className="bg-white min-h-screen font-sans">
-      {/* Structured Data */}
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
-      />
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbData) }}
-      />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbData) }} />
 
       <div className="max-w-6xl mx-auto px-4 py-8">
         <div className="flex gap-12">
@@ -234,7 +220,7 @@ export default async function ArtikelDetailPage({ params }: Props) {
               <div className="mt-16">
                 <p className="text-xl font-black text-slate-900 tracking-tight mb-8">Artikel Lainnya</p>
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-6">
-                  {others.map((a: any) => (
+                  {others.map((a) => (
                     <Link key={a.slug} href={`/artikel/${a.slug}`}
                       className="group flex flex-col bg-white border border-slate-200 rounded-2xl overflow-hidden hover:shadow-xl hover:border-slate-300 hover:-translate-y-1 transition-all duration-200 shadow-sm">
                       {a.cover_image ? (

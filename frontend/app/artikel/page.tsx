@@ -3,7 +3,8 @@ import Link from 'next/link';
 import Image from 'next/image';
 import type { Metadata } from 'next';
 
-export const revalidate = 0;
+// ✅ FIX: revalidate 1 jam, bukan 0 (tidak perlu render ulang setiap request)
+export const revalidate = 3600;
 
 export const metadata: Metadata = {
   title: 'Artikel Penipuan - KawalTransaksi',
@@ -27,8 +28,10 @@ function formatLoss(amount: number): string {
 
 export default async function ArtikelPage() {
   const supabase = await createClient();
-  const { data: articles } = await (supabase
-    .from('articles') as any)
+
+  // ✅ FIX: hapus cast `as any` — database.ts sudah punya definisi kolom status & cover_image
+  const { data: articles } = await supabase
+    .from('articles')
     .select('id, title, slug, summary, total_reports, total_loss, published_at, cover_image, content, top_category')
     .eq('status', 'published')
     .order('published_at', { ascending: false })
@@ -45,7 +48,6 @@ export default async function ArtikelPage() {
             <p className="text-xs sm:text-sm text-slate-500 max-w-xl leading-relaxed">Laporan dan edukasi seputar penipuan online di Indonesia, diperbarui setiap minggu.</p>
           </div>
         </div>
-        {/* Wave SVG */}
         <div className="absolute bottom-0 left-0 w-full overflow-hidden leading-none">
           <svg viewBox="0 0 1440 60" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" className="w-full h-12 sm:h-16">
             <path d="M0,30 C360,60 1080,0 1440,30 L1440,60 L0,60 Z" fill="white" />
@@ -63,7 +65,7 @@ export default async function ArtikelPage() {
             </div>
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6">
-              {articles.map((article: any) => (
+              {articles.map((article) => (
                 <Link key={article.id} href={`/artikel/${article.slug}`}
                   className="group flex flex-col bg-white border border-slate-200 rounded-2xl overflow-hidden hover:shadow-xl hover:border-slate-300 hover:-translate-y-1 transition-all duration-200 shadow-sm">
                   {article.cover_image ? (
