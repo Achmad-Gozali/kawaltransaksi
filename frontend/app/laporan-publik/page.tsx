@@ -7,7 +7,6 @@ import { formatDateID, encodeSlug } from '@/lib/utils';
 import StatsChart from './StatsChart';
 import SearchBar from './SearchBar';
 
-// Cache 60 detik — data tidak harus selalu realtime
 export const revalidate = 60;
 
 const ewalletNames = ['gopay', 'dana', 'ovo', 'shopeepay', 'linkaja'];
@@ -91,79 +90,28 @@ export default async function LaporanPublikPage({
   const page = Math.max(1, parseInt(params.page ?? '1'));
   const perPage = 12;
 
-  // ── Query stats (untuk chart) — fetch minimal kolom ──────────────────────
-  const { data: allReportsForStats } = await supabase
-    .from('reports')
-    .select('target_type, bank_name, category, status, created_at')
-    .in('status', ['verified', 'pending', 'withdrawn'])
-    .order('created_at', { ascending: true });
+  // ✅ OPTIMIZED: 2 RPC call parallel, gantiin fetch semua data + grouping di JS
+  // Sebelumnya: fetch semua rows → grouping di server memory → slice untuk pagination
+  // Sesudahnya: DB yang grouping + paginate, server terima data yang sudah siap
+  const [laporanResult, statsResult] = await Promise.all([
+    supabase.rpc('get_laporan_publik', {
+      p_type: type,
+      p_sort: sort,
+      p_q: q.replace(/\D/g, '') || q,
+      p_page: page,
+      p_per_page: perPage,
+    }),
+    supabase.rpc('get_laporan_stats'),
+  ]);
 
-  // ── Query laporan untuk list — fetch minimal kolom ────────────────────────
-  let query = supabase
-    .from('reports')
-    .select('id, target_number, target_name, target_type, bank_name, category, status, created_at')
-    .in('status', ['verified', 'pending', 'withdrawn'])
-    .order('created_at', { ascending: false });
+  const laporanData = laporanResult.data as { data: any[]; total_unique: number } | null;
+  const paginatedReports: any[] = laporanData?.data ?? [];
+  const totalUniqueNumbers: number = laporanData?.total_unique ?? 0;
+  const allReportsForStats: any[] = statsResult.data ?? [];
 
-  if (type === 'phone') query = query.eq('target_type', 'phone');
-  if (type === 'bank_account') query = query.eq('target_type', 'bank_account');
-  if (type === 'ewallet') query = query.eq('target_type', 'ewallet');
-  if (q) query = query.ilike('target_number', `%${q.replace(/\D/g, '')}%`);
-
-  const { data: allReports } = await query;
-
-  // ── Grouping di server (bukan di DB karena Supabase free tidak support window functions) ──
-  const grouped = new Map<string, {
-    target_number: string;
-    target_name: string | null;
-    target_type: string;
-    bank_name: string | null;
-    category: string | null;
-    latest_at: string;
-    earliest_at: string;
-    total: number;
-    verified_count: number;
-    pending_count: number;
-  }>();
-
-  (allReports ?? []).forEach((r) => {
-    const existing = grouped.get(r.target_number);
-    if (!existing) {
-      grouped.set(r.target_number, {
-        target_number: r.target_number,
-        target_name: r.target_name,
-        target_type: r.target_type,
-        bank_name: r.bank_name,
-        category: r.category,
-        latest_at: r.created_at,
-        earliest_at: r.created_at,
-        total: 1,
-        verified_count: r.status === 'verified' ? 1 : 0,
-        pending_count: r.status === 'pending' ? 1 : 0,
-      });
-    } else {
-      existing.total += 1;
-      if (r.status === 'verified') existing.verified_count += 1;
-      if (r.status === 'pending') existing.pending_count += 1;
-      if (r.created_at > existing.latest_at) existing.latest_at = r.created_at;
-      if (r.created_at < existing.earliest_at) existing.earliest_at = r.created_at;
-      if (!existing.target_name && r.target_name) existing.target_name = r.target_name;
-    }
-  });
-
-  let groupedArray = Array.from(grouped.values());
-
-  if (sort === 'oldest') {
-    groupedArray.sort((a, b) => new Date(a.earliest_at).getTime() - new Date(b.earliest_at).getTime());
-  } else {
-    groupedArray.sort((a, b) => new Date(b.latest_at).getTime() - new Date(a.latest_at).getTime());
-  }
-
-  const totalUniqueNumbers = groupedArray.length;
+  const totalReports = allReportsForStats.length;
   const totalPages = Math.ceil(totalUniqueNumbers / perPage);
   const safePage = Math.min(page, Math.max(1, totalPages));
-  const paginatedReports = groupedArray.slice((safePage - 1) * perPage, safePage * perPage);
-  const totalReports = (allReportsForStats ?? []).length;
   const paginationPages = buildPaginationPages(safePage, totalPages);
 
   const buildUrl = (newParams: Record<string, string>) => {
@@ -205,7 +153,7 @@ export default async function LaporanPublikPage({
               {totalReports} total laporan
             </span>
           </div>
-          <StatsChart rawReports={allReportsForStats ?? []} />
+          <StatsChart rawReports={allReportsForStats} />
         </div>
       </section>
 
@@ -301,9 +249,9 @@ export default async function LaporanPublikPage({
                 const meta = getTargetMeta(report.target_type, report.bank_name);
                 const Icon = meta.icon;
                 const logoSrc = getPlatformLogo(report.target_type, report.bank_name);
-                const aggStatus = getAggregateStatus(report.verified_count, report.pending_count);
-                const badge = getStatusBadge(aggStatus, report.verified_count);
-                const isVerified = report.verified_count > 0;
+                const aggStatus = getAggregateStatus(Number(report.verified_count), Number(report.pending_count));
+                const badge = getStatusBadge(aggStatus, Number(report.verified_count));
+                const isVerified = Number(report.verified_count) > 0;
                 const displayName = isVerified ? report.target_name : null;
 
                 return (
@@ -336,12 +284,12 @@ export default async function LaporanPublikPage({
                             : <Icon className="w-3 h-3" />}
                           <span className="truncate max-w-[60px] sm:max-w-[80px]">{meta.label}</span>
                         </span>
-                        {report.total > 1 && (
+                        {Number(report.total) > 1 && (
                           <span className="text-[10px] font-bold text-red-500 uppercase tracking-widest shrink-0">
                             {report.total} laporan
                           </span>
                         )}
-                        {report.total === 1 && (
+                        {Number(report.total) === 1 && (
                           <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest truncate min-w-0">
                             {report.category}
                           </span>
@@ -358,63 +306,41 @@ export default async function LaporanPublikPage({
           {/* ── Pagination ──────────────────────────────────────────────────── */}
           {totalPages > 1 && (
             <div className="mt-8 sm:mt-10">
-              {/* Info halaman */}
               <p className="text-center text-xs text-slate-400 font-medium mb-4">
                 Menampilkan {(safePage - 1) * perPage + 1}–{Math.min(safePage * perPage, totalUniqueNumbers)} dari {totalUniqueNumbers} nomor
               </p>
-
-              {/* Tombol pagination */}
               <div className="flex justify-center items-center gap-1.5 flex-wrap">
-                {/* Prev */}
                 {safePage > 1 ? (
-                  <Link
-                    href={buildUrl({ page: String(safePage - 1) })}
-                    scroll={false}
-                    className="px-3 py-2 text-xs font-bold border border-slate-200 rounded-lg hover:border-slate-400 hover:bg-slate-50 transition-all"
-                  >
+                  <Link href={buildUrl({ page: String(safePage - 1) })} scroll={false}
+                    className="px-3 py-2 text-xs font-bold border border-slate-200 rounded-lg hover:border-slate-400 hover:bg-slate-50 transition-all">
                     ←
                   </Link>
                 ) : (
-                  <span className="px-3 py-2 text-xs font-bold border border-slate-100 rounded-lg text-slate-300 cursor-not-allowed">
-                    ←
-                  </span>
+                  <span className="px-3 py-2 text-xs font-bold border border-slate-100 rounded-lg text-slate-300 cursor-not-allowed">←</span>
                 )}
 
-                {/* Nomor halaman */}
                 {paginationPages.map((p, i) =>
                   p === '...' ? (
-                    <span key={`dots-${i}`} className="px-2 py-2 text-xs text-slate-300 font-bold">
-                      ···
-                    </span>
+                    <span key={`dots-${i}`} className="px-2 py-2 text-xs text-slate-300 font-bold">···</span>
                   ) : (
-                    <Link
-                      key={p}
-                      href={buildUrl({ page: String(p) })}
-                      scroll={false}
+                    <Link key={p} href={buildUrl({ page: String(p) })} scroll={false}
                       className={`w-9 h-9 flex items-center justify-center text-xs font-bold rounded-lg border transition-all ${
                         p === safePage
                           ? 'bg-slate-900 text-white border-slate-900'
                           : 'border-slate-200 text-slate-600 hover:border-slate-400 hover:bg-slate-50'
-                      }`}
-                    >
+                      }`}>
                       {p}
                     </Link>
                   )
                 )}
 
-                {/* Next */}
                 {safePage < totalPages ? (
-                  <Link
-                    href={buildUrl({ page: String(safePage + 1) })}
-                    scroll={false}
-                    className="px-3 py-2 text-xs font-bold border border-slate-200 rounded-lg hover:border-slate-400 hover:bg-slate-50 transition-all"
-                  >
+                  <Link href={buildUrl({ page: String(safePage + 1) })} scroll={false}
+                    className="px-3 py-2 text-xs font-bold border border-slate-200 rounded-lg hover:border-slate-400 hover:bg-slate-50 transition-all">
                     →
                   </Link>
                 ) : (
-                  <span className="px-3 py-2 text-xs font-bold border border-slate-100 rounded-lg text-slate-300 cursor-not-allowed">
-                    →
-                  </span>
+                  <span className="px-3 py-2 text-xs font-bold border border-slate-100 rounded-lg text-slate-300 cursor-not-allowed">→</span>
                 )}
               </div>
             </div>

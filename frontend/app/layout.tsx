@@ -1,23 +1,18 @@
 import type { Metadata, Viewport } from 'next';
-import { Inter, Roboto_Mono } from 'next/font/google';
+import { Inter } from 'next/font/google';
 import './globals.css';
 import SiteShell from '@/components/SiteShell';
 import { Analytics } from '@vercel/analytics/next';
 
+// ✅ OPTIMIZED: hapus Roboto_Mono — font ini jarang dipakai tapi tetap load
+//    request font Google Fonts. Kalau memang dipakai di beberapa tempat,
+//    ganti dengan CSS variable + font-display: optional supaya ga block render.
 const inter = Inter({
   subsets: ['latin'],
   display: 'swap',
   preload: true,
   variable: '--font-inter',
   weight: ['400', '500', '600', '700'],
-});
-
-const robotoMono = Roboto_Mono({
-  subsets: ['latin'],
-  weight: ['400', '500'],
-  display: 'swap',
-  variable: '--font-dm-mono',
-  preload: false,
 });
 
 export const metadata: Metadata = {
@@ -102,7 +97,8 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="id" className={`scroll-smooth ${inter.variable} ${robotoMono.variable}`}>
+    // ✅ OPTIMIZED: hapus robotoMono.variable dari className
+    <html lang="id" className={`scroll-smooth ${inter.variable}`}>
       <body
         className={`${inter.className} bg-zinc-50 text-zinc-900 min-h-screen flex flex-col selection:bg-red-100 selection:text-red-900`}
         suppressHydrationWarning

@@ -31,35 +31,17 @@ const articles = [
   { title: 'Sudah Terlanjur Transfer ke Penipu?', desc: 'Segera hubungi bank Anda untuk memblokir transaksi dan laporkan nomor rekening tersebut ke KawalTransaksi.' },
 ];
 
+// ✅ OPTIMIZED: 3 query → 1 RPC call
 async function getStats() {
   try {
     const supabase = await createClient();
-
-    const { count: totalLaporan } = await supabase
-      .from('reports')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'verified')
-      .eq('target_type', 'bank_account');
-
-    const { count: totalRekening } = await supabase
-      .from('reports')
-      .select('target_number', { count: 'exact', head: true })
-      .eq('target_type', 'bank_account')
-      .in('status', ['verified', 'pending'])
-      .not('target_number', 'is', null);
-
-    const { data: kerugianData } = await supabase
-      .from('reports')
-      .select('loss_amount')
-      .eq('target_type', 'bank_account')
-      .eq('status', 'verified')
-      .not('loss_amount', 'is', null);
-
-    const totalKerugian = (kerugianData ?? []).reduce<number>(
-      (sum, row) => sum + (Number(row.loss_amount) || 0), 0
-    );
-
-    return { totalLaporan: totalLaporan ?? 0, totalRekening: totalRekening ?? 0, totalKerugian };
+    const { data } = await supabase.rpc('get_stats_rekening');
+    if (!data) return { totalLaporan: 0, totalRekening: 0, totalKerugian: 0 };
+    return {
+      totalLaporan: data.total_laporan ?? 0,
+      totalRekening: data.total_rekening ?? 0,
+      totalKerugian: Number(data.total_kerugian) ?? 0,
+    };
   } catch {
     return { totalLaporan: 0, totalRekening: 0, totalKerugian: 0 };
   }

@@ -131,10 +131,10 @@ export default async function BankDetailPage({ params }: PageProps) {
 
   type ReportRow = { target_number: string; target_name: string | null; status: string; created_at: string };
 
+  // ✅ OPTIMIZED: hapus query categoryData — prop categoryBreakdown tidak dirender di BankPageClient
   const [
     { data: primaryReports },
     { data: linkedReports },
-    { data: categoryData },
   ] = await Promise.all([
     supabase
       .from('reports')
@@ -146,10 +146,6 @@ export default async function BankDetailPage({ params }: PageProps) {
       .select('target_numbers, status, created_at')
       .filter('target_numbers', 'cs', `[{"type":"bank_account","bank":"${data.dbName}"}]`)
       .order('created_at', { ascending: false }),
-    supabase
-      .from('reports')
-      .select('category')
-      .ilike('bank_name', `%${data.dbName}%`),
   ]);
 
   const linkedRows: ReportRow[] = [];
@@ -194,14 +190,6 @@ export default async function BankDetailPage({ params }: PageProps) {
     dateFormatted: formatDateID(r.created_at),
   }));
 
-  const categoryMap: Record<string, number> = {};
-  (categoryData ?? []).forEach((r: { category: string | null }) => {
-    if (r.category) categoryMap[r.category] = (categoryMap[r.category] || 0) + 1;
-  });
-  const categoryBreakdown = Object.entries(categoryMap)
-    .map(([category, count]) => ({ category, count }))
-    .sort((a, b) => b.count - a.count);
-
   const structuredData = {
     '@context': 'https://schema.org',
     '@type': 'WebPage',
@@ -233,7 +221,7 @@ export default async function BankDetailPage({ params }: PageProps) {
         totalCount={totalCount}
         verifiedCount={verifiedCount}
         pendingCount={pendingCount}
-        categoryBreakdown={categoryBreakdown}
+        categoryBreakdown={[]}
       />
     </>
   );

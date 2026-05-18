@@ -30,35 +30,17 @@ const articles = [
   { title: 'Nomor HP Penipu Sosial Media', desc: 'KawalTransaksi menerima laporan nomor HP untuk modus phishing, soceng, investasi bodong, dan penipuan berkedok hadiah.' },
 ];
 
+// ✅ OPTIMIZED: 3 query → 1 RPC call
 async function getStats() {
   try {
     const supabase = await createClient();
-
-    const { count: totalLaporan } = await supabase
-      .from('reports')
-      .select('*', { count: 'exact', head: true })
-      .eq('status', 'verified')
-      .in('target_type', ['phone', 'ewallet']);
-
-    const { count: totalNomor } = await supabase
-      .from('reports')
-      .select('target_number', { count: 'exact', head: true })
-      .in('target_type', ['phone', 'ewallet'])
-      .in('status', ['verified', 'pending'])
-      .not('target_number', 'is', null);
-
-    const { data: kerugianData } = await supabase
-      .from('reports')
-      .select('loss_amount')
-      .eq('status', 'verified')
-      .in('target_type', ['phone', 'ewallet'])
-      .not('loss_amount', 'is', null);
-
-    const totalKerugian = (kerugianData ?? []).reduce<number>(
-      (sum, row) => sum + (Number(row.loss_amount) || 0), 0
-    );
-
-    return { totalLaporan: totalLaporan ?? 0, totalNomor: totalNomor ?? 0, totalKerugian };
+    const { data } = await supabase.rpc('get_stats_nomor');
+    if (!data) return { totalLaporan: 0, totalNomor: 0, totalKerugian: 0 };
+    return {
+      totalLaporan: data.total_laporan ?? 0,
+      totalNomor: data.total_nomor ?? 0,
+      totalKerugian: Number(data.total_kerugian) ?? 0,
+    };
   } catch {
     return { totalLaporan: 0, totalNomor: 0, totalKerugian: 0 };
   }

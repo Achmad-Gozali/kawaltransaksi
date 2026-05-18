@@ -112,52 +112,50 @@ async function getRecentReports(): Promise<ReportItem[]> {
   }
 }
 
+// ✅ OPTIMIZED: 1 RPC call → gantiin 3 fetch terpisah sebelumnya
 async function getStats(): Promise<Stats> {
   try {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
-    const headers = {
-      'apikey': supabaseAnonKey,
-      'Authorization': `Bearer ${supabaseAnonKey}`,
-      'Prefer': 'count=exact',
+
+    const res = await fetch(
+      `${supabaseUrl}/rest/v1/rpc/get_stats`,
+      {
+        method: 'POST',
+        headers: {
+          'apikey': supabaseAnonKey,
+          'Authorization': `Bearer ${supabaseAnonKey}`,
+          'Content-Type': 'application/json',
+        },
+        body: '{}',
+        next: { revalidate: 60 },
+      }
+    );
+
+    if (!res.ok) return { total: 0, verified: 0, totalLoss: 0 };
+
+    const data = await res.json();
+    return {
+      total: data.total ?? 0,
+      verified: data.verified ?? 0,
+      totalLoss: Number(data.total_loss) ?? 0,
     };
-
-    const [totalRes, verifiedRes, lossRes] = await Promise.all([
-      fetch(`${supabaseUrl}/rest/v1/reports?select=id&status=in.(verified,pending)`, { headers, next: { revalidate: 60 } }),
-      fetch(`${supabaseUrl}/rest/v1/reports?select=id&status=eq.verified`, { headers, next: { revalidate: 60 } }),
-      fetch(`${supabaseUrl}/rest/v1/reports?select=loss_amount&status=eq.verified`, { headers, next: { revalidate: 60 } }),
-    ]);
-
-    const totalData = totalRes.ok ? await totalRes.json() : [];
-    const verifiedData = verifiedRes.ok ? await verifiedRes.json() : [];
-    const lossData = lossRes.ok ? await lossRes.json() : [];
-
-    const totalLoss = lossData.reduce((sum: number, r: { loss_amount: string | null }) =>
-      sum + (Number(r.loss_amount) || 0), 0);
-
-    return { total: totalData.length, verified: verifiedData.length, totalLoss };
   } catch {
     return { total: 0, verified: 0, totalLoss: 0 };
   }
 }
 
-async function getUser() {
+// ✅ OPTIMIZED: ambil session dari cookie langsung, tanpa full Supabase client
+async function getIsLoggedIn(): Promise<boolean> {
   try {
     const cookieStore = await cookies();
-    const supabase = createServerClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-      {
-        cookies: {
-          getAll() { return cookieStore.getAll(); },
-          setAll() {},
-        },
-      }
+    // Supabase menyimpan session di cookie dengan prefix 'sb-'
+    const allCookies = cookieStore.getAll();
+    return allCookies.some(
+      (c) => c.name.startsWith('sb-') && c.name.endsWith('-auth-token')
     );
-    const { data: { user } } = await supabase.auth.getUser();
-    return user;
   } catch {
-    return null;
+    return false;
   }
 }
 
@@ -206,13 +204,14 @@ function StatsCard({ stats }: { stats: Stats }) {
 }
 
 export default async function HomePage() {
-  const [recentReports, stats, user] = await Promise.all([
+  // ✅ OPTIMIZED: semua fetch parallel, getUser() diganti getIsLoggedIn() yg lebih ringan
+  const [recentReports, stats, isLoggedIn] = await Promise.all([
     getRecentReports(),
     getStats(),
-    getUser(),
+    getIsLoggedIn(),
   ]);
 
-  const lihatSemuaHref = user ? '/laporan-publik' : '/login?redirectTo=/laporan-publik';
+  const lihatSemuaHref = isLoggedIn ? '/laporan-publik' : '/login?redirectTo=/laporan-publik';
 
   return (
     <main className="bg-white text-slate-900 font-sans overflow-x-hidden">
@@ -399,35 +398,33 @@ export default async function HomePage() {
         <path d="M0,80 C360,20 720,65 1080,25 C1260,5 1380,45 1440,30 L1440,80 Z" fill="#ffffff" />
       </svg>
 
-{/* ── 5. CTA ── */}
-<section className="bg-white">
-  <div className="max-w-5xl mx-auto px-5 sm:px-6 py-16 sm:py-24 text-center">
-    <h2 className="text-2xl sm:text-4xl md:text-5xl font-black tracking-tighter uppercase text-slate-900 mb-4">
-      berikan kontribusi anda.
-    </h2>
-    <p className="text-slate-500 text-sm max-w-lg mx-auto mb-8 sm:mb-10 leading-relaxed">
-      Bantu lindungi pengguna lain dengan melaporkan nomor yang mencurigakan.
-      Setiap laporan berkontribusi pada ekosistem digital yang lebih aman.
-    </p>
-    <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-      <Link href="/report" className="w-full sm:w-auto px-6 sm:px-7 py-3 sm:py-3.5 bg-emerald-700 text-white font-bold text-xs sm:text-sm tracking-widest uppercase rounded-xl hover:bg-emerald-600 transition-colors">
-        Buat Laporan Baru
-      </Link>
-      <Link href="/register" className="w-full sm:w-auto px-6 sm:px-7 py-3 sm:py-3.5 border-2 border-slate-200 text-slate-900 font-bold text-xs sm:text-sm tracking-widest uppercase rounded-xl hover:border-slate-900 transition-colors">
-        gabung komunitas
-      </Link>
-    </div>
-
-    {/* ← Tambah ini */}
-    <p className="text-xs text-slate-400 mt-8">
-      Dengan mendaftar, kamu menyetujui{' '}
-      <Link href="/syarat-ketentuan" className="underline hover:text-slate-600">Syarat Ketentuan</Link>
-      {' '}dan{' '}
-      <Link href="/kebijakan-privasi" className="underline hover:text-slate-600">Kebijakan Privasi</Link>
-      {' '}kami.
-    </p>
-  </div>
-</section>
+      {/* ── 5. CTA ── */}
+      <section className="bg-white">
+        <div className="max-w-5xl mx-auto px-5 sm:px-6 py-16 sm:py-24 text-center">
+          <h2 className="text-2xl sm:text-4xl md:text-5xl font-black tracking-tighter uppercase text-slate-900 mb-4">
+            berikan kontribusi anda.
+          </h2>
+          <p className="text-slate-500 text-sm max-w-lg mx-auto mb-8 sm:mb-10 leading-relaxed">
+            Bantu lindungi pengguna lain dengan melaporkan nomor yang mencurigakan.
+            Setiap laporan berkontribusi pada ekosistem digital yang lebih aman.
+          </p>
+          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+            <Link href="/report" className="w-full sm:w-auto px-6 sm:px-7 py-3 sm:py-3.5 bg-emerald-700 text-white font-bold text-xs sm:text-sm tracking-widest uppercase rounded-xl hover:bg-emerald-600 transition-colors">
+              Buat Laporan Baru
+            </Link>
+            <Link href="/register" className="w-full sm:w-auto px-6 sm:px-7 py-3 sm:py-3.5 border-2 border-slate-200 text-slate-900 font-bold text-xs sm:text-sm tracking-widest uppercase rounded-xl hover:border-slate-900 transition-colors">
+              gabung komunitas
+            </Link>
+          </div>
+          <p className="text-xs text-slate-400 mt-8">
+            Dengan mendaftar, kamu menyetujui{' '}
+            <Link href="/syarat-ketentuan" className="underline hover:text-slate-600">Syarat Ketentuan</Link>
+            {' '}dan{' '}
+            <Link href="/kebijakan-privasi" className="underline hover:text-slate-600">Kebijakan Privasi</Link>
+            {' '}kami.
+          </p>
+        </div>
+      </section>
 
     </main>
   );

@@ -178,12 +178,14 @@ const INDONESIAN_PREFIXES: { prefix: string; carrier: string; type: 'mobile' | '
   { prefix: '0800', carrier: 'Telkom IndiHome',    type: 'fixed' },
 ];
 
+// ✅ OPTIMIZED: pre-sort sekali di module level, bukan setiap render
+const SORTED_PREFIXES = [...INDONESIAN_PREFIXES].sort((a, b) => b.prefix.length - a.prefix.length);
+
 function detectCarrier(phone: string): CarrierInfo | null {
   let normalized = phone.replace(/\D/g, '');
   if (normalized.startsWith('62')) normalized = '0' + normalized.slice(2);
   if (normalized.length < 5) return null;
-  const sorted = [...INDONESIAN_PREFIXES].sort((a, b) => b.prefix.length - a.prefix.length);
-  for (const entry of sorted) {
+  for (const entry of SORTED_PREFIXES) {
     if (normalized.startsWith(entry.prefix)) {
       return { carrier: entry.carrier, type: entry.type };
     }
@@ -266,30 +268,22 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
   const checkedAt = new Date();
   const supabase = await createClient();
 
-  const { data: { user } } = await supabase.auth.getUser();
+  // ✅ OPTIMIZED: jalankan auth check + RPC data fetch secara parallel
+  // Sebelumnya: 3 query sequential (reports, linkedData, getUser)
+  // Sesudahnya: 2 call parallel (auth + 1 RPC yang sudah gabungkan reports + linked)
+  const [
+    { data: { user } },
+    { data: pageData },
+  ] = await Promise.all([
+    supabase.auth.getUser(),
+    supabase.rpc('get_check_page_data', { p_number: realNumber }),
+  ]);
+
   const isLoggedIn = !!user;
+  const allReports = (pageData?.reports as any[]) ?? [];
+  const linkedReports = (pageData?.linked as any[]) ?? [];
 
-  const { data, error } = await supabase
-    .from('reports')
-    .select('*')
-    .eq('target_number', realNumber)
-    .order('created_at', { ascending: false });
-
-  if (error) console.error('error fetching reports:', error);
-
-  const { data: linkedData } = await supabase
-    .from('reports')
-    .select('id, target_number, target_name, target_type, bank_name, status, created_at, target_numbers')
-    .filter('target_numbers', 'cs', `[{"number":"${realNumber}"}]`)
-    .neq('target_number', realNumber)
-    .in('status', ['verified', 'pending'])
-    .order('created_at', { ascending: false })
-    .limit(5);
-
-  const linkedReports = (linkedData as any[]) ?? [];
   const linkedHasVerified = linkedReports.some((r: any) => r.status === 'verified');
-
-  const allReports = (data as any[]) ?? [];
   const reports = allReports.filter((r) => r.status !== 'withdrawn');
   const withdrawnReports = allReports.filter((r) => r.status === 'withdrawn');
   const hasWithdrawn = withdrawnReports.length > 0;
@@ -421,7 +415,6 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
     phone: 'Nomor HP', bank_account: 'Rekening Bank', ewallet: 'E-Wallet',
   };
 
-  // ── Structured Data ────────────────────────────────────────────────────────
   const structuredData = {
     '@context': 'https://schema.org',
     '@type': 'WebPage',

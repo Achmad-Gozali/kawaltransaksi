@@ -1,6 +1,6 @@
 // ============================================
 // 📁 LOKASI: types/database.ts
-// ✅ UPDATE: Tambah tabel feedback
+// ✅ UPDATE: Tambah RPC get_stats, get_laporan_publik, get_laporan_stats
 // ============================================
 
 export type TargetType    = 'phone' | 'bank_account' | 'ewallet';
@@ -268,6 +268,84 @@ export interface Database {
     };
 
     Functions: {
+      // ── Baru: stats cek-nomor ────────────────────────────────────────────
+      get_stats_nomor: {
+        Args: Record<string, never>;
+        Returns: {
+          total_laporan: number;
+          total_nomor: number;
+          total_kerugian: number;
+        };
+      };
+
+      // ── Baru: stats cek-rekening ─────────────────────────────────────────
+      get_stats_rekening: {
+        Args: Record<string, never>;
+        Returns: {
+          total_laporan: number;
+          total_rekening: number;
+          total_kerugian: number;
+        };
+      };
+
+      // ── Baru: stats homepage ──────────────────────────────────────────────
+      get_stats: {
+        Args: Record<string, never>;
+        Returns: {
+          total: number;
+          verified: number;
+          total_loss: number;
+        };
+      };
+
+      // ── Baru: laporan publik dengan grouping + pagination di DB ───────────
+      get_laporan_publik: {
+        Args: {
+          p_type?: string;
+          p_sort?: string;
+          p_q?: string;
+          p_page?: number;
+          p_per_page?: number;
+        };
+        Returns: {
+          data: {
+            target_number: string;
+            target_name: string | null;
+            target_type: string;
+            bank_name: string | null;
+            category: string | null;
+            latest_at: string;
+            earliest_at: string;
+            total: number;
+            verified_count: number;
+            pending_count: number;
+          }[];
+          total_unique: number;
+        };
+      };
+
+      // ── Baru: stats untuk StatsChart ──────────────────────────────────────
+      get_laporan_stats: {
+        Args: Record<string, never>;
+        Returns: {
+          target_type: string;
+          bank_name: string | null;
+          category: string | null;
+          status: string;
+          created_at: string;
+        }[];
+      };
+
+      // ── Baru: check page data ─────────────────────────────────────────────
+      get_check_page_data: {
+        Args: { p_number: string };
+        Returns: {
+          reports: any[];
+          linked: any[];
+        };
+      };
+
+      // ── Existing ──────────────────────────────────────────────────────────
       get_category_counts: {
         Args: Record<string, never>;
         Returns: { category: string; count: number }[];

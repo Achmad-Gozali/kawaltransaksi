@@ -34,7 +34,6 @@ const LIMITS = {
   SOCIAL_ACCOUNTS_COUNT: 10,
   LOSS_AMOUNT_MAX: 999_999_999_999,
   STORE_NAME: 150,
-  // Rate limit analisis AI per user per hari
   ANALYZE_TEXT_PER_DAY: 5,
   ANALYZE_IMAGE_PER_DAY: 5,
 };
@@ -153,8 +152,6 @@ function determineAutoStatus(params: {
   return "pending";
 }
 
-// ── Cek rate limit analisis per user per hari via KV ─────────────────────────
-
 async function checkAnalyzeRateLimit(
   limiter: KVNamespace | undefined,
   userId: string,
@@ -163,16 +160,104 @@ async function checkAnalyzeRateLimit(
 ): Promise<{ blocked: boolean; count: number }> {
   if (!limiter) return { blocked: false, count: 0 };
   try {
-    const today = new Date().toISOString().slice(0, 10); // YYYY-MM-DD
+    const today = new Date().toISOString().slice(0, 10);
     const key = `analyze_${type}_${userId}_${today}`;
     const raw = await limiter.get(key);
     const count = raw ? parseInt(raw) : 0;
     if (count >= maxPerDay) return { blocked: true, count };
-    const ttl = 86400; // 24 jam
-    await limiter.put(key, (count + 1).toString(), { expirationTtl: ttl });
+    await limiter.put(key, (count + 1).toString(), { expirationTtl: 86400 });
     return { blocked: false, count: count + 1 };
   } catch {
     return { blocked: false, count: 0 };
+  }
+}
+
+// ✅ OPTIMIZED: gabungkan 2 count query (hourly + daily) jadi 1 query,
+//    lalu hitung di aplikasi — menghemat 1 round trip ke Supabase
+async function checkReportRateLimit(
+  supabase: ReturnType<typeof getSupabaseAdmin>,
+  userId: string
+): Promise<{ blocked: boolean; reason?: string }> {
+  const oneDayAgo = new Date(Date.now() - 86400000).toISOString();
+
+  const { data, error } = await supabase
+    .from("reports")
+    .select("created_at")
+    .eq("reporter_id", userId)
+    .gte("created_at", oneDayAgo)
+    .order("created_at", { ascending: false });
+
+  if (error) return { blocked: false }; // fail open
+
+  const now = Date.now();
+  const oneHourAgo = now - 3600000;
+
+  const hourCount = (data ?? []).filter(
+    (r) => new Date(r.created_at).getTime() >= oneHourAgo
+  ).length;
+
+  const dayCount = (data ?? []).length;
+
+  if (hourCount >= 3) {
+    return { blocked: true, reason: "Terlalu banyak laporan dalam 1 jam. Coba lagi nanti." };
+  }
+  if (dayCount >= 10) {
+    return { blocked: true, reason: "Batas laporan harian tercapai." };
+  }
+
+  return { blocked: false };
+}
+
+// ✅ OPTIMIZED: jalankan analisis AI di background (non-blocking)
+//    Insert ke DB langsung dengan status "pending",
+//    lalu update ke "verified" kalau AI lulus — tanpa block response ke user
+async function runAiAnalysisAndUpdate(
+  supabase: ReturnType<typeof getSupabaseAdmin>,
+  reportId: string,
+  sanitizedChronology: string,
+  evidenceUrls: string[],
+  groqApiKey: string
+): Promise<void> {
+  try {
+    const hasPhoto = evidenceUrls.length > 0;
+    const textResult = await analyzeChronologyText(sanitizedChronology, groqApiKey);
+
+    let photoResult: AnalysisResult | null = null;
+    if (hasPhoto && evidenceUrls[0]) {
+      try {
+        const imgRes = await fetch(evidenceUrls[0]);
+        if (imgRes.ok) {
+          const contentType = imgRes.headers.get("content-type") ?? "image/jpeg";
+          const buffer = await imgRes.arrayBuffer();
+          const bytes = new Uint8Array(buffer);
+          let binary = "";
+          for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
+          const base64 = btoa(binary);
+          photoResult = await analyzeEvidenceImage(base64, contentType, groqApiKey);
+        }
+      } catch {
+        photoResult = null;
+      }
+    }
+
+    const autoStatus = determineAutoStatus({
+      chronologyScore: textResult.chronology_score,
+      chronologyLength: sanitizedChronology.length,
+      riskLevel: textResult.risk_level,
+      photoResult,
+      hasPhoto,
+      photoCount: evidenceUrls.length,
+    });
+
+    // Hanya update kalau hasilnya "verified" — kalau "pending" ga perlu update
+    if (autoStatus === "verified") {
+      await supabase
+        .from("reports")
+        .update({ status: "verified" })
+        .eq("id", reportId);
+    }
+  } catch {
+    // Fail silently — laporan tetap tersimpan dengan status "pending"
   }
 }
 
@@ -192,6 +277,7 @@ reports.post("/", authMiddleware, async (c) => {
       return c.json({ success: false, message: "Verifikasi CAPTCHA gagal." }, 400);
     }
 
+    // ── Validasi panjang field ────────────────────────────────────────────────
     const rawNumber = String(body.target_number ?? "").replace(/[^0-9]/g, "");
     if (rawNumber.length > LIMITS.TARGET_NUMBER) {
       return c.json({ success: false, message: `Nomor terlalu panjang. Maks ${LIMITS.TARGET_NUMBER} karakter.` }, 400);
@@ -239,34 +325,19 @@ reports.post("/", authMiddleware, async (c) => {
     }
 
     if (!body.target_type || !VALID_TARGET_TYPES.includes(body.target_type)) {
-      return c.json({ success: false, message: `Jenis laporan tidak valid. Nilai yang diizinkan: ${VALID_TARGET_TYPES.join(", ")}.` }, 400);
+      return c.json({ success: false, message: `Jenis laporan tidak valid.` }, 400);
     }
     if (!body.category || !VALID_CATEGORIES.includes(body.category)) {
       return c.json({ success: false, message: `Kategori tidak valid.` }, 400);
     }
 
-    const oneHourAgo = new Date(Date.now() - 3600000).toISOString();
-    const { count: hourCount } = await supabase
-      .from("reports")
-      .select("*", { count: "exact", head: true })
-      .eq("reporter_id", userId)
-      .gte("created_at", oneHourAgo);
-
-    if ((hourCount ?? 0) >= 3) {
-      return c.json({ success: false, message: "Terlalu banyak laporan dalam 1 jam. Coba lagi nanti." }, 429);
+    // ✅ OPTIMIZED: 1 query rate limit (gantiin 2 query terpisah)
+    const rateLimitResult = await checkReportRateLimit(supabase, userId);
+    if (rateLimitResult.blocked) {
+      return c.json({ success: false, message: rateLimitResult.reason }, 429);
     }
 
-    const oneDayAgo = new Date(Date.now() - 86400000).toISOString();
-    const { count: todayCount } = await supabase
-      .from("reports")
-      .select("*", { count: "exact", head: true })
-      .eq("reporter_id", userId)
-      .gte("created_at", oneDayAgo);
-
-    if ((todayCount ?? 0) >= 10) {
-      return c.json({ success: false, message: "Batas laporan harian tercapai." }, 429);
-    }
-
+    // ── Cek duplikat ──────────────────────────────────────────────────────────
     const cleanNumberCheck = String(body.target_number).replace(/[^0-9]/g, "");
     const { count: duplicateCount } = await supabase
       .from("reports")
@@ -279,6 +350,7 @@ reports.post("/", authMiddleware, async (c) => {
       return c.json({ success: false, message: "Kamu sudah pernah melaporkan nomor ini sebelumnya." }, 409);
     }
 
+    // ── Sanitasi ──────────────────────────────────────────────────────────────
     const cleanNumber = String(body.target_number).replace(/[^0-9]/g, "");
     const sanitizedTargetName = body.target_name ? sanitizeText(String(body.target_name)) : null;
     const sanitizedChronology = sanitizeChronology(String(body.chronology));
@@ -320,109 +392,106 @@ reports.post("/", authMiddleware, async (c) => {
         ? body.evidence_urls
         : body.evidence_url ? [body.evidence_url] : []
     );
-    const hasPhoto = evidenceUrls.length > 0;
     const suspectPhotoUrl = isValidEvidenceUrl(body.suspect_photo_url) ? (body.suspect_photo_url as string) : null;
 
-    let autoStatus: "pending" | "verified" = "pending";
-    try {
-      const textResult = await analyzeChronologyText(sanitizedChronology, c.env.GROQ_API_KEY);
+    // ✅ OPTIMIZED: Insert dulu dengan status "pending", AI analysis jalan di background
+    const { data: insertedReport, error } = await supabase
+      .from("reports")
+      .insert({
+        reporter_id: userId,
+        target_number: cleanNumber,
+        target_name: sanitizedTargetName,
+        target_type: body.target_type,
+        category: body.category,
+        chronology: sanitizedChronology,
+        evidence_url: evidenceUrls[0] || null,
+        evidence_urls: evidenceUrls,
+        status: "pending", // selalu pending dulu
+        bank_name: sanitizedBankName,
+        loss_amount: body.loss_amount || null,
+        incident_date: body.incident_date || null,
+        platform: sanitizedPlatform,
+        link_url: sanitizedLinkUrl,
+        social_media_accounts: sanitizedSocialAccounts,
+        has_other_victims: body.has_other_victims || null,
+        reported_to: body.reported_to ?? [],
+        suspect_photo_url: suspectPhotoUrl,
+        target_numbers: cleanTargetNumbers,
+        store_name: sanitizedStoreName,
+        suspect_city: sanitizedSuspectCity,
+      })
+      .select("id")
+      .single();
 
-      let photoResult: AnalysisResult | null = null;
-      if (hasPhoto && evidenceUrls[0]) {
-        try {
-          const imgRes = await fetch(evidenceUrls[0]);
-          if (imgRes.ok) {
-            const contentType = imgRes.headers.get("content-type") ?? "image/jpeg";
-            const buffer = await imgRes.arrayBuffer();
-            const bytes = new Uint8Array(buffer);
-            let binary = "";
-            for (let i = 0; i < bytes.byteLength; i++) binary += String.fromCharCode(bytes[i]);
-            const base64 = btoa(binary);
-            photoResult = await analyzeEvidenceImage(base64, contentType, c.env.GROQ_API_KEY);
-          }
-        } catch {
-          photoResult = null;
-        }
-      }
-
-      autoStatus = determineAutoStatus({
-        chronologyScore: textResult.chronology_score,
-        chronologyLength: sanitizedChronology.length,
-        riskLevel: textResult.risk_level,
-        photoResult,
-        hasPhoto,
-        photoCount: evidenceUrls.length,
-      });
-    } catch {
-      /* tetap pending */
-    }
-
-    const { error } = await supabase.from("reports").insert({
-      reporter_id: userId,
-      target_number: cleanNumber,
-      target_name: sanitizedTargetName,
-      target_type: body.target_type,
-      category: body.category,
-      chronology: sanitizedChronology,
-      evidence_url: evidenceUrls[0] || null,
-      evidence_urls: evidenceUrls,
-      status: autoStatus,
-      bank_name: sanitizedBankName,
-      loss_amount: body.loss_amount || null,
-      incident_date: body.incident_date || null,
-      platform: sanitizedPlatform,
-      link_url: sanitizedLinkUrl,
-      social_media_accounts: sanitizedSocialAccounts,
-      has_other_victims: body.has_other_victims || null,
-      reported_to: body.reported_to ?? [],
-      suspect_photo_url: suspectPhotoUrl,
-      target_numbers: cleanTargetNumbers,
-      store_name: sanitizedStoreName,
-      suspect_city: sanitizedSuspectCity,
-    });
-
-    if (error) {
-      console.error("[REPORTS] Insert error:", error.message);
+    if (error || !insertedReport) {
+      console.error("[REPORTS] Insert error:", error?.message);
       return c.json({ success: false, message: "Gagal menyimpan laporan." }, 500);
     }
 
-    try {
-      const { data: profile } = await supabase
-        .from("profiles")
-        .select("full_name, email")
-        .eq("id", userId)
-        .single();
+    const reportId = insertedReport.id;
 
-      const reportUrl = `https://kawaltransaksi.com/check/${cleanNumber}`;
+    // ✅ OPTIMIZED: AI analysis & email jalan di background via waitUntil
+    //    Response ke user tidak perlu nunggu AI selesai
+    c.executionCtx.waitUntil(
+      Promise.all([
+        // AI analysis — update status kalau lulus
+        runAiAnalysisAndUpdate(
+          supabase,
+          reportId,
+          sanitizedChronology,
+          evidenceUrls,
+          c.env.GROQ_API_KEY
+        ),
+        // Email notifikasi
+        (async () => {
+          try {
+            const { data: profile } = await supabase
+              .from("profiles")
+              .select("full_name, email")
+              .eq("id", userId)
+              .single();
 
-      if (profile?.email) {
-        sendReportCreatedEmail({
-          to: profile.email,
-          fullName: profile.full_name ?? "Pengguna",
-          targetNumber: cleanNumber,
-          category: body.category,
-          status: autoStatus,
-          reportUrl,
-          apiKey: c.env.RESEND_API_KEY,
-        }).catch((err) => console.error("[EMAIL] Gagal kirim ke user:", err));
-      }
+            const reportUrl = `https://kawaltransaksi.com/check/${cleanNumber}`;
 
-      if (c.env.ADMIN_EMAIL) {
-        sendNewReportAdminEmail({
-          adminEmail: c.env.ADMIN_EMAIL,
-          reporterName: profile?.full_name ?? "Pengguna",
-          targetNumber: cleanNumber,
-          category: body.category,
-          status: autoStatus,
-          reportUrl: "https://kawaltransaksi.com/admin",
-          apiKey: c.env.RESEND_API_KEY,
-        }).catch((err) => console.error("[EMAIL] Gagal kirim ke admin:", err));
-      }
-    } catch (emailErr) {
-      console.error("[EMAIL] Error notifikasi:", emailErr);
-    }
+            const emailPromises: Promise<void>[] = [];
 
-    return c.json({ success: true, slug: cleanNumber, status: autoStatus }, 201);
+            if (profile?.email) {
+              emailPromises.push(
+                sendReportCreatedEmail({
+                  to: profile.email,
+                  fullName: profile.full_name ?? "Pengguna",
+                  targetNumber: cleanNumber,
+                  category: body.category,
+                  status: "pending",
+                  reportUrl,
+                  apiKey: c.env.RESEND_API_KEY,
+                }).catch((err) => console.error("[EMAIL] Gagal kirim ke user:", err))
+              );
+            }
+
+            if (c.env.ADMIN_EMAIL) {
+              emailPromises.push(
+                sendNewReportAdminEmail({
+                  adminEmail: c.env.ADMIN_EMAIL,
+                  reporterName: profile?.full_name ?? "Pengguna",
+                  targetNumber: cleanNumber,
+                  category: body.category,
+                  status: "pending",
+                  reportUrl: "https://kawaltransaksi.com/admin",
+                  apiKey: c.env.RESEND_API_KEY,
+                }).catch((err) => console.error("[EMAIL] Gagal kirim ke admin:", err))
+              );
+            }
+
+            await Promise.all(emailPromises);
+          } catch (emailErr) {
+            console.error("[EMAIL] Error notifikasi:", emailErr);
+          }
+        })(),
+      ])
+    );
+
+    return c.json({ success: true, slug: cleanNumber, status: "pending" }, 201);
   } catch {
     return c.json({ success: false, message: "Terjadi kesalahan server." }, 500);
   }
@@ -434,7 +503,6 @@ reports.post("/analyze/image", authMiddleware, async (c) => {
   try {
     const userId = c.get("userId");
 
-    // Rate limit: maks 5x analisis foto per user per hari
     const { blocked, count } = await checkAnalyzeRateLimit(
       c.env.LIMITER,
       userId,
@@ -477,7 +545,6 @@ reports.post("/analyze/text", authMiddleware, async (c) => {
   try {
     const userId = c.get("userId");
 
-    // Rate limit: maks 5x analisis teks per user per hari
     const { blocked, count } = await checkAnalyzeRateLimit(
       c.env.LIMITER,
       userId,
