@@ -78,14 +78,14 @@ function Lightbox({ urls, initialIndex, onClose }: { urls: string[]; initialInde
         <X className="w-5 h-5 text-white" />
       </button>
 
-      <div className="absolute top-4 left-1/2 -translate-x-1/2 text-white text-sm font-medium bg-black/40 px-3 py-1 rounded-full">
+      <div className="absolute top-4 left-1/2 -translate-x-1/2 text-white text-sm font-medium bg-black/50 px-3 py-1 rounded-full">
         {current + 1} / {urls.length}
       </div>
 
       {urls.length > 1 && (
         <button
           onClick={(e) => { e.stopPropagation(); setCurrent(prev => (prev > 0 ? prev - 1 : urls.length - 1)); }}
-          className="absolute left-4 w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors z-10"
+          className="absolute left-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors z-10"
         >
           <ChevronLeft className="w-5 h-5 text-white" />
         </button>
@@ -107,7 +107,7 @@ function Lightbox({ urls, initialIndex, onClose }: { urls: string[]; initialInde
       {urls.length > 1 && (
         <button
           onClick={(e) => { e.stopPropagation(); setCurrent(prev => (prev < urls.length - 1 ? prev + 1 : 0)); }}
-          className="absolute right-4 w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors z-10"
+          className="absolute right-4 top-1/2 -translate-y-1/2 w-10 h-10 bg-white/10 hover:bg-white/20 rounded-full flex items-center justify-center transition-colors z-10"
         >
           <ChevronRight className="w-5 h-5 text-white" />
         </button>
@@ -119,7 +119,7 @@ function Lightbox({ urls, initialIndex, onClose }: { urls: string[]; initialInde
             <button
               key={i}
               onClick={(e) => { e.stopPropagation(); setCurrent(i); }}
-              className={`relative w-10 h-10 rounded-md overflow-hidden border-2 transition-all ${
+              className={`relative w-10 h-10 rounded-lg overflow-hidden border-2 transition-all ${
                 i === current ? 'border-white scale-110' : 'border-white/30 opacity-60'
               }`}
             >
@@ -155,7 +155,7 @@ function EvidenceGallery({ urls }: { urls: string[] }) {
           <button
             key={i}
             onClick={() => setLightboxIndex(i)}
-            className="group relative aspect-square rounded-lg overflow-hidden border border-slate-200 bg-slate-50 hover:border-slate-400 transition-all cursor-pointer"
+            className="group relative aspect-square rounded-xl overflow-hidden border border-slate-200 bg-slate-50 hover:border-slate-400 transition-all cursor-pointer"
           >
             <Image
               src={url}
@@ -175,7 +175,7 @@ function EvidenceGallery({ urls }: { urls: string[] }) {
 
       <div className="flex items-center justify-between mt-2.5">
         <p className="text-[10px] text-slate-400">
-          Ketuk foto untuk lihat · {urls.length} foto bukti
+          Ketuk foto untuk perbesar · {urls.length} foto
         </p>
         {!showAll && remaining > 0 && (
           <button
@@ -198,23 +198,32 @@ function EvidenceGallery({ urls }: { urls: string[] }) {
   );
 }
 
-export default function ReportList({ reports, hasWithdrawn = false, hasLinkedReports = false, linkedHasVerified = false }: Props) {
+// ── Main ──────────────────────────────────────────────────────────────────────
+export default function ReportList({
+  reports,
+  hasWithdrawn = false,
+  hasLinkedReports = false,
+  linkedHasVerified = false,
+}: Props) {
   const allEvidenceUrls = getAllEvidenceUrls(reports);
   const hasVerified = reports.some((r) => r.status === 'verified');
   const allPending = reports.length > 0 && !hasVerified;
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-4">
+
+      {/* ── Riwayat laporan ── */}
       <div>
-        <div className="mb-2.5 px-0.5 flex items-center justify-between flex-wrap gap-1">
+        <div className="mb-2 px-0.5 flex items-center justify-between flex-wrap gap-1">
           <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 font-medium">Riwayat laporan</p>
           {reports.length > 0 && (
-            <p className="text-[10px] text-slate-400">{reports.length} laporan dari {reports.length} korban berbeda</p>
+            <p className="text-[10px] text-slate-400">{reports.length} laporan · {reports.length} korban berbeda</p>
           )}
         </div>
 
+        {/* Banner pending */}
         {allPending && (
-          <div className="mb-3 flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-lg px-4 py-3">
+          <div className="mb-3 flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
             <Info className="w-3.5 h-3.5 text-amber-500 shrink-0 mt-0.5" />
             <p className="text-[11px] text-amber-700 leading-relaxed">
               Laporan ini bersumber dari komunitas dan <span className="font-semibold">belum diverifikasi</span> oleh moderator. Gunakan sebagai kewaspadaan awal, bukan sebagai bukti final.
@@ -222,36 +231,44 @@ export default function ReportList({ reports, hasWithdrawn = false, hasLinkedRep
           </div>
         )}
 
+        {/* Report cards */}
         {reports.length > 0 ? (
-          <div className="space-y-3">
+          <div className="space-y-2.5">
             {reports.map((report, index) => {
               const isVerified = report.status === 'verified';
               return (
-                <div key={report.id}
-                  className={`bg-white rounded-lg border overflow-hidden ${
+                <div
+                  key={report.id}
+                  className={`bg-white rounded-xl border overflow-hidden ${
                     isVerified ? 'border-emerald-200' : 'border-slate-200'
-                  }`}>
-                  <div className={`flex items-center justify-between px-3 sm:px-4 py-2.5 border-b flex-wrap gap-1 ${
-                    isVerified ? 'bg-emerald-50 border-emerald-100' : 'bg-slate-50 border-slate-100'
+                  }`}
+                >
+                  {/* Header */}
+                  <div className={`flex items-center justify-between px-4 py-2.5 border-b flex-wrap gap-1 ${
+                    isVerified ? 'bg-emerald-50/80 border-emerald-100' : 'bg-slate-50/80 border-slate-100'
                   }`}>
                     <div className="flex items-center gap-2">
                       {isVerified
                         ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
                         : <AlertCircle className="w-3.5 h-3.5 text-amber-400 shrink-0" />}
-                      <span className={`text-[10px] font-semibold uppercase tracking-wider ${
+                      <span className={`text-[10px] font-semibold uppercase tracking-wide ${
                         isVerified ? 'text-emerald-700' : 'text-amber-600'
                       }`}>
-                        Laporan #{index + 1} · {isVerified ? 'Terverifikasi' : 'Menunggu Verifikasi'}
+                        Laporan #{index + 1} · {isVerified ? 'Terverifikasi' : 'Menunggu'}
                       </span>
                     </div>
                     <span className="text-[10px] text-slate-400 font-medium shrink-0">
                       {formatDate(report.incident_date || report.created_at)}
                     </span>
                   </div>
-                  <div className="px-3 sm:px-4 py-4">
-                    <p className="text-sm text-slate-600 leading-relaxed break-words"
-                      style={{ fontFamily: 'var(--font-serif, Georgia, serif)' }}>
-                      &quot;{cleanChronology(report.chronology)}&quot;
+
+                  {/* Chronology */}
+                  <div className="px-4 py-4">
+                    <p
+                      className="text-sm text-slate-600 leading-relaxed break-words"
+                      style={{ fontFamily: 'var(--font-serif, Georgia, serif)' }}
+                    >
+                      &ldquo;{cleanChronology(report.chronology)}&rdquo;
                     </p>
                   </div>
                 </div>
@@ -260,7 +277,7 @@ export default function ReportList({ reports, hasWithdrawn = false, hasLinkedRep
           </div>
 
         ) : hasWithdrawn ? (
-          <div className="bg-amber-50 rounded-lg border border-amber-200 p-8 text-center">
+          <div className="bg-amber-50 rounded-xl border border-amber-200 p-8 text-center">
             <Clock className="w-6 h-6 text-amber-400 mx-auto mb-2.5" />
             <p className="text-sm font-semibold text-amber-800 mb-1">Laporan sedang diperbarui</p>
             <p className="text-xs text-amber-600 max-w-xs mx-auto leading-relaxed">
@@ -269,9 +286,11 @@ export default function ReportList({ reports, hasWithdrawn = false, hasLinkedRep
           </div>
 
         ) : hasLinkedReports ? (
-          <div className={`bg-white rounded-lg border overflow-hidden ${linkedHasVerified ? 'border-red-200' : 'border-amber-200'}`}>
+          <div className={`bg-white rounded-xl border overflow-hidden ${linkedHasVerified ? 'border-red-200' : 'border-amber-200'}`}>
             <div className="flex items-start gap-3 px-4 py-4">
-              <div className={`w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5 ${linkedHasVerified ? 'bg-red-50 border border-red-100' : 'bg-amber-50 border border-amber-100'}`}>
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${
+                linkedHasVerified ? 'bg-red-50 border border-red-100' : 'bg-amber-50 border border-amber-100'
+              }`}>
                 <ShieldAlert className={`w-4 h-4 ${linkedHasVerified ? 'text-red-500' : 'text-amber-500'}`} />
               </div>
               <div>
@@ -283,7 +302,7 @@ export default function ReportList({ reports, hasWithdrawn = false, hasLinkedRep
                     ? 'Nomor ini disebutkan dalam laporan yang sudah diverifikasi oleh tim moderator. Pelaku yang sama terbukti menggunakan beberapa nomor berbeda — lihat peringatan di atas.'
                     : 'Nomor ini belum pernah dilaporkan secara langsung. Namun berdasarkan laporan komunitas, nomor ini disebutkan sebagai salah satu nomor yang digunakan oleh pelaku yang sama.'}
                 </p>
-                <div className={`mt-2.5 inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-md border ${
+                <div className={`mt-2.5 inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-lg border ${
                   linkedHasVerified
                     ? 'text-red-700 bg-red-50 border-red-200'
                     : 'text-amber-700 bg-amber-50 border-amber-200'
@@ -295,7 +314,7 @@ export default function ReportList({ reports, hasWithdrawn = false, hasLinkedRep
           </div>
 
         ) : (
-          <div className="bg-white rounded-lg border border-slate-200 p-12 text-center">
+          <div className="bg-white rounded-xl border border-slate-200 p-12 text-center">
             <ShieldCheck className="w-7 h-7 text-emerald-500 mx-auto mb-2.5" />
             <p className="text-sm font-semibold text-slate-900 mb-1">Database bersih</p>
             <p className="text-xs text-slate-400 max-w-xs mx-auto leading-relaxed">
@@ -305,12 +324,13 @@ export default function ReportList({ reports, hasWithdrawn = false, hasLinkedRep
         )}
       </div>
 
+      {/* ── Bukti lampiran ── */}
       {allEvidenceUrls.length > 0 && (
         <div>
-          <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-2.5 font-medium px-0.5">
+          <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-2 font-medium px-0.5">
             Bukti lampiran
           </p>
-          <div className="bg-white rounded-lg border border-slate-200 p-3 sm:p-4">
+          <div className="bg-white rounded-xl border border-slate-200 p-3 sm:p-4">
             <EvidenceGallery urls={allEvidenceUrls} />
           </div>
         </div>

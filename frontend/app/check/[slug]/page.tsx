@@ -178,7 +178,6 @@ const INDONESIAN_PREFIXES: { prefix: string; carrier: string; type: 'mobile' | '
   { prefix: '0800', carrier: 'Telkom IndiHome',    type: 'fixed' },
 ];
 
-// ✅ OPTIMIZED: pre-sort sekali di module level, bukan setiap render
 const SORTED_PREFIXES = [...INDONESIAN_PREFIXES].sort((a, b) => b.prefix.length - a.prefix.length);
 
 function detectCarrier(phone: string): CarrierInfo | null {
@@ -203,11 +202,11 @@ interface GatedProps {
 function GatedContent({ isLoggedIn, label, children, minHeight }: GatedProps) {
   if (isLoggedIn) return <>{children}</>;
   return (
-    <div className="relative overflow-hidden rounded-lg" style={minHeight ? { minHeight } : {}}>
+    <div className="relative overflow-hidden rounded-xl" style={minHeight ? { minHeight } : {}}>
       <div className="blur-[2px] select-none pointer-events-none" aria-hidden="true">
         {children}
       </div>
-      <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-white/30 via-white/60 to-white/80">
+      <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-white/20 via-white/70 to-white/90">
         <div className="flex flex-col items-center gap-3 px-6 text-center">
           <div className="w-10 h-10 rounded-full bg-slate-900 flex items-center justify-center shadow-lg">
             <Lock className="w-4 h-4 text-white" />
@@ -215,7 +214,7 @@ function GatedContent({ isLoggedIn, label, children, minHeight }: GatedProps) {
           <p className="text-sm font-semibold text-slate-800">{label}</p>
           <Link
             href="/login"
-            className="mt-1 inline-flex items-center gap-1.5 px-4 py-2 bg-slate-900 hover:bg-slate-700 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm"
+            className="mt-1 inline-flex items-center gap-1.5 px-5 py-2.5 bg-slate-900 hover:bg-slate-700 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm"
           >
             Login untuk melihat
           </Link>
@@ -227,21 +226,20 @@ function GatedContent({ isLoggedIn, label, children, minHeight }: GatedProps) {
 
 function CtaShareCard({ slug, shareText }: { slug: string; shareText: string }) {
   return (
-    <div className="rounded-lg border border-slate-200 overflow-hidden">
-      <div className="bg-slate-900 px-4 py-4 sm:px-5 sm:py-5">
+    <div className="rounded-xl border border-slate-200 overflow-hidden">
+      <div className="bg-slate-900 px-5 py-5 sm:px-6 sm:py-6">
         <p className="text-sm font-semibold text-white mb-1">Pernah kena tipu nomor ini?</p>
-        <p className="text-xs text-slate-400 mb-3 leading-relaxed">
+        <p className="text-xs text-slate-400 mb-4 leading-relaxed">
           Satu laporan dari kamu bisa melindungi ribuan orang.
         </p>
         <Link
           href="/report"
-          className="flex items-center justify-center gap-2 w-full py-2.5 bg-white hover:bg-slate-100 text-slate-900 text-xs font-semibold rounded-lg transition-colors"
+          className="flex items-center justify-center gap-2 w-full py-3 bg-white hover:bg-slate-100 text-slate-900 text-xs font-semibold rounded-lg transition-colors"
         >
           <PlusCircle className="w-3.5 h-3.5" /> Buat laporan
         </Link>
       </div>
-      <div className="border-t border-slate-700/40" />
-      <div className="bg-white px-4 py-4 sm:px-5">
+      <div className="bg-white px-5 py-4 sm:px-6">
         <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-3 font-medium">
           Sebarkan peringatan
         </p>
@@ -268,9 +266,6 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
   const checkedAt = new Date();
   const supabase = await createClient();
 
-  // ✅ OPTIMIZED: jalankan auth check + RPC data fetch secara parallel
-  // Sebelumnya: 3 query sequential (reports, linkedData, getUser)
-  // Sesudahnya: 2 call parallel (auth + 1 RPC yang sudah gabungkan reports + linked)
   const [
     { data: { user } },
     { data: pageData },
@@ -325,8 +320,13 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
 
   const statusConfig = {
     danger: {
-      barBg: 'bg-red-50 border-b border-red-100', barLabel: 'text-red-800', barDesc: 'text-red-600',
-      dotBg: 'bg-red-500', nameBadgeBg: 'bg-red-50', nameBadgeText: 'text-red-700', nameBadgeBorder: 'border-red-200',
+      barBg: 'bg-red-50 border-b border-red-100',
+      barLabel: 'text-red-800',
+      barDesc: 'text-red-600',
+      dotBg: 'bg-red-500',
+      nameBadgeBg: 'bg-red-50',
+      nameBadgeText: 'text-red-700',
+      nameBadgeBorder: 'border-red-200',
       verdict: 'Terindikasi penipuan',
       verdictSub: `${verifiedCount} laporan telah diverifikasi oleh sistem & komunitas.`,
     },
@@ -350,9 +350,15 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
         : `${pendingReports.length} laporan masuk sedang diverifikasi moderator.`,
     },
     safe: {
-      barBg: 'bg-emerald-50 border-b border-emerald-100', barLabel: 'text-emerald-900', barDesc: 'text-emerald-700',
-      dotBg: 'bg-emerald-500', nameBadgeBg: 'bg-emerald-50', nameBadgeText: 'text-emerald-800', nameBadgeBorder: 'border-emerald-200',
-      verdict: 'Tidak ada laporan', verdictSub: 'Nomor ini bersih di database kami. Tetap waspada.',
+      barBg: 'bg-emerald-50 border-b border-emerald-100',
+      barLabel: 'text-emerald-900',
+      barDesc: 'text-emerald-700',
+      dotBg: 'bg-emerald-500',
+      nameBadgeBg: 'bg-emerald-50',
+      nameBadgeText: 'text-emerald-800',
+      nameBadgeBorder: 'border-emerald-200',
+      verdict: 'Tidak ada laporan',
+      verdictSub: 'Nomor ini bersih di database kami. Tetap waspada.',
     },
   };
 
@@ -415,6 +421,7 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
     phone: 'Nomor HP', bank_account: 'Rekening Bank', ewallet: 'E-Wallet',
   };
 
+  // ✅ FIX: tambah field license di Dataset — fix Google Search Console warning
   const structuredData = {
     '@context': 'https://schema.org',
     '@type': 'WebPage',
@@ -433,6 +440,8 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
       '@type': 'Dataset',
       name: `Laporan penipuan untuk nomor ${realNumber}`,
       description: `Database laporan penipuan komunitas untuk nomor ${realNumber}`,
+      // ✅ license field — required by Google Dataset schema
+      license: 'https://creativecommons.org/licenses/by-nc/4.0/',
       creator: {
         '@type': 'Organization',
         name: 'KawalTransaksi',
@@ -448,24 +457,25 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
       <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
-        {/* Mobile back nav */}
-        <div className="sm:hidden bg-white border-b border-slate-100">
+
+        {/* ── Mobile back nav ── */}
+        <div className="sm:hidden bg-white border-b border-slate-100 sticky top-16 z-10">
           <div className="px-4 py-3 flex items-center justify-between">
-            <Link href="/cek-nomor" className="inline-flex items-center gap-2 text-slate-500 hover:text-slate-900 text-sm transition-colors">
+            <Link href="/cek-nomor" className="inline-flex items-center gap-1.5 text-slate-500 hover:text-slate-900 text-sm font-medium transition-colors">
               <ArrowLeft className="w-4 h-4" /> Kembali
             </Link>
-            <span className="text-[10px] text-slate-400 uppercase tracking-widest">KawalTransaksi</span>
+            <span className="text-[10px] text-slate-400 uppercase tracking-widest font-medium">KawalTransaksi</span>
           </div>
         </div>
 
-        {/* Status bar */}
+        {/* ── Status bar ── */}
         <div className={`${config.barBg} px-4 sm:px-6 py-3`}>
           <div className="max-w-5xl mx-auto flex items-center gap-2 flex-wrap">
-            <div className={`w-2 h-2 rounded-full shrink-0 ${config.dotBg}`} />
+            <div className={`w-2 h-2 rounded-full shrink-0 animate-pulse ${config.dotBg}`} />
             <span className={`text-xs font-semibold uppercase tracking-widest ${config.barLabel}`}>{config.verdict}</span>
             <span className={`text-xs ${config.barDesc} hidden sm:inline`}>— {config.verdictSub}</span>
             <span className="ml-auto flex items-center gap-1 text-[10px] text-slate-400">
-              <Clock className="w-3 h-3" /> Dicek {formatTimestamp(checkedAt)}
+              <Clock className="w-3 h-3" /> {formatTimestamp(checkedAt)}
             </span>
           </div>
           <div className="max-w-5xl mx-auto sm:hidden mt-1">
@@ -473,30 +483,33 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
           </div>
         </div>
 
-        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 sm:py-6 pb-20">
-          {/* Stats grid */}
+        <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 sm:py-6 pb-24">
+
+          {/* ── Stats grid ── */}
           {reports.length > 0 && (
-            <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-4 sm:mb-6">
-              <div className="bg-white rounded-lg border border-slate-200 p-3 sm:p-5">
-                <p className="text-2xl sm:text-4xl font-medium leading-none text-slate-900 tabular-nums">{reports.length}</p>
-                <p className="text-[10px] text-slate-400 mt-2 uppercase tracking-[0.12em]">Laporan masuk</p>
+            <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-4 sm:mb-5">
+              <div className="bg-white rounded-xl border border-slate-200 p-3 sm:p-5">
+                <p className="text-2xl sm:text-4xl font-bold leading-none text-slate-900 tabular-nums">{reports.length}</p>
+                <p className="text-[10px] text-slate-400 mt-2 uppercase tracking-[0.1em]">Laporan masuk</p>
               </div>
-              <div className="bg-white rounded-lg border border-slate-200 p-3 sm:p-5">
-                <p className={`text-2xl sm:text-4xl font-medium leading-none tabular-nums ${totalLoss > 0 ? 'text-red-600' : 'text-slate-300'}`}>
-                  {totalLoss > 0 ? new Intl.NumberFormat('id-ID', { notation: 'compact', maximumFractionDigits: 1 }).format(totalLoss) : '—'}
+              <div className="bg-white rounded-xl border border-slate-200 p-3 sm:p-5">
+                <p className={`text-2xl sm:text-4xl font-bold leading-none tabular-nums ${totalLoss > 0 ? 'text-red-600' : 'text-slate-300'}`}>
+                  {totalLoss > 0
+                    ? new Intl.NumberFormat('id-ID', { notation: 'compact', maximumFractionDigits: 1 }).format(totalLoss)
+                    : '—'}
                 </p>
-                <p className="text-[10px] text-slate-400 mt-2 uppercase tracking-[0.12em]">Total kerugian</p>
+                <p className="text-[10px] text-slate-400 mt-2 uppercase tracking-[0.1em]">Total kerugian</p>
               </div>
-              <div className={`rounded-lg border p-3 sm:p-5 ${hasOtherVictims ? 'bg-amber-50 border-amber-200' : 'bg-white border-slate-200'}`}>
-                <p className={`text-2xl sm:text-4xl font-medium leading-none ${hasOtherVictims ? 'text-amber-500' : 'text-slate-300'}`}>
+              <div className={`rounded-xl border p-3 sm:p-5 ${hasOtherVictims ? 'bg-amber-50 border-amber-200' : 'bg-white border-slate-200'}`}>
+                <p className={`text-2xl sm:text-4xl font-bold leading-none ${hasOtherVictims ? 'text-amber-500' : 'text-slate-300'}`}>
                   {hasOtherVictims ? '!' : '—'}
                 </p>
-                <p className="text-[10px] text-slate-400 mt-2 uppercase tracking-[0.12em]">Multi korban</p>
+                <p className="text-[10px] text-slate-400 mt-2 uppercase tracking-[0.1em]">Multi korban</p>
               </div>
             </div>
           )}
 
-          <div className="space-y-4 sm:space-y-5">
+          <div className="space-y-3 sm:space-y-4">
 
             {/* 1. NumberCard */}
             <NumberCard
@@ -522,9 +535,9 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
               </div>
             )}
 
-            {/* 3. Banner: nomor terkait laporan lain */}
+            {/* 3. Banner linked reports */}
             {linkedReports.length > 0 && reports.length === 0 && (
-              <div className={`rounded-lg overflow-hidden border ${linkedHasVerified ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}`}>
+              <div className={`rounded-xl overflow-hidden border ${linkedHasVerified ? 'bg-red-50 border-red-200' : 'bg-amber-50 border-amber-200'}`}>
                 <div className={`px-4 sm:px-5 py-4 border-b ${linkedHasVerified ? 'border-red-100' : 'border-amber-100'}`}>
                   <p className={`text-xs leading-relaxed ${linkedHasVerified ? 'text-red-700' : 'text-amber-700'}`}>
                     {linkedHasVerified
@@ -561,18 +574,19 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
               </div>
             )}
 
-            {/* 4. Tetap waspada — status safe */}
+            {/* 4. Tetap waspada */}
             {status === 'safe' && linkedReports.length === 0 && (
               <div>
-                <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-2.5 font-medium px-0.5">Tetap waspada</p>
-                <div className="bg-amber-50 rounded-lg border border-amber-200 overflow-hidden">
-                  <div className="px-4 py-3.5 border-b border-amber-100 flex items-center gap-2">
+                <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-2 font-medium px-0.5">Tetap waspada</p>
+                <div className="bg-amber-50 rounded-xl border border-amber-200 overflow-hidden">
+                  <div className="px-4 py-3 border-b border-amber-100 flex items-center gap-2">
                     <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
                     <p className="text-xs font-medium text-amber-800">Meski belum ada laporan, waspada jika nomor ini...</p>
                   </div>
                   <ul className="divide-y divide-amber-100">
                     {waspadaChecklist.map((item, i) => (
-                      <li key={i} className="px-4 py-3 hover:bg-amber-100/40 transition-colors">
+                      <li key={i} className="px-4 py-3 flex items-start gap-2.5">
+                        <span className="text-amber-400 mt-0.5 shrink-0">·</span>
                         <p className="text-xs text-amber-900 leading-relaxed">{item}</p>
                       </li>
                     ))}
@@ -621,11 +635,11 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
                 minHeight="160px"
               >
                 <div>
-                  <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-2.5 font-medium px-0.5">
+                  <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-2 font-medium px-0.5">
                     Nomor lain terkait pelaku ini
                   </p>
-                  <div className="bg-white rounded-lg border border-slate-200 overflow-hidden">
-                    <div className="px-4 py-3 border-b border-slate-100 bg-slate-50">
+                  <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+                    <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/80">
                       <p className="text-xs text-slate-500 leading-relaxed">
                         Pelapor menyebutkan bahwa pelaku yang sama juga menggunakan nomor-nomor berikut.
                       </p>
@@ -633,7 +647,7 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
                     <div className="divide-y divide-slate-100">
                       {relatedEntries.map((entry, i) => (
                         <a key={i} href={`/check/${entry.number}${buildTypeParam(entry.type, entry.bank)}`}
-                          className="flex items-center justify-between px-4 py-3 hover:bg-slate-50 transition-colors group">
+                          className="flex items-center justify-between px-4 py-3.5 hover:bg-slate-50 transition-colors group">
                           <div>
                             <span className="text-sm font-mono font-semibold text-slate-700 tracking-wide">
                               {entry.number.replace(/(\d{4})(?=\d)/g, '$1 ')}
@@ -654,8 +668,8 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
             {/* 7. Status verifikasi */}
             {(allReports.length > 0 || linkedHasVerified) && !(hasWithdrawn && reports.length === 0) && (
               <div>
-                <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-2.5 font-medium px-0.5">Status verifikasi</p>
-                <div className="bg-white rounded-lg border border-slate-200 px-4 sm:px-6 py-4 sm:py-5">
+                <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-2 font-medium px-0.5">Status verifikasi</p>
+                <div className="bg-white rounded-xl border border-slate-200 px-4 sm:px-6 py-4 sm:py-5">
                   <div className="flex relative">
                     {verificationSteps.map((step, i) => (
                       <div key={i} className="relative flex flex-col items-center flex-1">
@@ -680,6 +694,7 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
 
             {/* 8. CTA + Share */}
             <CtaShareCard slug={slug} shareText={shareText} />
+
           </div>
         </div>
       </div>
