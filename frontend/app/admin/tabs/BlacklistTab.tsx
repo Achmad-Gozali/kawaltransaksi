@@ -2,7 +2,7 @@
 
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import {
   Loader2, Search, Plus, AlertCircle, CheckCircle2,
   ShieldX, ShieldOff, Activity,
@@ -25,6 +25,12 @@ export default function BlacklistTab({ token }: { token: string }) {
   const [adding, setAdding] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+
+  // ✅ Auto-load saat tab dibuka
+  useEffect(() => {
+    fetchBlacklist();
+    fetchLogs();
+  }, []);
 
   const fetchBlacklist = async () => {
     setLoading(true); setError(null);
@@ -161,15 +167,13 @@ export default function BlacklistTab({ token }: { token: string }) {
             className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold rounded-xl disabled:opacity-50 transition-colors"
           >
             {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />}
-            {fetched ? 'Refresh' : 'Muat Data'}
+            Refresh
           </button>
         </div>
-        {!fetched ? (
+        {loading && !fetched ? (
           <div className="p-16 text-center">
-            <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
-              <ShieldX className="w-6 h-6 text-slate-300" />
-            </div>
-            <p className="text-sm font-medium text-slate-500">Klik Muat Data untuk melihat daftar IP blacklist</p>
+            <Loader2 className="w-6 h-6 text-slate-300 animate-spin mx-auto mb-3" />
+            <p className="text-sm text-slate-400">Memuat data...</p>
           </div>
         ) : entries.length === 0 ? (
           <div className="p-16 text-center">
@@ -226,15 +230,13 @@ export default function BlacklistTab({ token }: { token: string }) {
             className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold rounded-xl disabled:opacity-50 transition-colors"
           >
             {loadingLogs ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Activity className="w-3.5 h-3.5" />}
-            {fetchedLogs ? 'Refresh' : 'Muat Log'}
+            Refresh
           </button>
         </div>
-        {!fetchedLogs ? (
+        {loadingLogs && !fetchedLogs ? (
           <div className="p-16 text-center">
-            <div className="w-14 h-14 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-3">
-              <Activity className="w-6 h-6 text-slate-300" />
-            </div>
-            <p className="text-sm font-medium text-slate-500">Klik Muat Log untuk melihat aktivitas mencurigakan</p>
+            <Loader2 className="w-6 h-6 text-slate-300 animate-spin mx-auto mb-3" />
+            <p className="text-sm text-slate-400">Memuat log...</p>
           </div>
         ) : logs.length === 0 ? (
           <div className="p-16 text-center">

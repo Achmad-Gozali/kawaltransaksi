@@ -7,7 +7,7 @@ import { createClient } from '@/lib/supabase-browser';
 import {
   LayoutDashboard, FileText, BarChart2, Users,
   Home, LogOut, ChevronLeft, ChevronRight,
-  Search, X, Shield, ShieldX, Menu, Newspaper, MessageCircle,
+  Search, X, Shield, ShieldX, Menu, Newspaper, MessageCircle, Code2,
 } from 'lucide-react';
 
 interface AdminShellProps {
@@ -23,6 +23,8 @@ const navItems = [
   { id: 'pengguna',  label: 'Pengguna',     icon: Users,           href: '/admin?tab=pengguna'  },
   { id: 'blacklist', label: 'IP Blacklist', icon: ShieldX,         href: '/admin?tab=blacklist' },
   { id: 'feedback',  label: 'Feedback',     icon: MessageCircle,   href: '/admin?tab=feedback'  },
+  // ✅ Tambah tab API Keys
+  { id: 'apikeys',   label: 'API Keys',     icon: Code2,           href: '/admin?tab=apikeys'   },
 ];
 
 interface NavContentProps {

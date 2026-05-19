@@ -338,3 +338,66 @@ export async function sendFeedbackReplyEmail({
     `,
   });
 }
+
+// ── API Anomaly email ─────────────────────────────────────────────────────────
+// Tambahkan fungsi ini ke bagian paling bawah file resend.ts,
+// tepat sebelum baris terakhir file (atau di akhir file)
+
+export async function sendApiAnomalyEmail({
+  to,
+  keyId,
+  requestsThisHour,
+  avgPerHour,
+  multiplier,
+  apiKey,
+}: {
+  to: string;
+  keyId: string;
+  requestsThisHour: number;
+  avgPerHour: number;
+  multiplier: number;
+  apiKey: string;
+}) {
+  await sendEmail({
+    to,
+    apiKey,
+    subject: '⚠️ Aktivitas tidak biasa terdeteksi pada API key Anda — KawalTransaksi',
+    html: `
+      <div style="font-family: sans-serif; max-width: 520px; margin: 0 auto; padding: 32px; color: #1e293b;">
+        <img src="https://kawaltransaksi.com/logo.png" alt="KawalTransaksi" width="48" style="border-radius: 12px; margin-bottom: 24px;" />
+        <h1 style="font-size: 22px; font-weight: 900; margin: 0 0 8px;">⚠️ Aktivitas Tidak Biasa</h1>
+        <p style="color: #475569; margin: 0 0 24px;">Sistem kami mendeteksi lonjakan penggunaan yang tidak biasa pada salah satu API key Anda.</p>
+
+        <div style="background: #fef9c3; border: 1px solid #fde68a; border-radius: 12px; padding: 20px; margin-bottom: 24px;">
+          <p style="margin: 0 0 4px; font-size: 12px; color: #92400e; text-transform: uppercase; letter-spacing: 0.5px;">Key ID</p>
+          <p style="margin: 0 0 16px; font-size: 13px; font-weight: 700; font-family: monospace; color: #0f172a;">${keyId}</p>
+
+          <p style="margin: 0 0 4px; font-size: 12px; color: #92400e; text-transform: uppercase; letter-spacing: 0.5px;">Request jam ini</p>
+          <p style="margin: 0 0 16px; font-size: 24px; font-weight: 900; color: #b45309;">${requestsThisHour} request</p>
+
+          <p style="margin: 0 0 4px; font-size: 12px; color: #92400e; text-transform: uppercase; letter-spacing: 0.5px;">Rata-rata normal</p>
+          <p style="margin: 0 0 16px; font-size: 15px; font-weight: 600; color: #0f172a;">${avgPerHour} request/jam</p>
+
+          <p style="margin: 0 0 4px; font-size: 12px; color: #92400e; text-transform: uppercase; letter-spacing: 0.5px;">Lonjakan</p>
+          <p style="margin: 0; font-size: 20px; font-weight: 900; color: #dc2626;">${multiplier}x dari biasanya</p>
+        </div>
+
+        <p style="color: #475569; margin: 0 0 16px; font-size: 14px; line-height: 1.7;">
+          Jika ini memang aktivitas normal dari aplikasi Anda, tidak perlu melakukan apa-apa. Namun jika Anda tidak mengenali lonjakan ini, kemungkinan API key Anda sedang disalahgunakan.
+        </p>
+
+        <p style="color: #475569; margin: 0 0 24px; font-size: 14px; line-height: 1.7;">
+          <strong>Langkah yang disarankan:</strong><br/>
+          1. Cek aplikasi Anda apakah ada loop atau bug yang menyebabkan request berlebihan<br/>
+          2. Jika key Anda bocor, segera regenerate dari halaman Developer API<br/>
+          3. Hubungi kami jika butuh bantuan
+        </p>
+
+        <a href="https://kawaltransaksi.com/developer" style="display: inline-block; background: #f59e0b; color: white; text-decoration: none; padding: 12px 24px; border-radius: 8px; font-weight: 700; font-size: 14px;">Kelola API Key Saya</a>
+
+        <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 32px 0;" />
+        <p style="font-size: 12px; color: #94a3b8;">Email ini dikirim otomatis oleh sistem keamanan KawalTransaksi. Jangan balas email ini. Hubungi kami di <a href="mailto:kawaltransaksi@gmail.com" style="color: #10b981;">kawaltransaksi@gmail.com</a> jika butuh bantuan.</p>
+      </div>
+    `,
+  });
+}

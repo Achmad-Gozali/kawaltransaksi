@@ -7,6 +7,7 @@ const layananUtama = [
   { label: 'Cek Rekening',   href: '/cek-rekening' },
   { label: 'Lapor Penipuan', href: '/report' },
   { label: 'Edukasi',        href: '/edukasi' },
+  { label: 'Developer API',  href: '/developer' },
 ];
 
 const bantuanLegal = [
@@ -41,12 +42,6 @@ export default function Footer() {
           </div>
 
           <div className="col-span-1 md:col-span-3">
-            {/*
-              FIX: Ganti h4 → h2 karena di footer tidak ada h2/h3 sebelumnya.
-              Heading harus berurutan: h1 (hero) → h2 (section) → h3/h4 (sub-section).
-              Footer adalah section baru, jadi h2 adalah level yang benar di sini.
-              Style visual tetap sama (text-[11px] uppercase).
-            */}
             <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-4">Layanan Utama</h2>
             <ul className="space-y-3">
               {layananUtama.map((item) => (

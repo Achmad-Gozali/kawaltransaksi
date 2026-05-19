@@ -9,6 +9,7 @@ import PenggunaTab from './tabs/PenggunaTab';
 import BlacklistTab from './tabs/BlacklistTab';
 import ArtikelTab from './tabs/ArtikelTab';
 import FeedbackTab from './tabs/FeedbackTab';
+import ApiKeysTab from './tabs/ApiKeysTab';
 import type { Stats, Report, AdminUser, Tab } from './types';
 import type { FeedbackItem } from './tabs/FeedbackTab';
 
@@ -41,6 +42,8 @@ function DashboardInner({
     case 'blacklist':  return <BlacklistTab token={token} />;
     case 'artikel':    return <ArtikelTab token={token} />;
     case 'feedback':   return <FeedbackTab feedbacks={feedbacks} token={token} />;
+    // ✅ Tab baru API Keys
+    case 'apikeys':    return <ApiKeysTab token={token} />;
     default:           return <DashboardTab stats={stats} reports={reports} />;
   }
 }

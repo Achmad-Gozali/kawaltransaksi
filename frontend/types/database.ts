@@ -70,6 +70,11 @@ export interface Database {
           avatar_url: string | null;
           website: string | null;
           role: string;
+          email: string | null;
+          is_banned: boolean;
+          failed_attempts: number;
+          locked_until: string | null;
+          welcome_sent: boolean;
         };
         Insert: {
           id: string;
@@ -79,6 +84,11 @@ export interface Database {
           avatar_url?: string | null;
           website?: string | null;
           role?: string;
+          email?: string | null;
+          is_banned?: boolean;
+          failed_attempts?: number;
+          locked_until?: string | null;
+          welcome_sent?: boolean;
         };
         Update: {
           id?: string;
@@ -88,6 +98,11 @@ export interface Database {
           avatar_url?: string | null;
           website?: string | null;
           role?: string;
+          email?: string | null;
+          is_banned?: boolean;
+          failed_attempts?: number;
+          locked_until?: string | null;
+          welcome_sent?: boolean;
         };
         Relationships: [];
       };
@@ -168,11 +183,6 @@ export interface Database {
         Relationships: [];
       };
 
-      // ✅ UPDATE: sinkronisasi lengkap dengan kolom DB Supabase
-      // Kolom aktual: id, title, slug, summary, content, published_at,
-      // total_reports, total_loss, top_category, top_platform, top_bank,
-      // period_start, period_end, created_at, cover_image, status
-      // TIDAK ADA kolom updated_at di tabel ini
       articles: {
         Row: {
           id: string;
@@ -279,6 +289,65 @@ export interface Database {
         };
         Relationships: [];
       };
+
+      // ✅ api_keys — dengan semua kolom keamanan
+      api_keys: {
+        Row: {
+          id: string;
+          user_id: string;
+          name: string;
+          key: string;
+          key_hash: string | null;
+          key_prefix: string | null;
+          environment: string;
+          requests_today: number;
+          requests_total: number;
+          daily_limit: number;
+          last_reset_at: string | null;
+          last_used_at: string | null;
+          expires_at: string | null;
+          failed_attempts: number;
+          is_active: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          name: string;
+          key: string;
+          key_hash?: string | null;
+          key_prefix?: string | null;
+          environment?: string;
+          requests_today?: number;
+          requests_total?: number;
+          daily_limit?: number;
+          last_reset_at?: string | null;
+          last_used_at?: string | null;
+          expires_at?: string | null;
+          failed_attempts?: number;
+          is_active?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          name?: string;
+          key?: string;
+          key_hash?: string | null;
+          key_prefix?: string | null;
+          environment?: string;
+          requests_today?: number;
+          requests_total?: number;
+          daily_limit?: number;
+          last_reset_at?: string | null;
+          last_used_at?: string | null;
+          expires_at?: string | null;
+          failed_attempts?: number;
+          is_active?: boolean;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
     };
 
     Views: {
@@ -286,45 +355,20 @@ export interface Database {
     };
 
     Functions: {
-      // ── Baru: stats cek-nomor ────────────────────────────────────────────
       get_stats_nomor: {
         Args: Record<string, never>;
-        Returns: {
-          total_laporan: number;
-          total_nomor: number;
-          total_kerugian: number;
-        };
+        Returns: { total_laporan: number; total_nomor: number; total_kerugian: number };
       };
-
-      // ── Baru: stats cek-rekening ─────────────────────────────────────────
       get_stats_rekening: {
         Args: Record<string, never>;
-        Returns: {
-          total_laporan: number;
-          total_rekening: number;
-          total_kerugian: number;
-        };
+        Returns: { total_laporan: number; total_rekening: number; total_kerugian: number };
       };
-
-      // ── Baru: stats homepage ──────────────────────────────────────────────
       get_stats: {
         Args: Record<string, never>;
-        Returns: {
-          total: number;
-          verified: number;
-          total_loss: number;
-        };
+        Returns: { total: number; verified: number; total_loss: number };
       };
-
-      // ── Baru: laporan publik dengan grouping + pagination di DB ───────────
       get_laporan_publik: {
-        Args: {
-          p_type?: string;
-          p_sort?: string;
-          p_q?: string;
-          p_page?: number;
-          p_per_page?: number;
-        };
+        Args: { p_type?: string; p_sort?: string; p_q?: string; p_page?: number; p_per_page?: number };
         Returns: {
           data: {
             target_number: string;
@@ -341,29 +385,14 @@ export interface Database {
           total_unique: number;
         };
       };
-
-      // ── Baru: stats untuk StatsChart ──────────────────────────────────────
       get_laporan_stats: {
         Args: Record<string, never>;
-        Returns: {
-          target_type: string;
-          bank_name: string | null;
-          category: string | null;
-          status: string;
-          created_at: string;
-        }[];
+        Returns: { target_type: string; bank_name: string | null; category: string | null; status: string; created_at: string }[];
       };
-
-      // ── Baru: check page data ─────────────────────────────────────────────
       get_check_page_data: {
         Args: { p_number: string };
-        Returns: {
-          reports: any[];
-          linked: any[];
-        };
+        Returns: { reports: any[]; linked: any[] };
       };
-
-      // ── Existing ──────────────────────────────────────────────────────────
       get_category_counts: {
         Args: Record<string, never>;
         Returns: { category: string; count: number }[];
@@ -395,6 +424,10 @@ export interface Database {
           store_name: string | null;
           suspect_city: string | null;
         }[];
+      };
+      increment_api_usage: {
+        Args: { key_id: string };
+        Returns: undefined;
       };
       update_report_status: {
         Args: { report_id: string; new_status: string };

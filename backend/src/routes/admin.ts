@@ -89,7 +89,6 @@ admin.patch('/reports/:id/status', authMiddleware, requireAdmin, async (c) => {
 
     const supabase = getSupabaseAdmin(c.env);
 
-    // Ambil data laporan + profil pelapor untuk keperluan email
     const { data: report, error: fetchError } = await supabase
       .from('reports')
       .select('id, target_number, reporter_id')
@@ -103,7 +102,6 @@ admin.patch('/reports/:id/status', authMiddleware, requireAdmin, async (c) => {
     const { error } = await supabase.from('reports').update({ status }).eq('id', id);
     if (error) throw error;
 
-    // ── Kirim email notifikasi ke pelapor (fire & forget) ────────────────────
     try {
       const { data: profile } = await supabase
         .from('profiles')
@@ -347,10 +345,7 @@ admin.post('/articles', authMiddleware, requireAdmin, async (c) => {
     const slug = `${title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}-${Date.now()}`;
     const supabase = getSupabaseAdmin(c.env);
     const { data, error } = await supabase.from('articles').insert({
-      title,
-      content,
-      summary,
-      slug,
+      title, content, summary, slug,
       top_category: top_category || null,
       status: 'draft',
       published_at: new Date().toISOString(),
@@ -374,6 +369,124 @@ admin.delete('/articles/:id', authMiddleware, requireAdmin, async (c) => {
     return c.json({ success: true });
   } catch {
     return c.json({ success: false, message: 'Gagal menghapus artikel.' }, 500);
+  }
+});
+
+// ── GET /api/admin/apikeys ────────────────────────────────────────────────────
+admin.get('/apikeys', authMiddleware, requireAdmin, async (c) => {
+  try {
+    const supabase = getSupabaseAdmin(c.env);
+
+    const { data: keys, error } = await supabase
+      .from('api_keys')
+      // ✅ Tambah key_prefix, environment, failed_attempts — key plain tidak dikembalikan
+      .select('id, user_id, name, key_prefix, environment, failed_attempts, requests_today, requests_total, daily_limit, last_reset_at, last_used_at, expires_at, is_active, created_at')
+      .order('created_at', { ascending: false });
+
+    if (error) throw error;
+
+    const userIds = [...new Set((keys ?? []).map((k: any) => k.user_id).filter(Boolean))];
+    const emailMap: Record<string, string> = {};
+
+    if (userIds.length > 0) {
+      const { data: profiles } = await supabase
+        .from('profiles')
+        .select('id, email')
+        .in('id', userIds);
+      profiles?.forEach((p: any) => { emailMap[p.id] = p.email; });
+    }
+
+    const result = (keys ?? []).map((k: any) => ({
+      ...k,
+      user_email: emailMap[k.user_id] ?? null,
+    }));
+
+    return c.json({ success: true, data: result });
+  } catch {
+    return c.json({ success: false, message: 'Gagal mengambil API keys.' }, 500);
+  }
+});
+
+// ── PATCH /api/admin/apikeys/:id/toggle ──────────────────────────────────────
+admin.patch('/apikeys/:id/toggle', authMiddleware, requireAdmin, async (c) => {
+  try {
+    const id = c.req.param('id');
+    if (!UUID_REGEX.test(id)) return c.json({ success: false, message: 'ID tidak valid.' }, 400);
+    const { is_active } = await c.req.json();
+    const supabase = getSupabaseAdmin(c.env);
+    const { error } = await supabase.from('api_keys').update({ is_active }).eq('id', id);
+    if (error) throw error;
+    return c.json({ success: true });
+  } catch {
+    return c.json({ success: false, message: 'Gagal update status.' }, 500);
+  }
+});
+
+// ── PATCH /api/admin/apikeys/:id/reset ───────────────────────────────────────
+admin.patch('/apikeys/:id/reset', authMiddleware, requireAdmin, async (c) => {
+  try {
+    const id = c.req.param('id');
+    if (!UUID_REGEX.test(id)) return c.json({ success: false, message: 'ID tidak valid.' }, 400);
+    const supabase = getSupabaseAdmin(c.env);
+    const today = new Date().toISOString().slice(0, 10);
+    const { error } = await supabase
+      .from('api_keys')
+      .update({ requests_today: 0, last_reset_at: today })
+      .eq('id', id);
+    if (error) throw error;
+    return c.json({ success: true });
+  } catch {
+    return c.json({ success: false, message: 'Gagal reset usage.' }, 500);
+  }
+});
+
+// ── PATCH /api/admin/apikeys/:id/limit ───────────────────────────────────────
+admin.patch('/apikeys/:id/limit', authMiddleware, requireAdmin, async (c) => {
+  try {
+    const id = c.req.param('id');
+    if (!UUID_REGEX.test(id)) return c.json({ success: false, message: 'ID tidak valid.' }, 400);
+    const { daily_limit } = await c.req.json();
+    if (!daily_limit || typeof daily_limit !== 'number' || daily_limit < 1) {
+      return c.json({ success: false, message: 'daily_limit tidak valid.' }, 400);
+    }
+    const supabase = getSupabaseAdmin(c.env);
+    const { error } = await supabase.from('api_keys').update({ daily_limit }).eq('id', id);
+    if (error) throw error;
+    return c.json({ success: true });
+  } catch {
+    return c.json({ success: false, message: 'Gagal update limit.' }, 500);
+  }
+});
+
+// ── PATCH /api/admin/apikeys/:id/reset-failed ────────────────────────────────
+// Reset failed_attempts — misalnya kalau admin mau unblock key yang kena auto-flag
+admin.patch('/apikeys/:id/reset-failed', authMiddleware, requireAdmin, async (c) => {
+  try {
+    const id = c.req.param('id');
+    if (!UUID_REGEX.test(id)) return c.json({ success: false, message: 'ID tidak valid.' }, 400);
+    const supabase = getSupabaseAdmin(c.env);
+    const { error } = await supabase
+      .from('api_keys')
+      .update({ failed_attempts: 0 })
+      .eq('id', id);
+    if (error) throw error;
+    return c.json({ success: true });
+  } catch {
+    return c.json({ success: false, message: 'Gagal reset failed attempts.' }, 500);
+  }
+});
+
+// ── DELETE /api/admin/apikeys/:id ────────────────────────────────────────────
+admin.delete('/apikeys/:id', authMiddleware, requireAdmin, async (c) => {
+  try {
+    const id = c.req.param('id');
+    if (!UUID_REGEX.test(id)) return c.json({ success: false, message: 'ID tidak valid.' }, 400);
+    const supabase = getSupabaseAdmin(c.env);
+    const { error } = await supabase.from('api_keys').delete().eq('id', id);
+    if (error) throw error;
+    return c.json({ success: true });
+  } catch {
+    return c.json({ success: false, message: 'Gagal hapus API key.' }, 500);
   }
 });
 
