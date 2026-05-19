@@ -10,6 +10,22 @@
   "lang": "id",
   "scope": "/",
   "categories": ["finance", "utilities"],
+  "shortcuts": [
+    {
+      "name": "Cek Nomor",
+      "short_name": "Cek Nomor",
+      "description": "Cek nomor HP mencurigakan",
+      "url": "/cek-nomor",
+      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Laporkan",
+      "short_name": "Laporkan",
+      "description": "Laporkan nomor penipu",
+      "url": "/report",
+      "icons": [{ "src": "/icons/icon-192x192.png", "sizes": "192x192" }]
+    }
+  ],
   "icons": [
     {
       "src": "/icons/icon-192x192.png",
@@ -28,14 +44,6 @@
       "sizes": "512x512",
       "type": "image/png",
       "purpose": "maskable"
-    }
-  ],
-  "screenshots": [
-    {
-      "src": "/poster1.png",
-      "sizes": "1280x720",
-      "type": "image/png",
-      "form_factor": "wide"
     }
   ]
 }

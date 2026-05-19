@@ -4,7 +4,6 @@ import { encodeSlug } from '@/lib/utils';
 
 const BASE_URL = 'https://kawaltransaksi.com';
 
-// ✅ FIX: hapus force-dynamic, cukup revalidate saja — keduanya kontradiksi
 export const revalidate = 3600;
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
@@ -18,7 +17,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE_URL}/cek-rekening/mandiri`,          lastModified: new Date(), changeFrequency: 'weekly',  priority: 0.8 },
     { url: `${BASE_URL}/cek-rekening/bsi`,              lastModified: new Date(), changeFrequency: 'weekly',  priority: 0.8 },
     { url: `${BASE_URL}/cek-rekening/cimb`,             lastModified: new Date(), changeFrequency: 'weekly',  priority: 0.8 },
-    // ✅ FIX: path ewallet yang benar /cek-nomor/cek-ewallet/...
     { url: `${BASE_URL}/cek-nomor/cek-ewallet/gopay`,   lastModified: new Date(), changeFrequency: 'weekly',  priority: 0.8 },
     { url: `${BASE_URL}/cek-nomor/cek-ewallet/dana`,    lastModified: new Date(), changeFrequency: 'weekly',  priority: 0.8 },
     { url: `${BASE_URL}/cek-nomor/cek-ewallet/ovo`,     lastModified: new Date(), changeFrequency: 'weekly',  priority: 0.8 },
@@ -26,6 +24,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE_URL}/cek-nomor/cek-ewallet/linkaja`, lastModified: new Date(), changeFrequency: 'weekly',  priority: 0.8 },
     { url: `${BASE_URL}/artikel`,                       lastModified: new Date(), changeFrequency: 'weekly',  priority: 0.8 },
     { url: `${BASE_URL}/laporan-publik`,                lastModified: new Date(), changeFrequency: 'daily',   priority: 0.8 },
+    { url: `${BASE_URL}/developer`,                     lastModified: new Date(), changeFrequency: 'monthly', priority: 0.6 },
     { url: `${BASE_URL}/edukasi`,                       lastModified: new Date(), changeFrequency: 'weekly',  priority: 0.7 },
     { url: `${BASE_URL}/faq`,                           lastModified: new Date(), changeFrequency: 'monthly', priority: 0.6 },
     { url: `${BASE_URL}/kontak`,                        lastModified: new Date(), changeFrequency: 'monthly', priority: 0.5 },
@@ -39,7 +38,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   try {
     const supabase = await createClient();
 
-    // ✅ FIX: naikkan limit dari 1000 → 50000 (batas maksimal Google per sitemap)
     const { data: reports } = await supabase
       .from('reports')
       .select('target_number, created_at')

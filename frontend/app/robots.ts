@@ -26,6 +26,7 @@ export default function robots(): MetadataRoute.Robots {
           '/login',
           '/register',
           '/report',
+          '/developer',
         ],
         disallow: [
           '/admin',
