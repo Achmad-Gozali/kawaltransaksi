@@ -340,8 +340,6 @@ export async function sendFeedbackReplyEmail({
 }
 
 // ── API Anomaly email ─────────────────────────────────────────────────────────
-// Tambahkan fungsi ini ke bagian paling bawah file resend.ts,
-// tepat sebelum baris terakhir file (atau di akhir file)
 
 export async function sendApiAnomalyEmail({
   to,

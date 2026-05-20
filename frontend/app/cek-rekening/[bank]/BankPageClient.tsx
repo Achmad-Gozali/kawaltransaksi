@@ -1,13 +1,16 @@
-'use client';
+"use client";
 
-import Link from 'next/link';
-import Image from 'next/image';
+import Link from "next/link";
+import Image from "next/image";
 import {
-  ArrowLeft, ArrowRight,
-  Phone, Hash,
-  Globe, ShieldCheck,
-} from 'lucide-react';
-import { encodeSlug } from '@/lib/utils';
+  ArrowLeft,
+  ArrowRight,
+  Phone,
+  Hash,
+  Globe,
+  ShieldCheck,
+} from "lucide-react";
+import { encodeSlug } from "@/core/utils";
 
 // ── TYPES ─────────────────────────────────────────────────────────────────────
 interface BankData {
@@ -72,7 +75,9 @@ export default function BankPageClient({
             <ArrowLeft className="w-4 h-4" />
             Kembali
           </Link>
-          <span className="text-[10px] text-slate-400 uppercase tracking-widest">KawalTransaksi</span>
+          <span className="text-[10px] text-slate-400 uppercase tracking-widest">
+            KawalTransaksi
+          </span>
         </div>
       </div>
 
@@ -80,7 +85,6 @@ export default function BankPageClient({
       <section className="bg-white border-b border-slate-200/80">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
           <div className="grid lg:grid-cols-3 gap-8 items-start">
-
             {/* Kiri */}
             <div className="lg:col-span-2">
               <div className="flex items-center gap-4 mb-6">
@@ -135,8 +139,13 @@ export default function BankPageClient({
                     <Hash className="w-3.5 h-3.5 text-slate-400" />
                   </div>
                   <div>
-                    <p className="text-[10px] text-slate-400 uppercase tracking-[0.12em] font-medium mb-0.5">Kode bank</p>
-                    <span className="text-lg font-bold text-slate-900" style={{ fontFamily: "'DM Mono', monospace" }}>
+                    <p className="text-[10px] text-slate-400 uppercase tracking-[0.12em] font-medium mb-0.5">
+                      Kode bank
+                    </p>
+                    <span
+                      className="text-lg font-bold text-slate-900"
+                      style={{ fontFamily: "'DM Mono', monospace" }}
+                    >
                       {data.kodeBank}
                     </span>
                   </div>
@@ -147,7 +156,9 @@ export default function BankPageClient({
                     <Phone className="w-3.5 h-3.5 text-slate-400" />
                   </div>
                   <div>
-                    <p className="text-[10px] text-slate-400 uppercase tracking-[0.12em] font-medium mb-0.5">Call center</p>
+                    <p className="text-[10px] text-slate-400 uppercase tracking-[0.12em] font-medium mb-0.5">
+                      Call center
+                    </p>
                     <a
                       href={`tel:${data.callCenter}`}
                       className="text-lg font-bold text-slate-900 hover:text-emerald-600 transition-colors"
@@ -159,20 +170,31 @@ export default function BankPageClient({
                 </div>
               </div>
             </div>
-
           </div>
         </div>
       </section>
 
       {/* ── BODY ── */}
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-6">
-
         {/* STATS */}
         <div className="grid grid-cols-3 gap-2">
           {[
-            { value: totalCount, label: 'Total laporan', valueClass: 'text-slate-900' },
-            { value: verifiedCount, label: 'Verified scam', valueClass: verifiedCount > 0 ? 'text-red-600' : 'text-slate-300' },
-            { value: pendingCount, label: 'Pending', valueClass: pendingCount > 0 ? 'text-amber-500' : 'text-slate-300' },
+            {
+              value: totalCount,
+              label: "Total laporan",
+              valueClass: "text-slate-900",
+            },
+            {
+              value: verifiedCount,
+              label: "Verified scam",
+              valueClass: verifiedCount > 0 ? "text-red-600" : "text-slate-300",
+            },
+            {
+              value: pendingCount,
+              label: "Pending",
+              valueClass:
+                pendingCount > 0 ? "text-amber-500" : "text-slate-300",
+            },
           ].map((stat) => (
             <div
               key={stat.label}
@@ -184,7 +206,9 @@ export default function BankPageClient({
               >
                 {stat.value}
               </p>
-              <p className="text-[10px] text-slate-400 mt-2 uppercase tracking-[0.12em]">{stat.label}</p>
+              <p className="text-[10px] text-slate-400 mt-2 uppercase tracking-[0.12em]">
+                {stat.label}
+              </p>
             </div>
           ))}
         </div>
@@ -209,15 +233,24 @@ export default function BankPageClient({
               <table className="w-full text-left hidden md:table">
                 <thead>
                   <tr className="border-b border-slate-100 bg-slate-50/60">
-                    <th className="px-5 py-3 text-[10px] font-medium text-slate-400 uppercase tracking-[0.12em]">Nomor rekening</th>
-                    <th className="px-5 py-3 text-[10px] font-medium text-slate-400 uppercase tracking-[0.12em]">Status</th>
-                    <th className="px-5 py-3 text-[10px] font-medium text-slate-400 uppercase tracking-[0.12em]">Tanggal</th>
+                    <th className="px-5 py-3 text-[10px] font-medium text-slate-400 uppercase tracking-[0.12em]">
+                      Nomor rekening
+                    </th>
+                    <th className="px-5 py-3 text-[10px] font-medium text-slate-400 uppercase tracking-[0.12em]">
+                      Status
+                    </th>
+                    <th className="px-5 py-3 text-[10px] font-medium text-slate-400 uppercase tracking-[0.12em]">
+                      Tanggal
+                    </th>
                     <th className="px-5 py-3" />
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-slate-100">
                   {reports.map((report, i) => (
-                    <tr key={i} className="group hover:bg-slate-50/60 transition-colors">
+                    <tr
+                      key={i}
+                      className="group hover:bg-slate-50/60 transition-colors"
+                    >
                       <td className="px-5 py-4">
                         <p
                           className="text-sm font-medium text-slate-900 tracking-wider"
@@ -226,22 +259,26 @@ export default function BankPageClient({
                           {report.masked}
                         </p>
                         <p className="text-[10px] text-slate-400 mt-0.5">
-                          a.n. {report.target_name || 'Tidak diketahui'}
+                          a.n. {report.target_name || "Tidak diketahui"}
                         </p>
                       </td>
                       <td className="px-5 py-4">
                         <span
                           className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-[10px] font-semibold border ${
-                            report.status === 'verified'
-                              ? 'bg-red-50 text-red-700 border-red-200'
-                              : 'bg-amber-50 text-amber-700 border-amber-200'
+                            report.status === "verified"
+                              ? "bg-red-50 text-red-700 border-red-200"
+                              : "bg-amber-50 text-amber-700 border-amber-200"
                           }`}
                         >
-                          {report.status === 'verified' ? 'Terverifikasi' : 'Pending'}
+                          {report.status === "verified"
+                            ? "Terverifikasi"
+                            : "Pending"}
                         </span>
                       </td>
                       <td className="px-5 py-4">
-                        <span className="text-[11px] text-slate-400">{report.dateFormatted}</span>
+                        <span className="text-[11px] text-slate-400">
+                          {report.dateFormatted}
+                        </span>
                       </td>
                       <td className="px-5 py-4 text-right">
                         {/* FIX: pakai encodeSlug + ?type=bank&bank=xxx */}
@@ -274,18 +311,20 @@ export default function BankPageClient({
                         {report.masked}
                       </p>
                       <p className="text-[10px] text-slate-400 mt-0.5">
-                        a.n. {report.target_name || 'Tidak diketahui'}
+                        a.n. {report.target_name || "Tidak diketahui"}
                       </p>
                     </div>
                     <div className="flex items-center gap-2">
                       <span
                         className={`px-2 py-0.5 rounded-full text-[10px] font-semibold border ${
-                          report.status === 'verified'
-                            ? 'bg-red-50 text-red-700 border-red-200'
-                            : 'bg-amber-50 text-amber-700 border-amber-200'
+                          report.status === "verified"
+                            ? "bg-red-50 text-red-700 border-red-200"
+                            : "bg-amber-50 text-amber-700 border-amber-200"
                         }`}
                       >
-                        {report.status === 'verified' ? 'Terverifikasi' : 'Pending'}
+                        {report.status === "verified"
+                          ? "Terverifikasi"
+                          : "Pending"}
                       </span>
                       <ArrowRight className="w-4 h-4 text-slate-400" />
                     </div>
@@ -296,7 +335,9 @@ export default function BankPageClient({
           ) : (
             <div className="bg-white rounded-[8px] border border-slate-200/80 shadow-sm p-14 text-center">
               <ShieldCheck className="w-8 h-8 text-emerald-500 mx-auto mb-3" />
-              <p className="text-sm font-semibold text-slate-900 mb-1">Belum ada laporan</p>
+              <p className="text-sm font-semibold text-slate-900 mb-1">
+                Belum ada laporan
+              </p>
               <p className="text-xs text-slate-400 leading-relaxed">
                 Tidak ada rekening {data.name} yang dilaporkan saat ini.
               </p>
@@ -322,7 +363,6 @@ export default function BankPageClient({
             Cek rekening sekarang <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
-
       </div>
     </div>
   );

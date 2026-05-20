@@ -4,7 +4,7 @@ import React, { useState, useEffect, useRef, useMemo, startTransition } from 're
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter, usePathname } from 'next/navigation';
-import { createClient } from '@/lib/supabase-browser';
+import { createClient } from '@/core/supabase/browser';
 import { LogOut, Menu, X, User, FileText, ChevronDown, Home, Phone, Building2, Flag, Database, Newspaper } from 'lucide-react';
 import type { User as SupabaseUser } from '@supabase/supabase-js';
 

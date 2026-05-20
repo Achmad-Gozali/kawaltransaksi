@@ -1,14 +1,14 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import authRoutes from './routes/auth';
-import reportsRoutes from './routes/reports';
-import adminRoutes from './routes/admin';
-import searchRoutes from './routes/search';
-import articlesRoutes, { generateWeeklyArticle } from './routes/articles';
-import uploadRoutes from './routes/upload';
-import feedbackRoutes from './routes/feedback';
-import apiPublicRoutes from './routes/api-public';
-import developerRoutes from './routes/developer';
+import authRoutes from './features/auth/auth.route';
+import reportsRoutes from './features/reports/reports.route';
+import adminRoutes from './features/admin/admin.route';
+import searchRoutes from './features/search/search.route';
+import articlesRoutes, { generateWeeklyArticle } from './features/articles/articles.route';
+import uploadRoutes from './features/upload/upload.route';
+import feedbackRoutes from './features/feedback/feedback.route';
+import apiPublicRoutes from './features/api-public/api-public.route';
+import developerRoutes from './features/developer/developer.route';
 import type { Env } from './types';
 
 const app = new Hono<{ Bindings: Env }>();

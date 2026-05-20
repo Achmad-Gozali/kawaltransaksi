@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
-import { authMiddleware } from '../middleware/auth';
-import type { Env } from '../types';
+import { authMiddleware } from '../../core/auth.middleware';
+import type { Env } from '../../types';
 
 const upload = new Hono<{
   Bindings: Env;

@@ -1,8 +1,8 @@
 import { Hono } from 'hono';
-import { authMiddleware } from '../middleware/auth';
-import { getSupabaseAdmin } from '../lib/supabase';
-import { sendReportStatusChangedEmail } from '../lib/resend';
-import type { Env } from '../types';
+import { authMiddleware } from '../../core/auth.middleware';
+import { getSupabaseAdmin } from '../../core/supabase';
+import { sendReportStatusChangedEmail } from '../../core/resend';
+import type { Env } from '../../types';
 
 const admin = new Hono<{ Bindings: Env; Variables: { userId: string; userEmail: string } }>();
 
@@ -326,7 +326,8 @@ admin.patch('/articles/:id', authMiddleware, requireAdmin, async (c) => {
 // ── POST /api/admin/articles/generate ────────────────────────────────────────
 admin.post('/articles/generate', authMiddleware, requireAdmin, async (c) => {
   try {
-    const { generateWeeklyArticle } = await import('./articles');
+    // ✅ Updated: dynamic import sesuai path baru
+    const { generateWeeklyArticle } = await import('../articles/articles.route');
     await generateWeeklyArticle(c.env);
     return c.json({ success: true, message: 'Artikel berhasil di-generate.' });
   } catch (err: any) {
@@ -379,7 +380,6 @@ admin.get('/apikeys', authMiddleware, requireAdmin, async (c) => {
 
     const { data: keys, error } = await supabase
       .from('api_keys')
-      // ✅ Tambah key_prefix, environment, failed_attempts — key plain tidak dikembalikan
       .select('id, user_id, name, key_prefix, environment, failed_attempts, requests_today, requests_total, daily_limit, last_reset_at, last_used_at, expires_at, is_active, created_at')
       .order('created_at', { ascending: false });
 
@@ -459,7 +459,6 @@ admin.patch('/apikeys/:id/limit', authMiddleware, requireAdmin, async (c) => {
 });
 
 // ── PATCH /api/admin/apikeys/:id/reset-failed ────────────────────────────────
-// Reset failed_attempts — misalnya kalau admin mau unblock key yang kena auto-flag
 admin.patch('/apikeys/:id/reset-failed', authMiddleware, requireAdmin, async (c) => {
   try {
     const id = c.req.param('id');

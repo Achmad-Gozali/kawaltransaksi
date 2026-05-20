@@ -2,13 +2,13 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createClient } from '@/lib/supabase-browser';
+import { createClient } from '@/core/supabase/browser';
 import {
   Loader2, AlertCircle, CheckCircle2, Send,
   ArrowLeft, ArrowRight,
 } from 'lucide-react';
 import * as motion from 'motion/react-client';
-import { uploadToStorage } from '@/lib/upload-storage';
+import { uploadToStorage } from '@/core/storage/upload';
 
 import { STEPS, MAX_TARGET_NUMBERS, MAX_EVIDENCE_FILES } from './report/constants';
 import type {

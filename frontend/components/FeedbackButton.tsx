@@ -6,7 +6,7 @@ import {
   ChevronRight, Loader2, CheckCircle2, Upload, Trash2,
   AlertTriangle,
 } from 'lucide-react';
-import { createClient } from '@/lib/supabase-browser';
+import { createClient } from '@/core/supabase/browser';
 
 // ─────────────────────────────────────────────
 // Types

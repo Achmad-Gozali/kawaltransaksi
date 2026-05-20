@@ -1,4 +1,4 @@
-import { createClient } from '@/lib/supabase-browser';
+import { createClient } from '@/core/supabase/browser';
 
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png'];
@@ -32,7 +32,7 @@ async function stripExif(file: File): Promise<File> {
         const ctx = canvas.getContext('2d');
         if (!ctx) {
           URL.revokeObjectURL(objectUrl);
-          resolve(file); // fallback ke file asli kalau canvas tidak support
+          resolve(file);
           return;
         }
 
@@ -45,7 +45,7 @@ async function stripExif(file: File): Promise<File> {
           (blob) => {
             URL.revokeObjectURL(objectUrl);
             if (!blob) {
-              resolve(file); // fallback ke file asli
+              resolve(file);
               return;
             }
             const strippedFile = new File([blob], file.name, {
@@ -74,28 +74,23 @@ async function stripExif(file: File): Promise<File> {
 
 // ── Upload satu file ke Supabase Storage ─────────────────────────────────────
 export async function uploadToStorage(file: File): Promise<string> {
-  // Validasi ukuran
   if (file.size > MAX_FILE_SIZE) {
     throw new Error('Ukuran file melebihi batas 5MB.');
   }
 
-  // Validasi MIME type
   if (!ALLOWED_MIME_TYPES.includes(file.type)) {
     throw new Error('Tipe file tidak didukung. Hanya JPEG dan PNG yang diizinkan.');
   }
 
-  // Validasi magic bytes
   const isValid = await validateFileSignature(file);
   if (!isValid) {
     throw new Error('File tidak valid atau telah dimanipulasi.');
   }
 
-  // Strip EXIF metadata sebelum upload
   const cleanFile = await stripExif(file);
 
   const supabase = createClient();
 
-  // Ambil user ID dari session
   const { data: { session } } = await supabase.auth.getSession();
   if (!session) throw new Error('Sesi habis. Silakan login ulang.');
 

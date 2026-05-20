@@ -1,8 +1,3 @@
-// ============================================
-// 📁 LOKASI: cloudflare-worker/src/lib/turnstile.ts
-// ✅ NEW FILE — extracted dari routes/auth.ts, routes/reports.ts, routes/search.ts
-// ============================================
-
 export async function verifyTurnstile(token: string, secretKey: string): Promise<boolean> {
   try {
     const res = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {

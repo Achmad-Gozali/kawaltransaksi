@@ -3,7 +3,7 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { createClient } from '@/lib/supabase-browser';
+import { createClient } from '@/core/supabase/browser';
 import {
   Loader2, Lock, Eye, EyeOff, CheckCircle2,
   XCircle, AlertCircle, ArrowRight,

@@ -1,31 +1,31 @@
-'use client';
+"use client";
 
-import { useState, useRef, useCallback } from 'react';
-import { useRouter } from 'next/navigation';
-import { Search, Loader2, AlertCircle, AlertTriangle } from 'lucide-react';
-import { Turnstile } from '@marsidev/react-turnstile';
-import { encodeSlug } from '@/lib/utils';
+import { useState, useRef, useCallback } from "react";
+import { useRouter } from "next/navigation";
+import { Search, Loader2, AlertCircle, AlertTriangle } from "lucide-react";
+import { Turnstile } from "@marsidev/react-turnstile";
+import { encodeSlug } from "@/core/utils";
 
 const BACKEND_URL = (() => {
   const url = process.env.NEXT_PUBLIC_BACKEND_URL;
-  if (!url) throw new Error('NEXT_PUBLIC_BACKEND_URL is not defined');
+  if (!url) throw new Error("NEXT_PUBLIC_BACKEND_URL is not defined");
   return url;
 })();
 
-const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? '';
+const TURNSTILE_SITE_KEY = process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? "";
 
 function validateHP(num: string): { valid: boolean; warning: string | null } {
   if (num.length === 0) return { valid: false, warning: null };
-  if (num === '0') return { valid: false, warning: null };
-  if (num === '6') return { valid: false, warning: null };
-  if (num === '62') return { valid: false, warning: null };
+  if (num === "0") return { valid: false, warning: null };
+  if (num === "6") return { valid: false, warning: null };
+  if (num === "62") return { valid: false, warning: null };
 
-  const validPrefix = num.startsWith('08') || num.startsWith('628');
+  const validPrefix = num.startsWith("08") || num.startsWith("628");
 
   if (!validPrefix) {
     return {
       valid: false,
-      warning: 'Nomor HP Indonesia harus diawali 08 atau 628.',
+      warning: "Nomor HP Indonesia harus diawali 08 atau 628.",
     };
   }
 
@@ -34,7 +34,7 @@ function validateHP(num: string): { valid: boolean; warning: string | null } {
   if (num.length > 13) {
     return {
       valid: false,
-      warning: 'Nomor HP terlalu panjang. Maksimal 13 digit.',
+      warning: "Nomor HP terlalu panjang. Maksimal 13 digit.",
     };
   }
 
@@ -42,7 +42,7 @@ function validateHP(num: string): { valid: boolean; warning: string | null } {
 }
 
 export default function NomorSearchForm() {
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
@@ -59,11 +59,11 @@ export default function NomorSearchForm() {
     setTurnstileToken(token);
   }, []);
 
-  const cleaned = query.replace(/\D/g, '');
+  const cleaned = query.replace(/\D/g, "");
   const { valid: isValidHP, warning } = validateHP(cleaned);
 
   const handleChange = (val: string) => {
-    setQuery(val.replace(/\D/g, ''));
+    setQuery(val.replace(/\D/g, ""));
     setError(null);
   };
 
@@ -74,21 +74,21 @@ export default function NomorSearchForm() {
     if (!isValidHP) return;
 
     if (!turnstileToken) {
-      setError('Selesaikan verifikasi keamanan terlebih dahulu.');
+      setError("Selesaikan verifikasi keamanan terlebih dahulu.");
       return;
     }
 
     setLoading(true);
     try {
       const res = await fetch(`${BACKEND_URL}/api/search/verify-turnstile`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ token: turnstileToken }),
       });
       const data = (await res.json()) as { success: boolean; message?: string };
 
       if (!data.success) {
-        setError(data.message ?? 'Verifikasi keamanan gagal. Coba lagi.');
+        setError(data.message ?? "Verifikasi keamanan gagal. Coba lagi.");
         resetTurnstile();
         setLoading(false);
         return;
@@ -96,7 +96,7 @@ export default function NomorSearchForm() {
 
       router.push(`/check/${encodeSlug(cleaned)}?type=phone`);
     } catch {
-      setError('Terjadi kesalahan. Coba lagi.');
+      setError("Terjadi kesalahan. Coba lagi.");
       resetTurnstile();
     } finally {
       setLoading(false);
@@ -109,8 +109,8 @@ export default function NomorSearchForm() {
       <div
         className={`flex items-center gap-2 bg-white border-2 rounded-md px-3 py-2 transition-all ${
           warning
-            ? 'border-amber-400 ring-2 ring-amber-100'
-            : 'border-slate-200 focus-within:border-emerald-400 focus-within:ring-2 focus-within:ring-emerald-100'
+            ? "border-amber-400 ring-2 ring-amber-100"
+            : "border-slate-200 focus-within:border-emerald-400 focus-within:ring-2 focus-within:ring-emerald-100"
         }`}
       >
         <Search className="w-4 h-4 text-slate-400 shrink-0 ml-1" />
@@ -129,7 +129,7 @@ export default function NomorSearchForm() {
           disabled={loading || !turnstileToken || !isValidHP}
           className="px-5 py-2 bg-slate-900 text-white text-sm font-bold rounded hover:bg-black disabled:opacity-50 disabled:cursor-not-allowed transition-all active:scale-95 flex items-center gap-2 shrink-0"
         >
-          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : 'Cek'}
+          {loading ? <Loader2 className="w-4 h-4 animate-spin" /> : "Cek"}
         </button>
       </div>
 
@@ -154,7 +154,7 @@ export default function NomorSearchForm() {
           onSuccess={handleSuccess}
           onExpire={resetTurnstile}
           onError={resetTurnstile}
-          options={{ theme: 'light', size: 'normal' }}
+          options={{ theme: "light", size: "normal" }}
         />
       )}
     </form>

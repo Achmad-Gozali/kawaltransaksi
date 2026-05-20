@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import Image from 'next/image';
-import { createClient } from '@/lib/supabase-browser';
+import { createClient } from '@/core/supabase/browser';
 import {
   Loader2, CheckCircle2, AlertCircle, FileText,
   Eye, EyeOff, Pencil, X, Upload, ChevronDown, ChevronUp,

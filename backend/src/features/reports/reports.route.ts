@@ -1,10 +1,10 @@
 import { Hono } from 'hono';
-import { authMiddleware } from '../middleware/auth';
-import { getSupabaseAdmin } from '../lib/supabase';
-import { analyzeChronologyText, analyzeEvidenceImage, AnalysisResult } from '../lib/groq';
-import { verifyTurnstile } from '../lib/turnstile';
-import { sendReportCreatedEmail, sendNewReportAdminEmail } from '../lib/resend';
-import type { Env } from '../types';
+import { authMiddleware } from '../../core/auth.middleware';
+import { getSupabaseAdmin } from '../../core/supabase';
+import { analyzeChronologyText, analyzeEvidenceImage, AnalysisResult } from '../../core/groq';
+import { verifyTurnstile } from '../../core/turnstile';
+import { sendReportCreatedEmail, sendNewReportAdminEmail } from '../../core/resend';
+import type { Env } from '../../types';
 
 const reports = new Hono<{
   Bindings: Env;
@@ -172,8 +172,6 @@ async function checkAnalyzeRateLimit(
   }
 }
 
-// ✅ OPTIMIZED: gabungkan 2 count query (hourly + daily) jadi 1 query,
-//    lalu hitung di aplikasi — menghemat 1 round trip ke Supabase
 async function checkReportRateLimit(
   supabase: ReturnType<typeof getSupabaseAdmin>,
   userId: string
@@ -187,7 +185,7 @@ async function checkReportRateLimit(
     .gte("created_at", oneDayAgo)
     .order("created_at", { ascending: false });
 
-  if (error) return { blocked: false }; // fail open
+  if (error) return { blocked: false };
 
   const now = Date.now();
   const oneHourAgo = now - 3600000;
@@ -208,9 +206,6 @@ async function checkReportRateLimit(
   return { blocked: false };
 }
 
-// ✅ OPTIMIZED: jalankan analisis AI di background (non-blocking)
-//    Insert ke DB langsung dengan status "pending",
-//    lalu update ke "verified" kalau AI lulus — tanpa block response ke user
 async function runAiAnalysisAndUpdate(
   supabase: ReturnType<typeof getSupabaseAdmin>,
   reportId: string,
@@ -249,7 +244,6 @@ async function runAiAnalysisAndUpdate(
       photoCount: evidenceUrls.length,
     });
 
-    // Hanya update kalau hasilnya "verified" — kalau "pending" ga perlu update
     if (autoStatus === "verified") {
       await supabase
         .from("reports")
@@ -277,7 +271,6 @@ reports.post("/", authMiddleware, async (c) => {
       return c.json({ success: false, message: "Verifikasi CAPTCHA gagal." }, 400);
     }
 
-    // ── Validasi panjang field ────────────────────────────────────────────────
     const rawNumber = String(body.target_number ?? "").replace(/[^0-9]/g, "");
     if (rawNumber.length > LIMITS.TARGET_NUMBER) {
       return c.json({ success: false, message: `Nomor terlalu panjang. Maks ${LIMITS.TARGET_NUMBER} karakter.` }, 400);
@@ -331,13 +324,11 @@ reports.post("/", authMiddleware, async (c) => {
       return c.json({ success: false, message: `Kategori tidak valid.` }, 400);
     }
 
-    // ✅ OPTIMIZED: 1 query rate limit (gantiin 2 query terpisah)
     const rateLimitResult = await checkReportRateLimit(supabase, userId);
     if (rateLimitResult.blocked) {
       return c.json({ success: false, message: rateLimitResult.reason }, 429);
     }
 
-    // ── Cek duplikat ──────────────────────────────────────────────────────────
     const cleanNumberCheck = String(body.target_number).replace(/[^0-9]/g, "");
     const { count: duplicateCount } = await supabase
       .from("reports")
@@ -350,7 +341,6 @@ reports.post("/", authMiddleware, async (c) => {
       return c.json({ success: false, message: "Kamu sudah pernah melaporkan nomor ini sebelumnya." }, 409);
     }
 
-    // ── Sanitasi ──────────────────────────────────────────────────────────────
     const cleanNumber = String(body.target_number).replace(/[^0-9]/g, "");
     const sanitizedTargetName = body.target_name ? sanitizeText(String(body.target_name)) : null;
     const sanitizedChronology = sanitizeChronology(String(body.chronology));
@@ -394,7 +384,6 @@ reports.post("/", authMiddleware, async (c) => {
     );
     const suspectPhotoUrl = isValidEvidenceUrl(body.suspect_photo_url) ? (body.suspect_photo_url as string) : null;
 
-    // ✅ OPTIMIZED: Insert dulu dengan status "pending", AI analysis jalan di background
     const { data: insertedReport, error } = await supabase
       .from("reports")
       .insert({
@@ -406,7 +395,7 @@ reports.post("/", authMiddleware, async (c) => {
         chronology: sanitizedChronology,
         evidence_url: evidenceUrls[0] || null,
         evidence_urls: evidenceUrls,
-        status: "pending", // selalu pending dulu
+        status: "pending",
         bank_name: sanitizedBankName,
         loss_amount: body.loss_amount || null,
         incident_date: body.incident_date || null,
@@ -430,11 +419,8 @@ reports.post("/", authMiddleware, async (c) => {
 
     const reportId = insertedReport.id;
 
-    // ✅ OPTIMIZED: AI analysis & email jalan di background via waitUntil
-    //    Response ke user tidak perlu nunggu AI selesai
     c.executionCtx.waitUntil(
       Promise.all([
-        // AI analysis — update status kalau lulus
         runAiAnalysisAndUpdate(
           supabase,
           reportId,
@@ -442,7 +428,6 @@ reports.post("/", authMiddleware, async (c) => {
           evidenceUrls,
           c.env.GROQ_API_KEY
         ),
-        // Email notifikasi
         (async () => {
           try {
             const { data: profile } = await supabase

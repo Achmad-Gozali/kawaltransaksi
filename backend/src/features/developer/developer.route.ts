@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
-import { authMiddleware } from '../middleware/auth';
-import { getSupabaseAdmin } from '../lib/supabase';
-import type { Env } from '../types';
+import { authMiddleware } from '../../core/auth.middleware';
+import { getSupabaseAdmin } from '../../core/supabase';
+import type { Env } from '../../types';
 
 const developer = new Hono<{ Bindings: Env; Variables: { userId: string; userEmail: string } }>();
 

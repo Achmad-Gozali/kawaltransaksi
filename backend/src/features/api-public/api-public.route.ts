@@ -1,19 +1,15 @@
 import { Hono } from 'hono';
 import { createClient, type SupabaseClient } from '@supabase/supabase-js';
-import { sendApiAnomalyEmail } from '../lib/resend';
-import type { Env } from '../types';
+import { sendApiAnomalyEmail } from '../../core/resend';
+import type { Env } from '../../types';
 
 const apiPublic = new Hono<{ Bindings: Env }>();
 
 // ── Singleton Supabase client per request context ─────────────────────────────
-// Cloudflare Workers tidak bisa simpan state antar request (stateless),
-// tapi dalam satu request kita bisa reuse client yang sama daripada buat baru
-// di setiap fungsi helper.
 let _supabase: SupabaseClient | null = null;
 let _supabaseEnv: string | null = null;
 
 function getSupabase(env: Env): SupabaseClient {
-  // Re-create jika env berubah (misalnya di test vs production)
   if (!_supabase || _supabaseEnv !== env.SUPABASE_URL) {
     _supabase = createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY, {
       auth: { autoRefreshToken: false, persistSession: false },
@@ -212,7 +208,6 @@ async function validateApiKey(
     return { valid: false, message: 'API key tidak valid.', statusCode: 401 };
   }
 
-  // ✅ Reuse singleton client
   const supabase = getSupabase(env);
   const keyHash  = await hashKey(key.trim());
 
@@ -252,7 +247,6 @@ async function validateApiKey(
     };
   }
 
-  // ✅ Reuse singleton client untuk fetch profile
   const { data: profile } = await supabase
     .from('profiles')
     .select('email')
@@ -263,7 +257,6 @@ async function validateApiKey(
 }
 
 async function incrementUsage(keyId: string, env: Env): Promise<void> {
-  // ✅ Reuse singleton client
   const supabase = getSupabase(env);
   await supabase.rpc('increment_api_usage', { key_id: keyId });
 }
@@ -311,14 +304,13 @@ apiPublic.get('/check', async (c) => {
       return c.json({ success: false, message: 'Parameter type tidak valid. Gunakan: phone, bank_account, ewallet.' }, 400);
     }
 
-    // 5. ✅ Cek cache dulu sebelum query DB
+    // 5. Cek cache dulu sebelum query DB
     let checkData: any = null;
     if (c.env.LIMITER) {
       checkData = await getCachedCheckResult(c.env.LIMITER, number, type);
     }
 
     if (!checkData) {
-      // Cache miss — query DB
       const supabase = getSupabase(c.env);
       const { data: reports } = await supabase
         .from('reports')
@@ -347,7 +339,6 @@ apiPublic.get('/check', async (c) => {
         check_url:         `https://kawaltransaksi.com/check/${number}`,
       };
 
-      // Simpan ke cache (non-blocking)
       if (c.env.LIMITER) {
         c.executionCtx.waitUntil(setCachedCheckResult(c.env.LIMITER, number, type, checkData));
       }

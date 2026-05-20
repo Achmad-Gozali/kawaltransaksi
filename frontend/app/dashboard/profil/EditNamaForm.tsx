@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { createClient } from '@/lib/supabase-browser';
+import { createClient } from '@/core/supabase/browser';
 import { Loader2, CheckCircle2, AlertCircle, Pencil, X } from 'lucide-react';
 
 export default function EditNamaForm({ currentName }: { currentName: string }) {

@@ -1,23 +1,30 @@
-import { createClient } from '@/lib/supabase-server';
-import { redirect } from 'next/navigation';
-import Link from 'next/link';
+import { createClient } from "@/core/supabase/server";
+import { redirect } from "next/navigation";
+import Link from "next/link";
 import {
-  Clock, CheckCircle2, XCircle, FileText,
-  PlusCircle, ArrowRight, Phone, Building2, FilePen,
-} from 'lucide-react';
-import type { Metadata } from 'next';
-import * as motion from 'motion/react-client';
-import { formatDateID, maskNumber } from '@/lib/utils';
-import WithdrawButton from '@/components/WithdrawButton';
-import EditReportButton from '@/components/EditReportButton';
+  Clock,
+  CheckCircle2,
+  XCircle,
+  FileText,
+  PlusCircle,
+  ArrowRight,
+  Phone,
+  Building2,
+  FilePen,
+} from "lucide-react";
+import type { Metadata } from "next";
+import * as motion from "motion/react-client";
+import { formatDateID, maskNumber } from "@/core/utils";
+import WithdrawButton from "@/components/WithdrawButton";
+import EditReportButton from "@/components/EditReportButton";
 
 // ─────────────────────────────────────────────
 // Metadata
 // ─────────────────────────────────────────────
 
 export const metadata: Metadata = {
-  title: 'Laporan Saya - KawalTransaksi',
-  description: 'Lihat laporan yang pernah kamu buat di KawalTransaksi.',
+  title: "Laporan Saya - KawalTransaksi",
+  description: "Lihat laporan yang pernah kamu buat di KawalTransaksi.",
 };
 
 export const revalidate = 30;
@@ -27,17 +34,53 @@ export const revalidate = 30;
 // ─────────────────────────────────────────────
 
 const STATUS_CONFIG = {
-  pending:   { label: 'Menunggu',        icon: Clock,        className: 'bg-amber-50 text-amber-700 border-amber-200'     },
-  verified:  { label: 'Terverifikasi',   icon: CheckCircle2, className: 'bg-emerald-50 text-emerald-700 border-emerald-200' },
-  rejected:  { label: 'Ditolak',         icon: XCircle,      className: 'bg-red-50 text-red-700 border-red-200'           },
-  withdrawn: { label: 'Sedang Direvisi', icon: FilePen,      className: 'bg-blue-50 text-blue-700 border-blue-200'        },
+  pending: {
+    label: "Menunggu",
+    icon: Clock,
+    className: "bg-amber-50 text-amber-700 border-amber-200",
+  },
+  verified: {
+    label: "Terverifikasi",
+    icon: CheckCircle2,
+    className: "bg-emerald-50 text-emerald-700 border-emerald-200",
+  },
+  rejected: {
+    label: "Ditolak",
+    icon: XCircle,
+    className: "bg-red-50 text-red-700 border-red-200",
+  },
+  withdrawn: {
+    label: "Sedang Direvisi",
+    icon: FilePen,
+    className: "bg-blue-50 text-blue-700 border-blue-200",
+  },
 } as const;
 
 const STAT_CARDS = [
-  { key: 'total',    label: 'Total',         color: 'text-zinc-900',    sub: 'Laporan dibuat' },
-  { key: 'pending',  label: 'Menunggu',      color: 'text-amber-500',   sub: 'Dalam review'   },
-  { key: 'verified', label: 'Terverifikasi', color: 'text-emerald-500', sub: 'Dipublikasi'    },
-  { key: 'rejected', label: 'Ditolak',       color: 'text-red-500',     sub: 'Tidak lolos'    },
+  {
+    key: "total",
+    label: "Total",
+    color: "text-zinc-900",
+    sub: "Laporan dibuat",
+  },
+  {
+    key: "pending",
+    label: "Menunggu",
+    color: "text-amber-500",
+    sub: "Dalam review",
+  },
+  {
+    key: "verified",
+    label: "Terverifikasi",
+    color: "text-emerald-500",
+    sub: "Dipublikasi",
+  },
+  {
+    key: "rejected",
+    label: "Ditolak",
+    color: "text-red-500",
+    sub: "Tidak lolos",
+  },
 ] as const;
 
 // ─────────────────────────────────────────────
@@ -47,28 +90,31 @@ const STAT_CARDS = [
 export default async function LaporanPage() {
   const supabase = await createClient();
 
-  const { data: { user } } = await supabase.auth.getUser();
-  if (!user) redirect('/login');
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) redirect("/login");
 
   const { data: reports, error } = await supabase
-    .from('reports')
-    .select('id, target_number, target_name, target_type, category, chronology, status, created_at, bank_name, loss_amount, incident_date, platform, link_url, social_media_accounts, has_other_victims, reported_to')
-    .eq('reporter_id', user.id)
-    .order('created_at', { ascending: false });
+    .from("reports")
+    .select(
+      "id, target_number, target_name, target_type, category, chronology, status, created_at, bank_name, loss_amount, incident_date, platform, link_url, social_media_accounts, has_other_victims, reported_to",
+    )
+    .eq("reporter_id", user.id)
+    .order("created_at", { ascending: false });
 
   const allReports = (reports ?? []) as any[];
 
   const stats = {
-    total:    allReports.length,
-    pending:  allReports.filter(r => r.status === 'pending').length,
-    verified: allReports.filter(r => r.status === 'verified').length,
-    rejected: allReports.filter(r => r.status === 'rejected').length,
+    total: allReports.length,
+    pending: allReports.filter((r) => r.status === "pending").length,
+    verified: allReports.filter((r) => r.status === "verified").length,
+    rejected: allReports.filter((r) => r.status === "rejected").length,
   };
 
   return (
     <div className="min-h-screen bg-zinc-50">
       <div className="max-w-5xl mx-auto px-4 py-12 space-y-10">
-
         {/* ── Header ── */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -77,8 +123,12 @@ export default async function LaporanPage() {
           className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-5"
         >
           <div>
-            <h1 className="text-3xl font-extrabold text-zinc-900 tracking-tight">Riwayat Laporan</h1>
-            <p className="text-zinc-400 text-sm mt-1 truncate max-w-xs">{user.email}</p>
+            <h1 className="text-3xl font-extrabold text-zinc-900 tracking-tight">
+              Riwayat Laporan
+            </h1>
+            <p className="text-zinc-400 text-sm mt-1 truncate max-w-xs">
+              {user.email}
+            </p>
           </div>
           <Link
             href="/report"
@@ -96,11 +146,19 @@ export default async function LaporanPage() {
               key={item.label}
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: 0.1 + i * 0.07, duration: 0.4, ease: [0.16, 1, 0.3, 1] }}
+              transition={{
+                delay: 0.1 + i * 0.07,
+                duration: 0.4,
+                ease: [0.16, 1, 0.3, 1],
+              }}
               className="bg-white border border-zinc-200 rounded-2xl p-5 hover:shadow-md hover:border-zinc-300 transition-all"
             >
-              <p className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1">{item.label}</p>
-              <p className={`text-3xl font-extrabold ${item.color}`}>{stats[item.key]}</p>
+              <p className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider mb-1">
+                {item.label}
+              </p>
+              <p className={`text-3xl font-extrabold ${item.color}`}>
+                {stats[item.key]}
+              </p>
               <p className="text-xs text-zinc-400 mt-1">{item.sub}</p>
             </motion.div>
           ))}
@@ -135,9 +193,12 @@ export default async function LaporanPage() {
               <div className="w-16 h-16 bg-zinc-100 rounded-2xl flex items-center justify-center mx-auto mb-5">
                 <FileText className="w-7 h-7 text-zinc-300" />
               </div>
-              <h3 className="text-base font-bold text-zinc-900 mb-2">Belum ada laporan</h3>
+              <h3 className="text-base font-bold text-zinc-900 mb-2">
+                Belum ada laporan
+              </h3>
               <p className="text-sm text-zinc-400 mb-6 max-w-xs mx-auto">
-                Kamu belum pernah membuat laporan. Bantu komunitas dengan melaporkan nomor penipu.
+                Kamu belum pernah membuat laporan. Bantu komunitas dengan
+                melaporkan nomor penipu.
               </p>
               <Link
                 href="/report"
@@ -153,20 +214,27 @@ export default async function LaporanPage() {
           {allReports.length > 0 && (
             <div className="space-y-3">
               {allReports.map((report, i) => {
-                const status      = STATUS_CONFIG[report.status as keyof typeof STATUS_CONFIG] ?? STATUS_CONFIG.pending;
-                const StatusIcon  = status.icon;
-                const isPhone     = report.target_type === 'phone';
-                const isWithdrawn = report.status === 'withdrawn';
+                const status =
+                  STATUS_CONFIG[report.status as keyof typeof STATUS_CONFIG] ??
+                  STATUS_CONFIG.pending;
+                const StatusIcon = status.icon;
+                const isPhone = report.target_type === "phone";
+                const isWithdrawn = report.status === "withdrawn";
 
                 return (
                   <motion.div
                     key={report.id}
                     initial={{ opacity: 0, y: 15 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 + i * 0.06, ease: [0.16, 1, 0.3, 1] }}
+                    transition={{
+                      delay: 0.3 + i * 0.06,
+                      ease: [0.16, 1, 0.3, 1],
+                    }}
                     whileHover={{ y: -1 }}
                     className={`bg-white border rounded-2xl p-5 hover:shadow-md transition-all ${
-                      isWithdrawn ? 'border-blue-100' : 'border-zinc-200 hover:border-zinc-300'
+                      isWithdrawn
+                        ? "border-blue-100"
+                        : "border-zinc-200 hover:border-zinc-300"
                     }`}
                   >
                     {/* Top row */}
@@ -174,9 +242,11 @@ export default async function LaporanPage() {
                       <div className="flex items-start gap-4 min-w-0">
                         {/* Icon */}
                         <div className="w-10 h-10 bg-zinc-100 rounded-xl flex items-center justify-center shrink-0">
-                          {isPhone
-                            ? <Phone className="w-4 h-4 text-zinc-500" />
-                            : <Building2 className="w-4 h-4 text-zinc-500" />}
+                          {isPhone ? (
+                            <Phone className="w-4 h-4 text-zinc-500" />
+                          ) : (
+                            <Building2 className="w-4 h-4 text-zinc-500" />
+                          )}
                         </div>
 
                         {/* Number + category */}
@@ -186,7 +256,9 @@ export default async function LaporanPage() {
                               {maskNumber(report.target_number)}
                             </span>
                             {report.target_name && (
-                              <span className="text-sm text-zinc-400">· {report.target_name}</span>
+                              <span className="text-sm text-zinc-400">
+                                · {report.target_name}
+                              </span>
                             )}
                           </div>
                           <div className="flex items-center gap-2 flex-wrap">
@@ -194,18 +266,22 @@ export default async function LaporanPage() {
                               {report.category}
                             </span>
                             <span className="text-zinc-200">·</span>
-                            <span className="text-[11px] text-zinc-400">{formatDateID(report.created_at)}</span>
+                            <span className="text-[11px] text-zinc-400">
+                              {formatDateID(report.created_at)}
+                            </span>
                           </div>
                         </div>
                       </div>
 
                       {/* Status + link */}
                       <div className="flex items-center gap-2 shrink-0 flex-wrap justify-end">
-                        <div className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[11px] font-bold ${status.className}`}>
+                        <div
+                          className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full border text-[11px] font-bold ${status.className}`}
+                        >
                           <StatusIcon className="w-3 h-3" />
                           {status.label}
                         </div>
-                        {report.status === 'verified' && (
+                        {report.status === "verified" && (
                           <Link
                             href={`/check/${report.target_number}`}
                             className="w-8 h-8 bg-zinc-100 rounded-lg flex items-center justify-center hover:bg-zinc-900 hover:text-white transition-all group/btn"
@@ -219,11 +295,13 @@ export default async function LaporanPage() {
 
                     {/* Chronology preview */}
                     <div className="mt-4 pl-14">
-                      <p className="text-sm text-zinc-400 leading-relaxed line-clamp-2">{report.chronology}</p>
+                      <p className="text-sm text-zinc-400 leading-relaxed line-clamp-2">
+                        {report.chronology}
+                      </p>
                     </div>
 
                     {/* Status messages */}
-                    {report.status === 'pending' && (
+                    {report.status === "pending" && (
                       <div className="mt-4 pl-14">
                         <p className="inline-flex items-center gap-1.5 text-[11px] text-amber-600 font-medium">
                           <Clock className="w-3.5 h-3.5" />
@@ -231,29 +309,32 @@ export default async function LaporanPage() {
                         </p>
                       </div>
                     )}
-                    {report.status === 'rejected' && (
+                    {report.status === "rejected" && (
                       <div className="mt-4 pl-14">
                         <p className="inline-flex items-center gap-1.5 text-[11px] text-red-500 font-medium">
                           <XCircle className="w-3.5 h-3.5" />
-                          Laporan tidak memenuhi syarat. Hubungi kami jika ada pertanyaan.
+                          Laporan tidak memenuhi syarat. Hubungi kami jika ada
+                          pertanyaan.
                         </p>
                       </div>
                     )}
-                    {report.status === 'withdrawn' && (
+                    {report.status === "withdrawn" && (
                       <div className="mt-4 pl-14">
                         <p className="inline-flex items-center gap-1.5 text-[11px] text-blue-600 font-medium">
                           <FilePen className="w-3.5 h-3.5" />
-                          Laporan sedang kamu revisi. Edit dan kirim ulang untuk direview admin.
+                          Laporan sedang kamu revisi. Edit dan kirim ulang untuk
+                          direview admin.
                         </p>
                       </div>
                     )}
 
                     {/* Actions */}
                     <div className="mt-4 pl-14 flex items-center gap-2 flex-wrap">
-                      {(report.status === 'pending' || report.status === 'verified') && (
+                      {(report.status === "pending" ||
+                        report.status === "verified") && (
                         <WithdrawButton reportId={report.id} />
                       )}
-                      {report.status === 'withdrawn' && (
+                      {report.status === "withdrawn" && (
                         <EditReportButton report={report} />
                       )}
                     </div>
@@ -263,7 +344,6 @@ export default async function LaporanPage() {
             </div>
           )}
         </div>
-
       </div>
     </div>
   );

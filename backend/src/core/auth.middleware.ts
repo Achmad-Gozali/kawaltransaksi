@@ -1,5 +1,5 @@
 import { createMiddleware } from 'hono/factory';
-import { getSupabaseAdmin } from '../lib/supabase';
+import { getSupabaseAdmin } from './supabase';
 import type { Env } from '../types';
 
 export const authMiddleware = createMiddleware<{

@@ -1,6 +1,6 @@
 import { Hono } from 'hono';
 import { createClient } from "@supabase/supabase-js";
-import type { Env } from '../types';
+import type { Env } from '../../types';
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -81,10 +81,10 @@ function getEducationAngle(topCategory: string | null, topPlatform: string | nul
 // ── Normalisasi format konten dari Groq ───────────────────────────────────────
 function fixArticleFormat(raw: string): string {
   return raw
-    .replace(/([^\n])\n(## )/g, '$1\n\n$2')   // baris kosong sebelum heading
-    .replace(/(## [^\n]+)\n([^\n])/g, '$1\n\n$2') // baris kosong setelah heading
-    .replace(/\*\*/g, '')                          // hapus bold markdown
-    .replace(/\n{3,}/g, '\n\n')                    // max 2 baris kosong berturut
+    .replace(/([^\n])\n(## )/g, '$1\n\n$2')
+    .replace(/(## [^\n]+)\n([^\n])/g, '$1\n\n$2')
+    .replace(/\*\*/g, '')
+    .replace(/\n{3,}/g, '\n\n')
     .trim();
 }
 

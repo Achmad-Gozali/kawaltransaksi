@@ -1,7 +1,7 @@
 import { Hono } from 'hono';
-import { getSupabaseAdmin } from '../lib/supabase';
-import { verifyTurnstile } from '../lib/turnstile';
-import type { Env } from '../types';
+import { getSupabaseAdmin } from '../../core/supabase';
+import { verifyTurnstile } from '../../core/turnstile';
+import type { Env } from '../../types';
 
 const search = new Hono<{ Bindings: Env }>();
 

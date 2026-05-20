@@ -1,9 +1,9 @@
 import { Hono } from 'hono';
-import { getSupabaseAdmin, getSupabaseClient } from '../lib/supabase';
-import { verifyTurnstile } from '../lib/turnstile';
-import { sendVerificationEmail, sendPasswordResetEmail } from '../lib/resend';
-import { autoBlacklistIfAbuse } from '../index';
-import type { Env } from '../types';
+import { getSupabaseAdmin, getSupabaseClient } from '../../core/supabase';
+import { verifyTurnstile } from '../../core/turnstile';
+import { sendVerificationEmail, sendPasswordResetEmail } from '../../core/resend';
+import { autoBlacklistIfAbuse } from '../../index';
+import type { Env } from '../../types';
 
 const auth = new Hono<{ Bindings: Env }>();
 
@@ -42,7 +42,6 @@ async function checkBreachedPassword(password: string): Promise<{ breached: bool
     return { breached: false, count: 0 };
   } catch (err) {
     console.error('[BREACHED PASSWORD] Error:', err);
-    // Kalau API tidak bisa diakses, tetap lanjutkan register
     return { breached: false, count: 0 };
   }
 }

@@ -1,8 +1,8 @@
 import { Hono } from 'hono';
-import { authMiddleware } from '../middleware/auth';
-import { getSupabaseAdmin } from '../lib/supabase';
-import { sendFeedbackReplyEmail } from '../lib/resend';
-import type { Env } from '../types';
+import { authMiddleware } from '../../core/auth.middleware';
+import { getSupabaseAdmin } from '../../core/supabase';
+import { sendFeedbackReplyEmail } from '../../core/resend';
+import type { Env } from '../../types';
 
 const feedback = new Hono<{
   Bindings: Env;

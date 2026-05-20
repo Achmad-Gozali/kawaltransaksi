@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useEffect, Suspense, useRef } from 'react';
-import { createClient } from '@/lib/supabase-browser';
+import { createClient } from '@/core/supabase/browser';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
