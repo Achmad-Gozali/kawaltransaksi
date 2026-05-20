@@ -9,9 +9,9 @@ import {
 } from 'lucide-react';
 import SectionTitle from '@/features/admin/components/SectionTitle';
 
-// ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+// ─────────────────────────────────────────────
 // Types
-// ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+// ─────────────────────────────────────────────
 
 export type FeedbackCategory = 'bug' | 'feature' | 'ui_ux' | 'other';
 export type FeedbackUrgency  = 'low' | 'medium' | 'high' | 'critical';
@@ -33,9 +33,9 @@ export interface FeedbackItem {
   created_at: string;
 }
 
-// ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+// ─────────────────────────────────────────────
 // Config
-// ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+// ─────────────────────────────────────────────
 
 const CATEGORY_CONFIG: Record<FeedbackCategory, {
   label: string;
@@ -69,9 +69,9 @@ const STATUS_CONFIG: Record<FeedbackStatus, {
 
 type StatusFilter = 'semua' | FeedbackStatus;
 
-// ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+// ─────────────────────────────────────────────
 // Helper
-// ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+// ─────────────────────────────────────────────
 
 function formatDate(iso: string) {
   const d = new Date(iso);
@@ -88,9 +88,9 @@ function formatDate(iso: string) {
   return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-// ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+// ─────────────────────────────────────────────
 // Main Component
-// ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+// ─────────────────────────────────────────────
 
 export default function FeedbackTab({
   feedbacks,
@@ -106,7 +106,7 @@ export default function FeedbackTab({
   const [replyText, setReplyText]       = useState<Record<string, string>>({});
   const [loadingId, setLoadingId]       = useState<string | null>(null);
 
-  // ÔöÇÔöÇ Filtered list ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+  // ── Filtered list ────────────────────────────────────────────
   const filtered = useMemo(() => feedbacks.filter(f => {
     const matchStatus   = statusFilter === 'semua' || f.status === statusFilter;
     const matchCategory = !categoryFilter || f.category === categoryFilter;
@@ -119,7 +119,7 @@ export default function FeedbackTab({
     return matchStatus && matchCategory && matchSearch;
   }), [feedbacks, statusFilter, categoryFilter, searchQuery]);
 
-  // ÔöÇÔöÇ Update status via API ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+  // ── Update status via API ─────────────────────────────────────
   const updateStatus = async (id: string, status: FeedbackStatus) => {
     setLoadingId(id);
     try {
@@ -142,7 +142,7 @@ export default function FeedbackTab({
     }
   };
 
-  // ÔöÇÔöÇ Kirim reply ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+  // ── Kirim reply ───────────────────────────────────────────────
   const sendReply = async (id: string) => {
     const reply = replyText[id]?.trim();
     if (!reply) return;
@@ -166,15 +166,15 @@ export default function FeedbackTab({
     }
   };
 
-  // ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+  // ─────────────────────────────────────────────
   // Render
-  // ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+  // ─────────────────────────────────────────────
 
   return (
     <div className="space-y-5 max-w-7xl mx-auto">
       <SectionTitle title="Feedback" />
 
-      {/* ÔöÇÔöÇ Search & Category filter ÔöÇÔöÇ */}
+      {/* ── Search & Category filter ── */}
       <div className="flex flex-col sm:flex-row gap-3">
         <div className="relative flex-grow">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -202,7 +202,7 @@ export default function FeedbackTab({
         </select>
       </div>
 
-      {/* ÔöÇÔöÇ Status filter tabs ÔöÇÔöÇ */}
+      {/* ── Status filter tabs ── */}
       <div className="flex gap-2 overflow-x-auto pb-1">
         {(['semua', 'pending', 'in_review', 'fixed', 'closed'] as StatusFilter[]).map(f => {
           const count = f === 'semua'
@@ -226,7 +226,7 @@ export default function FeedbackTab({
         })}
       </div>
 
-      {/* ÔöÇÔöÇ Empty state ÔöÇÔöÇ */}
+      {/* ── Empty state ── */}
       {filtered.length === 0 ? (
         <div className="bg-white border border-slate-200 rounded-2xl p-20 text-center">
           <div className="w-16 h-16 bg-slate-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
@@ -252,7 +252,7 @@ export default function FeedbackTab({
                 key={fb.id}
                 className="bg-white border border-slate-200 rounded-2xl overflow-hidden hover:border-slate-300 transition-all"
               >
-                {/* ÔöÇÔöÇ Row summary ÔöÇÔöÇ */}
+                {/* ── Row summary ── */}
                 <div className="px-4 sm:px-5 py-4">
                   <div className="flex items-start gap-3">
 
@@ -315,7 +315,7 @@ export default function FeedbackTab({
                   </div>
                 </div>
 
-                {/* ÔöÇÔöÇ Expanded detail ÔöÇÔöÇ */}
+                {/* ── Expanded detail ── */}
                 {isExp && (
                   <div className="border-t border-slate-100 px-4 sm:px-5 py-5 bg-slate-50/60 space-y-5">
 

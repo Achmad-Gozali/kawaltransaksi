@@ -75,7 +75,7 @@ export default function ReportForm() {
   const [isAnalyzingText, setIsAnalyzingText] = useState(false);
   const [isAnalyzingAll, setIsAnalyzingAll] = useState(false);
 
-  // ÔöÇÔöÇ Target handlers ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+  // ── Target handlers ────────────────────────────────────────────────────────
   const updateTarget = (index: number, updated: TargetEntry) =>
     setTargets((prev) => prev.map((t, i) => (i === index ? updated : t)));
 
@@ -87,7 +87,7 @@ export default function ReportForm() {
   const removeTarget = (index: number) =>
     setTargets((prev) => prev.filter((_, i) => i !== index));
 
-  // ÔöÇÔöÇ Social media handlers ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+  // ── Social media handlers ──────────────────────────────────────────────────
   const addSocialField = () =>
     setFormData((f) => ({ ...f, social_media_accounts: [...f.social_media_accounts, ''] }));
 
@@ -112,7 +112,7 @@ export default function ReportForm() {
         : [...f.reported_to, val],
     }));
 
-  // ÔöÇÔöÇ Suspect photo handlers ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+  // ── Suspect photo handlers ─────────────────────────────────────────────────
   const handleSuspectPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0] || null;
     if (selected && selected.size > 5 * 1024 * 1024) {
@@ -134,7 +134,7 @@ export default function ReportForm() {
     setSuspectPhotoPreview(null);
   };
 
-  // ÔöÇÔöÇ Evidence file handlers ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+  // ── Evidence file handlers ─────────────────────────────────────────────────
   const handleEvidenceFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
@@ -160,7 +160,7 @@ export default function ReportForm() {
   const removeEvidenceFile = (index: number) =>
     setEvidenceFiles((prev) => prev.filter((_, i) => i !== index));
 
-  // ÔöÇÔöÇ AI handlers ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+  // ── AI handlers ────────────────────────────────────────────────────────────
   const handleAIImageAnalysis = async (index: number) => {
     const item = evidenceFiles[index];
     if (!item) return;
@@ -229,7 +229,7 @@ export default function ReportForm() {
     }
   };
 
-  // ÔöÇÔöÇ Navigation ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+  // ── Navigation ─────────────────────────────────────────────────────────────
   const handleNextStep = () => {
     setError(null);
     if (currentStep === 1) {
@@ -257,7 +257,7 @@ export default function ReportForm() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // ÔöÇÔöÇ Submit ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+  // ── Submit ─────────────────────────────────────────────────────────────────
   const handleSubmit = async () => {
     if (!turnstileToken) {
       setError('Selesaikan verifikasi keamanan terlebih dahulu.');
@@ -380,7 +380,7 @@ export default function ReportForm() {
     }
   };
 
-  // ÔöÇÔöÇ Success state ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+  // ── Success state ──────────────────────────────────────────────────────────
   if (isSuccess) {
     return (
       <div className="flex flex-col items-center justify-center py-28 text-center">
@@ -556,7 +556,7 @@ export default function ReportForm() {
 
       {currentStep === 3 && (
         <p className="text-center text-xs text-slate-300 uppercase tracking-widest font-medium pb-4">
-          Laporan divalidasi tim moderator ┬À Identitas pelapor terlindungi
+          Laporan divalidasi tim moderator · Identitas pelapor terlindungi
         </p>
       )}
     </div>

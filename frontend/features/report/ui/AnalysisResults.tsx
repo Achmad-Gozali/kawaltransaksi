@@ -1,7 +1,7 @@
 import { Brain, ShieldCheck, ShieldAlert, ShieldX, Info, CheckCircle2, XCircle, AlertCircle } from 'lucide-react';
 import type { AnalysisResult, TextAnalysis } from '@/features/report/types';
 
-// ÔöÇÔöÇ Komponen skor bar ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+// ── Komponen skor bar ─────────────────────────────────────────────────────────
 
 function ScoreBar({ value, color }: { value: number; color: string }) {
   return (
@@ -17,7 +17,7 @@ function ScoreBar({ value, color }: { value: number; color: string }) {
   );
 }
 
-// ÔöÇÔöÇ Hasil analisis foto ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+// ── Hasil analisis foto ───────────────────────────────────────────────────────
 
 export function ImageAnalysisResult({ analysis }: { analysis: AnalysisResult }) {
   const isValid = analysis.is_likely_authentic && analysis.relevance_score >= 90;
@@ -114,7 +114,7 @@ export function ImageAnalysisResult({ analysis }: { analysis: AnalysisResult }) 
   );
 }
 
-// ÔöÇÔöÇ Hasil analisis teks ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+// ── Hasil analisis teks ───────────────────────────────────────────────────────
 
 export function TextAnalysisResult({ analysis }: { analysis: TextAnalysis }) {
   const isHigh = analysis.risk_level === 'high';
@@ -202,7 +202,7 @@ export function TextAnalysisResult({ analysis }: { analysis: TextAnalysis }) {
         <div className="flex items-center justify-between">
           <span className={`text-xs font-medium ${config.subtext}`}>Kelengkapan Kronologi</span>
           <span className={`text-xs font-bold ${completenessColor}`}>
-            {completenessLabel} ┬À {completenessScore}/100
+            {completenessLabel} · {completenessScore}/100
           </span>
         </div>
         <ScoreBar value={completenessScore} color={completenessBarColor} />

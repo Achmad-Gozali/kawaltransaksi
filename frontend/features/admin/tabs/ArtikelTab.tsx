@@ -336,7 +336,7 @@ export default function ArtikelTab({ token }: { token: string }) {
             <div className="px-4 py-3 sm:px-5 sm:py-4 border-b border-slate-100 flex items-center justify-between gap-2">
               <div>
                 <p className="text-sm font-semibold text-slate-800">Draft ({drafts.length})</p>
-                <p className="text-xs text-slate-400 mt-0.5 hidden sm:block">Belum dipublish ÔÇö tambah gambar & review dulu</p>
+                <p className="text-xs text-slate-400 mt-0.5 hidden sm:block">Belum dipublish — tambah gambar & review dulu</p>
               </div>
               <button onClick={fetchArticles} disabled={loading}
                 className="text-xs font-semibold px-3 py-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 rounded-xl transition-colors shrink-0">
@@ -383,7 +383,7 @@ export default function ArtikelTab({ token }: { token: string }) {
           <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
             <div className="px-4 py-3 sm:px-5 sm:py-4 border-b border-slate-100">
               <p className="text-sm font-semibold text-slate-800">Published ({published.length})</p>
-              <p className="text-xs text-slate-400 mt-0.5 hidden sm:block">Tampil di website ÔÇö bisa unpublish kapan saja</p>
+              <p className="text-xs text-slate-400 mt-0.5 hidden sm:block">Tampil di website — bisa unpublish kapan saja</p>
             </div>
             {published.length === 0 ? (
               <div className="p-10 text-center">

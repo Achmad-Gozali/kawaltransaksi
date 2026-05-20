@@ -93,8 +93,7 @@ const renderBarLabel = ({ x, y, width, value, index, data }: any) => {
 export default function StatsChart({ rawReports }: StatsChartProps) {
   const [range, setRange] = useState<Range>('30');
 
-  const nowRef = useRef(Date.now());
-  const now = nowRef.current;
+  const now = Date.now();
 
   const filteredReports = useMemo(() => {
     if (range === 'all') return rawReports;

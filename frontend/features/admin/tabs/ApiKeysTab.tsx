@@ -29,7 +29,7 @@ const BACKEND_URL = (() => {
 })();
 
 function formatRelative(dateStr: string | null): string {
-  if (!dateStr) return 'ÔÇö';
+  if (!dateStr) return '—';
   const date = new Date(dateStr);
   const now = new Date();
   const diffMs = now.getTime() - date.getTime();
@@ -44,7 +44,7 @@ function formatRelative(dateStr: string | null): string {
 }
 
 function formatExpiry(expiresAt: string | null): { label: string; isExpired: boolean } {
-  if (!expiresAt) return { label: 'ÔÇö', isExpired: false };
+  if (!expiresAt) return { label: '—', isExpired: false };
   const date = new Date(expiresAt);
   const now = new Date();
   const diffDays = Math.ceil((date.getTime() - now.getTime()) / (1000 * 60 * 60 * 24));
@@ -185,7 +185,7 @@ export default function ApiKeysTab({ token }: { token: string }) {
     </div>
   );
 
-  // ÔöÇÔöÇ Mobile card per key ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+  // ── Mobile card per key ────────────────────────────────────────────────────
   const MobileCard = ({ k }: { k: ApiKey }) => {
     const expiry = formatExpiry(k.expires_at);
     return (
@@ -194,8 +194,8 @@ export default function ApiKeysTab({ token }: { token: string }) {
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <p className="text-sm font-bold text-slate-900 truncate">{k.name}</p>
-            <p className="text-[10px] text-slate-400 font-mono mt-0.5">{k.key_prefix ? `${k.key_prefix}...` : 'ÔÇö'}</p>
-            <p className="text-xs text-slate-500 mt-0.5">{k.user_email ?? 'ÔÇö'}</p>
+            <p className="text-[10px] text-slate-400 font-mono mt-0.5">{k.key_prefix ? `${k.key_prefix}...` : '—'}</p>
+            <p className="text-xs text-slate-500 mt-0.5">{k.user_email ?? '—'}</p>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
             <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
@@ -375,7 +375,7 @@ export default function ApiKeysTab({ token }: { token: string }) {
         </div>
       </div>
 
-      {/* ÔöÇÔöÇ Mobile: card layout ÔöÇÔöÇ */}
+      {/* ── Mobile: card layout ── */}
       <div className="block lg:hidden">
         {loading ? (
           <LoadingState />
@@ -388,7 +388,7 @@ export default function ApiKeysTab({ token }: { token: string }) {
         )}
       </div>
 
-      {/* ÔöÇÔöÇ Desktop: table layout ÔöÇÔöÇ */}
+      {/* ── Desktop: table layout ── */}
       <div className="hidden lg:block bg-white rounded-xl border border-slate-200 overflow-hidden">
         {loading ? (
           <LoadingState />
@@ -433,10 +433,10 @@ export default function ApiKeysTab({ token }: { token: string }) {
                     <tr key={k.id} className="hover:bg-slate-50/60 transition-colors">
                       <td className="px-4 py-3.5">
                         <p className="text-sm font-semibold text-slate-900">{k.name}</p>
-                        <p className="text-[10px] text-slate-400 font-mono mt-0.5">{k.key_prefix ? `${k.key_prefix}...` : 'ÔÇö'}</p>
+                        <p className="text-[10px] text-slate-400 font-mono mt-0.5">{k.key_prefix ? `${k.key_prefix}...` : '—'}</p>
                       </td>
                       <td className="px-4 py-3.5">
-                        <p className="text-xs text-slate-600">{k.user_email ?? 'ÔÇö'}</p>
+                        <p className="text-xs text-slate-600">{k.user_email ?? '—'}</p>
                       </td>
                       <td className="px-4 py-3.5">
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${

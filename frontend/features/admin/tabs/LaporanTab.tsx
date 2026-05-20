@@ -454,7 +454,7 @@ export default function LaporanTab({
                         </span>
                         {report.target_name && (
                           <span className="text-xs text-slate-400 hidden sm:inline">
-                            ┬À {report.target_name}
+                            · {report.target_name}
                           </span>
                         )}
                         <span
@@ -705,7 +705,7 @@ export default function LaporanTab({
                               label: "Korban Lain",
                               value:
                                 report.has_other_victims === "yes"
-                                  ? "ÔÜá Ada korban lain"
+                                  ? "⚠ Ada korban lain"
                                   : "Hanya pelapor",
                               className:
                                 report.has_other_victims === "yes"
@@ -766,12 +766,12 @@ export default function LaporanTab({
                               {t.number}
                               {t.bank && (
                                 <span className="text-slate-400">
-                                  ┬À {t.bank}
+                                  · {t.bank}
                                 </span>
                               )}
                               {t.name && (
                                 <span className="text-slate-400">
-                                  ┬À {t.name}
+                                  · {t.name}
                                 </span>
                               )}
                               <ExternalLink className="w-2.5 h-2.5 text-slate-400" />

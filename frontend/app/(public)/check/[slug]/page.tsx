@@ -376,7 +376,7 @@ export default async function CheckPage({
   }
   if (totalLoss >= 10_000_000) {
     riskBadges.push({
-      label: `Kerugian besar ÔÇö ${new Intl.NumberFormat("id-ID", { notation: "compact", maximumFractionDigits: 1 }).format(totalLoss)}`,
+      label: `Kerugian besar — ${new Intl.NumberFormat("id-ID", { notation: "compact", maximumFractionDigits: 1 }).format(totalLoss)}`,
       color: "bg-orange-50 text-orange-700 border-orange-200",
     });
   }
@@ -453,10 +453,10 @@ export default async function CheckPage({
 
   const shareText =
     status === "danger"
-      ? `ÔÜá´©Å waspada! nomor ${formatNum(realNumber)} terindikasi penipu dengan ${verifiedCount} laporan terverifikasi. cek di kawaltransaksi:`
+      ? `⚠️ waspada! nomor ${formatNum(realNumber)} terindikasi penipu dengan ${verifiedCount} laporan terverifikasi. cek di kawaltransaksi:`
       : status === "warning"
-        ? `ÔÜá´©Å nomor ${formatNum(realNumber)} sedang dalam proses verifikasi laporan penipuan. cek di kawaltransaksi:`
-        : `Ô£à nomor ${formatNum(realNumber)} aman ÔÇö belum ada laporan penipuan di kawaltransaksi:`;
+        ? `⚠️ nomor ${formatNum(realNumber)} sedang dalam proses verifikasi laporan penipuan. cek di kawaltransaksi:`
+        : `✓ nomor ${formatNum(realNumber)} aman — belum ada laporan penipuan di kawaltransaksi:`;
 
   const verificationSteps =
     linkedHasVerified && reports.length > 0 && verifiedCount === 0
@@ -544,7 +544,7 @@ export default async function CheckPage({
     ewallet: "E-Wallet",
   };
 
-  // Ô£à FIX: tambah field license di Dataset ÔÇö fix Google Search Console warning
+  // ✓ FIX: tambah field license di Dataset — fix Google Search Console warning
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "WebPage",
@@ -565,7 +565,7 @@ export default async function CheckPage({
       "@type": "Dataset",
       name: `Laporan penipuan untuk nomor ${realNumber}`,
       description: `Database laporan penipuan komunitas untuk nomor ${realNumber}`,
-      // Ô£à license field ÔÇö required by Google Dataset schema
+      // ✓ license field — required by Google Dataset schema
       license: "https://creativecommons.org/licenses/by-nc/4.0/",
       creator: {
         "@type": "Organization",
@@ -582,7 +582,7 @@ export default async function CheckPage({
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
       <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
-        {/* ÔöÇÔöÇ Mobile back nav ÔöÇÔöÇ */}
+        {/* ── Mobile back nav ── */}
         <div className="sm:hidden bg-white border-b border-slate-100 sticky top-16 z-10">
           <div className="px-4 py-3 flex items-center justify-between">
             <Link
@@ -597,7 +597,7 @@ export default async function CheckPage({
           </div>
         </div>
 
-        {/* ÔöÇÔöÇ Status bar ÔöÇÔöÇ */}
+        {/* ── Status bar ── */}
         <div className={`${config.barBg} px-4 sm:px-6 py-3`}>
           <div className="max-w-5xl mx-auto flex items-center gap-2 flex-wrap">
             <div
@@ -609,7 +609,7 @@ export default async function CheckPage({
               {config.verdict}
             </span>
             <span className={`text-xs ${config.barDesc} hidden sm:inline`}>
-              ÔÇö {config.verdictSub}
+              — {config.verdictSub}
             </span>
             <span className="ml-auto flex items-center gap-1 text-[10px] text-slate-400">
               <Clock className="w-3 h-3" /> {formatTimestamp(checkedAt)}
@@ -623,7 +623,7 @@ export default async function CheckPage({
         </div>
 
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 sm:py-6 pb-24">
-          {/* ÔöÇÔöÇ Stats grid ÔöÇÔöÇ */}
+          {/* ── Stats grid ── */}
           {reports.length > 0 && (
             <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-4 sm:mb-5">
               <div className="bg-white rounded-xl border border-slate-200 p-3 sm:p-5">
@@ -643,7 +643,7 @@ export default async function CheckPage({
                         notation: "compact",
                         maximumFractionDigits: 1,
                       }).format(totalLoss)
-                    : "ÔÇö"}
+                    : "—"}
                 </p>
                 <p className="text-[10px] text-slate-400 mt-2 uppercase tracking-[0.1em]">
                   Total kerugian
@@ -655,7 +655,7 @@ export default async function CheckPage({
                 <p
                   className={`text-2xl sm:text-4xl font-bold leading-none ${hasOtherVictims ? "text-amber-500" : "text-slate-300"}`}
                 >
-                  {hasOtherVictims ? "!" : "ÔÇö"}
+                  {hasOtherVictims ? "!" : "—"}
                 </p>
                 <p className="text-[10px] text-slate-400 mt-2 uppercase tracking-[0.1em]">
                   Multi korban
@@ -729,13 +729,13 @@ export default async function CheckPage({
                           {r.status === "verified"
                             ? "Laporan terverifikasi"
                             : "Laporan dalam investigasi"}
-                          {r.target_name ? ` ┬À a.n. ${r.target_name}` : ""}
+                          {r.target_name ? ` · a.n. ${r.target_name}` : ""}
                         </p>
                       </div>
                       <span
                         className={`text-xs font-semibold whitespace-nowrap ${linkedHasVerified ? "text-red-600 group-hover:text-red-800" : "text-amber-700 group-hover:text-amber-900"}`}
                       >
-                        Lihat ÔåÆ
+                        Lihat →
                       </span>
                     </a>
                   ))}
@@ -774,7 +774,7 @@ export default async function CheckPage({
                         className="px-4 py-3 flex items-start gap-2.5"
                       >
                         <span className="text-amber-400 mt-0.5 shrink-0">
-                          ┬À
+                          ·
                         </span>
                         <p className="text-xs text-amber-900 leading-relaxed">
                           {item}
@@ -865,11 +865,11 @@ export default async function CheckPage({
                                 entry.name ? `a.n. ${entry.name}` : null,
                               ]
                                 .filter(Boolean)
-                                .join(" ┬À ")}
+                                .join(" · ")}
                             </p>
                           </div>
                           <span className="text-xs text-emerald-600 font-semibold group-hover:underline whitespace-nowrap">
-                            Cek ÔåÆ
+                            Cek →
                           </span>
                         </a>
                       ))}
@@ -912,8 +912,8 @@ export default async function CheckPage({
                     {linkedHasVerified && verifiedCount === 0 && (
                       <p className="text-[11px] text-slate-400 leading-relaxed mt-4 pt-3 border-t border-slate-100">
                         {reports.length > 0
-                          ? "Laporan di nomor ini sedang direview moderator. Namun nomor ini sudah terbukti terkait pelaku yang telah diverifikasi ÔÇö tetap waspada."
-                          : "Belum ada laporan langsung di nomor ini. Namun nomor ini sudah terbukti terkait pelaku yang telah diverifikasi ÔÇö hindari bertransaksi."}
+                          ? "Laporan di nomor ini sedang direview moderator. Namun nomor ini sudah terbukti terkait pelaku yang telah diverifikasi — tetap waspada."
+                          : "Belum ada laporan langsung di nomor ini. Namun nomor ini sudah terbukti terkait pelaku yang telah diverifikasi — hindari bertransaksi."}
                       </p>
                     )}
                   </div>

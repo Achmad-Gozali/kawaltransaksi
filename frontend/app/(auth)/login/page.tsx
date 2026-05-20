@@ -1,4 +1,4 @@
-import AuthForm from '@/components/AuthForm';
+import AuthForm from '@/features/auth/AuthForm';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowLeft, ArrowRight, ShieldX } from 'lucide-react';

@@ -2,7 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ArrowRight } from "lucide-react";
 import type { Metadata } from "next";
-import NomorSearchForm from "@/components/NomorSearchForm";
+import NomorSearchForm from "@/features/check/NomorSearchForm";
 import { createClient } from "@/core/supabase/server";
 import { formatRupiah } from "@/core/utils";
 

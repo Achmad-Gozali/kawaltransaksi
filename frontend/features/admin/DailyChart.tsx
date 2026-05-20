@@ -13,7 +13,7 @@ export default function DailyChart({ reports }: DailyChartProps) {
   const chartRef = useRef<any>(null);
   const [period, setPeriod] = useState<Period>('7d');
 
-  // ÔöÇÔöÇ Hitung data berdasarkan period ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+  // ── Hitung data berdasarkan period ──────────────────────────────────────────
   const chartData = useMemo(() => {
     const days: Record<string, number> = {};
 
@@ -26,7 +26,7 @@ export default function DailyChart({ reports }: DailyChartProps) {
         })
       );
 
-      const useDaily = months.size <= 1; // semua dalam 1 bulan ÔåÆ group by hari
+      const useDaily = months.size <= 1; // semua dalam 1 bulan → group by hari
 
       reports.forEach((r) => {
         const d = new Date(r.created_at);
@@ -78,7 +78,7 @@ export default function DailyChart({ reports }: DailyChartProps) {
     };
   }, [reports, period]);
 
-  // ÔöÇÔöÇ Render Chart.js ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+  // ── Render Chart.js ─────────────────────────────────────────────────────────
   useEffect(() => {
     let cancelled = false;
 
@@ -178,7 +178,7 @@ export default function DailyChart({ reports }: DailyChartProps) {
     };
   }, [chartData, period]);
 
-  // ÔöÇÔöÇ Total laporan di period ini ÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇÔöÇ
+  // ── Total laporan di period ini ─────────────────────────────────────────────
   const totalInPeriod = chartData.data.reduce((a, b) => a + b, 0);
 
   return (

@@ -23,7 +23,7 @@ const navItems = [
   { id: 'pengguna',  label: 'Pengguna',     icon: Users,           href: '/admin?tab=pengguna'  },
   { id: 'blacklist', label: 'IP Blacklist', icon: ShieldX,         href: '/admin?tab=blacklist' },
   { id: 'feedback',  label: 'Feedback',     icon: MessageCircle,   href: '/admin?tab=feedback'  },
-  // Ô£à Tambah tab API Keys
+  // ✓ Tambah tab API Keys
   { id: 'apikeys',   label: 'API Keys',     icon: Code2,           href: '/admin?tab=apikeys'   },
 ];
 
@@ -126,7 +126,7 @@ export default function AdminShell({ email, children }: AdminShellProps) {
   return (
     <div className="min-h-screen bg-slate-50 flex">
 
-      {/* ÔöÇÔöÇ Mobile sidebar overlay ÔöÇÔöÇ */}
+      {/* ── Mobile sidebar overlay ── */}
       {mobileOpen && (
         <div
           className="lg:hidden fixed inset-0 bg-black/40 z-40 backdrop-blur-sm"
@@ -134,7 +134,7 @@ export default function AdminShell({ email, children }: AdminShellProps) {
         />
       )}
 
-      {/* ÔöÇÔöÇ Mobile sidebar drawer ÔöÇÔöÇ */}
+      {/* ── Mobile sidebar drawer ── */}
       <aside className={`
         lg:hidden fixed top-0 left-0 h-full w-[280px] bg-white border-r border-slate-200 z-50 flex flex-col
         transition-transform duration-250 ease-out
@@ -162,7 +162,7 @@ export default function AdminShell({ email, children }: AdminShellProps) {
         <NavContent {...navProps} onNavClick={() => setMobileOpen(false)} />
       </aside>
 
-      {/* ÔöÇÔöÇ Desktop sidebar ÔöÇÔöÇ */}
+      {/* ── Desktop sidebar ── */}
       <aside className={`
         hidden lg:flex fixed top-0 left-0 h-full bg-white border-r border-slate-200 z-50 flex-col
         transition-all duration-200 ease-out
@@ -190,7 +190,7 @@ export default function AdminShell({ email, children }: AdminShellProps) {
         </button>
       </aside>
 
-      {/* ÔöÇÔöÇ Main content ÔöÇÔöÇ */}
+      {/* ── Main content ── */}
       <div className={`flex-1 flex flex-col min-h-screen transition-all duration-200 ${collapsed ? 'lg:ml-[64px]' : 'lg:ml-[240px]'}`}>
         <header className="h-14 sm:h-16 bg-white border-b border-slate-200 flex items-center justify-between px-3 sm:px-6 shrink-0 sticky top-0 z-30">
           <button

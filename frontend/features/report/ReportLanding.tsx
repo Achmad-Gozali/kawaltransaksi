@@ -48,7 +48,7 @@ export default function ReportLanding() {
   return (
     <div className="min-h-screen bg-slate-50">
 
-      {/* ÔöÇÔöÇ HERO SECTION ÔöÇÔöÇ */}
+      {/* ── HERO SECTION ── */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-20">
         <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-start">
 
@@ -156,7 +156,7 @@ export default function ReportLanding() {
         </div>
       </div>
 
-      {/* ÔöÇÔöÇ PENJELASAN SECTION ÔÇö mirip Kredibel ÔöÇÔöÇ */}
+      {/* ── PENJELASAN SECTION — mirip Kredibel ── */}
       <div className="bg-white border-t border-slate-100">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-14 sm:py-20">
           <div className="grid sm:grid-cols-2 gap-x-16 gap-y-10">

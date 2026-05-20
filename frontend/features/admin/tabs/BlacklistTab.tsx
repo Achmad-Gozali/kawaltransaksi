@@ -26,7 +26,7 @@ export default function BlacklistTab({ token }: { token: string }) {
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  // Ô£à Auto-load saat tab dibuka
+  // ✓ Auto-load saat tab dibuka
   useEffect(() => {
     fetchBlacklist();
     fetchLogs();
@@ -222,7 +222,7 @@ export default function BlacklistTab({ token }: { token: string }) {
             <p className="text-sm font-semibold text-slate-800">
               Log IP Mencurigakan {fetchedLogs && `(${logs.length})`}
             </p>
-            <p className="text-xs text-slate-400 mt-0.5">IP yang kena rate limit ÔÇö disimpan 7 hari</p>
+            <p className="text-xs text-slate-400 mt-0.5">IP yang kena rate limit — disimpan 7 hari</p>
           </div>
           <button
             onClick={fetchLogs}

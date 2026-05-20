@@ -2,7 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { ArrowRight } from "lucide-react";
 import type { Metadata } from "next";
-import RekeningSearchForm from "@/components/RekeningSearchForm";
+import RekeningSearchForm from "@/features/check/RekeningSearchForm";
 import { createClient } from "@/core/supabase/server";
 import { formatRupiah } from "@/core/utils";
 

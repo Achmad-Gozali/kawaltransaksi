@@ -15,8 +15,8 @@ import {
 import type { Metadata } from "next";
 import * as motion from "motion/react-client";
 import { formatDateID, maskNumber } from "@/core/utils";
-import WithdrawButton from "@/components/WithdrawButton";
-import EditReportButton from "@/components/EditReportButton";
+import WithdrawButton from "@/features/report/WithdrawButton";
+import EditReportButton from "@/features/report/EditReportButton";
 
 // ─────────────────────────────────────────────
 // Metadata

@@ -80,7 +80,7 @@ export function Step3BuktiKirim({
           <div className="flex items-start justify-between gap-3 mb-4 sm:mb-5">
             <SectionTitle
               title="Bukti Foto"
-              subtitle={`Upload hingga ${MAX_EVIDENCE_FILES} foto ┬À Screenshot, struk transfer ┬À JPG, PNG ┬À maks 5MB`}
+              subtitle={`Upload hingga ${MAX_EVIDENCE_FILES} foto · Screenshot, struk transfer · JPG, PNG · maks 5MB`}
             />
 
             {hasFiles && !allAnalyzed && (
@@ -203,7 +203,7 @@ export function Step3BuktiKirim({
                     ? 'Klik untuk upload foto bukti'
                     : `Tambah foto (${evidenceFiles.length}/${MAX_EVIDENCE_FILES})`}
                 </p>
-                <p className="text-xs text-slate-300 mt-1">JPG, PNG ┬À maks 5MB per file</p>
+                <p className="text-xs text-slate-300 mt-1">JPG, PNG · maks 5MB per file</p>
               </div>
               <input
                 type="file"
