@@ -1,6 +1,15 @@
 'use client';
 
-import { useState, useEffect, useRef, useMemo } from 'react';
+import { useState, useMemo } from 'react';
+import {
+  AreaChart,
+  Area,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+} from 'recharts';
 
 interface DailyChartProps {
   reports: { created_at: string }[];
@@ -9,16 +18,12 @@ interface DailyChartProps {
 type Period = '7d' | '30d' | 'all';
 
 export default function DailyChart({ reports }: DailyChartProps) {
-  const canvasRef = useRef<HTMLCanvasElement>(null);
-  const chartRef = useRef<any>(null);
   const [period, setPeriod] = useState<Period>('7d');
 
-  // ── Hitung data berdasarkan period ──────────────────────────────────────────
   const chartData = useMemo(() => {
     const days: Record<string, number> = {};
 
     if (period === 'all') {
-      // Cek apakah semua data dalam bulan yang sama
       const months = new Set(
         reports.map((r) => {
           const d = new Date(r.created_at);
@@ -26,34 +31,31 @@ export default function DailyChart({ reports }: DailyChartProps) {
         })
       );
 
-      const useDaily = months.size <= 1; // semua dalam 1 bulan → group by hari
+      const useDaily = months.size <= 1;
 
       reports.forEach((r) => {
         const d = new Date(r.created_at);
         const key = useDaily
-          ? d.toLocaleDateString('en-CA') // YYYY-MM-DD
+          ? d.toLocaleDateString('en-CA')
           : `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
         days[key] = (days[key] || 0) + 1;
       });
 
       const sorted = Object.entries(days).sort((a, b) => a[0].localeCompare(b[0]));
-      return {
-        labels: sorted.map(([key]) => {
-          if (useDaily) {
-            const d = new Date(key);
-            return d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
-          }
-          const [y, m] = key.split('-');
-          return new Date(Number(y), Number(m) - 1).toLocaleDateString('id-ID', {
-            month: 'short',
-            year: '2-digit',
-          });
-        }),
-        data: sorted.map(([, count]) => count),
-      };
+      return sorted.map(([key, count]) => ({
+        label: useDaily
+          ? new Date(key).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' })
+          : (() => {
+              const [y, m] = key.split('-');
+              return new Date(Number(y), Number(m) - 1).toLocaleDateString('id-ID', {
+                month: 'short',
+                year: '2-digit',
+              });
+            })(),
+        laporan: count,
+      }));
     }
 
-    // 7 hari atau 30 hari
     const numDays = period === '7d' ? 7 : 30;
     for (let i = numDays - 1; i >= 0; i--) {
       const d = new Date();
@@ -66,124 +68,19 @@ export default function DailyChart({ reports }: DailyChartProps) {
       if (d in days) days[d]++;
     });
 
-    const entries = Object.entries(days);
-    return {
-      labels: entries.map(([date]) => {
-        const d = new Date(date);
-        return period === '30d'
-          ? d.toLocaleDateString('id-ID', { day: 'numeric' })
-          : d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
-      }),
-      data: entries.map(([, count]) => count),
-    };
+    return Object.entries(days).map(([date, count]) => ({
+      label:
+        period === '30d'
+          ? new Date(date).toLocaleDateString('id-ID', { day: 'numeric' })
+          : new Date(date).toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }),
+      laporan: count,
+    }));
   }, [reports, period]);
 
-  // ── Render Chart.js ─────────────────────────────────────────────────────────
-  useEffect(() => {
-    let cancelled = false;
-
-    async function renderChart() {
-      const { Chart, registerables } = await import('chart.js');
-      Chart.register(...registerables);
-
-      if (cancelled || !canvasRef.current) return;
-
-      // Destroy old chart
-      if (chartRef.current) {
-        chartRef.current.destroy();
-      }
-
-      const ctx = canvasRef.current.getContext('2d');
-      if (!ctx) return;
-
-      const isDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
-      const textColor = isDark ? '#b4b2a9' : '#888780';
-      const gridColor = isDark ? 'rgba(255,255,255,0.06)' : 'rgba(0,0,0,0.05)';
-
-      // Gradient fill
-      const gradient = ctx.createLinearGradient(0, 0, 0, 200);
-      gradient.addColorStop(0, isDark ? 'rgba(29,158,117,0.35)' : 'rgba(29,158,117,0.2)');
-      gradient.addColorStop(1, 'rgba(29,158,117,0)');
-
-      chartRef.current = new Chart(ctx, {
-        type: 'line',
-        data: {
-          labels: chartData.labels,
-          datasets: [{
-            data: chartData.data,
-            borderColor: '#1D9E75',
-            backgroundColor: gradient,
-            fill: true,
-            tension: 0.4,
-            pointRadius: period === '30d' ? 2 : 4,
-            pointHoverRadius: 6,
-            pointBackgroundColor: '#1D9E75',
-            pointBorderColor: isDark ? '#2C2C2A' : '#fff',
-            pointBorderWidth: 2,
-            borderWidth: 2.5,
-          }],
-        },
-        options: {
-          responsive: true,
-          maintainAspectRatio: false,
-          animation: { duration: 400, easing: 'easeOutQuart' },
-          plugins: {
-            legend: { display: false },
-            tooltip: {
-              backgroundColor: isDark ? '#444' : '#1e1e1e',
-              titleFont: { size: 12 },
-              bodyFont: { size: 13, weight: 'bold' as const },
-              padding: 10,
-              cornerRadius: 8,
-              displayColors: false,
-              callbacks: {
-                label: (ctx: any) => `${ctx.parsed.y} laporan`,
-              },
-            },
-          },
-          scales: {
-            x: {
-              grid: { display: false },
-              ticks: {
-                color: textColor,
-                font: { size: 10 },
-                maxRotation: 0,
-                autoSkip: period === '30d',
-                maxTicksLimit: period === '30d' ? 10 : undefined,
-              },
-            },
-            y: {
-              beginAtZero: true,
-              grid: { color: gridColor },
-              ticks: {
-                color: textColor,
-                font: { size: 11 },
-                stepSize: 1,
-                precision: 0,
-              },
-            },
-          },
-        },
-      });
-    }
-
-    renderChart();
-
-    return () => {
-      cancelled = true;
-      if (chartRef.current) {
-        chartRef.current.destroy();
-        chartRef.current = null;
-      }
-    };
-  }, [chartData, period]);
-
-  // ── Total laporan di period ini ─────────────────────────────────────────────
-  const totalInPeriod = chartData.data.reduce((a, b) => a + b, 0);
+  const totalInPeriod = chartData.reduce((a, b) => a + b.laporan, 0);
 
   return (
     <div>
-      {/* Header: title + period toggle */}
       <div className="flex items-center justify-between mb-4">
         <div>
           <h3 className="text-sm font-semibold text-slate-900">Laporan masuk</h3>
@@ -210,9 +107,55 @@ export default function DailyChart({ reports }: DailyChartProps) {
         </div>
       </div>
 
-      {/* Chart canvas */}
-      <div style={{ position: 'relative', height: '200px' }}>
-        <canvas ref={canvasRef} />
+      <div style={{ height: '200px' }}>
+        <ResponsiveContainer width="100%" height="100%">
+          <AreaChart data={chartData} margin={{ top: 4, right: 4, left: -24, bottom: 0 }}>
+            <defs>
+              <linearGradient id="colorLaporan" x1="0" y1="0" x2="0" y2="1">
+                <stop offset="5%" stopColor="#1D9E75" stopOpacity={0.2} />
+                <stop offset="95%" stopColor="#1D9E75" stopOpacity={0} />
+              </linearGradient>
+            </defs>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(0,0,0,0.05)" vertical={false} />
+            <XAxis
+              dataKey="label"
+              tick={{ fontSize: 10, fill: '#888780' }}
+              tickLine={false}
+              axisLine={false}
+              interval={period === '30d' ? 4 : 0}
+            />
+            <YAxis
+              tick={{ fontSize: 11, fill: '#888780' }}
+              tickLine={false}
+              axisLine={false}
+              allowDecimals={false}
+              minTickGap={10}
+            />
+            <Tooltip
+              contentStyle={{
+                backgroundColor: '#1e1e1e',
+                border: 'none',
+                borderRadius: '8px',
+                fontSize: '12px',
+                color: '#fff',
+                padding: '8px 12px',
+              }}
+              formatter={(value: unknown) => [`${value} laporan`, '']}
+              labelStyle={{ display: 'none' }}
+              cursor={{ stroke: 'rgba(0,0,0,0.1)', strokeWidth: 1 }}
+            />
+            <Area
+              type="monotone"
+              dataKey="laporan"
+              stroke="#1D9E75"
+              strokeWidth={2.5}
+              fill="url(#colorLaporan)"
+              dot={period === '30d' ? false : { fill: '#1D9E75', r: 4, strokeWidth: 2, stroke: '#fff' }}
+              activeDot={{ r: 6, fill: '#1D9E75', stroke: '#fff', strokeWidth: 2 }}
+              animationDuration={400}
+            />
+          </AreaChart>
+        </ResponsiveContainer>
       </div>
     </div>
   );

@@ -77,7 +77,7 @@ const nextConfig: NextConfig = {
   // ─────────────────────────────────────────────
   experimental: {
     optimisticClientCache: true,
-    optimizePackageImports: ['lucide-react', 'motion', '@radix-ui/react-icons'],
+    optimizePackageImports: ['lucide-react', 'motion'],
   },
 
   // ─────────────────────────────────────────────

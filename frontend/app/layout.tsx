@@ -94,6 +94,9 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="id" className={`scroll-smooth ${inter.variable}`}>
+      <head>
+        <link rel="preconnect" href="https://o45112203640541953.ingest.us.sentry.io" />
+      </head>
       <body
         className={`${inter.className} bg-zinc-50 text-zinc-900 min-h-screen flex flex-col selection:bg-red-100 selection:text-red-900`}
         suppressHydrationWarning
