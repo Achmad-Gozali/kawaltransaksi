@@ -71,7 +71,6 @@ export interface Stats {
   rejected: number;
 }
 
-// ✅ Tambah 'apikeys' ke union type Tab
 export type Tab = 'dashboard' | 'laporan' | 'statistik' | 'pengguna' | 'blacklist' | 'artikel' | 'feedback' | 'apikeys';
 export type StatusFilter = 'semua' | 'pending' | 'verified' | 'rejected' | 'withdrawn';
 

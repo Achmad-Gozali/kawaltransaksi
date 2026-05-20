@@ -2,33 +2,22 @@
 
 import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import DashboardTab from './tabs/DashboardTab';
-import LaporanTab from './tabs/LaporanTab';
-import StatistikTab from './tabs/StatistikTab';
-import PenggunaTab from './tabs/PenggunaTab';
-import BlacklistTab from './tabs/BlacklistTab';
-import ArtikelTab from './tabs/ArtikelTab';
-import FeedbackTab from './tabs/FeedbackTab';
-import ApiKeysTab from './tabs/ApiKeysTab';
-import type { Stats, Report, AdminUser, Tab } from './types';
-import type { FeedbackItem } from './tabs/FeedbackTab';
-
-// ─────────────────────────────────────────────
-// Inner (wrapped in Suspense karena useSearchParams)
-// ─────────────────────────────────────────────
+import DashboardTab from '@/features/admin/tabs/DashboardTab';
+import LaporanTab from '@/features/admin/tabs/LaporanTab';
+import StatistikTab from '@/features/admin/tabs/StatistikTab';
+import PenggunaTab from '@/features/admin/tabs/PenggunaTab';
+import BlacklistTab from '@/features/admin/tabs/BlacklistTab';
+import ArtikelTab from '@/features/admin/tabs/ArtikelTab';
+import FeedbackTab from '@/features/admin/tabs/FeedbackTab';
+import ApiKeysTab from '@/features/admin/tabs/ApiKeysTab';
+import type { Stats, Report, AdminUser, Tab } from '@/features/admin/types';
+import type { FeedbackItem } from '@/features/admin/tabs/FeedbackTab';
 
 function DashboardInner({
-  stats,
-  reports,
-  users,
-  feedbacks,
-  token,
+  stats, reports, users, feedbacks, token,
 }: {
-  stats:     Stats;
-  reports:   Report[];
-  users:     AdminUser[];
-  feedbacks: FeedbackItem[];
-  token:     string;
+  stats: Stats; reports: Report[]; users: AdminUser[];
+  feedbacks: FeedbackItem[]; token: string;
 }) {
   const searchParams  = useSearchParams();
   const currentTab    = (searchParams.get('tab') as Tab) || 'dashboard';
@@ -42,15 +31,10 @@ function DashboardInner({
     case 'blacklist':  return <BlacklistTab token={token} />;
     case 'artikel':    return <ArtikelTab token={token} />;
     case 'feedback':   return <FeedbackTab feedbacks={feedbacks} token={token} />;
-    // ✅ Tab baru API Keys
     case 'apikeys':    return <ApiKeysTab token={token} />;
     default:           return <DashboardTab stats={stats} reports={reports} />;
   }
 }
-
-// ─────────────────────────────────────────────
-// Skeleton fallback
-// ─────────────────────────────────────────────
 
 function DashboardSkeleton() {
   return (
@@ -65,16 +49,9 @@ function DashboardSkeleton() {
   );
 }
 
-// ─────────────────────────────────────────────
-// Export
-// ─────────────────────────────────────────────
-
 export default function AdminDashboard(props: {
-  stats:     Stats;
-  reports:   Report[];
-  users:     AdminUser[];
-  feedbacks: FeedbackItem[];
-  token:     string;
+  stats: Stats; reports: Report[]; users: AdminUser[];
+  feedbacks: FeedbackItem[]; token: string;
 }) {
   return (
     <Suspense fallback={<DashboardSkeleton />}>
