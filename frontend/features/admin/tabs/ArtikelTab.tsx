@@ -90,6 +90,8 @@ const CATEGORIES = [
   'Lainnya',
 ];
 
+const CUSTOM_SENTINEL = '__custom__';
+
 function formatDate(d: string) {
   return new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
 }
@@ -110,13 +112,14 @@ function Alert({ type, message }: { type: 'error' | 'success'; message: string }
 }
 
 function Btn({
-  onClick, disabled, loading, icon: Icon, label, className,
+  onClick, disabled, loading, icon: Icon, label, className, type,
 }: {
   onClick?: () => void; disabled?: boolean; loading?: boolean;
   icon?: React.ElementType; label: string; className: string;
+  type?: 'button' | 'submit';
 }) {
   return (
-    <button onClick={onClick} disabled={disabled}
+    <button type={type ?? 'button'} onClick={onClick} disabled={disabled}
       className={`flex items-center gap-2 px-3 py-2 sm:px-4 sm:py-2.5 text-xs font-bold rounded-xl disabled:opacity-50 transition-colors ${className}`}>
       {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : Icon ? <Icon className="w-3.5 h-3.5" /> : null}
       {label}
@@ -125,24 +128,29 @@ function Btn({
 }
 
 function CategorySelect({ value, onChange }: { value: string; onChange: (v: string) => void }) {
-  const isCustom = value !== '' && !CATEGORIES.includes(value);
+  const isCustom = value === CUSTOM_SENTINEL || (value !== '' && !CATEGORIES.includes(value));
   const selectVal = isCustom ? 'Lainnya' : value;
+  const customVal = value === CUSTOM_SENTINEL ? '' : (isCustom ? value : '');
 
   return (
     <div className="space-y-2">
       <select
         value={selectVal}
-        onChange={e => onChange(e.target.value === 'Lainnya' ? '' : e.target.value)}
+        onChange={e => {
+          if (e.target.value === 'Lainnya') onChange(CUSTOM_SENTINEL);
+          else onChange(e.target.value);
+        }}
         className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 focus:outline-none focus:border-emerald-400 transition-all"
       >
         <option value="">Pilih kategori...</option>
         {CATEGORIES.map(c => <option key={c} value={c}>{c}</option>)}
       </select>
-      {(selectVal === 'Lainnya' || isCustom) && (
+      {isCustom && (
         <input
-          value={isCustom ? value : ''}
+          value={customVal}
           onChange={e => onChange(e.target.value)}
           placeholder="Tulis kategori sendiri..."
+          autoFocus
           className="w-full px-3 py-2.5 bg-slate-50 border border-emerald-300 rounded-xl text-sm text-slate-700 focus:outline-none focus:border-emerald-400 transition-all"
         />
       )}
@@ -205,12 +213,14 @@ export default function ArtikelTab({ token }: { token: string }) {
   const handleCreate = async () => {
     const { title, summary, content, category } = createFields;
     if (!title.trim() || !summary.trim() || !content.trim()) { setError('Judul, summary, dan konten wajib diisi.'); return; }
+    // Kalau masih CUSTOM_SENTINEL (belum diisi), kirim null
+    const finalCategory = category === CUSTOM_SENTINEL ? null : (category || null);
     setCreating(true); setError(null);
     try {
       const res = await fetch(`${BACKEND_URL}/api/admin/articles`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ title, summary, content, top_category: category || null }),
+        body: JSON.stringify({ title, summary, content, top_category: finalCategory }),
       });
       const data = await res.json();
       if (data.success) {
@@ -326,42 +336,53 @@ export default function ArtikelTab({ token }: { token: string }) {
       {showCreateForm && (
         <div className="bg-white rounded-2xl border border-slate-200 p-4 sm:p-5 space-y-4">
           <p className="text-sm font-bold text-slate-800">Buat Artikel Baru</p>
-          {[
-            { label: 'Judul *', key: 'title', placeholder: 'Judul artikel...', type: 'input' },
-            { label: 'Summary *', key: 'summary', placeholder: 'Ringkasan singkat artikel...', type: 'textarea', rows: 2 },
-          ].map(({ label, key, placeholder, type, rows }) => (
-            <div key={key}>
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">{label}</label>
-              {type === 'input' ? (
-                <input value={createFields[key as keyof typeof createFields]}
-                  onChange={e => setCreateFields(prev => ({ ...prev, [key]: e.target.value }))}
-                  placeholder={placeholder}
-                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:outline-none focus:border-emerald-400 transition-all" />
-              ) : (
-                <textarea value={createFields[key as keyof typeof createFields]}
-                  onChange={e => setCreateFields(prev => ({ ...prev, [key]: e.target.value }))}
-                  placeholder={placeholder} rows={rows}
-                  className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 focus:outline-none focus:border-emerald-400 transition-all resize-none" />
-              )}
-            </div>
-          ))}
+
+          <div>
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Judul *</label>
+            <input
+              value={createFields.title}
+              onChange={e => setCreateFields(prev => ({ ...prev, title: e.target.value }))}
+              placeholder="Judul artikel..."
+              className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:outline-none focus:border-emerald-400 transition-all"
+            />
+          </div>
+
+          <div>
+            <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Summary *</label>
+            <textarea
+              value={createFields.summary}
+              onChange={e => setCreateFields(prev => ({ ...prev, summary: e.target.value }))}
+              placeholder="Ringkasan singkat artikel..." rows={2}
+              className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 focus:outline-none focus:border-emerald-400 transition-all resize-none"
+            />
+          </div>
+
           <div>
             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Kategori</label>
-            <CategorySelect value={createFields.category} onChange={v => setCreateFields(prev => ({ ...prev, category: v }))} />
+            <CategorySelect
+              value={createFields.category}
+              onChange={v => setCreateFields(prev => ({ ...prev, category: v }))}
+            />
           </div>
+
           <div>
             <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">Konten (Markdown) *</label>
-            <textarea value={createFields.content}
+            <textarea
+              value={createFields.content}
               onChange={e => setCreateFields(prev => ({ ...prev, content: e.target.value }))}
               placeholder="## Judul Section&#10;&#10;Isi konten artikel..." rows={10}
-              className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 font-mono focus:outline-none focus:border-emerald-400 transition-all resize-y" />
+              className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 font-mono focus:outline-none focus:border-emerald-400 transition-all resize-y"
+            />
           </div>
+
           <div className="flex gap-2 flex-wrap">
             <Btn onClick={handleCreate} disabled={creating} loading={creating}
               icon={CheckCircle2} label="Simpan Draft"
               className="bg-emerald-500 hover:bg-emerald-600 text-white" />
-            <Btn onClick={() => { setShowCreateForm(false); setCreateFields({ title: '', summary: '', content: '', category: '' }); }}
-              icon={X} label="Batal" className="bg-slate-100 hover:bg-slate-200 text-slate-600" />
+            <Btn
+              onClick={() => { setShowCreateForm(false); setCreateFields({ title: '', summary: '', content: '', category: '' }); }}
+              icon={X} label="Batal" className="bg-slate-100 hover:bg-slate-200 text-slate-600"
+            />
           </div>
         </div>
       )}
@@ -377,7 +398,6 @@ export default function ArtikelTab({ token }: { token: string }) {
 
       {fetched && (
         <>
-          {/* Draft */}
           <ArticleSection
             title={`Draft (${drafts.length})`}
             subtitle="Belum dipublish — tambah gambar & review dulu"
@@ -400,8 +420,6 @@ export default function ArtikelTab({ token }: { token: string }) {
             onPublishToggle={handlePublishToggle}
             onDelete={handleDelete}
           />
-
-          {/* Published */}
           <ArticleSection
             title={`Published (${published.length})`}
             subtitle="Tampil di website — bisa unpublish kapan saja"
@@ -510,23 +528,14 @@ function ArticleRow({
 }) {
   const isPublished = article.status === 'published';
 
-  const iconBtn = (onClick: () => void, disabled: boolean, loading: boolean, Icon: React.ElementType, className: string) => (
-    <button onClick={onClick} disabled={disabled}
-      className={`w-8 h-8 sm:hidden flex items-center justify-center rounded-xl disabled:opacity-50 transition-colors ${className}`}>
-      {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Icon className="w-3.5 h-3.5" />}
-    </button>
-  );
-
   return (
     <div className="px-4 py-4 sm:px-5">
       <div className="flex items-start gap-3">
         {/* Thumbnail */}
         <div className="w-12 h-12 sm:w-16 sm:h-16 rounded-xl overflow-hidden shrink-0 bg-slate-100 flex items-center justify-center border border-slate-200">
-          {article.cover_image ? (
-            <div className="relative w-full h-full">
-              <Image src={article.cover_image} alt={article.title} fill className="object-cover" />
-            </div>
-          ) : <FileText className="w-5 h-5 text-slate-300" />}
+          {article.cover_image
+            ? <div className="relative w-full h-full"><Image src={article.cover_image} alt={article.title} fill className="object-cover" /></div>
+            : <FileText className="w-5 h-5 text-slate-300" />}
         </div>
 
         {/* Info */}
@@ -546,10 +555,16 @@ function ArticleRow({
         {/* Actions */}
         <div className="flex items-center gap-1.5 shrink-0">
           {/* Mobile icon-only */}
-          {iconBtn(onUpload, uploading, uploading, Upload, 'bg-slate-100 hover:bg-slate-200 text-slate-600')}
-          {iconBtn(onPublishToggle, publishing, publishing, isPublished ? EyeOff : Eye,
-            isPublished ? 'bg-slate-100 hover:bg-red-50 hover:text-red-500 text-slate-600' : 'bg-emerald-500 hover:bg-emerald-600 text-white')}
-          {iconBtn(onDelete, deleting, deleting, Trash2, 'bg-red-50 hover:bg-red-100 text-red-500')}
+          {([
+            { onClick: onUpload, disabled: uploading, loading: uploading, Icon: Upload, cls: 'bg-slate-100 hover:bg-slate-200 text-slate-600' },
+            { onClick: onPublishToggle, disabled: publishing, loading: publishing, Icon: isPublished ? EyeOff : Eye, cls: isPublished ? 'bg-slate-100 hover:bg-red-50 hover:text-red-500 text-slate-600' : 'bg-emerald-500 hover:bg-emerald-600 text-white' },
+            { onClick: onDelete, disabled: deleting, loading: deleting, Icon: Trash2, cls: 'bg-red-50 hover:bg-red-100 text-red-500' },
+          ] as { onClick: () => void; disabled: boolean; loading: boolean; Icon: React.ElementType; cls: string }[]).map(({ onClick, disabled, loading, Icon, cls }, i) => (
+            <button key={i} onClick={onClick} disabled={disabled}
+              className={`w-8 h-8 sm:hidden flex items-center justify-center rounded-xl disabled:opacity-50 transition-colors ${cls}`}>
+              {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Icon className="w-3.5 h-3.5" />}
+            </button>
+          ))}
 
           {/* Desktop with label */}
           <Btn onClick={onUpload} disabled={uploading} loading={uploading} icon={Upload}
@@ -582,19 +597,19 @@ function ArticleRow({
             </div>
           ) : (
             <div className="space-y-3">
-              {[
+              {([
                 { label: 'Judul', key: 'title', type: 'input' },
                 { label: 'Summary', key: 'summary', type: 'textarea', rows: 2 },
                 { label: 'Konten (Markdown)', key: 'content', type: 'textarea', rows: 12, mono: true },
-              ].map(({ label, key, type, rows, mono }) => (
+              ] as { label: string; key: keyof typeof editFields; type: string; rows?: number; mono?: boolean }[]).map(({ label, key, type, rows, mono }) => (
                 <div key={key}>
                   <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block mb-1">{label}</label>
                   {type === 'input' ? (
-                    <input value={editFields[key as keyof typeof editFields]}
+                    <input value={editFields[key]}
                       onChange={e => onEditFields({ ...editFields, [key]: e.target.value })}
                       className="w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm font-medium text-slate-900 focus:outline-none focus:border-emerald-400 transition-all" />
                   ) : (
-                    <textarea value={editFields[key as keyof typeof editFields]}
+                    <textarea value={editFields[key]}
                       onChange={e => onEditFields({ ...editFields, [key]: e.target.value })}
                       rows={rows}
                       className={`w-full px-3 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm text-slate-700 focus:outline-none focus:border-emerald-400 transition-all resize-y ${mono ? 'font-mono' : ''}`} />
