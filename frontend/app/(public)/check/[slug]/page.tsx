@@ -158,7 +158,7 @@ interface CarrierInfo {
 const INDONESIAN_PREFIXES: {
   prefix: string;
   carrier: string;
-  type: "mobile" | "fixed";
+  type: "mobile" | "fixed";   
 }[] = [
   { prefix: "0811", carrier: "Telkomsel", type: "mobile" },
   { prefix: "0812", carrier: "Telkomsel", type: "mobile" },
