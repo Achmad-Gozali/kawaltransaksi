@@ -7,27 +7,6 @@ export default function robots(): MetadataRoute.Robots {
     rules: [
       {
         userAgent: '*',
-        allow: [
-          '/',
-          '/cek-nomor',
-          '/cek-rekening',
-          '/cek-rekening/',
-          '/cek-nomor/cek-ewallet',
-          '/cek-nomor/cek-ewallet/',
-          '/check/',
-          '/laporan-publik',
-          '/edukasi',
-          '/artikel',
-          '/artikel/',
-          '/faq',
-          '/kontak',
-          '/kebijakan-privasi',
-          '/syarat-ketentuan',
-          '/login',
-          '/register',
-          '/report',
-          '/developer',
-        ],
         disallow: [
           '/admin',
           '/dashboard',
