@@ -11,6 +11,7 @@ export interface Env {
   RESEND_API_KEY: string;
   ADMIN_EMAIL: string;
   R2_PUBLIC_URL: string;
+  INTERNAL_API_KEY: string;
 
   // Cloudflare R2
   BUCKET: R2Bucket;
