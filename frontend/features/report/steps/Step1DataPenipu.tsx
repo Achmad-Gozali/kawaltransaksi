@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import Image from 'next/image';
 import { Plus, Upload, X, Trash2, AlertCircle } from 'lucide-react';
@@ -231,7 +231,7 @@ export function Step1DataPenipu({
                 </button>
               </div>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Foto berhasil dipilih. Klik Ô£ò untuk mengganti.
+                Foto berhasil dipilih. Klik di sini untuk mengganti.
               </p>
             </div>
           )}
@@ -391,3 +391,5 @@ export function Step1DataPenipu({
     </div>
   );
 }
+
+
