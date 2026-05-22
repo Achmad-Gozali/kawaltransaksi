@@ -8,7 +8,7 @@ export interface Report {
   chronology: string;
   evidence_url: string | null;
   evidence_urls?: string[] | null;
-  target_numbers?: any[] | null;
+  target_numbers?: TargetNumber[] | null;
   status: string;
   created_at: string;
   bank_name?: string | null;
@@ -22,6 +22,13 @@ export interface Report {
   reported_to?: string[] | null;
   store_name?: string | null;
   suspect_city?: string | null;
+}
+
+export interface TargetNumber {
+  number: string;
+  type?: string;
+  bank?: string | null;
+  name?: string | null;
 }
 
 export interface AdminUser {

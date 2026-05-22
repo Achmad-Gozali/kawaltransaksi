@@ -1,18 +1,17 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
-import authRoutes from './features/auth/auth.route';
-import reportsRoutes from './features/reports/reports.route';
-import adminRoutes from './features/admin/admin.route';
-import searchRoutes from './features/search/search.route';
+import authRoutes      from './features/auth/auth.route';
+import reportsRoutes   from './features/reports/reports.route';
+import adminRoutes     from './features/admin/admin.route';
+import searchRoutes    from './features/search/search.route';
 import articlesRoutes, { generateWeeklyArticle } from './features/articles/articles.route';
-import uploadRoutes from './features/upload/upload.route';
-import feedbackRoutes from './features/feedback/feedback.route';
+import uploadRoutes    from './features/upload/upload.route';
+import feedbackRoutes  from './features/feedback/feedback.route';
 import apiPublicRoutes from './features/api-public/api-public.route';
 import developerRoutes from './features/developer/developer.route';
 import { logSuspiciousIp, autoBlacklistIfAbuse } from './core/abuse';
 import type { Env } from './types';
 
-// Re-export untuk dipakai route lain
 export { logSuspiciousIp, autoBlacklistIfAbuse };
 
 const app = new Hono<{ Bindings: Env }>();
@@ -30,7 +29,23 @@ app.use('*', cors({
   credentials: true,
 }));
 
-// ── Origin validator ──────────────────────────────────────────────────────────
+// ── Security Headers ──────────────────────────────────────────────────────────
+
+app.use('*', async (c, next) => {
+  await next();
+  const h = c.res.headers;
+  h.set('X-Content-Type-Options', 'nosniff');
+  h.set('X-Frame-Options', 'DENY');
+  h.set('X-XSS-Protection', '1; mode=block');
+  h.set('Referrer-Policy', 'strict-origin-when-cross-origin');
+  h.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
+  h.set('Cache-Control', 'no-store');
+  if (c.req.url.startsWith('https://')) {
+    h.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
+});
+
+// ── Origin Validator ──────────────────────────────────────────────────────────
 
 const originValidator = async (c: { req: { method: string; header: (k: string) => string | undefined }; env: Env; json: (d: unknown, s?: number) => Response }, next: () => Promise<void>) => {
   if (c.req.method === 'OPTIONS') return next();
@@ -45,10 +60,10 @@ const originValidator = async (c: { req: { method: string; header: (k: string) =
   return next();
 };
 
-app.use('/api/auth/*', originValidator);
+app.use('/api/auth/*',   originValidator);
 app.use('/api/search/*', originValidator);
 
-// ── Request size limits ───────────────────────────────────────────────────────
+// ── Request Size Limits ───────────────────────────────────────────────────────
 
 const SIZE_LIMITS: Record<string, number> = {
   '/api/auth':     10 * 1024,
@@ -59,7 +74,6 @@ const SIZE_LIMITS: Record<string, number> = {
   '/api/feedback': 10 * 1024,
   '/api/v1':       5 * 1024,
 };
-const DEFAULT_SIZE = 1 * 1024 * 1024;
 
 app.use('/api/*', async (c, next) => {
   if (['GET', 'HEAD', 'OPTIONS'].includes(c.req.method)) return next();
@@ -67,13 +81,13 @@ app.use('/api/*', async (c, next) => {
   if (cl) {
     const size  = parseInt(cl, 10);
     const path  = new URL(c.req.url).pathname;
-    const limit = Object.entries(SIZE_LIMITS).find(([prefix]) => path.startsWith(prefix))?.[1] ?? DEFAULT_SIZE;
+    const limit = Object.entries(SIZE_LIMITS).find(([prefix]) => path.startsWith(prefix))?.[1] ?? 1024 * 1024;
     if (size > limit) return c.json({ success: false, message: 'Ukuran request terlalu besar.' }, 413);
   }
   return next();
 });
 
-// ── IP Blacklist check ────────────────────────────────────────────────────────
+// ── IP Blacklist ──────────────────────────────────────────────────────────────
 
 app.use('/api/*', async (c, next) => {
   if (!c.env.LIMITER) return next();
@@ -85,14 +99,13 @@ app.use('/api/*', async (c, next) => {
     if (await c.env.LIMITER.get(`blacklist_${ip}`)) {
       return c.json({ success: false, message: 'Akses Anda telah diblokir sementara.' }, 403);
     }
-  } catch (err) {
-    console.error('[BLACKLIST] Error cek KV:', err);
-  }
+  } catch (err) { console.error('[BLACKLIST] Error:', err); }
   return next();
 });
 
-// ── Auth rate limiter (Cloudflare built-in) ───────────────────────────────────
+// ── Rate Limiters ─────────────────────────────────────────────────────────────
 
+// Cloudflare native rate limiter untuk auth
 app.use('/api/auth/*', async (c, next) => {
   if (c.env.AUTH_RATE_LIMITER) {
     const ip = c.req.header('CF-Connecting-IP') || 'anonymous';
@@ -102,68 +115,36 @@ app.use('/api/auth/*', async (c, next) => {
   return next();
 });
 
-// ── Global rate limit ─────────────────────────────────────────────────────────
-
-app.use('/api/*', async (c, next) => {
+// KV-based rate limiters
+const kvRateLimit = async (
+  c: { req: { header: (k: string) => string | undefined; url: string }; env: Env; json: (d: unknown, s?: number) => Response },
+  next: () => Promise<void>,
+  { key, max, ttl, label, logReason, blacklist }: { key: string; max: number; ttl: number; label: string; logReason: string; blacklist?: boolean }
+) => {
   if (!c.env.LIMITER) return next();
   const ip   = c.req.header('CF-Connecting-IP') || 'anonymous';
+  const path = new URL(c.req.url).pathname;
+  try {
+    const kvKey = `${key}${ip}`;
+    const count = parseInt(await c.env.LIMITER.get(kvKey) ?? '0');
+    if (count >= max) {
+      await logSuspiciousIp(c.env.LIMITER, ip, logReason, path);
+      if (blacklist) await autoBlacklistIfAbuse(c.env.LIMITER, ip, logReason);
+      return c.json({ success: false, message: `Terlalu banyak permintaan. Tunggu 1 menit.`, retry_after: 60 }, 429);
+    }
+    await c.env.LIMITER.put(kvKey, (count + 1).toString(), { expirationTtl: ttl });
+  } catch (err) { console.error(`[${label}] Error:`, err); }
+  return next();
+};
+
+app.use('/api/*', (c, next) => {
   const path = new URL(c.req.url).pathname;
   if (path.startsWith('/api/v1')) return next();
-  try {
-    const key   = `rl_global_${ip}`;
-    const count = parseInt(await c.env.LIMITER.get(key) ?? '0');
-    if (count >= 20) {
-      await logSuspiciousIp(c.env.LIMITER, ip, 'Melewati global rate limit', path);
-      await autoBlacklistIfAbuse(c.env.LIMITER, ip, 'Terlalu sering melewati global rate limit');
-      return c.json({ success: false, message: 'Terlalu banyak permintaan. Coba lagi nanti.' }, 429);
-    }
-    await c.env.LIMITER.put(key, (count + 1).toString(), { expirationTtl: 60 });
-  } catch (err) {
-    console.error('[RATE LIMIT] Error KV global:', err);
-  }
-  return next();
+  return kvRateLimit(c, next, { key: 'rl_global_', max: 20, ttl: 60, label: 'GLOBAL RL', logReason: 'Melewati global rate limit', blacklist: true });
 });
 
-// ── Auth rate limit (KV) ──────────────────────────────────────────────────────
-
-app.use('/api/auth/*', async (c, next) => {
-  if (!c.env.LIMITER) return next();
-  const ip   = c.req.header('CF-Connecting-IP') || 'anonymous';
-  const path = new URL(c.req.url).pathname;
-  try {
-    const key   = `rl_auth_ip_${ip}`;
-    const count = parseInt(await c.env.LIMITER.get(key) ?? '0');
-    if (count >= 5) {
-      await logSuspiciousIp(c.env.LIMITER, ip, 'Melewati auth rate limit', path);
-      await autoBlacklistIfAbuse(c.env.LIMITER, ip, 'Terlalu sering melewati auth rate limit');
-      return c.json({ success: false, message: 'Terlalu banyak percobaan. Tunggu 1 menit.', retry_after: 60 }, 429);
-    }
-    await c.env.LIMITER.put(key, (count + 1).toString(), { expirationTtl: 60 });
-  } catch (err) {
-    console.error('[AUTH RATE LIMIT] Error KV auth:', err);
-  }
-  return next();
-});
-
-// ── Search rate limit ─────────────────────────────────────────────────────────
-
-app.use('/api/search/*', async (c, next) => {
-  if (!c.env.LIMITER) return next();
-  const ip   = c.req.header('CF-Connecting-IP') || 'anonymous';
-  const path = new URL(c.req.url).pathname;
-  try {
-    const key   = `rl_search_${ip}`;
-    const count = parseInt(await c.env.LIMITER.get(key) ?? '0');
-    if (count >= 30) {
-      await logSuspiciousIp(c.env.LIMITER, ip, 'Melewati search rate limit', path);
-      return c.json({ success: false, message: 'Terlalu banyak permintaan pencarian. Tunggu 1 menit.', retry_after: 60 }, 429);
-    }
-    await c.env.LIMITER.put(key, (count + 1).toString(), { expirationTtl: 60 });
-  } catch (err) {
-    console.error('[SEARCH RATE LIMIT] Error KV search:', err);
-  }
-  return next();
-});
+app.use('/api/auth/*',   (c, next) => kvRateLimit(c, next, { key: 'rl_auth_ip_',   max: 5,  ttl: 60, label: 'AUTH RL',   logReason: 'Melewati auth rate limit',   blacklist: true }));
+app.use('/api/search/*', (c, next) => kvRateLimit(c, next, { key: 'rl_search_',    max: 30, ttl: 60, label: 'SEARCH RL', logReason: 'Melewati search rate limit' }));
 
 // ── Honeypot ──────────────────────────────────────────────────────────────────
 
@@ -173,23 +154,29 @@ async function honeypotHandler(c: { req: { header: (k: string) => string | undef
   if (c.env.LIMITER && ip !== 'anonymous') {
     const key = `blacklist_${ip}`;
     if (!await c.env.LIMITER.get(key)) {
-      await c.env.LIMITER.put(key, JSON.stringify({ ip, reason: `Honeypot hit: ${path}`, auto: true, label: 'scanner', created_at: new Date().toISOString() }), { expirationTtl: 86400 });
+      await c.env.LIMITER.put(key, JSON.stringify({
+        ip, reason: `Honeypot hit: ${path}`, auto: true, label: 'scanner', created_at: new Date().toISOString(),
+      }), { expirationTtl: 86400 });
     }
-    await logSuspiciousIp(c.env.LIMITER, ip, `Honeypot hit: scanner detected`, path);
+    await logSuspiciousIp(c.env.LIMITER, ip, 'Honeypot hit: scanner detected', path);
   }
   return c.json({ success: false, message: 'Endpoint tidak ditemukan.' }, 404);
 }
 
 // ── Health & Robots ───────────────────────────────────────────────────────────
 
-app.get('/health', (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }));
+app.get('/health',    (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }));
+app.get('/robots.txt',(c) => c.text([
+  'User-agent: *', 'Allow: /', '',
+  'Disallow: /api/v1/accounts', 'Disallow: /api/v1/reports', 'Disallow: /api/v1/keys',
+  'Disallow: /api/v1/token',    'Disallow: /api/v1/users',   'Disallow: /api/v1/admin',
+  'Disallow: /api/internal', '',
+].join('\n')));
 
-app.get('/robots.txt', (c) => c.text(`User-agent: *\nAllow: /\n\nDisallow: /api/v1/accounts\nDisallow: /api/v1/reports\nDisallow: /api/v1/keys\nDisallow: /api/v1/token\nDisallow: /api/v1/users\nDisallow: /api/v1/admin\nDisallow: /api/internal\n`));
+// ── Honeypot Endpoints ────────────────────────────────────────────────────────
 
-// ── Honeypot endpoints ────────────────────────────────────────────────────────
-
-const HONEYPOT_PATHS = ['/api/v1/accounts', '/api/v1/reports', '/api/v1/keys', '/api/v1/token', '/api/v1/users', '/api/v1/admin', '/api/internal'];
-HONEYPOT_PATHS.forEach(path => app.all(path, honeypotHandler));
+['/api/v1/accounts','/api/v1/reports','/api/v1/keys','/api/v1/token',
+ '/api/v1/users','/api/v1/admin','/api/internal'].forEach(p => app.all(p, honeypotHandler));
 
 // ── Routes ────────────────────────────────────────────────────────────────────
 
