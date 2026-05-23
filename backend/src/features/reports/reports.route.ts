@@ -3,7 +3,7 @@ import { authMiddleware } from '../../core/auth.middleware';
 import { getSupabaseAdmin } from '../../core/supabase';
 import { analyzeChronologyText, analyzeEvidenceImage, AnalysisResult } from '../../core/groq';
 import { verifyTurnstile } from '../../core/turnstile';
-import { sendReportCreatedEmail, sendNewReportAdminEmail } from '../../core/resend';
+import { sendReportCreatedEmail, sendNewReportAdminEmail, sendReportStatusChangedEmail } from '../../core/resend';
 import type { Env } from '../../types';
 
 const reports = new Hono<{
@@ -206,12 +206,18 @@ async function checkReportRateLimit(
   return { blocked: false };
 }
 
+// ── [FIXED] runAiAnalysisAndUpdate — kirim email saat status berubah ke verified ──
+
 async function runAiAnalysisAndUpdate(
   supabase: ReturnType<typeof getSupabaseAdmin>,
   reportId: string,
   sanitizedChronology: string,
   evidenceUrls: string[],
-  groqApiKey: string
+  groqApiKey: string,
+  resendApiKey: string,        // ← tambahan
+  reporterEmail: string | null, // ← tambahan
+  reporterName: string | null,  // ← tambahan
+  targetNumber: string,         // ← tambahan
 ): Promise<void> {
   try {
     const hasPhoto = evidenceUrls.length > 0;
@@ -249,6 +255,18 @@ async function runAiAnalysisAndUpdate(
         .from("reports")
         .update({ status: "verified" })
         .eq("id", reportId);
+
+      // [FIX] Kirim email notifikasi status verified ke user
+      if (reporterEmail) {
+        await sendReportStatusChangedEmail({
+          to: reporterEmail,
+          fullName: reporterName ?? "Pengguna",
+          targetNumber,
+          newStatus: "verified",
+          reportUrl: `https://kawaltransaksi.com/check/${targetNumber}`,
+          apiKey: resendApiKey,
+        }).catch((err) => console.error("[EMAIL] Gagal kirim status verified:", err));
+      }
     }
   } catch {
     // Fail silently — laporan tetap tersimpan dengan status "pending"
@@ -421,13 +439,6 @@ reports.post("/", authMiddleware, async (c) => {
 
     c.executionCtx.waitUntil(
       Promise.all([
-        runAiAnalysisAndUpdate(
-          supabase,
-          reportId,
-          sanitizedChronology,
-          evidenceUrls,
-          c.env.GROQ_API_KEY
-        ),
         (async () => {
           try {
             const { data: profile } = await supabase
@@ -469,8 +480,22 @@ reports.post("/", authMiddleware, async (c) => {
             }
 
             await Promise.all(emailPromises);
-          } catch (emailErr) {
-            console.error("[EMAIL] Error notifikasi:", emailErr);
+
+            // [FIX] Jalankan AI analysis setelah profile sudah diambil,
+            // supaya bisa langsung passing email & nama tanpa query ulang
+            await runAiAnalysisAndUpdate(
+              supabase,
+              reportId,
+              sanitizedChronology,
+              evidenceUrls,
+              c.env.GROQ_API_KEY,
+              c.env.RESEND_API_KEY,
+              profile?.email ?? null,
+              profile?.full_name ?? null,
+              cleanNumber,
+            );
+          } catch (err) {
+            console.error("[EMAIL] Error notifikasi:", err);
           }
         })(),
       ])
@@ -574,7 +599,7 @@ reports.post("/withdraw", authMiddleware, async (c) => {
     const supabase = getSupabaseAdmin(c.env);
     const { data: report, error: fetchError } = await supabase
       .from("reports")
-      .select("id, status, reporter_id")
+      .select("id, status, reporter_id, target_number")
       .eq("id", reportId)
       .eq("reporter_id", userId)
       .single();
@@ -589,6 +614,33 @@ reports.post("/withdraw", authMiddleware, async (c) => {
       .eq("reporter_id", userId);
 
     if (error) throw error;
+
+    // [FIX] Kirim email notifikasi status withdrawn ke user
+    c.executionCtx.waitUntil(
+      (async () => {
+        try {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("full_name, email")
+            .eq("id", userId)
+            .single();
+
+          if (profile?.email) {
+            await sendReportStatusChangedEmail({
+              to: profile.email,
+              fullName: profile.full_name ?? "Pengguna",
+              targetNumber: report.target_number,
+              newStatus: "withdrawn",
+              reportUrl: `https://kawaltransaksi.com/dashboard/laporan/${reportId}`,
+              apiKey: c.env.RESEND_API_KEY,
+            }).catch((err) => console.error("[EMAIL] Gagal kirim status withdrawn:", err));
+          }
+        } catch (err) {
+          console.error("[EMAIL] Error notifikasi withdraw:", err);
+        }
+      })()
+    );
+
     return c.json({ success: true, message: "Laporan berhasil ditarik." });
   } catch {
     return c.json({ success: false, message: "Terjadi kesalahan server." }, 500);
@@ -648,7 +700,7 @@ reports.put("/:reportId", authMiddleware, async (c) => {
     const supabase = getSupabaseAdmin(c.env);
     const { data: report, error: fetchError } = await supabase
       .from("reports")
-      .select("id, status, reporter_id")
+      .select("id, status, reporter_id, target_number")
       .eq("id", reportId)
       .eq("reporter_id", userId)
       .single();
@@ -687,6 +739,33 @@ reports.put("/:reportId", authMiddleware, async (c) => {
       .eq("reporter_id", userId);
 
     if (error) throw error;
+
+    // [FIX] Kirim email notifikasi status pending (resubmit) ke user
+    c.executionCtx.waitUntil(
+      (async () => {
+        try {
+          const { data: profile } = await supabase
+            .from("profiles")
+            .select("full_name, email")
+            .eq("id", userId)
+            .single();
+
+          if (profile?.email) {
+            await sendReportStatusChangedEmail({
+              to: profile.email,
+              fullName: profile.full_name ?? "Pengguna",
+              targetNumber: report.target_number,
+              newStatus: "pending",
+              reportUrl: `https://kawaltransaksi.com/dashboard/laporan/${reportId}`,
+              apiKey: c.env.RESEND_API_KEY,
+            }).catch((err) => console.error("[EMAIL] Gagal kirim status pending:", err));
+          }
+        } catch (err) {
+          console.error("[EMAIL] Error notifikasi resubmit:", err);
+        }
+      })()
+    );
+
     return c.json({ success: true, message: "Laporan berhasil diperbarui." });
   } catch {
     return c.json({ success: false, message: "Terjadi kesalahan server." }, 500);
