@@ -280,7 +280,7 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
   const hasOtherVictims = reports.some(r => r.has_other_victims === "yes");
 
   // Dipindah ke luar render agar tidak dianggap impure
-  const now = Date.now();
+  const now = checkedAt.getTime();
   const thirtyDaysAgo   = new Date(now - 30 * 24 * 60 * 60 * 1000);
   const recentReports   = reports.filter(r => new Date(r.created_at) >= thirtyDaysAgo);
   const uniquePlatforms = Array.from(new Set(reports.map(r => r.platform).filter(Boolean)));

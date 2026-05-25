@@ -81,7 +81,7 @@ export default async function LaporanPage() {
   };
 
   // Dipindah ke luar render agar tidak dianggap impure
-  const now = Date.now();
+  const now = new Date().getTime();
 
   return (
     <div className="min-h-screen bg-zinc-50">
