@@ -170,13 +170,17 @@ function AuthFormInner({ type }: AuthFormProps) {
   );
   const isSubmitDisabled = isLoading || !!oauthLoading || turnstileStatus !== 'ready' || !turnstileToken || isRegisterInvalid || isLocked;
 
+  // ✅ PERUBAHAN ADA DI SINI
   const handleOAuthLogin = async (provider: OAuthProvider) => {
     setOauthLoading(provider);
     setError(null);
     setIsWarning(false);
+    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
     const { error } = await supabase.auth.signInWithOAuth({
       provider,
-      options: { redirectTo: `${window.location.origin}/auth/callback?next=${encodeURIComponent(redirectTo)}` },
+      options: {
+        redirectTo: `${siteUrl}/auth/callback?next=${encodeURIComponent(redirectTo)}`,
+      },
     });
     if (error) { setError(`Gagal masuk dengan ${provider}. Coba lagi.`); setOauthLoading(null); }
   };

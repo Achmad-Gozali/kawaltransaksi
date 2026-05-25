@@ -10,6 +10,11 @@ export async function GET(request: NextRequest) {
   const type = searchParams.get('type');
   const next = searchParams.get('next') ?? searchParams.get('redirectTo') ?? '/';
 
+  // Selalu pakai SITE_URL di production
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL;
+  const isProduction = process.env.NODE_ENV === 'production';
+  const baseUrl = (isProduction && siteUrl) ? siteUrl : origin;
+
   const cookieStore = await cookies();
 
   const supabase = createServerClient(
@@ -37,10 +42,10 @@ export async function GET(request: NextRequest) {
     });
 
     if (!error) {
-      return NextResponse.redirect(`${origin}/reset-kata-sandi`);
+      return NextResponse.redirect(`${baseUrl}/reset-kata-sandi`);
     }
 
-    return NextResponse.redirect(`${origin}/lupa-kata-sandi?error=link_expired`);
+    return NextResponse.redirect(`${baseUrl}/lupa-kata-sandi?error=link_expired`);
   }
 
   // Handle magic link / email verification (token_hash)
@@ -62,15 +67,15 @@ export async function GET(request: NextRequest) {
 
         if (profile?.is_banned === true) {
           await supabase.auth.signOut();
-          return NextResponse.redirect(`${origin}/login?error=banned`);
+          return NextResponse.redirect(`${baseUrl}/login?error=banned`);
         }
 
         if (profile?.role === 'admin') {
-          return NextResponse.redirect(`${origin}/admin`);
+          return NextResponse.redirect(`${baseUrl}/admin`);
         }
       }
 
-      return NextResponse.redirect(`${origin}${next}`);
+      return NextResponse.redirect(`${baseUrl}${next}`);
     }
   }
 
@@ -90,17 +95,17 @@ export async function GET(request: NextRequest) {
 
         if (profile?.is_banned === true) {
           await supabase.auth.signOut();
-          return NextResponse.redirect(`${origin}/login?error=banned`);
+          return NextResponse.redirect(`${baseUrl}/login?error=banned`);
         }
 
         if (profile?.role === 'admin') {
-          return NextResponse.redirect(`${origin}/admin`);
+          return NextResponse.redirect(`${baseUrl}/admin`);
         }
       }
 
-      return NextResponse.redirect(`${origin}${next}`);
+      return NextResponse.redirect(`${baseUrl}${next}`);
     }
   }
 
-  return NextResponse.redirect(`${origin}/login?error=oauth_failed`);
+  return NextResponse.redirect(`${baseUrl}/login?error=oauth_failed`);
 }
