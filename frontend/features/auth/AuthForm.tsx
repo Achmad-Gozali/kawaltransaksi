@@ -172,18 +172,24 @@ function AuthFormInner({ type }: AuthFormProps) {
 
   // [OK] PERUBAHAN ADA DI SINI
   const handleOAuthLogin = async (provider: OAuthProvider) => {
-    setOauthLoading(provider);
-    setError(null);
-    setIsWarning(false);
-    const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
-    const { error } = await supabase.auth.signInWithOAuth({
-      provider,
-      options: {
-        redirectTo: `${siteUrl}/auth/callback?next=${encodeURIComponent(redirectTo)}`,
-      },
-    });
-    if (error) { setError(`Gagal masuk dengan ${provider}. Coba lagi.`); setOauthLoading(null); }
-  };
+  setOauthLoading(provider);
+  setError(null);
+  setIsWarning(false);
+  
+  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+  
+  const params = new URLSearchParams({
+    client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
+    redirect_uri: `${siteUrl}/auth/callback`,
+    response_type: 'code',
+    scope: 'openid email profile',
+    access_type: 'offline',
+    prompt: 'select_account',
+    state: redirectTo,
+  });
+
+  window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+};
 
   const handleResend = async () => {
     setIsLoading(true);
