@@ -27,7 +27,7 @@ robot.post('/evaluate/:reportId', async (c) => {
     .from('reports').select('*').eq('id', c.req.param('reportId')).single();
   if (error || !report) return c.json({ success: false, message: 'Laporan tidak ditemukan.' }, 404);
   const result = await scoreReport(report as RobotReport, supabase);
-  await applyVerdict(report.id, result, supabase);
+  await applyVerdict(report.id, result, supabase, report.status);  // ← pass existing status
   return c.json({ success: true, data: result });
 });
 
@@ -113,6 +113,46 @@ robot.post('/run-trends', async (c) => {
   return c.json({ success: true, data: result });
 });
 
+// ── POST /api/robot/backfill ──────────────────────────────────────────────────
+
+robot.post('/backfill', async (c) => {
+  if (!isInternal(c)) return c.json({ success: false, message: 'Akses ditolak.' }, 403);
+
+  const supabase = getSupabaseAdmin(c.env);
+  const stats = { processed: 0, verified: 0, rejected: 0, skipped: 0, errors: 0 };
+
+  const { data: reports } = await supabase
+    .from('reports')
+    .select('*')
+    .eq('status', 'verified')
+    .eq('robot_status', 'pending')
+    .order('created_at', { ascending: true });
+
+  if (!reports?.length) {
+    return c.json({ success: true, message: 'Tidak ada laporan yang perlu diproses.', data: stats });
+  }
+
+  for (const report of reports) {
+    try {
+      const result = await scoreReport(report as RobotReport, supabase);
+      await applyVerdict(report.id, result, supabase, report.status);  // ← pass existing status
+      stats.processed++;
+      if (result.verdict === 'verified') stats.verified++;
+      if (result.verdict === 'rejected') stats.rejected++;
+      if (result.verdict === 'pending')  stats.skipped++;  // ← robot belum confident, status tetap
+    } catch (err) {
+      console.error(`[BACKFILL] Error evaluasi ${report.id}:`, err);
+      stats.errors++;
+      await writeLog({ action: 'evaluate', report_id: report.id, error: String(err) }, supabase).catch(() => {});
+    }
+  }
+
+  await writeLog({ action: 'scheduler', reasons: [{ ...stats, source: 'backfill' }] }, supabase).catch(() => {});
+  console.log('[BACKFILL] Selesai:', stats);
+
+  return c.json({ success: true, data: stats });
+});
+
 // ── Scheduler ────────────────────────────────────────────────────────────────
 
 export async function runScheduler(
@@ -135,7 +175,7 @@ export async function runScheduler(
       const start = Date.now();
       try {
         const result = await scoreReport(report as RobotReport, supabase);
-        await applyVerdict(report.id, result, supabase);
+        await applyVerdict(report.id, result, supabase, report.status);  // ← pass existing status
         stats.processed++;
         if (result.verdict === 'verified') stats.verified++;
         if (result.verdict === 'rejected') stats.rejected++;

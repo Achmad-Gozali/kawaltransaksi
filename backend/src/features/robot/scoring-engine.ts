@@ -131,7 +131,8 @@ export async function scoreReport(
 export async function applyVerdict(
   reportId: string,
   result: ScoringResult,
-  supabase: ReturnType<typeof getSupabaseAdmin>
+  supabase: ReturnType<typeof getSupabaseAdmin>,
+  existingStatus?: string  // ← status laporan sebelum robot evaluasi
 ): Promise<void> {
   const updateData: Record<string, unknown> = {
     robot_score:      result.score,
@@ -140,8 +141,18 @@ export async function applyVerdict(
     robot_reasons:    result.reasons,
   };
 
-  if (result.verdict === 'verified') updateData.status = 'verified';
-  if (result.verdict === 'rejected') updateData.status = 'rejected';
+  // Kalau robot verdict 'verified' → upgrade status ke verified
+  if (result.verdict === 'verified') {
+    updateData.status = 'verified';
+  }
+
+  // Kalau robot verdict 'rejected' → HANYA reject kalau belum verified manual
+  // Jangan downgrade laporan yang udah diverifikasi manusia
+  if (result.verdict === 'rejected' && existingStatus !== 'verified') {
+    updateData.status = 'rejected';
+  }
+
+  // Kalau robot verdict 'pending' → status laporan TIDAK diubah (biarkan existing)
 
   const { data: report } = await supabase
     .from('reports').update(updateData).eq('id', reportId).select('target_number').single();
@@ -177,6 +188,6 @@ export async function reEvaluateByNumber(
 
   for (const report of relatedReports) {
     const result = await scoreReport(report as RobotReport, supabase);
-    await applyVerdict(report.id, result, supabase);
+    await applyVerdict(report.id, result, supabase, report.status);  // ← pass existing status
   }
 }
