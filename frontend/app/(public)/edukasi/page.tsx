@@ -181,7 +181,7 @@ export default function EdukasiPage() {
         </div>
       </section>
 
-      {/* Wave: slate-50 -> putih */}
+      {/* Wave: slate-50 &rarr; putih */}
       <svg viewBox="0 0 1440 50" preserveAspectRatio="none" className="w-full block bg-slate-50 -mb-1" xmlns="http://www.w3.org/2000/svg">
         <path d="M0,50 C360,10 720,40 1080,15 C1260,2 1380,30 1440,20 L1440,50 Z" fill="#ffffff" />
       </svg>

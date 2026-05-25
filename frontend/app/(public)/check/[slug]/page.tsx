@@ -534,7 +534,7 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
                         </p>
                       </div>
                       <span className={`text-xs font-semibold whitespace-nowrap ${linkedHasVerified ? "text-red-600 group-hover:text-red-800" : "text-amber-700 group-hover:text-amber-900"}`}>
-                        Lihat ->
+                        Lihat &rarr;
                       </span>
                     </a>
                   ))}
@@ -613,7 +613,7 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
                               {[entry.bank ? entry.bank : (typeLabel[entry.type] ?? "Nomor HP"), entry.name ? `a.n. ${entry.name}` : null].filter(Boolean).join(" - ")}
                             </p>
                           </div>
-                          <span className="text-xs text-emerald-600 font-semibold group-hover:underline whitespace-nowrap">Cek -></span>
+                          <span className="text-xs text-emerald-600 font-semibold group-hover:underline whitespace-nowrap">Cek &rarr;</span>
                         </a>
                       ))}
                     </div>

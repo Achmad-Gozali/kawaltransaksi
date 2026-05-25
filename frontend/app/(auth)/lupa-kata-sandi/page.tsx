@@ -127,7 +127,7 @@ function LupaKataSandiContent() {
                     href="/login"
                     className="text-sm text-gray-500 hover:text-gray-800 transition-colors"
                   >
-                    <- Kembali ke Login
+                    &larr; Kembali ke Login
                   </Link>
                 </div>
               </div>

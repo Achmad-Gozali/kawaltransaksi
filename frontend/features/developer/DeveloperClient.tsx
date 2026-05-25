@@ -516,7 +516,7 @@ if (remaining < 30) {
                     version: 'v1.2', date: '19 Mei 2026',
                     badge: 'bg-emerald-50 text-emerald-700 border-emerald-200', label: 'Terbaru',
                     changes: [
-                      'Limit dinaikkan dari 100 -> 300 request/hari',
+                      'Limit dinaikkan dari 100 &rarr; 300 request/hari',
                       'Tambah dukungan Idempotency-Key untuk deduplication request',
                       'API key sekarang punya environment: live dan test',
                       'Format key baru: kt_live_... dan kt_test_...',

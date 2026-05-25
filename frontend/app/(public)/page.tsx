@@ -423,7 +423,7 @@ export default async function HomePage() {
               href={lihatSemuaHref}
               className="text-xs font-bold text-slate-500 uppercase tracking-widest hover:text-emerald-700 transition-colors whitespace-nowrap"
             >
-              lihat semua ->
+              lihat semua &rarr;
             </Link>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">

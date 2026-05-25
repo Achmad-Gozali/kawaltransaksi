@@ -145,7 +145,7 @@ export default async function LaporanPublikPage({
   const perPage = 12;
 
   // [OK] OPTIMIZED: 2 RPC call parallel, gantiin fetch semua data + grouping di JS
-  // Sebelumnya: fetch semua rows -> grouping di server memory -> slice untuk pagination
+  // Sebelumnya: fetch semua rows &rarr; grouping di server memory &rarr; slice untuk pagination
   // Sesudahnya: DB yang grouping + paginate, server terima data yang sudah siap
   const [laporanResult, statsResult] = await Promise.all([
     supabase.rpc("get_laporan_publik", {
@@ -439,11 +439,11 @@ export default async function LaporanPublikPage({
                     scroll={false}
                     className="px-3 py-2 text-xs font-bold border border-slate-200 rounded-lg hover:border-slate-400 hover:bg-slate-50 transition-all"
                   >
-                    <-
+                    &larr;
                   </Link>
                 ) : (
                   <span className="px-3 py-2 text-xs font-bold border border-slate-100 rounded-lg text-slate-300 cursor-not-allowed">
-                    <-
+                    &larr;
                   </span>
                 )}
 
@@ -477,11 +477,11 @@ export default async function LaporanPublikPage({
                     scroll={false}
                     className="px-3 py-2 text-xs font-bold border border-slate-200 rounded-lg hover:border-slate-400 hover:bg-slate-50 transition-all"
                   >
-                    ->
+                    &rarr;
                   </Link>
                 ) : (
                   <span className="px-3 py-2 text-xs font-bold border border-slate-100 rounded-lg text-slate-300 cursor-not-allowed">
-                    ->
+                    &rarr;
                   </span>
                 )}
               </div>

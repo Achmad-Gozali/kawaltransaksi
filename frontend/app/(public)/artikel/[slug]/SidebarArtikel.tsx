@@ -44,7 +44,7 @@ export default function SidebarArtikel({ articles }: { articles: Article[] }) {
         </div>
         <div className="mt-4 pt-4 border-t border-slate-200">
           <Link href="/artikel" className="block text-center text-[10px] font-bold text-emerald-600 hover:text-emerald-700 transition-colors">
-            Lihat semua artikel ->
+            Lihat semua artikel &rarr;
           </Link>
         </div>
       </div>
