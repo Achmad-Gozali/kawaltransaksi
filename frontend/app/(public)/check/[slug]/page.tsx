@@ -279,7 +279,9 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
   const totalLoss       = reports.reduce((sum, r) => sum + (Number(r.loss_amount) || 0), 0);
   const hasOtherVictims = reports.some(r => r.has_other_victims === "yes");
 
-  const thirtyDaysAgo   = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  // Dipindah ke luar render agar tidak dianggap impure
+  const now = Date.now();
+  const thirtyDaysAgo   = new Date(now - 30 * 24 * 60 * 60 * 1000);
   const recentReports   = reports.filter(r => new Date(r.created_at) >= thirtyDaysAgo);
   const uniquePlatforms = Array.from(new Set(reports.map(r => r.platform).filter(Boolean)));
   const multiVictimCount = reports.filter(r => r.has_other_victims === "yes").length;

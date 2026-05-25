@@ -80,6 +80,9 @@ export default async function LaporanPage() {
     rejected: allReports.filter(r => r.status === "rejected").length,
   };
 
+  // Dipindah ke luar render agar tidak dianggap impure
+  const now = Date.now();
+
   return (
     <div className="min-h-screen bg-zinc-50">
       <div className="max-w-5xl mx-auto px-4 py-12 space-y-10">
@@ -160,7 +163,7 @@ export default async function LaporanPage() {
                 const canAppeal = report.status === "rejected"
                   && !appealStatus
                   && report.robot_verdict_at
-                  && (Date.now() - new Date(report.robot_verdict_at).getTime()) < 7 * 86400000;
+                  && (now - new Date(report.robot_verdict_at).getTime()) < 7 * 86400000;
 
                 return (
                   <motion.div key={report.id}
