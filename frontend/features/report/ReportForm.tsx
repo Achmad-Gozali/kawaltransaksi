@@ -3,18 +3,12 @@
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { createClient } from '@/core/supabase/browser';
-import {
-  Loader2, AlertCircle, CheckCircle2, Send,
-  ArrowLeft, ArrowRight,
-} from 'lucide-react';
+import { Loader2, AlertCircle, CheckCircle2, Send, ArrowLeft, ArrowRight } from 'lucide-react';
 import * as motion from 'motion/react-client';
 import { uploadToStorage } from '@/core/storage/upload';
 
 import { STEPS, MAX_TARGET_NUMBERS, MAX_EVIDENCE_FILES } from '@/features/report/constants';
-import type {
-  TargetEntry, EvidenceFile, TextAnalysis,
-  ReportFormData, PhotoScanPayload, AnalysisResult,
-} from '@/features/report/types';
+import type { TargetEntry, EvidenceFile, ReportFormData } from '@/features/report/types';
 import { Step1DataPenipu } from '@/features/report/steps/Step1DataPenipu';
 import { Step2Kronologi } from '@/features/report/steps/Step2Kronologi';
 import { Step3BuktiKirim } from '@/features/report/steps/Step3BuktiKirim';
@@ -36,17 +30,10 @@ const defaultEntry = (): TargetEntry => ({
 });
 
 const defaultFormData = (): ReportFormData => ({
-  category: 'Jual Beli Online',
-  chronology: '',
-  loss_amount: '',
-  incident_date: '',
-  platform: '',
-  link_url: '',
-  social_media_accounts: [''],
-  has_other_victims: '',
-  reported_to: [],
-  store_name: '',
-  suspect_city: '',
+  category: 'Jual Beli Online', chronology: '', loss_amount: '',
+  incident_date: '', platform: '', link_url: '',
+  social_media_accounts: [''], has_other_victims: '',
+  reported_to: [], store_name: '', suspect_city: '',
 });
 
 export default function ReportForm() {
@@ -64,280 +51,130 @@ export default function ReportForm() {
   // Form state
   const [targets, setTargets] = useState<TargetEntry[]>([defaultEntry()]);
   const [formData, setFormData] = useState<ReportFormData>(defaultFormData());
-
-  // Evidence & photos
   const [evidenceFiles, setEvidenceFiles] = useState<EvidenceFile[]>([]);
   const [suspectPhoto, setSuspectPhoto] = useState<File | null>(null);
   const [suspectPhotoPreview, setSuspectPhotoPreview] = useState<string | null>(null);
 
-  // AI analysis
-  const [textAnalysis, setTextAnalysis] = useState<TextAnalysis | null>(null);
-  const [isAnalyzingText, setIsAnalyzingText] = useState(false);
-  const [isAnalyzingAll, setIsAnalyzingAll] = useState(false);
-
   // ── Target handlers ────────────────────────────────────────────────────────
   const updateTarget = (index: number, updated: TargetEntry) =>
-    setTargets((prev) => prev.map((t, i) => (i === index ? updated : t)));
-
+    setTargets(prev => prev.map((t, i) => i === index ? updated : t));
   const addTarget = () => {
-    if (targets.length >= MAX_TARGET_NUMBERS) return;
-    setTargets((prev) => [...prev, defaultEntry()]);
+    if (targets.length < MAX_TARGET_NUMBERS) setTargets(prev => [...prev, defaultEntry()]);
   };
-
-  const removeTarget = (index: number) =>
-    setTargets((prev) => prev.filter((_, i) => i !== index));
+  const removeTarget = (index: number) => setTargets(prev => prev.filter((_, i) => i !== index));
 
   // ── Social media handlers ──────────────────────────────────────────────────
   const addSocialField = () =>
-    setFormData((f) => ({ ...f, social_media_accounts: [...f.social_media_accounts, ''] }));
-
+    setFormData(f => ({ ...f, social_media_accounts: [...f.social_media_accounts, ''] }));
   const removeSocialField = (i: number) =>
-    setFormData((f) => ({
-      ...f,
-      social_media_accounts: f.social_media_accounts.filter((_: string, idx: number) => idx !== i),
-    }));
-
+    setFormData(f => ({ ...f, social_media_accounts: f.social_media_accounts.filter((_, idx) => idx !== i) }));
   const updateSocialField = (i: number, val: string) =>
-    setFormData((f) => {
-      const arr = [...f.social_media_accounts];
-      arr[i] = val;
-      return { ...f, social_media_accounts: arr };
-    });
-
+    setFormData(f => { const arr = [...f.social_media_accounts]; arr[i] = val; return { ...f, social_media_accounts: arr }; });
   const toggleReportedTo = (val: string) =>
-    setFormData((f) => ({
+    setFormData(f => ({
       ...f,
       reported_to: f.reported_to.includes(val)
-        ? f.reported_to.filter((v: string) => v !== val)
+        ? f.reported_to.filter(v => v !== val)
         : [...f.reported_to, val],
     }));
 
   // ── Suspect photo handlers ─────────────────────────────────────────────────
   const handleSuspectPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0] || null;
-    if (selected && selected.size > 5 * 1024 * 1024) {
-      setError('Ukuran foto melebihi 5MB.');
-      return;
-    }
+    if (selected && selected.size > 5 * 1024 * 1024) { setError('Ukuran foto melebihi 5MB.'); return; }
     setSuspectPhoto(selected);
     if (selected) {
       const reader = new FileReader();
       reader.onloadend = () => setSuspectPhotoPreview(reader.result as string);
       reader.readAsDataURL(selected);
-    } else {
-      setSuspectPhotoPreview(null);
-    }
+    } else { setSuspectPhotoPreview(null); }
   };
-
-  const removeSuspectPhoto = () => {
-    setSuspectPhoto(null);
-    setSuspectPhotoPreview(null);
-  };
+  const removeSuspectPhoto = () => { setSuspectPhoto(null); setSuspectPhotoPreview(null); };
 
   // ── Evidence file handlers ─────────────────────────────────────────────────
   const handleEvidenceFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
-    const remaining = MAX_EVIDENCE_FILES - evidenceFiles.length;
-    const toAdd = files.slice(0, remaining);
-    const oversized = toAdd.filter((f) => f.size > 5 * 1024 * 1024);
-    if (oversized.length > 0) {
-      setError(`${oversized.length} file melebihi batas 5MB.`);
-      return;
-    }
-    toAdd.forEach((file) => {
+    const toAdd = files.slice(0, MAX_EVIDENCE_FILES - evidenceFiles.length);
+    const oversized = toAdd.filter(f => f.size > 5 * 1024 * 1024);
+    if (oversized.length > 0) { setError(`${oversized.length} file melebihi batas 5MB.`); return; }
+    toAdd.forEach(file => {
       const reader = new FileReader();
       reader.onloadend = () =>
-        setEvidenceFiles((prev) => [
-          ...prev,
-          { file, preview: reader.result as string, analysis: null, isAnalyzing: false },
-        ]);
+        setEvidenceFiles(prev => [...prev, { file, preview: reader.result as string }]);
       reader.readAsDataURL(file);
     });
     e.target.value = '';
   };
-
   const removeEvidenceFile = (index: number) =>
-    setEvidenceFiles((prev) => prev.filter((_, i) => i !== index));
-
-  // ── AI handlers ────────────────────────────────────────────────────────────
-  const handleAIImageAnalysis = async (index: number) => {
-    const item = evidenceFiles[index];
-    if (!item) return;
-    setEvidenceFiles((prev) =>
-      prev.map((f, i) => (i === index ? { ...f, isAnalyzing: true } : f))
-    );
-    try {
-      const token = await getAuthToken();
-      if (!token) { setError('Sesi habis. Silakan login ulang.'); return; }
-      const fd = new FormData();
-      fd.append('file', item.file);
-      const res = await fetch(`${BACKEND_URL}/api/reports/analyze/image`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: fd,
-      });
-      const result = await res.json();
-      if (result.success && result.data) {
-        setEvidenceFiles((prev) =>
-          prev.map((f, i) =>
-            i === index ? { ...f, analysis: result.data as AnalysisResult, isAnalyzing: false } : f
-          )
-        );
-      } else {
-        setError(result.message || 'Gagal menganalisis gambar.');
-        setEvidenceFiles((prev) =>
-          prev.map((f, i) => (i === index ? { ...f, isAnalyzing: false } : f))
-        );
-      }
-    } catch {
-      setError('Gagal menganalisis gambar.');
-      setEvidenceFiles((prev) =>
-        prev.map((f, i) => (i === index ? { ...f, isAnalyzing: false } : f))
-      );
-    }
-  };
-
-  const handleAnalyzeAll = async () => {
-    setIsAnalyzingAll(true);
-    for (let i = 0; i < evidenceFiles.length; i++) {
-      if (!evidenceFiles[i].analysis) {
-        await handleAIImageAnalysis(i);
-      }
-    }
-    setIsAnalyzingAll(false);
-  };
-
-  const handleAITextAnalysis = async () => {
-    if (formData.chronology.trim().length < 20) return;
-    setIsAnalyzingText(true);
-    try {
-      const token = await getAuthToken();
-      if (!token) { setError('Sesi habis.'); return; }
-      const res = await fetch(`${BACKEND_URL}/api/reports/analyze/text`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
-        body: JSON.stringify({ chronology: formData.chronology }),
-      });
-      const result = await res.json();
-      if (result.success) setTextAnalysis(result.data as TextAnalysis);
-      else setError(result.message || 'Gagal menganalisis.');
-    } catch {
-      setError('Gagal menganalisis kronologi.');
-    } finally {
-      setIsAnalyzingText(false);
-    }
-  };
+    setEvidenceFiles(prev => prev.filter((_, i) => i !== index));
 
   // ── Navigation ─────────────────────────────────────────────────────────────
   const handleNextStep = () => {
     setError(null);
     if (currentStep === 1) {
-      if (!targets[0].number.trim()) {
-        setError('Nomor HP atau rekening utama wajib diisi.');
-        return;
-      }
-      const emptyAdditional = targets.slice(1).some((t) => !t.number.trim());
-      if (emptyAdditional) {
-        setError('Nomor tambahan yang ditambahkan wajib diisi, atau hapus jika tidak perlu.');
-        return;
+      if (!targets[0].number.trim()) { setError('Nomor HP atau rekening utama wajib diisi.'); return; }
+      if (targets.slice(1).some(t => !t.number.trim())) {
+        setError('Nomor tambahan yang ditambahkan wajib diisi, atau hapus jika tidak perlu.'); return;
       }
     }
     if (currentStep === 2 && formData.chronology.trim().length < 20) {
-      setError('Kronologi minimal 20 karakter.');
-      return;
+      setError('Kronologi minimal 20 karakter.'); return;
     }
-    setCurrentStep((s) => Math.min(s + 1, 3));
+    setCurrentStep(s => Math.min(s + 1, 3));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const handlePrevStep = () => {
     setError(null);
-    setCurrentStep((s) => Math.max(s - 1, 1));
+    setCurrentStep(s => Math.max(s - 1, 1));
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   // ── Submit ─────────────────────────────────────────────────────────────────
   const handleSubmit = async () => {
-    if (!turnstileToken) {
-      setError('Selesaikan verifikasi keamanan terlebih dahulu.');
-      return;
-    }
+    if (!turnstileToken) { setError('Selesaikan verifikasi keamanan terlebih dahulu.'); return; }
     setIsLoading(true);
     setError(null);
     setUploadProgress(null);
 
     try {
       const token = await getAuthToken();
-      if (!token) {
-        setError('Sesi habis. Silakan login ulang.');
-        setIsLoading(false);
-        return;
-      }
+      if (!token) { setError('Sesi habis. Silakan login ulang.'); setIsLoading(false); return; }
 
+      // Upload bukti
       const uploadedUrls: string[] = [];
       for (let i = 0; i < evidenceFiles.length; i++) {
         setUploadProgress(`Mengupload foto ${i + 1} dari ${evidenceFiles.length}...`);
-        try {
-          uploadedUrls.push(await uploadToStorage(evidenceFiles[i].file));
-        } catch (err) {
-          setError(err instanceof Error ? err.message : 'Gagal upload foto.');
-          setIsLoading(false);
-          return;
-        }
+        try { uploadedUrls.push(await uploadToStorage(evidenceFiles[i].file)); }
+        catch (err) { setError(err instanceof Error ? err.message : 'Gagal upload foto.'); setIsLoading(false); return; }
       }
 
+      // Upload foto tersangka
       let suspectPhotoUrl: string | null = null;
       if (suspectPhoto) {
         setUploadProgress('Mengupload foto profil penipu...');
-        try {
-          suspectPhotoUrl = await uploadToStorage(suspectPhoto);
-        } catch (err) {
-          setError(err instanceof Error ? err.message : 'Gagal upload foto profil.');
-          setIsLoading(false);
-          return;
-        }
+        try { suspectPhotoUrl = await uploadToStorage(suspectPhoto); }
+        catch (err) { setError(err instanceof Error ? err.message : 'Gagal upload foto profil.'); setIsLoading(false); return; }
       }
-
-      const scannedFile = evidenceFiles.find((f) => f.analysis !== null);
-      const aiPhotoResult: PhotoScanPayload | null = scannedFile?.analysis
-        ? {
-            authenticity_score: scannedFile.analysis.authenticity_score,
-            relevance_score: scannedFile.analysis.relevance_score,
-            has_concrete_evidence: scannedFile.analysis.has_concrete_evidence,
-            is_likely_authentic: scannedFile.analysis.is_likely_authentic,
-          }
-        : null;
 
       const primary = targets[0];
       const providerName =
-        primary.type === 'bank_account'
-          ? primary.bank_name
-          : primary.type === 'ewallet'
-          ? primary.ewallet_name
-          : null;
+        primary.type === 'bank_account' ? primary.bank_name :
+        primary.type === 'ewallet' ? primary.ewallet_name : null;
 
       const allNumbers = targets
-        .map((t) => ({
-          number: t.number.trim(),
-          type: t.type,
-          bank:
-            t.type === 'bank_account'
-              ? t.bank_name || null
-              : t.type === 'ewallet'
-              ? t.ewallet_name || null
-              : null,
+        .map(t => ({
+          number: t.number.trim(), type: t.type,
+          bank: t.type === 'bank_account' ? t.bank_name || null : t.type === 'ewallet' ? t.ewallet_name || null : null,
           name: t.name.trim() || null,
         }))
-        .filter((t) => t.number.length > 0);
+        .filter(t => t.number.length > 0);
 
       setUploadProgress('Mengirim laporan...');
       const res = await fetch(`${BACKEND_URL}/api/reports`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
+        headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
         body: JSON.stringify({
           target_number: primary.number,
           target_name: primary.name || null,
@@ -348,13 +185,10 @@ export default function ReportForm() {
           chronology: formData.chronology,
           evidence_url: uploadedUrls[0] || null,
           evidence_urls: uploadedUrls,
-          loss_amount: formData.loss_amount
-            ? parseInt(formData.loss_amount.replace(/\D/g, ''), 10)
-            : null,
+          loss_amount: formData.loss_amount ? parseInt(formData.loss_amount.replace(/\D/g, ''), 10) : null,
           incident_date: formData.incident_date || null,
           platform: formData.platform || null,
           link_url: formData.link_url || null,
-          ai_photo_result: aiPhotoResult,
           social_media_accounts: formData.social_media_accounts.filter(Boolean),
           has_other_victims: formData.has_other_victims || null,
           reported_to: formData.reported_to,
@@ -404,31 +238,21 @@ export default function ReportForm() {
           return (
             <React.Fragment key={step.number}>
               <div className="flex flex-col items-center gap-1.5">
-                <div
-                  className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300 ${
-                    isDone
-                      ? 'bg-emerald-500 text-white shadow-sm shadow-emerald-200'
-                      : isActive
-                      ? 'bg-slate-900 text-white'
-                      : 'bg-white text-slate-300 border-2 border-slate-100'
-                  }`}
-                >
+                <div className={`w-9 h-9 rounded-full flex items-center justify-center text-sm font-bold transition-all duration-300 ${
+                  isDone ? 'bg-emerald-500 text-white shadow-sm shadow-emerald-200'
+                  : isActive ? 'bg-slate-900 text-white'
+                  : 'bg-white text-slate-300 border-2 border-slate-100'
+                }`}>
                   {isDone ? <CheckCircle2 className="w-4 h-4" /> : step.number}
                 </div>
-                <span
-                  className={`text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap transition-colors ${
-                    isActive ? 'text-slate-900' : isDone ? 'text-emerald-500' : 'text-slate-300'
-                  }`}
-                >
+                <span className={`text-[10px] font-semibold uppercase tracking-wide whitespace-nowrap transition-colors ${
+                  isActive ? 'text-slate-900' : isDone ? 'text-emerald-500' : 'text-slate-300'
+                }`}>
                   {step.label}
                 </span>
               </div>
               {i < STEPS.length - 1 && (
-                <div
-                  className={`flex-1 h-px mx-1 transition-all duration-500 ${
-                    currentStep > step.number ? 'bg-emerald-400' : 'bg-slate-200'
-                  }`}
-                />
+                <div className={`flex-1 h-px mx-1 transition-all duration-500 ${currentStep > step.number ? 'bg-emerald-400' : 'bg-slate-200'}`} />
               )}
             </React.Fragment>
           );
@@ -445,75 +269,35 @@ export default function ReportForm() {
 
       {/* Steps */}
       {currentStep === 1 && (
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-        >
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
           <Step1DataPenipu
-            targets={targets}
-            formData={formData}
-            suspectPhotoPreview={suspectPhotoPreview}
-            onUpdateTarget={updateTarget}
-            onAddTarget={addTarget}
-            onRemoveTarget={removeTarget}
-            onFormDataChange={setFormData}
-            onSuspectPhotoChange={handleSuspectPhotoChange}
-            onRemoveSuspectPhoto={removeSuspectPhoto}
-            onAddSocialField={addSocialField}
-            onRemoveSocialField={removeSocialField}
-            onUpdateSocialField={updateSocialField}
+            targets={targets} formData={formData} suspectPhotoPreview={suspectPhotoPreview}
+            onUpdateTarget={updateTarget} onAddTarget={addTarget} onRemoveTarget={removeTarget}
+            onFormDataChange={setFormData} onSuspectPhotoChange={handleSuspectPhotoChange}
+            onRemoveSuspectPhoto={removeSuspectPhoto} onAddSocialField={addSocialField}
+            onRemoveSocialField={removeSocialField} onUpdateSocialField={updateSocialField}
             onToggleReportedTo={toggleReportedTo}
           />
         </motion.div>
       )}
 
       {currentStep === 2 && (
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-        >
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
           <Step2Kronologi
             chronology={formData.chronology}
-            textAnalysis={textAnalysis}
-            isAnalyzingText={isAnalyzingText}
-            onChronologyChange={(val: string) =>
-              setFormData((f) => ({ ...f, chronology: val }))
-            }
-            onAnalyzeText={handleAITextAnalysis}
+            onChronologyChange={(val) => setFormData(f => ({ ...f, chronology: val }))}
           />
         </motion.div>
       )}
 
       {currentStep === 3 && (
-        <motion.div
-          initial={{ opacity: 0, y: 16 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.3 }}
-        >
+        <motion.div initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
           <Step3BuktiKirim
-            evidenceFiles={evidenceFiles}
-            turnstileStatus={turnstileStatus}
-            isAnalyzingAll={isAnalyzingAll}
-            onEvidenceFileChange={handleEvidenceFileChange}
-            onRemoveEvidenceFile={removeEvidenceFile}
-            onAnalyzeAll={handleAnalyzeAll}
-            onTurnstileSuccess={(token: string) => {
-              setTurnstileToken(token);
-              setTurnstileStatus('success');
-              setError(null);
-            }}
-            onTurnstileExpire={() => {
-              setTurnstileToken(null);
-              setTurnstileStatus('idle');
-              setError('Verifikasi kedaluwarsa. Silakan ulangi.');
-            }}
-            onTurnstileError={() => {
-              setTurnstileToken(null);
-              setTurnstileStatus('error');
-              setError('Widget keamanan gagal dimuat. Coba refresh halaman.');
-            }}
+            evidenceFiles={evidenceFiles} turnstileStatus={turnstileStatus}
+            onEvidenceFileChange={handleEvidenceFileChange} onRemoveEvidenceFile={removeEvidenceFile}
+            onTurnstileSuccess={(token) => { setTurnstileToken(token); setTurnstileStatus('success'); setError(null); }}
+            onTurnstileExpire={() => { setTurnstileToken(null); setTurnstileStatus('idle'); setError('Verifikasi kedaluwarsa. Silakan ulangi.'); }}
+            onTurnstileError={() => { setTurnstileToken(null); setTurnstileStatus('error'); setError('Widget keamanan gagal dimuat. Coba refresh halaman.'); }}
           />
         </motion.div>
       )}
@@ -521,34 +305,20 @@ export default function ReportForm() {
       {/* Navigation */}
       <div className={`flex gap-3 ${currentStep === 1 ? 'justify-end' : 'justify-between'}`}>
         {currentStep > 1 && (
-          <button
-            type="button"
-            onClick={handlePrevStep}
-            className="flex items-center gap-2 px-6 py-3 border border-slate-200 text-slate-600 text-sm font-semibold rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all active:scale-95"
-          >
+          <button type="button" onClick={handlePrevStep}
+            className="flex items-center gap-2 px-6 py-3 border border-slate-200 text-slate-600 text-sm font-semibold rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all active:scale-95">
             <ArrowLeft className="w-4 h-4" /> Kembali
           </button>
         )}
         {currentStep < 3 ? (
-          <button
-            type="button"
-            onClick={handleNextStep}
-            className="flex items-center gap-2 px-8 py-3 bg-slate-900 text-white text-sm font-semibold rounded-xl hover:bg-slate-800 transition-all active:scale-95"
-          >
+          <button type="button" onClick={handleNextStep}
+            className="flex items-center gap-2 px-8 py-3 bg-slate-900 text-white text-sm font-semibold rounded-xl hover:bg-slate-800 transition-all active:scale-95">
             Lanjut <ArrowRight className="w-4 h-4" />
           </button>
         ) : (
-          <button
-            type="button"
-            onClick={handleSubmit}
-            disabled={isLoading || !turnstileToken}
-            className="flex items-center gap-2 px-8 py-3 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold rounded-xl transition-all disabled:opacity-50 active:scale-95 shadow-sm shadow-emerald-200"
-          >
-            {isLoading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
-            ) : (
-              <Send className="w-4 h-4" />
-            )}
+          <button type="button" onClick={handleSubmit} disabled={isLoading || !turnstileToken}
+            className="flex items-center gap-2 px-8 py-3 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold rounded-xl transition-all disabled:opacity-50 active:scale-95 shadow-sm shadow-emerald-200">
+            {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
             {uploadProgress ?? 'Kirim Laporan'}
           </button>
         )}
@@ -556,7 +326,7 @@ export default function ReportForm() {
 
       {currentStep === 3 && (
         <p className="text-center text-xs text-slate-300 uppercase tracking-widest font-medium pb-4">
-          Laporan divalidasi tim moderator · Identitas pelapor terlindungi
+          Laporan divalidasi sistem · Identitas pelapor terlindungi
         </p>
       )}
     </div>

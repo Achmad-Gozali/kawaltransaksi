@@ -8,35 +8,9 @@ export interface TargetEntry {
   ewallet_name: string;
 }
 
-export interface AnalysisResult {
-  authenticity_score: number;
-  relevance_score: number;
-  has_concrete_evidence: boolean;
-  is_likely_authentic: boolean;
-  summary: string;
-  red_flags: string[];
-}
-
 export interface EvidenceFile {
   file: File;
   preview: string;
-  analysis: AnalysisResult | null;
-  isAnalyzing: boolean;
-}
-
-export type PhotoScanPayload = Pick<
-  AnalysisResult,
-  | 'authenticity_score'
-  | 'relevance_score'
-  | 'has_concrete_evidence'
-  | 'is_likely_authentic'
->;
-
-export interface TextAnalysis {
-  risk_level: 'low' | 'medium' | 'high';
-  chronology_score: number;
-  analysis: string;
-  suggested_category: string | null;
 }
 
 export interface ReportFormData {

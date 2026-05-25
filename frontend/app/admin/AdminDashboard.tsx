@@ -2,14 +2,15 @@
 
 import { Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
-import DashboardTab from '@/features/admin/tabs/DashboardTab';
-import LaporanTab from '@/features/admin/tabs/LaporanTab';
-import StatistikTab from '@/features/admin/tabs/StatistikTab';
-import PenggunaTab from '@/features/admin/tabs/PenggunaTab';
-import BlacklistTab from '@/features/admin/tabs/BlacklistTab';
-import ArtikelTab from '@/features/admin/tabs/ArtikelTab';
-import FeedbackTab from '@/features/admin/tabs/FeedbackTab';
-import ApiKeysTab from '@/features/admin/tabs/ApiKeysTab';
+import DashboardTab  from '@/features/admin/tabs/DashboardTab';
+import LaporanTab    from '@/features/admin/tabs/LaporanTab';
+import StatistikTab  from '@/features/admin/tabs/StatistikTab';
+import PenggunaTab   from '@/features/admin/tabs/PenggunaTab';
+import BlacklistTab  from '@/features/admin/tabs/BlacklistTab';
+import ArtikelTab    from '@/features/admin/tabs/ArtikelTab';
+import FeedbackTab   from '@/features/admin/tabs/FeedbackTab';
+import ApiKeysTab    from '@/features/admin/tabs/ApiKeysTab';
+import RobotTab      from '@/features/admin/tabs/RobotTab';
 import type { Stats, Report, AdminUser, Tab } from '@/features/admin/types';
 import type { FeedbackItem } from '@/features/admin/tabs/FeedbackTab';
 
@@ -32,6 +33,7 @@ function DashboardInner({
     case 'artikel':    return <ArtikelTab token={token} />;
     case 'feedback':   return <FeedbackTab feedbacks={feedbacks} token={token} />;
     case 'apikeys':    return <ApiKeysTab token={token} />;
+    case 'robot':      return <RobotTab token={token} />;
     default:           return <DashboardTab stats={stats} reports={reports} />;
   }
 }

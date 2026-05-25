@@ -40,8 +40,8 @@ const HOW_IT_WORKS = [
   },
   {
     number: "#3",
-    title: "Verifikasi AI & Moderator",
-    desc: "Setiap laporan dianalisis oleh sistem AI dan ditinjau moderator sebelum dipublikasikan ke database.",
+    title: "Verifikasi Robot & Moderator",
+    desc: "Setiap laporan dianalisis otomatis oleh robot sistem kami dan ditinjau moderator sebelum dipublikasikan ke database.",
   },
   {
     number: "#4",
@@ -146,7 +146,7 @@ async function getRecentReports(): Promise<ReportItem[]> {
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL!;
     const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!;
     const res = await fetch(
-      `${supabaseUrl}/rest/v1/reports?select=id,target_number,target_name,target_type,bank_name,category,created_at,status&order=created_at.desc&limit=6`,
+      `${supabaseUrl}/rest/v1/reports?select=id,target_number,target_name,target_type,bank_name,category,created_at,status&status=neq.rejected&order=created_at.desc&limit=6`,
       {
         headers: {
           apikey: supabaseAnonKey,

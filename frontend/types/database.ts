@@ -1,15 +1,16 @@
 // ============================================
 // 📁 LOKASI: frontend/types/database.ts
-// ✅ UPDATE: Sinkronisasi lengkap dengan struktur tabel Supabase
 // ============================================
 
-export type TargetType    = 'phone' | 'bank_account' | 'ewallet';
-export type ReportStatus  = 'pending' | 'verified' | 'rejected' | 'withdrawn';
-export type UserRole      = 'user' | 'admin' | 'moderator';
+export type TargetType       = 'phone' | 'bank_account' | 'ewallet';
+export type ReportStatus     = 'pending' | 'verified' | 'rejected' | 'withdrawn';
+export type UserRole         = 'user' | 'admin' | 'moderator';
 export type FeedbackCategory = 'bug' | 'feature' | 'ui_ux' | 'other';
 export type FeedbackUrgency  = 'low' | 'medium' | 'high' | 'critical';
 export type FeedbackStatus   = 'pending' | 'in_review' | 'fixed' | 'closed';
-export type ArticleStatus = 'draft' | 'published';
+export type ArticleStatus    = 'draft' | 'published';
+export type BlacklistLevel   = 'medium' | 'high' | 'critical';
+export type AppealStatus     = 'pending' | 'approved' | 'rejected';
 
 export interface Profile {
   id: string;
@@ -32,6 +33,11 @@ export interface Report {
   evidence_url: string | null;
   status: ReportStatus;
   created_at: string;
+  // Robot fields
+  robot_score: number | null;
+  robot_status: string | null;
+  robot_verdict_at: string | null;
+  robot_reasons: Json | null;
 }
 
 export interface Feedback {
@@ -61,6 +67,7 @@ export type Json =
 export interface Database {
   public: {
     Tables: {
+
       profiles: {
         Row: {
           id: string;
@@ -131,6 +138,11 @@ export interface Database {
           reported_to: string[] | null;
           store_name: string | null;
           suspect_city: string | null;
+          // Robot fields
+          robot_score: number | null;
+          robot_status: string | null;
+          robot_verdict_at: string | null;
+          robot_reasons: Json | null;
         };
         Insert: {
           id?: string;
@@ -155,6 +167,10 @@ export interface Database {
           reported_to?: string[] | null;
           store_name?: string | null;
           suspect_city?: string | null;
+          robot_score?: number | null;
+          robot_status?: string | null;
+          robot_verdict_at?: string | null;
+          robot_reasons?: Json | null;
         };
         Update: {
           id?: string;
@@ -179,6 +195,187 @@ export interface Database {
           reported_to?: string[] | null;
           store_name?: string | null;
           suspect_city?: string | null;
+          robot_score?: number | null;
+          robot_status?: string | null;
+          robot_verdict_at?: string | null;
+          robot_reasons?: Json | null;
+        };
+        Relationships: [];
+      };
+
+      // ── Blacklist (robot) ───────────────────────────────────────────────────
+      blacklist: {
+        Row: {
+          id: string;
+          target_number: string;
+          level: string; // medium | high | critical
+          total_reports: number;
+          unique_reporters: number;
+          last_reported_at: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          target_number: string;
+          level?: string;
+          total_reports?: number;
+          unique_reporters?: number;
+          last_reported_at?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          target_number?: string;
+          level?: string;
+          total_reports?: number;
+          unique_reporters?: number;
+          last_reported_at?: string | null;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+
+      // ── Robot Trends ────────────────────────────────────────────────────────
+      robot_trends: {
+        Row: {
+          id: string;
+          target_number: string;
+          report_count: number;
+          is_viral: boolean;
+          detected_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          target_number: string;
+          report_count?: number;
+          is_viral?: boolean;
+          detected_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          target_number?: string;
+          report_count?: number;
+          is_viral?: boolean;
+          detected_at?: string;
+          updated_at?: string;
+        };
+        Relationships: [];
+      };
+
+      // ── Robot Logs (audit) ──────────────────────────────────────────────────
+      robot_logs: {
+        Row: {
+          id: string;
+          report_id: string | null;
+          action: string;
+          verdict: string | null;
+          score: number | null;
+          reasons: Json;
+          error: string | null;
+          duration_ms: number | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          report_id?: string | null;
+          action: string;
+          verdict?: string | null;
+          score?: number | null;
+          reasons?: Json;
+          error?: string | null;
+          duration_ms?: number | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          report_id?: string | null;
+          action?: string;
+          verdict?: string | null;
+          score?: number | null;
+          reasons?: Json;
+          error?: string | null;
+          duration_ms?: number | null;
+          created_at?: string;
+        };
+        Relationships: [];
+      };
+
+      // ── Robot Health ────────────────────────────────────────────────────────
+      robot_health: {
+        Row: {
+          id: string;
+          checked_at: string;
+          processed: number;
+          verified: number;
+          rejected: number;
+          errors: number;
+          avg_duration_ms: number;
+          pending_total: number;
+          error_rate: number;
+        };
+        Insert: {
+          id?: string;
+          checked_at?: string;
+          processed?: number;
+          verified?: number;
+          rejected?: number;
+          errors?: number;
+          avg_duration_ms?: number;
+          pending_total?: number;
+          error_rate?: number;
+        };
+        Update: {
+          id?: string;
+          checked_at?: string;
+          processed?: number;
+          verified?: number;
+          rejected?: number;
+          errors?: number;
+          avg_duration_ms?: number;
+          pending_total?: number;
+          error_rate?: number;
+        };
+        Relationships: [];
+      };
+
+      // ── Appeal System ───────────────────────────────────────────────────────
+      report_appeals: {
+        Row: {
+          id: string;
+          report_id: string;
+          user_id: string;
+          reason: string;
+          status: string; // pending | approved | rejected
+          evidence_urls: string[] | null;  // ← tambah
+          loss_amount: number | null;      // ← tambah
+          reviewed_at: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          report_id: string;
+          user_id: string;
+          reason: string;
+          status?: string;
+          evidence_urls?: string[] | null;  // ← tambah
+          loss_amount?: number | null;      // ← tambah
+          reviewed_at?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          report_id?: string;
+          user_id?: string;
+          reason?: string;
+          status?: string;
+          evidence_urls?: string[] | null;  // ← tambah
+          loss_amount?: number | null;      // ← tambah
+          reviewed_at?: string | null;
+          created_at?: string;
         };
         Relationships: [];
       };
@@ -290,7 +487,6 @@ export interface Database {
         Relationships: [];
       };
 
-      // ✅ api_keys — dengan semua kolom keamanan
       api_keys: {
         Row: {
           id: string;
@@ -348,11 +544,10 @@ export interface Database {
         };
         Relationships: [];
       };
+
     };
 
-    Views: {
-      [_ in never]: never;
-    };
+    Views: { [_ in never]: never };
 
     Functions: {
       get_stats_nomor: {
@@ -423,6 +618,9 @@ export interface Database {
           target_numbers: Json | null;
           store_name: string | null;
           suspect_city: string | null;
+          robot_score: number | null;
+          robot_status: string | null;
+          robot_reasons: Json | null;
         }[];
       };
       increment_api_usage: {
@@ -444,8 +642,6 @@ export interface Database {
       report_status_enum: 'pending' | 'verified' | 'rejected' | 'withdrawn';
     };
 
-    CompositeTypes: {
-      [_ in never]: never;
-    };
+    CompositeTypes: { [_ in never]: never };
   };
 }

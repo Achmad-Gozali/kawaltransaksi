@@ -7,7 +7,7 @@ import {
   CheckCircle2, XCircle, Clock, Eye, ExternalLink, Phone,
   Building2, ChevronDown, ChevronUp, Loader2, Search, X,
   FilePen, Download, AtSign, ShieldAlert, UserX, Store,
-  MapPin, Undo2,
+  MapPin, Undo2, Bot,
 } from "lucide-react";
 import SectionTitle from "../components/SectionTitle";
 import { updateReportStatus } from "../actions";
@@ -15,7 +15,7 @@ import { formatDateID, formatRupiah } from "@/core/utils";
 import type { Report, StatusFilter } from "../types";
 import { reportedToLabel } from "../types";
 
-// ── Constants ────────────────────────────────────────────────────────────────
+// ── Constants ─────────────────────────────────────────────────────────────────
 
 const STATUS_CONFIG = {
   pending:   { label: "Pending",         color: "bg-amber-50 text-amber-600 border-amber-200",       icon: Clock },
@@ -40,7 +40,7 @@ const TAB_COLORS: Record<StatusFilter, { active: string; inactive: string }> = {
   withdrawn: { active: "bg-blue-600 text-white",    inactive: "bg-white text-blue-600 border border-blue-200" },
 };
 
-// ── Helpers ──────────────────────────────────────────────────────────────────
+// ── Helpers ───────────────────────────────────────────────────────────────────
 
 function Badge({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
@@ -72,7 +72,7 @@ function ActionBtn({
   );
 }
 
-// ── Main ─────────────────────────────────────────────────────────────────────
+// ── Main ──────────────────────────────────────────────────────────────────────
 
 export default function LaporanTab({
   reports,
@@ -82,36 +82,37 @@ export default function LaporanTab({
   initialSearch?: string;
 }) {
   const router = useRouter();
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("semua");
-  const [searchQuery, setSearchQuery] = useState(initialSearch);
-  const [bankFilter, setBankFilter] = useState("");
+  const [statusFilter, setStatusFilter]   = useState<StatusFilter>("semua");
+  const [searchQuery, setSearchQuery]     = useState(initialSearch);
+  const [bankFilter, setBankFilter]       = useState("");
   const [platformFilter, setPlatformFilter] = useState("");
-  const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [loadingId, setLoadingId] = useState<string | null>(null);
-  const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
-  const [bulkLoading, setBulkLoading] = useState(false);
+  const [expandedId, setExpandedId]       = useState<string | null>(null);
+  const [loadingId, setLoadingId]         = useState<string | null>(null);
+  const [selectedIds, setSelectedIds]     = useState<Set<string>>(new Set());
+  const [bulkLoading, setBulkLoading]     = useState(false);
 
   const todayStr = new Date().toLocaleDateString("en-CA");
 
   const uniqueBanks = useMemo(() =>
-    Array.from(new Set(reports.map((r) => r.bank_name).filter(Boolean) as string[])).sort(),
+    Array.from(new Set(reports.map(r => r.bank_name).filter(Boolean) as string[])).sort(),
     [reports]);
 
   const uniquePlatforms = useMemo(() =>
-    Array.from(new Set(reports.map((r) => r.platform).filter(Boolean) as string[])).sort(),
+    Array.from(new Set(reports.map(r => r.platform).filter(Boolean) as string[])).sort(),
     [reports]);
 
   const filteredReports = useMemo(() => {
     const q = searchQuery.toLowerCase();
-    return reports.filter((r) => {
+    return reports.filter(r => {
       if (statusFilter !== "semua" && r.status !== statusFilter) return false;
       if (bankFilter && r.bank_name !== bankFilter) return false;
       if (platformFilter && r.platform !== platformFilter) return false;
       if (q && ![
+        r.id,
         r.target_number, r.category, r.reporter_email ?? "",
         r.target_name ?? "", r.bank_name ?? "", r.store_name ?? "",
         r.suspect_city ?? "", ...(r.social_media_accounts ?? []),
-      ].some((v) => v.toLowerCase().includes(q))) return false;
+      ].some(v => v.toLowerCase().includes(q))) return false;
       return true;
     });
   }, [reports, statusFilter, searchQuery, bankFilter, platformFilter]);
@@ -126,7 +127,7 @@ export default function LaporanTab({
     if (!selectedIds.size) return;
     setBulkLoading(true);
     try {
-      await Promise.all([...selectedIds].map((id) => updateReportStatus(id, status)));
+      await Promise.all([...selectedIds].map(id => updateReportStatus(id, status)));
       setSelectedIds(new Set());
       router.refresh();
     } catch {} finally { setBulkLoading(false); }
@@ -141,12 +142,12 @@ export default function LaporanTab({
   const selectAll = () =>
     setSelectedIds(selectedIds.size === filteredReports.length
       ? new Set()
-      : new Set(filteredReports.map((r) => r.id)));
+      : new Set(filteredReports.map(r => r.id)));
 
   const handleExportCSV = () => {
     const rows = [
-      ["ID","Nomor","Nama","Tipe","Bank","Kategori","Platform","Link URL","Sosmed","Korban Lain","Lapor Ke","Kerugian","Tgl Kejadian","Nama Toko","Provinsi","Nomor Terkait","Status","Pelapor","Tgl Lapor"],
-      ...reports.map((r) => [
+      ["ID","Nomor","Nama","Tipe","Bank","Kategori","Platform","Link URL","Sosmed","Korban Lain","Lapor Ke","Kerugian","Tgl Kejadian","Nama Toko","Provinsi","Nomor Terkait","Status","Pelapor","Tgl Lapor","Robot Score","Robot Status"],
+      ...reports.map(r => [
         r.id, r.target_number, r.target_name ?? "", r.target_type, r.bank_name ?? "",
         r.category, r.platform ?? "", r.link_url ?? "",
         (r.social_media_accounts ?? []).join(";"), r.has_other_victims ?? "",
@@ -154,9 +155,10 @@ export default function LaporanTab({
         r.incident_date ?? "", r.store_name ?? "", r.suspect_city ?? "",
         (r.target_numbers ?? []).map((t: any) => t.number).join(";"),
         r.status, r.reporter_email, r.created_at,
+        r.robot_score ?? "", r.robot_status ?? "",
       ]),
     ];
-    const csv = rows.map((r) => r.map((c) => `"${c}"`).join(",")).join("\n");
+    const csv = rows.map(r => r.map(c => `"${c}"`).join(",")).join("\n");
     const a = document.createElement("a");
     a.href = URL.createObjectURL(new Blob([csv], { type: "text/csv" }));
     a.download = `laporan-${todayStr}.csv`;
@@ -185,7 +187,7 @@ export default function LaporanTab({
       <div className="relative">
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
         <input type="text" placeholder="Cari nomor, nama, toko, provinsi..."
-          value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
+          value={searchQuery} onChange={e => setSearchQuery(e.target.value)}
           className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-100 transition-all" />
       </div>
 
@@ -193,17 +195,17 @@ export default function LaporanTab({
       {(uniqueBanks.length > 0 || uniquePlatforms.length > 0) && (
         <div className="flex gap-2 flex-wrap">
           {uniqueBanks.length > 0 && (
-            <select value={bankFilter} onChange={(e) => setBankFilter(e.target.value)}
+            <select value={bankFilter} onChange={e => setBankFilter(e.target.value)}
               className={`px-3 py-2 border rounded-xl text-sm cursor-pointer transition-all ${bankFilter ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-slate-200 bg-white text-slate-600"}`}>
               <option value="">Bank</option>
-              {uniqueBanks.map((b) => <option key={b} value={b}>{b}</option>)}
+              {uniqueBanks.map(b => <option key={b} value={b}>{b}</option>)}
             </select>
           )}
           {uniquePlatforms.length > 0 && (
-            <select value={platformFilter} onChange={(e) => setPlatformFilter(e.target.value)}
+            <select value={platformFilter} onChange={e => setPlatformFilter(e.target.value)}
               className={`px-3 py-2 border rounded-xl text-sm cursor-pointer transition-all ${platformFilter ? "border-emerald-500 bg-emerald-50 text-emerald-700" : "border-slate-200 bg-white text-slate-600"}`}>
               <option value="">Platform</option>
-              {uniquePlatforms.map((p) => <option key={p} value={p}>{p}</option>)}
+              {uniquePlatforms.map(p => <option key={p} value={p}>{p}</option>)}
             </select>
           )}
           {(bankFilter || platformFilter) && (
@@ -218,7 +220,7 @@ export default function LaporanTab({
       {/* Status tabs */}
       <div className="flex gap-1.5 overflow-x-auto pb-1">
         {STATUS_TABS.map(({ value, label }) => {
-          const count = value === "semua" ? reports.length : reports.filter((r) => r.status === value).length;
+          const count = value === "semua" ? reports.length : reports.filter(r => r.status === value).length;
           const col = TAB_COLORS[value];
           return (
             <button key={value} onClick={() => setStatusFilter(value)}
@@ -265,7 +267,7 @@ export default function LaporanTab({
         </div>
       ) : (
         <div className="space-y-2.5">
-          {filteredReports.map((report) => (
+          {filteredReports.map(report => (
             <ReportCard
               key={report.id}
               report={report}
@@ -295,17 +297,17 @@ function ReportCard({
   onAction: (id: string, status: "verified" | "rejected" | "pending" | "withdrawn") => void;
   getEvidenceUrls: (r: Report) => string[];
 }) {
-  const st = STATUS_CONFIG[report.status as keyof typeof STATUS_CONFIG] ?? STATUS_CONFIG.pending;
+  const st     = STATUS_CONFIG[report.status as keyof typeof STATUS_CONFIG] ?? STATUS_CONFIG.pending;
   const StIcon = st.icon;
-  const evidenceUrls = getEvidenceUrls(report);
+  const evidenceUrls   = getEvidenceUrls(report);
   const relatedNumbers = (report.target_numbers ?? []).filter((t: any) => t.number !== report.target_number);
-  const hasSocmed = (report.social_media_accounts ?? []).filter(Boolean).length > 0;
-  const hasReportedTo = (report.reported_to ?? []).filter(Boolean).length > 0;
+  const hasSocmed      = (report.social_media_accounts ?? []).filter(Boolean).length > 0;
+  const hasReportedTo  = (report.reported_to ?? []).filter(Boolean).length > 0;
 
   return (
     <div className={`bg-white border rounded-2xl overflow-hidden transition-all ${isSelected ? "border-emerald-400 ring-1 ring-emerald-200" : "border-slate-200 hover:border-slate-300"}`}>
       <div className="px-3.5 py-3.5 sm:px-5">
-        {/* Top row: checkbox + icon + number + status + expand */}
+        {/* Top row */}
         <div className="flex items-start gap-2.5">
           <input type="checkbox" checked={isSelected} onChange={onToggleSelect}
             className="w-4 h-4 accent-emerald-600 shrink-0 mt-1 rounded" />
@@ -317,12 +319,21 @@ function ReportCard({
           </div>
 
           <div className="flex-grow min-w-0">
-            {/* Number + status badge */}
             <div className="flex flex-wrap items-center gap-1.5 mb-1">
               <span className="font-bold text-slate-900 text-sm font-mono">{report.target_number}</span>
               <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-semibold border ${st.color}`}>
                 <StIcon className="w-2.5 h-2.5" />{st.label}
               </span>
+              {/* Robot score badge */}
+              {report.robot_score != null && (
+                <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-semibold border ${
+                  report.robot_score >= 60 ? "bg-emerald-50 text-emerald-600 border-emerald-200" :
+                  report.robot_score >= 30 ? "bg-amber-50 text-amber-600 border-amber-200" :
+                  "bg-red-50 text-red-500 border-red-200"
+                }`}>
+                  <Bot className="w-2.5 h-2.5" />{report.robot_score}
+                </span>
+              )}
               {report.has_other_victims === "yes" && (
                 <Badge className="bg-orange-50 text-orange-600 border border-orange-200">Multi korban</Badge>
               )}
@@ -331,7 +342,6 @@ function ReportCard({
               )}
             </div>
 
-            {/* Meta row */}
             <div className="flex flex-wrap items-center gap-1.5 text-[11px] text-slate-400">
               <Badge className="bg-slate-100 text-slate-500">{report.category}</Badge>
               <span>{formatDateID(report.created_at)}</span>
@@ -357,7 +367,6 @@ function ReportCard({
               )}
             </div>
 
-            {/* Sosmed */}
             {hasSocmed && (
               <div className="flex flex-wrap gap-1 mt-1.5">
                 {(report.social_media_accounts ?? []).filter(Boolean).slice(0, 2).map((acc, i) => (
@@ -374,14 +383,13 @@ function ReportCard({
             )}
           </div>
 
-          {/* Expand toggle — always visible top right */}
           <button onClick={onToggleExpand}
             className="w-8 h-8 bg-slate-100 rounded-xl flex items-center justify-center hover:bg-slate-200 transition-colors shrink-0">
             {isExpanded ? <ChevronUp className="w-4 h-4 text-slate-500" /> : <ChevronDown className="w-4 h-4 text-slate-500" />}
           </button>
         </div>
 
-        {/* Action buttons — full width row below, always visible */}
+        {/* Action buttons */}
         <div className="flex gap-2 mt-3 pl-[52px]">
           {report.status === "pending" && (
             <>
@@ -406,7 +414,6 @@ function ReportCard({
         </div>
       </div>
 
-      {/* Expanded detail */}
       {isExpanded && (
         <ReportDetail
           report={report}
@@ -430,12 +437,12 @@ function ReportDetail({
 }) {
   const detailItems = [
     { label: "Pelapor",      value: report.reporter_email },
-    report.bank_name        ? { label: "Bank",         value: report.bank_name }                                              : null,
-    report.loss_amount      ? { label: "Kerugian",     value: formatRupiah(report.loss_amount as number), className: "text-red-600 font-semibold" } : null,
-    report.incident_date    ? { label: "Tgl Kejadian", value: formatDateID(report.incident_date) }                           : null,
-    report.platform         ? { label: "Platform",     value: report.platform }                                               : null,
-    report.store_name       ? { label: "Nama Toko",    value: report.store_name }                                             : null,
-    report.suspect_city     ? { label: "Provinsi",     value: report.suspect_city }                                           : null,
+    report.bank_name     ? { label: "Bank",         value: report.bank_name }                                                                    : null,
+    report.loss_amount   ? { label: "Kerugian",     value: formatRupiah(report.loss_amount as number), className: "text-red-600 font-semibold" } : null,
+    report.incident_date ? { label: "Tgl Kejadian", value: formatDateID(report.incident_date) }                                                  : null,
+    report.platform      ? { label: "Platform",     value: report.platform }                                                                      : null,
+    report.store_name    ? { label: "Nama Toko",    value: report.store_name }                                                                    : null,
+    report.suspect_city  ? { label: "Provinsi",     value: report.suspect_city }                                                                  : null,
     report.has_other_victims ? {
       label: "Korban Lain",
       value: report.has_other_victims === "yes" ? "⚠ Ada korban lain" : "Hanya pelapor",
@@ -445,6 +452,7 @@ function ReportDetail({
 
   return (
     <div className="border-t border-slate-100 px-3.5 sm:px-5 py-4 bg-slate-50/60 space-y-4">
+
       {/* Foto penipu */}
       {report.suspect_photo_url && (
         <div className="flex items-start gap-3 p-3 bg-red-50 border border-red-100 rounded-xl">
@@ -528,7 +536,7 @@ function ReportDetail({
             <ShieldAlert className="w-3 h-3" /> Sudah Lapor Ke
           </p>
           <div className="flex flex-wrap gap-1.5">
-            {(report.reported_to ?? []).filter(Boolean).map((v) => (
+            {(report.reported_to ?? []).filter(Boolean).map(v => (
               <span key={v} className={`px-3 py-1.5 rounded-xl text-xs font-semibold border ${v === "belum" ? "bg-red-50 text-red-600 border-red-200" : "bg-emerald-50 text-emerald-700 border-emerald-200"}`}>
                 {reportedToLabel[v] ?? v}
               </span>
@@ -544,6 +552,53 @@ function ReportDetail({
           <p className="text-sm text-slate-600 leading-relaxed whitespace-pre-wrap">{report.chronology}</p>
         </div>
       </div>
+
+      {/* Robot Score */}
+      {report.robot_score != null && (
+        <div>
+          <p className="text-[10px] text-slate-400 uppercase tracking-wider font-semibold mb-2 flex items-center gap-1.5">
+            <Bot className="w-3 h-3" /> Skor Robot
+          </p>
+          <div className="bg-white border border-slate-100 rounded-xl p-3.5 space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="flex-1 h-2 bg-slate-100 rounded-full overflow-hidden">
+                <div
+                  className={`h-full rounded-full transition-all ${
+                    report.robot_score >= 60 ? "bg-emerald-500" :
+                    report.robot_score >= 30 ? "bg-amber-400" : "bg-red-400"
+                  }`}
+                  style={{ width: `${report.robot_score}%` }}
+                />
+              </div>
+              <span className={`text-sm font-bold tabular-nums w-8 text-right ${
+                report.robot_score >= 60 ? "text-emerald-600" :
+                report.robot_score >= 30 ? "text-amber-600" : "text-red-500"
+              }`}>
+                {report.robot_score}
+              </span>
+              <span className={`text-[10px] font-bold px-2 py-0.5 rounded-lg ${
+                report.robot_status === "verified" ? "bg-emerald-50 text-emerald-600" :
+                report.robot_status === "rejected" ? "bg-red-50 text-red-500" :
+                "bg-amber-50 text-amber-600"
+              }`}>
+                {report.robot_status ?? "pending"}
+              </span>
+            </div>
+            {report.robot_reasons && report.robot_reasons.length > 0 && (
+              <div className="space-y-1.5 pt-2 border-t border-slate-100">
+                {report.robot_reasons.map((r, i) => (
+                  <div key={i} className="flex items-center justify-between gap-2">
+                    <span className="text-[11px] text-slate-500 truncate">{r.detail}</span>
+                    <span className={`text-[11px] font-bold shrink-0 ${r.points > 0 ? "text-emerald-600" : "text-red-500"}`}>
+                      {r.points > 0 ? `+${r.points}` : r.points}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
 
       {/* Bukti foto */}
       {evidenceUrls.length > 0 && (

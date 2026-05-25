@@ -1,3 +1,13 @@
+// ============================================
+// 📁 LOKASI: frontend/features/admin/types.ts
+// ============================================
+
+export interface RobotReason {
+  rule: string;
+  points: number;
+  detail: string;
+}
+
 export interface Report {
   id: string;
   reporter_email: string;
@@ -22,6 +32,10 @@ export interface Report {
   reported_to?: string[] | null;
   store_name?: string | null;
   suspect_city?: string | null;
+  // Robot fields
+  robot_score?: number | null;
+  robot_status?: string | null;
+  robot_reasons?: RobotReason[] | null;
 }
 
 export interface TargetNumber {
@@ -78,7 +92,61 @@ export interface Stats {
   rejected: number;
 }
 
-export type Tab = 'dashboard' | 'laporan' | 'statistik' | 'pengguna' | 'blacklist' | 'artikel' | 'feedback' | 'apikeys';
+// Robot types
+export interface RobotBlacklist {
+  id: string;
+  target_number: string;
+  level: 'medium' | 'high' | 'critical';
+  total_reports: number;
+  unique_reporters: number;
+  last_reported_at: string | null;
+  updated_at: string;
+}
+
+export interface RobotHealth {
+  id: string;
+  checked_at: string;
+  processed: number;
+  verified: number;
+  rejected: number;
+  errors: number;
+  avg_duration_ms: number;
+  pending_total: number;
+  error_rate: number;
+}
+
+export interface RobotTrend {
+  id: string;
+  target_number: string;
+  report_count: number;
+  is_viral: boolean;
+  detected_at: string;
+  updated_at: string;
+}
+
+export interface RobotLog {
+  id: string;
+  report_id: string | null;
+  action: string;
+  verdict: string | null;
+  score: number | null;
+  reasons: unknown[];
+  error: string | null;
+  duration_ms: number | null;
+  created_at: string;
+}
+
+export type Tab =
+  | 'dashboard'
+  | 'laporan'
+  | 'statistik'
+  | 'pengguna'
+  | 'blacklist'
+  | 'artikel'
+  | 'feedback'
+  | 'apikeys'
+  | 'robot';
+
 export type StatusFilter = 'semua' | 'pending' | 'verified' | 'rejected' | 'withdrawn';
 
 export const reportedToLabel: Record<string, string> = {

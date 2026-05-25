@@ -3,11 +3,8 @@ import { createClient } from "@/core/supabase/server";
 import Link from "next/link";
 import type { Metadata } from "next";
 import {
-  ArrowLeft,
-  PlusCircle,
-  AlertTriangle,
-  Clock,
-  Lock,
+  ArrowLeft, PlusCircle, AlertTriangle, Clock, Lock,
+  ShieldAlert, ShieldX, Flame,
 } from "lucide-react";
 import { formatNum, decodeSlug } from "@/core/utils";
 import ShareButtons from "@/features/check/ShareButtons";
@@ -21,36 +18,26 @@ interface CheckPageProps {
   searchParams: Promise<{ type?: string; bank?: string; wallet?: string }>;
 }
 
-export async function generateMetadata({
-  params,
-}: CheckPageProps): Promise<Metadata> {
+export async function generateMetadata({ params }: CheckPageProps): Promise<Metadata> {
   const { slug } = await params;
   const realNumber = decodeSlug(slug);
-
-  if (!realNumber) {
-    return { title: "Halaman tidak ditemukan - KawalTransaksi" };
-  }
+  if (!realNumber) return { title: "Halaman tidak ditemukan - KawalTransaksi" };
 
   const supabase = await createClient();
   const { data } = await supabase
-    .from("reports")
-    .select("status, loss_amount")
-    .eq("target_number", realNumber)
-    .neq("status", "withdrawn");
+    .from("reports").select("status, loss_amount")
+    .eq("target_number", realNumber).neq("status", "withdrawn");
 
-  const reports = data ?? [];
-  const verifiedCount = reports.filter((r) => r.status === "verified").length;
-  const pendingCount = reports.filter((r) => r.status === "pending").length;
-  const totalLoss = reports.reduce(
-    (sum, r) => sum + (Number(r.loss_amount) || 0),
-    0,
-  );
-  const totalReports = reports.length;
+  const reports       = data ?? [];
+  const verifiedCount = reports.filter(r => r.status === "verified").length;
+  const pendingCount  = reports.filter(r => r.status === "pending").length;
+  const totalLoss     = reports.reduce((sum, r) => sum + (Number(r.loss_amount) || 0), 0);
+  const totalReports  = reports.length;
 
   const formatLoss = (n: number) => {
     if (n >= 1_000_000_000) return `Rp ${(n / 1_000_000_000).toFixed(1)} M`;
-    if (n >= 1_000_000) return `Rp ${(n / 1_000_000).toFixed(1)} juta`;
-    if (n >= 1_000) return `Rp ${(n / 1_000).toFixed(0)} ribu`;
+    if (n >= 1_000_000)     return `Rp ${(n / 1_000_000).toFixed(1)} juta`;
+    if (n >= 1_000)         return `Rp ${(n / 1_000).toFixed(0)} ribu`;
     return `Rp ${n}`;
   };
 
@@ -61,10 +48,9 @@ export async function generateMetadata({
 
   if (verifiedCount > 0) {
     title = `Nomor ${formattedNumber} - Terindikasi Penipuan (${verifiedCount} Laporan Terverifikasi) | KawalTransaksi`;
-    description =
-      totalLoss > 0
-        ? `Nomor ${formattedNumber} dilaporkan ${totalReports}x sebagai penipu dengan ${verifiedCount} laporan terverifikasi dan total kerugian ${formatLoss(totalLoss)}. Cek detail laporan sebelum bertransaksi.`
-        : `Nomor ${formattedNumber} dilaporkan ${totalReports}x sebagai penipu dengan ${verifiedCount} laporan terverifikasi. Jangan bertransaksi dengan nomor ini.`;
+    description = totalLoss > 0
+      ? `Nomor ${formattedNumber} dilaporkan ${totalReports}x sebagai penipu dengan ${verifiedCount} laporan terverifikasi dan total kerugian ${formatLoss(totalLoss)}. Cek detail laporan sebelum bertransaksi.`
+      : `Nomor ${formattedNumber} dilaporkan ${totalReports}x sebagai penipu dengan ${verifiedCount} laporan terverifikasi. Jangan bertransaksi dengan nomor ini.`;
   } else if (pendingCount > 0) {
     title = `Nomor ${formattedNumber} - Dalam Investigasi (${pendingCount} Laporan Masuk) | KawalTransaksi`;
     description = `Nomor ${formattedNumber} sedang dalam proses verifikasi dengan ${pendingCount} laporan masuk. Tetap waspada sebelum melakukan transaksi.`;
@@ -74,41 +60,22 @@ export async function generateMetadata({
   }
 
   return {
-    title,
-    description,
-    openGraph: {
-      title,
-      description,
-      type: "website",
-      locale: "id_ID",
-      siteName: "KawalTransaksi",
-      url: `https://kawaltransaksi.com/check/${slug}`,
-    },
-    twitter: {
-      card: "summary_large_image",
-      title,
-      description,
-    },
-    alternates: {
-      canonical: `https://kawaltransaksi.com/check/${slug}`,
-    },
+    title, description,
+    openGraph: { title, description, type: "website", locale: "id_ID", siteName: "KawalTransaksi", url: `https://kawaltransaksi.com/check/${slug}` },
+    twitter: { card: "summary_large_image", title, description },
+    alternates: { canonical: `https://kawaltransaksi.com/check/${slug}` },
   };
 }
 
 function formatTimestamp(date: Date): string {
-  const now = new Date();
-  const diffMs = now.getTime() - date.getTime();
+  const diffMs  = Date.now() - date.getTime();
   const diffSec = Math.floor(diffMs / 1000);
   const diffMin = Math.floor(diffSec / 60);
   const diffHour = Math.floor(diffMin / 60);
-  if (diffSec < 60) return "baru saja";
-  if (diffMin < 60) return `${diffMin} menit lalu`;
+  if (diffSec < 60)  return "baru saja";
+  if (diffMin < 60)  return `${diffMin} menit lalu`;
   if (diffHour < 24) return `${diffHour} jam lalu`;
-  return date.toLocaleDateString("id-ID", {
-    day: "numeric",
-    month: "short",
-    year: "numeric",
-  });
+  return date.toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
 }
 
 const waspadaChecklist = [
@@ -121,45 +88,22 @@ const waspadaChecklist = [
 ];
 
 const bankNameMap: Record<string, string> = {
-  bca: "BCA",
-  bri: "BRI",
-  bni: "BNI",
-  mandiri: "Mandiri",
-  cimb: "CIMB Niaga",
-  cimbniaga: "CIMB Niaga",
-  bsi: "BSI",
-  danamon: "Danamon",
-  permata: "Permata",
-  ocbcnisp: "OCBC NISP",
-  ocbc: "OCBC NISP",
-  panin: "Panin",
-  mega: "Mega",
-  btn: "BTN",
-  jago: "Jago",
-  seabank: "SeaBank",
-  lainnya: "Bank Lainnya",
+  bca: "BCA", bri: "BRI", bni: "BNI", mandiri: "Mandiri",
+  cimb: "CIMB Niaga", cimbniaga: "CIMB Niaga", bsi: "BSI",
+  danamon: "Danamon", permata: "Permata", ocbcnisp: "OCBC NISP",
+  ocbc: "OCBC NISP", panin: "Panin", mega: "Mega", btn: "BTN",
+  jago: "Jago", seabank: "SeaBank", lainnya: "Bank Lainnya",
 };
 
 const walletNameMap: Record<string, string> = {
-  gopay: "GoPay",
-  dana: "DANA",
-  ovo: "OVO",
-  shopeepay: "ShopeePay",
-  shopee: "ShopeePay",
-  linkaja: "LinkAja",
-  lainnya: "E-Wallet Lainnya",
+  gopay: "GoPay", dana: "DANA", ovo: "OVO",
+  shopeepay: "ShopeePay", shopee: "ShopeePay",
+  linkaja: "LinkAja", lainnya: "E-Wallet Lainnya",
 };
 
-interface CarrierInfo {
-  carrier: string;
-  type: "mobile" | "fixed" | "unknown";
-}
+interface CarrierInfo { carrier: string; type: "mobile" | "fixed" | "unknown" }
 
-const INDONESIAN_PREFIXES: {
-  prefix: string;
-  carrier: string;
-  type: "mobile" | "fixed";   
-}[] = [
+const INDONESIAN_PREFIXES: { prefix: string; carrier: string; type: "mobile" | "fixed" }[] = [
   { prefix: "0811", carrier: "Telkomsel", type: "mobile" },
   { prefix: "0812", carrier: "Telkomsel", type: "mobile" },
   { prefix: "0813", carrier: "Telkomsel", type: "mobile" },
@@ -213,52 +157,51 @@ const INDONESIAN_PREFIXES: {
   { prefix: "0800", carrier: "Telkom IndiHome", type: "fixed" },
 ];
 
-const SORTED_PREFIXES = [...INDONESIAN_PREFIXES].sort(
-  (a, b) => b.prefix.length - a.prefix.length,
-);
+const SORTED_PREFIXES = [...INDONESIAN_PREFIXES].sort((a, b) => b.prefix.length - a.prefix.length);
 
 function detectCarrier(phone: string): CarrierInfo | null {
   let normalized = phone.replace(/\D/g, "");
   if (normalized.startsWith("62")) normalized = "0" + normalized.slice(2);
   if (normalized.length < 5) return null;
   for (const entry of SORTED_PREFIXES) {
-    if (normalized.startsWith(entry.prefix)) {
-      return { carrier: entry.carrier, type: entry.type };
-    }
+    if (normalized.startsWith(entry.prefix)) return { carrier: entry.carrier, type: entry.type };
   }
   return null;
 }
 
-interface GatedProps {
-  isLoggedIn: boolean;
-  label: string;
-  children: React.ReactNode;
-  minHeight?: string;
+// ── Blacklist Badge ───────────────────────────────────────────────────────────
+
+type BlacklistLevel = "medium" | "high" | "critical";
+
+const blacklistConfig: Record<BlacklistLevel, { label: string; bg: string; border: string; text: string; icon: React.ElementType }> = {
+  medium:   { label: "Terindikasi Penipu",    bg: "bg-amber-50",  border: "border-amber-300",  text: "text-amber-700",  icon: AlertTriangle },
+  high:     { label: "Penipu Terkonfirmasi",  bg: "bg-orange-50", border: "border-orange-300", text: "text-orange-700", icon: ShieldAlert },
+  critical: { label: "Penipu Berbahaya",      bg: "bg-red-50",    border: "border-red-300",    text: "text-red-700",    icon: ShieldX },
+};
+
+function BlacklistBadge({ level }: { level: BlacklistLevel }) {
+  const cfg  = blacklistConfig[level];
+  const Icon = cfg.icon;
+  return (
+    <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border text-xs font-semibold ${cfg.bg} ${cfg.border} ${cfg.text}`}>
+      <Icon className="w-3.5 h-3.5" />
+      {cfg.label}
+    </span>
+  );
 }
 
-function GatedContent({ isLoggedIn, label, children, minHeight }: GatedProps) {
+function GatedContent({ isLoggedIn, label, children, minHeight }: { isLoggedIn: boolean; label: string; children: React.ReactNode; minHeight?: string }) {
   if (isLoggedIn) return <>{children}</>;
   return (
-    <div
-      className="relative overflow-hidden rounded-xl"
-      style={minHeight ? { minHeight } : {}}
-    >
-      <div
-        className="blur-[2px] select-none pointer-events-none"
-        aria-hidden="true"
-      >
-        {children}
-      </div>
+    <div className="relative overflow-hidden rounded-xl" style={minHeight ? { minHeight } : {}}>
+      <div className="blur-[2px] select-none pointer-events-none" aria-hidden="true">{children}</div>
       <div className="absolute inset-0 flex flex-col items-center justify-center bg-gradient-to-b from-white/20 via-white/70 to-white/90">
         <div className="flex flex-col items-center gap-3 px-6 text-center">
           <div className="w-10 h-10 rounded-full bg-slate-900 flex items-center justify-center shadow-lg">
             <Lock className="w-4 h-4 text-white" />
           </div>
           <p className="text-sm font-semibold text-slate-800">{label}</p>
-          <Link
-            href="/login"
-            className="mt-1 inline-flex items-center gap-1.5 px-5 py-2.5 bg-slate-900 hover:bg-slate-700 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm"
-          >
+          <Link href="/login" className="mt-1 inline-flex items-center gap-1.5 px-5 py-2.5 bg-slate-900 hover:bg-slate-700 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm">
             Login untuk melihat
           </Link>
         </div>
@@ -267,44 +210,26 @@ function GatedContent({ isLoggedIn, label, children, minHeight }: GatedProps) {
   );
 }
 
-function CtaShareCard({
-  slug,
-  shareText,
-}: {
-  slug: string;
-  shareText: string;
-}) {
+function CtaShareCard({ slug, shareText }: { slug: string; shareText: string }) {
   return (
     <div className="rounded-xl border border-slate-200 overflow-hidden">
       <div className="bg-slate-900 px-5 py-5 sm:px-6 sm:py-6">
-        <p className="text-sm font-semibold text-white mb-1">
-          Pernah kena tipu nomor ini?
-        </p>
-        <p className="text-xs text-slate-400 mb-4 leading-relaxed">
-          Satu laporan dari kamu bisa melindungi ribuan orang.
-        </p>
-        <Link
-          href="/report"
-          className="flex items-center justify-center gap-2 w-full py-3 bg-white hover:bg-slate-100 text-slate-900 text-xs font-semibold rounded-lg transition-colors"
-        >
+        <p className="text-sm font-semibold text-white mb-1">Pernah kena tipu nomor ini?</p>
+        <p className="text-xs text-slate-400 mb-4 leading-relaxed">Satu laporan dari kamu bisa melindungi ribuan orang.</p>
+        <Link href="/report" className="flex items-center justify-center gap-2 w-full py-3 bg-white hover:bg-slate-100 text-slate-900 text-xs font-semibold rounded-lg transition-colors">
           <PlusCircle className="w-3.5 h-3.5" /> Buat laporan
         </Link>
       </div>
       <div className="bg-white px-5 py-4 sm:px-6">
-        <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-3 font-medium">
-          Sebarkan peringatan
-        </p>
+        <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-3 font-medium">Sebarkan peringatan</p>
         <ShareButtons slug={slug} shareText={shareText} />
       </div>
     </div>
   );
 }
 
-export default async function CheckPage({
-  params,
-  searchParams,
-}: CheckPageProps) {
-  const { slug } = await params;
+export default async function CheckPage({ params, searchParams }: CheckPageProps) {
+  const { slug }               = await params;
   const { type, bank, wallet } = await searchParams;
 
   if (!slug || slug.length > 50) notFound();
@@ -312,180 +237,124 @@ export default async function CheckPage({
   const realNumber = decodeSlug(slug);
   if (!realNumber || !/^\d+$/.test(realNumber)) notFound();
 
-  const defaultType =
-    type === "bank" ? "bank_account" : type === "ewallet" ? "ewallet" : "phone";
-  const hasTypeParam = !!type;
-  const defaultBankName = bank ? (bankNameMap[bank] ?? null) : null;
+  const defaultType       = type === "bank" ? "bank_account" : type === "ewallet" ? "ewallet" : "phone";
+  const hasTypeParam      = !!type;
+  const defaultBankName   = bank   ? (bankNameMap[bank]   ?? null) : null;
   const defaultWalletName = wallet ? (walletNameMap[wallet] ?? null) : null;
 
   const checkedAt = new Date();
-  const supabase = await createClient();
+  const supabase  = await createClient();
 
   const [
-    {
-      data: { user },
-    },
+    { data: { user } },
     { data: pageData },
+    { data: blacklistData },
+    { data: trendData },
   ] = await Promise.all([
     supabase.auth.getUser(),
     supabase.rpc("get_check_page_data", { p_number: realNumber }),
+    // [ROBOT] Cek blacklist
+    supabase.from("blacklist").select("level, total_reports, unique_reporters")
+      .eq("target_number", realNumber).single(),
+    // [ROBOT] Cek viral
+    supabase.from("robot_trends").select("is_viral, report_count")
+      .eq("target_number", realNumber).single(),
   ]);
 
-  const isLoggedIn = !!user;
-  const allReports = (pageData?.reports as any[]) ?? [];
-  const linkedReports = (pageData?.linked as any[]) ?? [];
+  const isLoggedIn    = !!user;
+  const blacklist     = blacklistData ?? null;
+  const isViral       = trendData?.is_viral ?? false;
+  const viralCount    = trendData?.report_count ?? 0;
+  const allReports    = (pageData?.reports as any[]) ?? [];
+  const linkedReports = (pageData?.linked  as any[]) ?? [];
 
-  const linkedHasVerified = linkedReports.some(
-    (r: any) => r.status === "verified",
-  );
-  const reports = allReports.filter((r) => r.status !== "withdrawn");
-  const withdrawnReports = allReports.filter((r) => r.status === "withdrawn");
-  const hasWithdrawn = withdrawnReports.length > 0;
+  const linkedHasVerified = linkedReports.some((r: any) => r.status === "verified");
+  const reports = allReports.filter(r => r.status !== "withdrawn" && r.status !== "rejected");
+  const withdrawnReports  = allReports.filter(r => r.status === "withdrawn");
+  const hasWithdrawn      = withdrawnReports.length > 0;
 
-  const verifiedReports = reports.filter((r) => r.status === "verified");
-  const pendingReports = reports.filter((r) => r.status === "pending");
-  const verifiedCount = verifiedReports.length;
-  const totalLoss = reports.reduce(
-    (sum, r) => sum + (Number(r.loss_amount) || 0),
-    0,
-  );
-  const hasOtherVictims = reports.some((r) => r.has_other_victims === "yes");
+  const verifiedReports = reports.filter(r => r.status === "verified");
+  const pendingReports  = reports.filter(r => r.status === "pending");
+  const verifiedCount   = verifiedReports.length;
+  const totalLoss       = reports.reduce((sum, r) => sum + (Number(r.loss_amount) || 0), 0);
+  const hasOtherVictims = reports.some(r => r.has_other_victims === "yes");
 
-  const nowMs = checkedAt.getTime();
-  const thirtyDaysAgo = new Date(nowMs - 30 * 24 * 60 * 60 * 1000);
-  const recentReports = reports.filter(
-    (r) => new Date(r.created_at) >= thirtyDaysAgo,
-  );
-  const uniquePlatforms = Array.from(
-    new Set(reports.map((r) => r.platform).filter(Boolean)),
-  );
-  const multiVictimCount = reports.filter(
-    (r) => r.has_other_victims === "yes",
-  ).length;
+  const thirtyDaysAgo   = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const recentReports   = reports.filter(r => new Date(r.created_at) >= thirtyDaysAgo);
+  const uniquePlatforms = Array.from(new Set(reports.map(r => r.platform).filter(Boolean)));
+  const multiVictimCount = reports.filter(r => r.has_other_victims === "yes").length;
 
-  const isPhoneNumber =
-    defaultType === "phone" && !defaultBankName && !defaultWalletName;
-  const carrierInfo = isPhoneNumber ? detectCarrier(realNumber) : null;
+  const isPhoneNumber = defaultType === "phone" && !defaultBankName && !defaultWalletName;
+  const carrierInfo   = isPhoneNumber ? detectCarrier(realNumber) : null;
 
+  // Risk badges — termasuk blacklist & viral
   const riskBadges: { label: string; color: string }[] = [];
-  if (recentReports.length >= 3) {
-    riskBadges.push({
-      label: `Dilaporkan ${recentReports.length}x dalam 30 hari`,
-      color: "bg-red-50 text-red-700 border-red-200",
-    });
-  }
-  if (totalLoss >= 10_000_000) {
-    riskBadges.push({
-      label: `Kerugian besar — ${new Intl.NumberFormat("id-ID", { notation: "compact", maximumFractionDigits: 1 }).format(totalLoss)}`,
-      color: "bg-orange-50 text-orange-700 border-orange-200",
-    });
-  }
-  if (multiVictimCount >= 2) {
-    riskBadges.push({
-      label: `${multiVictimCount} laporan sebut ada korban lain`,
-      color: "bg-amber-50 text-amber-700 border-amber-200",
-    });
-  }
-  if (uniquePlatforms.length >= 2) {
-    riskBadges.push({
-      label: `Aktif di ${uniquePlatforms.length} platform berbeda`,
-      color: "bg-slate-100 text-slate-600 border-slate-200",
-    });
-  }
+  if (recentReports.length >= 3)
+    riskBadges.push({ label: `Dilaporkan ${recentReports.length}x dalam 30 hari`, color: "bg-red-50 text-red-700 border-red-200" });
+  if (totalLoss >= 10_000_000)
+    riskBadges.push({ label: `Kerugian besar — ${new Intl.NumberFormat("id-ID", { notation: "compact", maximumFractionDigits: 1 }).format(totalLoss)}`, color: "bg-orange-50 text-orange-700 border-orange-200" });
+  if (multiVictimCount >= 2)
+    riskBadges.push({ label: `${multiVictimCount} laporan sebut ada korban lain`, color: "bg-amber-50 text-amber-700 border-amber-200" });
+  if (uniquePlatforms.length >= 2)
+    riskBadges.push({ label: `Aktif di ${uniquePlatforms.length} platform berbeda`, color: "bg-slate-100 text-slate-600 border-slate-200" });
+  // [ROBOT] Viral badge
+  if (isViral)
+    riskBadges.push({ label: `🔥 Sedang viral — ${viralCount} laporan dalam 24 jam`, color: "bg-red-50 text-red-700 border-red-200" });
 
   let status: "safe" | "warning" | "danger" = "safe";
-  if (verifiedCount > 0) status = "danger";
+  if (verifiedCount > 0)         status = "danger";
   else if (pendingReports.length > 0) status = "warning";
-  else if (hasWithdrawn) status = "warning";
-  else if (linkedReports.length > 0) status = "warning";
+  else if (hasWithdrawn)         status = "warning";
+  else if (linkedReports.length > 0)  status = "warning";
 
   const statusConfig = {
     danger: {
-      barBg: "bg-red-50 border-b border-red-100",
-      barLabel: "text-red-800",
-      barDesc: "text-red-600",
-      dotBg: "bg-red-500",
-      nameBadgeBg: "bg-red-50",
-      nameBadgeText: "text-red-700",
-      nameBadgeBorder: "border-red-200",
-      verdict: "Terindikasi penipuan",
-      verdictSub: `${verifiedCount} laporan telah diverifikasi oleh sistem & komunitas.`,
+      barBg: "bg-red-50 border-b border-red-100", barLabel: "text-red-800", barDesc: "text-red-600",
+      dotBg: "bg-red-500", nameBadgeBg: "bg-red-50", nameBadgeText: "text-red-700", nameBadgeBorder: "border-red-200",
+      verdict: "Terindikasi penipuan", verdictSub: `${verifiedCount} laporan telah diverifikasi oleh sistem & komunitas.`,
     },
     warning: {
-      barBg: linkedHasVerified
-        ? "bg-red-50 border-b border-red-100"
-        : "bg-amber-50 border-b border-amber-100",
+      barBg: linkedHasVerified ? "bg-red-50 border-b border-red-100" : "bg-amber-50 border-b border-amber-100",
       barLabel: linkedHasVerified ? "text-red-800" : "text-amber-900",
       barDesc: linkedHasVerified ? "text-red-600" : "text-amber-700",
       dotBg: linkedHasVerified ? "bg-red-500" : "bg-amber-500",
       nameBadgeBg: linkedHasVerified ? "bg-red-50" : "bg-amber-50",
       nameBadgeText: linkedHasVerified ? "text-red-800" : "text-amber-800",
-      nameBadgeBorder: linkedHasVerified
-        ? "border-red-200"
-        : "border-amber-200",
-      verdict:
-        hasWithdrawn && pendingReports.length === 0 && verifiedCount === 0
-          ? "Ada riwayat laporan"
-          : linkedHasVerified
-            ? "Terkait pelaku terverifikasi"
-            : "Dalam investigasi",
-      verdictSub:
-        hasWithdrawn && pendingReports.length === 0 && verifiedCount === 0
-          ? "Laporan untuk nomor ini sedang dalam proses revisi oleh pelapor."
-          : linkedHasVerified
-            ? "Nomor ini terbukti terkait pelaku yang sudah diverifikasi. Hindari bertransaksi."
-            : `${pendingReports.length} laporan masuk sedang diverifikasi moderator.`,
+      nameBadgeBorder: linkedHasVerified ? "border-red-200" : "border-amber-200",
+      verdict: hasWithdrawn && pendingReports.length === 0 && verifiedCount === 0
+        ? "Ada riwayat laporan" : linkedHasVerified ? "Terkait pelaku terverifikasi" : "Dalam investigasi",
+      verdictSub: hasWithdrawn && pendingReports.length === 0 && verifiedCount === 0
+        ? "Laporan untuk nomor ini sedang dalam proses revisi oleh pelapor."
+        : linkedHasVerified
+          ? "Nomor ini terbukti terkait pelaku yang sudah diverifikasi. Hindari bertransaksi."
+          : `${pendingReports.length} laporan masuk sedang diverifikasi moderator.`,
     },
     safe: {
-      barBg: "bg-emerald-50 border-b border-emerald-100",
-      barLabel: "text-emerald-900",
-      barDesc: "text-emerald-700",
-      dotBg: "bg-emerald-500",
-      nameBadgeBg: "bg-emerald-50",
-      nameBadgeText: "text-emerald-800",
-      nameBadgeBorder: "border-emerald-200",
-      verdict: "Tidak ada laporan",
-      verdictSub: "Nomor ini bersih di database kami. Tetap waspada.",
+      barBg: "bg-emerald-50 border-b border-emerald-100", barLabel: "text-emerald-900", barDesc: "text-emerald-700",
+      dotBg: "bg-emerald-500", nameBadgeBg: "bg-emerald-50", nameBadgeText: "text-emerald-800", nameBadgeBorder: "border-emerald-200",
+      verdict: "Tidak ada laporan", verdictSub: "Nomor ini bersih di database kami. Tetap waspada.",
     },
   };
 
   const config = statusConfig[status];
 
-  const shareText =
-    status === "danger"
-      ? `⚠️ waspada! nomor ${formatNum(realNumber)} terindikasi penipu dengan ${verifiedCount} laporan terverifikasi. cek di kawaltransaksi:`
-      : status === "warning"
-        ? `⚠️ nomor ${formatNum(realNumber)} sedang dalam proses verifikasi laporan penipuan. cek di kawaltransaksi:`
-        : `✓ nomor ${formatNum(realNumber)} aman — belum ada laporan penipuan di kawaltransaksi:`;
+  const shareText = status === "danger"
+    ? `⚠️ waspada! nomor ${formatNum(realNumber)} terindikasi penipu dengan ${verifiedCount} laporan terverifikasi. cek di kawaltransaksi:`
+    : status === "warning"
+      ? `⚠️ nomor ${formatNum(realNumber)} sedang dalam proses verifikasi laporan penipuan. cek di kawaltransaksi:`
+      : `✓ nomor ${formatNum(realNumber)} aman — belum ada laporan penipuan di kawaltransaksi:`;
 
-  const verificationSteps =
-    linkedHasVerified && reports.length > 0 && verifiedCount === 0
-      ? [
-          { label: "Nomor ditemukan", done: true },
-          { label: "Terkait laporan terverifikasi", done: true },
-          { label: "Laporan langsung menunggu review", done: false },
-        ]
-      : linkedHasVerified && reports.length === 0
-        ? [
-            { label: "Nomor ditemukan", done: true },
-            { label: "Terkait laporan terverifikasi", done: true },
-            { label: "Belum ada laporan langsung", done: false },
-          ]
-        : [
-            { label: "Laporan diterima", done: allReports.length > 0 },
-            {
-              label: "Dalam review moderator",
-              done: status === "warning" || status === "danger",
-            },
-            { label: "Terverifikasi", done: status === "danger" },
-          ];
+  const verificationSteps = linkedHasVerified && reports.length > 0 && verifiedCount === 0
+    ? [{ label: "Nomor ditemukan", done: true }, { label: "Terkait laporan terverifikasi", done: true }, { label: "Laporan langsung menunggu review", done: false }]
+    : linkedHasVerified && reports.length === 0
+      ? [{ label: "Nomor ditemukan", done: true }, { label: "Terkait laporan terverifikasi", done: true }, { label: "Belum ada laporan langsung", done: false }]
+      : [
+          { label: "Laporan diterima",       done: allReports.length > 0 },
+          { label: "Dalam review moderator", done: status === "warning" || status === "danger" },
+          { label: "Terverifikasi",          done: status === "danger" },
+        ];
 
-  const relatedEntries: {
-    number: string;
-    type: string;
-    bank: string | null;
-    name: string | null;
-  }[] = [];
+  const relatedEntries: { number: string; type: string; bank: string | null; name: string | null }[] = [];
   const seenNumbers = new Set<string>();
   allReports.forEach((r: any) => {
     if (!Array.isArray(r.target_numbers)) return;
@@ -493,259 +362,183 @@ export default async function CheckPage({
       if (typeof item === "object" && item !== null && item.number) {
         if (item.number !== realNumber && !seenNumbers.has(item.number)) {
           seenNumbers.add(item.number);
-          relatedEntries.push({
-            number: item.number,
-            type: item.type ?? "phone",
-            bank: item.bank ?? null,
-            name: item.name ?? null,
-          });
+          relatedEntries.push({ number: item.number, type: item.type ?? "phone", bank: item.bank ?? null, name: item.name ?? null });
         }
-      } else if (
-        typeof item === "string" &&
-        item !== realNumber &&
-        !seenNumbers.has(item)
-      ) {
+      } else if (typeof item === "string" && item !== realNumber && !seenNumbers.has(item)) {
         seenNumbers.add(item);
-        relatedEntries.push({
-          number: item,
-          type: "phone",
-          bank: null,
-          name: null,
-        });
+        relatedEntries.push({ number: item, type: "phone", bank: null, name: null });
       }
     });
   });
 
   const buildTypeParam = (type: string, bank: string | null) => {
     if (type === "bank_account") {
-      const bankKey = bank
-        ? bank
-            .toLowerCase()
-            .replace(/\s/g, "")
-            .replace(/[^a-z]/g, "")
-        : "";
+      const bankKey = bank ? bank.toLowerCase().replace(/\s/g, "").replace(/[^a-z]/g, "") : "";
       return `?type=bank${bankKey ? `&bank=${bankKey}` : ""}`;
     }
     if (type === "ewallet") {
-      const walletKey = bank
-        ? bank
-            .toLowerCase()
-            .replace(/\s/g, "")
-            .replace(/[^a-z]/g, "")
-        : "";
+      const walletKey = bank ? bank.toLowerCase().replace(/\s/g, "").replace(/[^a-z]/g, "") : "";
       return `?type=ewallet${walletKey ? `&wallet=${walletKey}` : ""}`;
     }
     return "?type=phone";
   };
 
-  const typeLabel: Record<string, string> = {
-    phone: "Nomor HP",
-    bank_account: "Rekening Bank",
-    ewallet: "E-Wallet",
-  };
+  const typeLabel: Record<string, string> = { phone: "Nomor HP", bank_account: "Rekening Bank", ewallet: "E-Wallet" };
 
-  // ✓ FIX: tambah field license di Dataset — fix Google Search Console warning
   const structuredData = {
-    "@context": "https://schema.org",
-    "@type": "WebPage",
-    name:
-      status === "danger"
-        ? `Nomor ${formatNum(realNumber)} - Terindikasi Penipuan | KawalTransaksi`
-        : status === "warning"
-          ? `Nomor ${formatNum(realNumber)} - Dalam Investigasi | KawalTransaksi`
-          : `Cek Nomor ${formatNum(realNumber)} - Tidak Ada Laporan | KawalTransaksi`,
-    description:
-      status === "danger"
-        ? `Nomor ${formatNum(realNumber)} terindikasi penipuan dengan ${verifiedCount} laporan terverifikasi.`
-        : status === "warning"
-          ? `Nomor ${formatNum(realNumber)} sedang dalam investigasi dengan laporan masuk.`
-          : `Nomor ${formatNum(realNumber)} belum memiliki laporan penipuan di database KawalTransaksi.`,
+    "@context": "https://schema.org", "@type": "WebPage",
+    name: status === "danger"
+      ? `Nomor ${formatNum(realNumber)} - Terindikasi Penipuan | KawalTransaksi`
+      : status === "warning"
+        ? `Nomor ${formatNum(realNumber)} - Dalam Investigasi | KawalTransaksi`
+        : `Cek Nomor ${formatNum(realNumber)} - Tidak Ada Laporan | KawalTransaksi`,
+    description: status === "danger"
+      ? `Nomor ${formatNum(realNumber)} terindikasi penipuan dengan ${verifiedCount} laporan terverifikasi.`
+      : status === "warning"
+        ? `Nomor ${formatNum(realNumber)} sedang dalam investigasi dengan laporan masuk.`
+        : `Nomor ${formatNum(realNumber)} belum memiliki laporan penipuan di database KawalTransaksi.`,
     url: `https://kawaltransaksi.com/check/${slug}`,
     about: {
       "@type": "Dataset",
       name: `Laporan penipuan untuk nomor ${realNumber}`,
       description: `Database laporan penipuan komunitas untuk nomor ${realNumber}`,
-      // ✓ license field — required by Google Dataset schema
       license: "https://creativecommons.org/licenses/by-nc/4.0/",
-      creator: {
-        "@type": "Organization",
-        name: "KawalTransaksi",
-        url: "https://kawaltransaksi.com",
-      },
+      creator: { "@type": "Organization", name: "KawalTransaksi", url: "https://kawaltransaksi.com" },
     },
   };
 
   return (
     <>
-      <script
-        type="application/ld+json"
-        dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
-      />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
       <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
-        {/* ── Mobile back nav ── */}
+
+        {/* Mobile back nav */}
         <div className="sm:hidden bg-white border-b border-slate-100 sticky top-16 z-10">
           <div className="px-4 py-3 flex items-center justify-between">
-            <Link
-              href="/cek-nomor"
-              className="inline-flex items-center gap-1.5 text-slate-500 hover:text-slate-900 text-sm font-medium transition-colors"
-            >
+            <Link href="/cek-nomor" className="inline-flex items-center gap-1.5 text-slate-500 hover:text-slate-900 text-sm font-medium transition-colors">
               <ArrowLeft className="w-4 h-4" /> Kembali
             </Link>
-            <span className="text-[10px] text-slate-400 uppercase tracking-widest font-medium">
-              KawalTransaksi
-            </span>
+            <span className="text-[10px] text-slate-400 uppercase tracking-widest font-medium">KawalTransaksi</span>
           </div>
         </div>
 
-        {/* ── Status bar ── */}
+        {/* Status bar */}
         <div className={`${config.barBg} px-4 sm:px-6 py-3`}>
           <div className="max-w-5xl mx-auto flex items-center gap-2 flex-wrap">
-            <div
-              className={`w-2 h-2 rounded-full shrink-0 animate-pulse ${config.dotBg}`}
-            />
-            <span
-              className={`text-xs font-semibold uppercase tracking-widest ${config.barLabel}`}
-            >
-              {config.verdict}
-            </span>
-            <span className={`text-xs ${config.barDesc} hidden sm:inline`}>
-              — {config.verdictSub}
-            </span>
+            <div className={`w-2 h-2 rounded-full shrink-0 animate-pulse ${config.dotBg}`} />
+            <span className={`text-xs font-semibold uppercase tracking-widest ${config.barLabel}`}>{config.verdict}</span>
+            <span className={`text-xs ${config.barDesc} hidden sm:inline`}>— {config.verdictSub}</span>
             <span className="ml-auto flex items-center gap-1 text-[10px] text-slate-400">
               <Clock className="w-3 h-3" /> {formatTimestamp(checkedAt)}
             </span>
           </div>
           <div className="max-w-5xl mx-auto sm:hidden mt-1">
-            <span className={`text-xs ${config.barDesc}`}>
-              {config.verdictSub}
-            </span>
+            <span className={`text-xs ${config.barDesc}`}>{config.verdictSub}</span>
           </div>
         </div>
 
+        {/* [ROBOT] Blacklist banner — tampil kalau ada di blacklist */}
+        {blacklist && (
+          <div className={`px-4 sm:px-6 py-3 border-b ${
+            blacklist.level === "critical" ? "bg-red-600 border-red-700" :
+            blacklist.level === "high"     ? "bg-orange-500 border-orange-600" :
+                                             "bg-amber-400 border-amber-500"
+          }`}>
+            <div className="max-w-5xl mx-auto flex items-center gap-3 flex-wrap">
+              {blacklist.level === "critical" ? <ShieldX className="w-4 h-4 text-white shrink-0" /> :
+               blacklist.level === "high"     ? <ShieldAlert className="w-4 h-4 text-white shrink-0" /> :
+                                                <AlertTriangle className="w-4 h-4 text-white shrink-0" />}
+              <div className="flex-1 min-w-0">
+                <span className="text-xs font-bold text-white uppercase tracking-wider">
+                  {blacklist.level === "critical" ? "⚠️ Penipu Berbahaya — Jangan Bertransaksi" :
+                   blacklist.level === "high"     ? "Penipu Terkonfirmasi" :
+                                                    "Terindikasi Penipu"}
+                </span>
+                <span className="text-xs text-white/80 ml-2">
+                  {blacklist.unique_reporters} orang berbeda melaporkan nomor ini
+                </span>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 sm:py-6 pb-24">
-          {/* ── Stats grid ── */}
+
+          {/* Stats grid */}
           {reports.length > 0 && (
             <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-4 sm:mb-5">
               <div className="bg-white rounded-xl border border-slate-200 p-3 sm:p-5">
-                <p className="text-2xl sm:text-4xl font-bold leading-none text-slate-900 tabular-nums">
-                  {reports.length}
-                </p>
-                <p className="text-[10px] text-slate-400 mt-2 uppercase tracking-[0.1em]">
-                  Laporan masuk
-                </p>
+                <p className="text-2xl sm:text-4xl font-bold leading-none text-slate-900 tabular-nums">{reports.length}</p>
+                <p className="text-[10px] text-slate-400 mt-2 uppercase tracking-[0.1em]">Laporan masuk</p>
               </div>
               <div className="bg-white rounded-xl border border-slate-200 p-3 sm:p-5">
-                <p
-                  className={`text-2xl sm:text-4xl font-bold leading-none tabular-nums ${totalLoss > 0 ? "text-red-600" : "text-slate-300"}`}
-                >
-                  {totalLoss > 0
-                    ? new Intl.NumberFormat("id-ID", {
-                        notation: "compact",
-                        maximumFractionDigits: 1,
-                      }).format(totalLoss)
-                    : "—"}
+                <p className={`text-2xl sm:text-4xl font-bold leading-none tabular-nums ${totalLoss > 0 ? "text-red-600" : "text-slate-300"}`}>
+                  {totalLoss > 0 ? new Intl.NumberFormat("id-ID", { notation: "compact", maximumFractionDigits: 1 }).format(totalLoss) : "—"}
                 </p>
-                <p className="text-[10px] text-slate-400 mt-2 uppercase tracking-[0.1em]">
-                  Total kerugian
-                </p>
+                <p className="text-[10px] text-slate-400 mt-2 uppercase tracking-[0.1em]">Total kerugian</p>
               </div>
-              <div
-                className={`rounded-xl border p-3 sm:p-5 ${hasOtherVictims ? "bg-amber-50 border-amber-200" : "bg-white border-slate-200"}`}
-              >
-                <p
-                  className={`text-2xl sm:text-4xl font-bold leading-none ${hasOtherVictims ? "text-amber-500" : "text-slate-300"}`}
-                >
+              <div className={`rounded-xl border p-3 sm:p-5 ${hasOtherVictims ? "bg-amber-50 border-amber-200" : "bg-white border-slate-200"}`}>
+                <p className={`text-2xl sm:text-4xl font-bold leading-none ${hasOtherVictims ? "text-amber-500" : "text-slate-300"}`}>
                   {hasOtherVictims ? "!" : "—"}
                 </p>
-                <p className="text-[10px] text-slate-400 mt-2 uppercase tracking-[0.1em]">
-                  Multi korban
-                </p>
+                <p className="text-[10px] text-slate-400 mt-2 uppercase tracking-[0.1em]">Multi korban</p>
               </div>
             </div>
           )}
 
           <div className="space-y-3 sm:space-y-4">
+
             {/* 1. NumberCard */}
             <NumberCard
-              reports={reports}
-              realNumber={realNumber}
-              config={config}
-              defaultType={defaultType}
-              defaultBankName={defaultBankName}
-              defaultWalletName={defaultWalletName}
-              hasTypeParam={hasTypeParam}
-              isLoggedIn={isLoggedIn}
-              carrierInfo={carrierInfo}
+              reports={reports} realNumber={realNumber} config={config}
+              defaultType={defaultType} defaultBankName={defaultBankName}
+              defaultWalletName={defaultWalletName} hasTypeParam={hasTypeParam}
+              isLoggedIn={isLoggedIn} carrierInfo={carrierInfo}
             />
 
-            {/* 2. Risk badges */}
-            {riskBadges.length > 0 && (
+            {/* 2. Risk badges + blacklist badge */}
+            {(riskBadges.length > 0 || blacklist) && (
               <div className="flex flex-wrap gap-2">
+                {blacklist && <BlacklistBadge level={blacklist.level as BlacklistLevel} />}
                 {riskBadges.map((badge, i) => (
-                  <span
-                    key={i}
-                    className={`text-xs font-semibold px-3 py-1.5 rounded-lg border ${badge.color}`}
-                  >
+                  <span key={i} className={`text-xs font-semibold px-3 py-1.5 rounded-lg border ${badge.color}`}>
                     {badge.label}
                   </span>
                 ))}
               </div>
             )}
 
-            {/* 3. Banner linked reports */}
+            {/* 3. Linked reports banner */}
             {linkedReports.length > 0 && reports.length === 0 && (
-              <div
-                className={`rounded-xl overflow-hidden border ${linkedHasVerified ? "bg-red-50 border-red-200" : "bg-amber-50 border-amber-200"}`}
-              >
-                <div
-                  className={`px-4 sm:px-5 py-4 border-b ${linkedHasVerified ? "border-red-100" : "border-amber-100"}`}
-                >
-                  <p
-                    className={`text-xs leading-relaxed ${linkedHasVerified ? "text-red-700" : "text-amber-700"}`}
-                  >
+              <div className={`rounded-xl overflow-hidden border ${linkedHasVerified ? "bg-red-50 border-red-200" : "bg-amber-50 border-amber-200"}`}>
+                <div className={`px-4 sm:px-5 py-4 border-b ${linkedHasVerified ? "border-red-100" : "border-amber-100"}`}>
+                  <p className={`text-xs leading-relaxed ${linkedHasVerified ? "text-red-700" : "text-amber-700"}`}>
                     {linkedHasVerified
                       ? "Nomor ini disebutkan dalam laporan yang telah diverifikasi. Berdasarkan bukti yang ada, pelaku diketahui menggunakan beberapa nomor secara bergantian. Kami menyarankan untuk tidak melanjutkan transaksi."
                       : "Meski belum ada laporan langsung untuk nomor ini, nomor ini disebutkan sebagai nomor milik pelaku yang sudah dilaporkan. Pelaku yang sama diduga menggunakan beberapa nomor berbeda."}
                   </p>
                 </div>
-                <div
-                  className={`divide-y ${linkedHasVerified ? "divide-red-100" : "divide-amber-100"}`}
-                >
+                <div className={`divide-y ${linkedHasVerified ? "divide-red-100" : "divide-amber-100"}`}>
                   {linkedReports.map((r: any, i: number) => (
-                    <a
-                      key={i}
-                      href={`/check/${r.target_number}`}
-                      className={`flex items-center justify-between px-4 sm:px-5 py-3.5 transition-colors group ${linkedHasVerified ? "hover:bg-red-100/40" : "hover:bg-amber-100/40"}`}
-                    >
+                    <a key={i} href={`/check/${r.target_number}`}
+                      className={`flex items-center justify-between px-4 sm:px-5 py-3.5 transition-colors group ${linkedHasVerified ? "hover:bg-red-100/40" : "hover:bg-amber-100/40"}`}>
                       <div>
-                        <p
-                          className={`text-sm font-mono font-semibold tracking-wide ${linkedHasVerified ? "text-red-900" : "text-amber-900"}`}
-                        >
+                        <p className={`text-sm font-mono font-semibold tracking-wide ${linkedHasVerified ? "text-red-900" : "text-amber-900"}`}>
                           {r.target_number.replace(/(\d{4})(?=\d)/g, "$1 ")}
                         </p>
-                        <p
-                          className={`text-xs mt-0.5 ${linkedHasVerified ? "text-red-600" : "text-amber-600"}`}
-                        >
-                          {r.status === "verified"
-                            ? "Laporan terverifikasi"
-                            : "Laporan dalam investigasi"}
+                        <p className={`text-xs mt-0.5 ${linkedHasVerified ? "text-red-600" : "text-amber-600"}`}>
+                          {r.status === "verified" ? "Laporan terverifikasi" : "Laporan dalam investigasi"}
                           {r.target_name ? ` · a.n. ${r.target_name}` : ""}
                         </p>
                       </div>
-                      <span
-                        className={`text-xs font-semibold whitespace-nowrap ${linkedHasVerified ? "text-red-600 group-hover:text-red-800" : "text-amber-700 group-hover:text-amber-900"}`}
-                      >
+                      <span className={`text-xs font-semibold whitespace-nowrap ${linkedHasVerified ? "text-red-600 group-hover:text-red-800" : "text-amber-700 group-hover:text-amber-900"}`}>
                         Lihat →
                       </span>
                     </a>
                   ))}
                 </div>
-                <div
-                  className={`px-4 sm:px-5 py-3 ${linkedHasVerified ? "bg-red-100/30" : "bg-amber-100/30"}`}
-                >
-                  <p
-                    className={`text-xs ${linkedHasVerified ? "text-red-600" : "text-amber-600"}`}
-                  >
+                <div className={`px-4 sm:px-5 py-3 ${linkedHasVerified ? "bg-red-100/30" : "bg-amber-100/30"}`}>
+                  <p className={`text-xs ${linkedHasVerified ? "text-red-600" : "text-amber-600"}`}>
                     {linkedHasVerified
                       ? "Perhatian: Pelaku diketahui menggunakan beberapa nomor secara bergantian untuk menghindari deteksi."
                       : "Waspada! Penipu sering berganti nomor untuk menghindari deteksi."}
@@ -757,41 +550,24 @@ export default async function CheckPage({
             {/* 4. Tetap waspada */}
             {status === "safe" && linkedReports.length === 0 && (
               <div>
-                <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-2 font-medium px-0.5">
-                  Tetap waspada
-                </p>
+                <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-2 font-medium px-0.5">Tetap waspada</p>
                 <div className="bg-amber-50 rounded-xl border border-amber-200 overflow-hidden">
                   <div className="px-4 py-3 border-b border-amber-100 flex items-center gap-2">
                     <AlertTriangle className="w-3.5 h-3.5 text-amber-500 shrink-0" />
-                    <p className="text-xs font-medium text-amber-800">
-                      Meski belum ada laporan, waspada jika nomor ini...
-                    </p>
+                    <p className="text-xs font-medium text-amber-800">Meski belum ada laporan, waspada jika nomor ini...</p>
                   </div>
                   <ul className="divide-y divide-amber-100">
                     {waspadaChecklist.map((item, i) => (
-                      <li
-                        key={i}
-                        className="px-4 py-3 flex items-start gap-2.5"
-                      >
-                        <span className="text-amber-400 mt-0.5 shrink-0">
-                          ·
-                        </span>
-                        <p className="text-xs text-amber-900 leading-relaxed">
-                          {item}
-                        </p>
+                      <li key={i} className="px-4 py-3 flex items-start gap-2.5">
+                        <span className="text-amber-400 mt-0.5 shrink-0">·</span>
+                        <p className="text-xs text-amber-900 leading-relaxed">{item}</p>
                       </li>
                     ))}
                   </ul>
                   <div className="px-4 py-3 border-t border-amber-100 bg-amber-100/30">
                     <p className="text-[10px] text-amber-700 leading-relaxed">
-                      Penipu bisa pakai nomor baru yang belum terdata. Jika
-                      ragu,{" "}
-                      <Link
-                        href="/report"
-                        className="font-semibold underline underline-offset-2 hover:text-amber-900"
-                      >
-                        laporkan sekarang
-                      </Link>{" "}
+                      Penipu bisa pakai nomor baru yang belum terdata. Jika ragu,{" "}
+                      <Link href="/report" className="font-semibold underline underline-offset-2 hover:text-amber-900">laporkan sekarang</Link>{" "}
                       untuk melindungi orang lain.
                     </p>
                   </div>
@@ -801,76 +577,41 @@ export default async function CheckPage({
 
             {/* 5. GATED: Kronologi & bukti */}
             {reports.length > 0 && (
-              <GatedContent
-                isLoggedIn={isLoggedIn}
-                label="Login untuk lihat kronologi & bukti lengkap"
-                minHeight="200px"
-              >
-                <ReportList
-                  reports={reports}
-                  hasWithdrawn={hasWithdrawn}
-                  hasLinkedReports={
-                    linkedReports.length > 0 && reports.length === 0
-                  }
-                  linkedHasVerified={linkedHasVerified}
-                />
+              <GatedContent isLoggedIn={isLoggedIn} label="Login untuk lihat kronologi & bukti lengkap" minHeight="200px">
+                <ReportList reports={reports} hasWithdrawn={hasWithdrawn}
+                  hasLinkedReports={linkedReports.length > 0 && reports.length === 0}
+                  linkedHasVerified={linkedHasVerified} />
               </GatedContent>
             )}
 
             {reports.length === 0 && (
-              <ReportList
-                reports={reports}
-                hasWithdrawn={hasWithdrawn}
-                hasLinkedReports={
-                  linkedReports.length > 0 && reports.length === 0
-                }
-                linkedHasVerified={linkedHasVerified}
-              />
+              <ReportList reports={reports} hasWithdrawn={hasWithdrawn}
+                hasLinkedReports={linkedReports.length > 0 && reports.length === 0}
+                linkedHasVerified={linkedHasVerified} />
             )}
 
-            {/* 6. GATED: Nomor lain terkait pelaku */}
+            {/* 6. GATED: Nomor lain terkait */}
             {relatedEntries.length > 0 && (
-              <GatedContent
-                isLoggedIn={isLoggedIn}
-                label="Login untuk lihat nomor lain terkait pelaku"
-                minHeight="160px"
-              >
+              <GatedContent isLoggedIn={isLoggedIn} label="Login untuk lihat nomor lain terkait pelaku" minHeight="160px">
                 <div>
-                  <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-2 font-medium px-0.5">
-                    Nomor lain terkait pelaku ini
-                  </p>
+                  <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-2 font-medium px-0.5">Nomor lain terkait pelaku ini</p>
                   <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
                     <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/80">
-                      <p className="text-xs text-slate-500 leading-relaxed">
-                        Pelapor menyebutkan bahwa pelaku yang sama juga
-                        menggunakan nomor-nomor berikut.
-                      </p>
+                      <p className="text-xs text-slate-500 leading-relaxed">Pelapor menyebutkan bahwa pelaku yang sama juga menggunakan nomor-nomor berikut.</p>
                     </div>
                     <div className="divide-y divide-slate-100">
                       {relatedEntries.map((entry, i) => (
-                        <a
-                          key={i}
-                          href={`/check/${entry.number}${buildTypeParam(entry.type, entry.bank)}`}
-                          className="flex items-center justify-between px-4 py-3.5 hover:bg-slate-50 transition-colors group"
-                        >
+                        <a key={i} href={`/check/${entry.number}${buildTypeParam(entry.type, entry.bank)}`}
+                          className="flex items-center justify-between px-4 py-3.5 hover:bg-slate-50 transition-colors group">
                           <div>
                             <span className="text-sm font-mono font-semibold text-slate-700 tracking-wide">
                               {entry.number.replace(/(\d{4})(?=\d)/g, "$1 ")}
                             </span>
                             <p className="text-[10px] text-slate-400 mt-0.5">
-                              {[
-                                entry.bank
-                                  ? entry.bank
-                                  : (typeLabel[entry.type] ?? "Nomor HP"),
-                                entry.name ? `a.n. ${entry.name}` : null,
-                              ]
-                                .filter(Boolean)
-                                .join(" · ")}
+                              {[entry.bank ? entry.bank : (typeLabel[entry.type] ?? "Nomor HP"), entry.name ? `a.n. ${entry.name}` : null].filter(Boolean).join(" · ")}
                             </p>
                           </div>
-                          <span className="text-xs text-emerald-600 font-semibold group-hover:underline whitespace-nowrap">
-                            Cek →
-                          </span>
+                          <span className="text-xs text-emerald-600 font-semibold group-hover:underline whitespace-nowrap">Cek →</span>
                         </a>
                       ))}
                     </div>
@@ -880,45 +621,31 @@ export default async function CheckPage({
             )}
 
             {/* 7. Status verifikasi */}
-            {(allReports.length > 0 || linkedHasVerified) &&
-              !(hasWithdrawn && reports.length === 0) && (
-                <div>
-                  <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-2 font-medium px-0.5">
-                    Status verifikasi
-                  </p>
-                  <div className="bg-white rounded-xl border border-slate-200 px-4 sm:px-6 py-4 sm:py-5">
-                    <div className="flex relative">
-                      {verificationSteps.map((step, i) => (
-                        <div
-                          key={i}
-                          className="relative flex flex-col items-center flex-1"
-                        >
-                          {i < verificationSteps.length - 1 && (
-                            <div
-                              className={`absolute top-1.5 left-1/2 w-full h-[2px] z-0 ${verificationSteps[i + 1].done ? "bg-emerald-500" : "bg-slate-200"}`}
-                            />
-                          )}
-                          <div
-                            className={`relative z-10 w-3 h-3 rounded-full border-2 transition-colors mb-2 ${step.done ? "bg-emerald-500 border-emerald-500" : "bg-white border-slate-300"}`}
-                          />
-                          <p
-                            className={`text-[10px] text-center leading-snug px-1 ${step.done ? "text-slate-700 font-medium" : "text-slate-400"}`}
-                          >
-                            {step.label}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                    {linkedHasVerified && verifiedCount === 0 && (
-                      <p className="text-[11px] text-slate-400 leading-relaxed mt-4 pt-3 border-t border-slate-100">
-                        {reports.length > 0
-                          ? "Laporan di nomor ini sedang direview moderator. Namun nomor ini sudah terbukti terkait pelaku yang telah diverifikasi — tetap waspada."
-                          : "Belum ada laporan langsung di nomor ini. Namun nomor ini sudah terbukti terkait pelaku yang telah diverifikasi — hindari bertransaksi."}
-                      </p>
-                    )}
+            {(allReports.length > 0 || linkedHasVerified) && !(hasWithdrawn && reports.length === 0) && (
+              <div>
+                <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-2 font-medium px-0.5">Status verifikasi</p>
+                <div className="bg-white rounded-xl border border-slate-200 px-4 sm:px-6 py-4 sm:py-5">
+                  <div className="flex relative">
+                    {verificationSteps.map((step, i) => (
+                      <div key={i} className="relative flex flex-col items-center flex-1">
+                        {i < verificationSteps.length - 1 && (
+                          <div className={`absolute top-1.5 left-1/2 w-full h-[2px] z-0 ${verificationSteps[i + 1].done ? "bg-emerald-500" : "bg-slate-200"}`} />
+                        )}
+                        <div className={`relative z-10 w-3 h-3 rounded-full border-2 transition-colors mb-2 ${step.done ? "bg-emerald-500 border-emerald-500" : "bg-white border-slate-300"}`} />
+                        <p className={`text-[10px] text-center leading-snug px-1 ${step.done ? "text-slate-700 font-medium" : "text-slate-400"}`}>{step.label}</p>
+                      </div>
+                    ))}
                   </div>
+                  {linkedHasVerified && verifiedCount === 0 && (
+                    <p className="text-[11px] text-slate-400 leading-relaxed mt-4 pt-3 border-t border-slate-100">
+                      {reports.length > 0
+                        ? "Laporan di nomor ini sedang direview moderator. Namun nomor ini sudah terbukti terkait pelaku yang telah diverifikasi — tetap waspada."
+                        : "Belum ada laporan langsung di nomor ini. Namun nomor ini sudah terbukti terkait pelaku yang telah diverifikasi — hindari bertransaksi."}
+                    </p>
+                  )}
                 </div>
-              )}
+              </div>
+            )}
 
             {/* 8. CTA + Share */}
             <CtaShareCard slug={slug} shareText={shareText} />

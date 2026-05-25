@@ -2,6 +2,9 @@ import { Hono } from 'hono';
 import { authMiddleware } from '../../core/auth.middleware';
 import { getSupabaseAdmin } from '../../core/supabase';
 import { sendReportStatusChangedEmail } from '../../core/resend';
+import { runScheduler } from '../robot/robot.route';
+import { getLatestHealth } from '../robot/health-monitor';
+import { getViralNumbers } from '../robot/trend-detector';
 import type { Env } from '../../types';
 
 const admin = new Hono<{ Bindings: Env; Variables: { userId: string; userEmail: string } }>();
@@ -376,6 +379,61 @@ admin.delete('/apikeys/:id', authMiddleware, requireAdmin, async (c) => {
     return c.json({ success: true });
   } catch {
     return c.json({ success: false, message: 'Gagal hapus API key.' }, 500);
+  }
+});
+
+// ── Robot ─────────────────────────────────────────────────────────────────────
+
+admin.get('/robot/health', authMiddleware, requireAdmin, async (c) => {
+  try {
+    const latest = await getLatestHealth(getSupabaseAdmin(c.env));
+    return c.json({ success: true, data: latest });
+  } catch {
+    return c.json({ success: false, message: 'Gagal mengambil health data.' }, 500);
+  }
+});
+
+admin.get('/robot/blacklist-list', authMiddleware, requireAdmin, async (c) => {
+  try {
+    const { data } = await getSupabaseAdmin(c.env)
+      .from('blacklist')
+      .select('*')
+      .order('unique_reporters', { ascending: false })
+      .limit(50);
+    return c.json({ success: true, data: data ?? [] });
+  } catch {
+    return c.json({ success: false, message: 'Gagal mengambil blacklist.' }, 500);
+  }
+});
+
+admin.get('/robot/viral', authMiddleware, requireAdmin, async (c) => {
+  try {
+    const data = await getViralNumbers(getSupabaseAdmin(c.env));
+    return c.json({ success: true, data });
+  } catch {
+    return c.json({ success: false, message: 'Gagal mengambil data viral.' }, 500);
+  }
+});
+
+admin.get('/robot/logs', authMiddleware, requireAdmin, async (c) => {
+  try {
+    const { data } = await getSupabaseAdmin(c.env)
+      .from('robot_logs')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(50);
+    return c.json({ success: true, data: data ?? [] });
+  } catch {
+    return c.json({ success: false, message: 'Gagal mengambil logs.' }, 500);
+  }
+});
+
+admin.post('/robot/run-scheduler', authMiddleware, requireAdmin, async (c) => {
+  try {
+    const result = await runScheduler(getSupabaseAdmin(c.env));
+    return c.json({ success: true, data: result });
+  } catch {
+    return c.json({ success: false, message: 'Gagal menjalankan scheduler.' }, 500);
   }
 });
 

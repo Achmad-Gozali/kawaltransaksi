@@ -9,7 +9,12 @@ import uploadRoutes    from './features/upload/upload.route';
 import feedbackRoutes  from './features/feedback/feedback.route';
 import apiPublicRoutes from './features/api-public/api-public.route';
 import developerRoutes from './features/developer/developer.route';
+import robotRoutes, { runScheduler } from './features/robot/robot.route';
+import appealRoutes    from './features/robot/appeal-system';
+import { runConfidenceDecay } from './features/robot/blacklist-engine';
+import { detectTrends } from './features/robot/trend-detector';
 import { logSuspiciousIp, autoBlacklistIfAbuse } from './core/abuse';
+import { getSupabaseAdmin } from './core/supabase';
 import type { Env } from './types';
 
 export { logSuspiciousIp, autoBlacklistIfAbuse };
@@ -54,9 +59,8 @@ const originValidator = async (c: { req: { method: string; header: (k: string) =
   const origin = c.req.header('Origin') || c.req.header('Referer') || '';
   if (!origin.trim()) return next();
   const allowed = ['http://localhost:3000', 'http://localhost:3001', 'https://kawaltransaksi.com', c.env.FRONTEND_URL].filter(Boolean);
-  if (!allowed.some((a: string) => origin.startsWith(a))) {
+  if (!allowed.some((a: string) => origin.startsWith(a)))
     return c.json({ success: false, message: 'Akses ditolak.' }, 403);
-  }
   return next();
 };
 
@@ -73,6 +77,8 @@ const SIZE_LIMITS: Record<string, number> = {
   '/api/upload':   6 * 1024 * 1024,
   '/api/feedback': 10 * 1024,
   '/api/v1':       5 * 1024,
+  '/api/robot':    5 * 1024,
+  '/api/appeals':  10 * 1024,
 };
 
 app.use('/api/*', async (c, next) => {
@@ -96,16 +102,14 @@ app.use('/api/*', async (c, next) => {
   if (ip === 'anonymous' || ip === '127.0.0.1') return next();
   if (path.startsWith('/api/admin/blacklist') || path.startsWith('/api/admin/iplogs')) return next();
   try {
-    if (await c.env.LIMITER.get(`blacklist_${ip}`)) {
+    if (await c.env.LIMITER.get(`blacklist_${ip}`))
       return c.json({ success: false, message: 'Akses Anda telah diblokir sementara.' }, 403);
-    }
   } catch (err) { console.error('[BLACKLIST] Error:', err); }
   return next();
 });
 
 // ── Rate Limiters ─────────────────────────────────────────────────────────────
 
-// Cloudflare native rate limiter untuk auth
 app.use('/api/auth/*', async (c, next) => {
   if (c.env.AUTH_RATE_LIMITER) {
     const ip = c.req.header('CF-Connecting-IP') || 'anonymous';
@@ -115,7 +119,6 @@ app.use('/api/auth/*', async (c, next) => {
   return next();
 });
 
-// KV-based rate limiters
 const kvRateLimit = async (
   c: { req: { header: (k: string) => string | undefined; url: string }; env: Env; json: (d: unknown, s?: number) => Response },
   next: () => Promise<void>,
@@ -130,7 +133,7 @@ const kvRateLimit = async (
     if (count >= max) {
       await logSuspiciousIp(c.env.LIMITER, ip, logReason, path);
       if (blacklist) await autoBlacklistIfAbuse(c.env.LIMITER, ip, logReason);
-      return c.json({ success: false, message: `Terlalu banyak permintaan. Tunggu 1 menit.`, retry_after: 60 }, 429);
+      return c.json({ success: false, message: 'Terlalu banyak permintaan. Tunggu 1 menit.', retry_after: 60 }, 429);
     }
     await c.env.LIMITER.put(kvKey, (count + 1).toString(), { expirationTtl: ttl });
   } catch (err) { console.error(`[${label}] Error:`, err); }
@@ -139,12 +142,12 @@ const kvRateLimit = async (
 
 app.use('/api/*', (c, next) => {
   const path = new URL(c.req.url).pathname;
-  if (path.startsWith('/api/v1')) return next();
+  if (path.startsWith('/api/v1') || path.startsWith('/api/robot')) return next();
   return kvRateLimit(c, next, { key: 'rl_global_', max: 20, ttl: 60, label: 'GLOBAL RL', logReason: 'Melewati global rate limit', blacklist: true });
 });
 
-app.use('/api/auth/*',   (c, next) => kvRateLimit(c, next, { key: 'rl_auth_ip_',   max: 5,  ttl: 60, label: 'AUTH RL',   logReason: 'Melewati auth rate limit',   blacklist: true }));
-app.use('/api/search/*', (c, next) => kvRateLimit(c, next, { key: 'rl_search_',    max: 30, ttl: 60, label: 'SEARCH RL', logReason: 'Melewati search rate limit' }));
+app.use('/api/auth/*',   (c, next) => kvRateLimit(c, next, { key: 'rl_auth_ip_', max: 5,  ttl: 60, label: 'AUTH RL',   logReason: 'Melewati auth rate limit',   blacklist: true }));
+app.use('/api/search/*', (c, next) => kvRateLimit(c, next, { key: 'rl_search_',  max: 30, ttl: 60, label: 'SEARCH RL', logReason: 'Melewati search rate limit' }));
 
 // ── Honeypot ──────────────────────────────────────────────────────────────────
 
@@ -163,20 +166,20 @@ async function honeypotHandler(c: { req: { header: (k: string) => string | undef
   return c.json({ success: false, message: 'Endpoint tidak ditemukan.' }, 404);
 }
 
-// ── Health & Robots ───────────────────────────────────────────────────────────
+// ── Health & Robots.txt ───────────────────────────────────────────────────────
 
-app.get('/health',    (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }));
-app.get('/robots.txt',(c) => c.text([
+app.get('/health',     (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }));
+app.get('/robots.txt', (c) => c.text([
   'User-agent: *', 'Allow: /', '',
   'Disallow: /api/v1/accounts', 'Disallow: /api/v1/reports', 'Disallow: /api/v1/keys',
   'Disallow: /api/v1/token',    'Disallow: /api/v1/users',   'Disallow: /api/v1/admin',
-  'Disallow: /api/internal', '',
+  'Disallow: /api/internal',    'Disallow: /api/robot', '',
 ].join('\n')));
 
 // ── Honeypot Endpoints ────────────────────────────────────────────────────────
 
-['/api/v1/accounts','/api/v1/reports','/api/v1/keys','/api/v1/token',
- '/api/v1/users','/api/v1/admin','/api/internal'].forEach(p => app.all(p, honeypotHandler));
+['/api/v1/accounts', '/api/v1/reports', '/api/v1/keys', '/api/v1/token',
+ '/api/v1/users',    '/api/v1/admin',   '/api/internal'].forEach(p => app.all(p, honeypotHandler));
 
 // ── Routes ────────────────────────────────────────────────────────────────────
 
@@ -189,6 +192,8 @@ app.route('/api/upload',    uploadRoutes);
 app.route('/api/feedback',  feedbackRoutes);
 app.route('/api/v1',        apiPublicRoutes);
 app.route('/api/developer', developerRoutes);
+app.route('/api/robot',     robotRoutes);
+app.route('/api/appeals',   appealRoutes);
 
 app.notFound((c) => c.json({ success: false, message: 'Endpoint tidak ditemukan.' }, 404));
 app.onError((err, c) => {
@@ -196,10 +201,44 @@ app.onError((err, c) => {
   return c.json({ success: false, message: 'Terjadi kesalahan server.' }, 500);
 });
 
+// ── Scheduled (Cron) ─────────────────────────────────────────────────────────
+
 export default {
   fetch: app.fetch,
-  async scheduled(_event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
-    console.log('[CRON] Mulai generate artikel mingguan...');
-    ctx.waitUntil(generateWeeklyArticle(env));
+  async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
+    const supabase = getSupabaseAdmin(env);
+    const cron     = event.cron;
+
+    console.log(`[CRON] Trigger: ${cron}`);
+
+    // Artikel mingguan — Minggu 23:00 UTC
+    if (cron === '0 23 * * SUN') {
+      ctx.waitUntil(
+        generateWeeklyArticle(env)
+          .catch(err => console.error('[CRON] Artikel error:', err))
+      );
+    }
+
+    // Robot scheduler — tiap 30 menit
+    else if (cron === '*/30 * * * *') {
+      ctx.waitUntil(
+        runScheduler(supabase)
+          .catch(err => console.error('[CRON] Robot scheduler error:', err))
+      );
+    }
+
+    // Trend detector + confidence decay (hari pertama bulan) — tiap 1 jam
+    else if (cron === '0 * * * *') {
+      const isFirstOfMonth = new Date().getDate() === 1;
+      ctx.waitUntil(
+        Promise.all([
+          detectTrends(supabase)
+            .catch(err => console.error('[CRON] Trend error:', err)),
+          isFirstOfMonth
+            ? runConfidenceDecay(supabase).catch(err => console.error('[CRON] Decay error:', err))
+            : Promise.resolve(),
+        ])
+      );
+    }
   },
 };
