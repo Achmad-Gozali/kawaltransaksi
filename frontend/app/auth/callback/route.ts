@@ -53,16 +53,57 @@ export async function GET(request: NextRequest) {
   }
 
   if (code) {
-    const { error } = await supabase.auth.exchangeCodeForSession(code);
-    if (!error) {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: profile } = await supabase.from('profiles').select('is_banned, role').eq('id', user.id).single();
-        if (profile?.is_banned) { await supabase.auth.signOut(); return NextResponse.redirect(`${baseUrl}/login?error=banned`); }
-        if (profile?.role === 'admin') return NextResponse.redirect(`${baseUrl}/admin`);
+    const isDirectGoogle = state !== null && !searchParams.get('next');
+
+    if (isDirectGoogle) {
+      try {
+        const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+          body: new URLSearchParams({
+            code,
+            client_id: process.env.GOOGLE_CLIENT_ID!,
+            client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+            redirect_uri: `${baseUrl}/auth/callback`,
+            grant_type: 'authorization_code',
+          }),
+        });
+
+        const tokenData = await tokenRes.json() as { id_token?: string; access_token?: string; error?: string };
+
+        if (tokenData.error || !tokenData.id_token) {
+          console.error('Google token exchange error:', tokenData.error);
+          return NextResponse.redirect(`${baseUrl}/login?error=oauth_failed`);
+        }
+
+        const { error } = await supabase.auth.signInWithIdToken({
+          provider: 'google',
+          token: tokenData.id_token,
+          access_token: tokenData.access_token,
+        });
+
+        if (error) {
+          console.error('Supabase signInWithIdToken error:', error.message);
+          return NextResponse.redirect(`${baseUrl}/login?error=oauth_failed`);
+        }
+
+      } catch (e) {
+        console.error('OAuth callback error:', e);
+        return NextResponse.redirect(`${baseUrl}/login?error=oauth_failed`);
       }
-      return NextResponse.redirect(`${baseUrl}${next}`);
+    } else {
+      const { error } = await supabase.auth.exchangeCodeForSession(code);
+      if (error) return NextResponse.redirect(`${baseUrl}/login?error=oauth_failed`);
     }
+
+    const { data: { user } } = await supabase.auth.getUser();
+    if (user) {
+      const { data: profile } = await supabase.from('profiles').select('is_banned, role').eq('id', user.id).single();
+      if (profile?.is_banned) { await supabase.auth.signOut(); return NextResponse.redirect(`${baseUrl}/login?error=banned`); }
+      if (profile?.role === 'admin') return NextResponse.redirect(`${baseUrl}/admin`);
+    }
+
+    return NextResponse.redirect(`${baseUrl}${next}`);
   }
 
   return NextResponse.redirect(`${baseUrl}/login?error=oauth_failed`);
