@@ -73,7 +73,7 @@ const renderCustomLabel = ({ cx, cy, midAngle, innerRadius, outerRadius, percent
   );
 };
 
-// Custom label di atas bar — nampilin nama platform
+// Custom label di atas bar -- nampilin nama platform
 const renderBarLabel = ({ x, y, width, value, index, data }: any) => {
   const name = data?.[index]?.name ?? '';
   return (

@@ -15,7 +15,7 @@ import { formatDateID, formatRupiah } from "@/core/utils";
 import type { Report, StatusFilter } from "../types";
 import { reportedToLabel } from "../types";
 
-// ── Constants ─────────────────────────────────────────────────────────────────
+// -- Constants -----------------------------------------------------------------
 
 const STATUS_CONFIG = {
   pending:   { label: "Pending",         color: "bg-amber-50 text-amber-600 border-amber-200",       icon: Clock },
@@ -40,7 +40,7 @@ const TAB_COLORS: Record<StatusFilter, { active: string; inactive: string }> = {
   withdrawn: { active: "bg-blue-600 text-white",    inactive: "bg-white text-blue-600 border border-blue-200" },
 };
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// -- Helpers -------------------------------------------------------------------
 
 function Badge({ children, className }: { children: React.ReactNode; className?: string }) {
   return (
@@ -72,7 +72,7 @@ function ActionBtn({
   );
 }
 
-// ── Main ──────────────────────────────────────────────────────────────────────
+// -- Main ----------------------------------------------------------------------
 
 export default function LaporanTab({
   reports,
@@ -286,7 +286,7 @@ export default function LaporanTab({
   );
 }
 
-// ── ReportCard ────────────────────────────────────────────────────────────────
+// -- ReportCard ----------------------------------------------------------------
 
 function ReportCard({
   report, isExpanded, isLoading, isSelected,
@@ -427,7 +427,7 @@ function ReportCard({
   );
 }
 
-// ── ReportDetail ──────────────────────────────────────────────────────────────
+// -- ReportDetail --------------------------------------------------------------
 
 function ReportDetail({
   report, evidenceUrls, relatedNumbers, hasSocmed, hasReportedTo,
@@ -445,7 +445,7 @@ function ReportDetail({
     report.suspect_city  ? { label: "Provinsi",     value: report.suspect_city }                                                                  : null,
     report.has_other_victims ? {
       label: "Korban Lain",
-      value: report.has_other_victims === "yes" ? "⚠ Ada korban lain" : "Hanya pelapor",
+      value: report.has_other_victims === "yes" ? "[!] Ada korban lain" : "Hanya pelapor",
       className: report.has_other_victims === "yes" ? "text-orange-600 font-semibold" : "",
     } : null,
   ].filter(Boolean) as { label: string; value: string; className?: string }[];
@@ -499,8 +499,8 @@ function ReportDetail({
               <a key={i} href={`/check/${t.number}`} target="_blank" rel="noopener noreferrer"
                 className="px-3 py-1.5 bg-white border border-slate-200 rounded-xl text-xs font-mono text-slate-700 hover:border-slate-400 transition-colors flex items-center gap-1.5">
                 {t.number}
-                {t.bank && <span className="text-slate-400">· {t.bank}</span>}
-                {t.name && <span className="text-slate-400">· {t.name}</span>}
+                {t.bank && <span className="text-slate-400">- {t.bank}</span>}
+                {t.name && <span className="text-slate-400">- {t.name}</span>}
                 <ExternalLink className="w-2.5 h-2.5 text-slate-400" />
               </a>
             ))}

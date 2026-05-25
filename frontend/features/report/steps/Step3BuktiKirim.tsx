@@ -32,7 +32,7 @@ export function Step3BuktiKirim({
         <div className="p-4 sm:p-5">
           <SectionTitle
             title="Bukti Foto"
-            subtitle={`Upload hingga ${MAX_EVIDENCE_FILES} foto · Screenshot, struk transfer · JPG, PNG · maks 5MB`}
+            subtitle={`Upload hingga ${MAX_EVIDENCE_FILES} foto - Screenshot, struk transfer - JPG, PNG - maks 5MB`}
           />
 
           {evidenceFiles.length > 0 && (
@@ -69,7 +69,7 @@ export function Step3BuktiKirim({
                 <p className="text-sm font-semibold text-slate-500 group-hover:text-slate-700 transition-colors">
                   {evidenceFiles.length === 0 ? 'Klik untuk upload foto bukti' : `Tambah foto (${evidenceFiles.length}/${MAX_EVIDENCE_FILES})`}
                 </p>
-                <p className="text-xs text-slate-300 mt-1">JPG, PNG · maks 5MB per file</p>
+                <p className="text-xs text-slate-300 mt-1">JPG, PNG - maks 5MB per file</p>
               </div>
               <input type="file" onChange={onEvidenceFileChange} className="hidden" accept="image/*" multiple />
             </label>

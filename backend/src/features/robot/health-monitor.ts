@@ -1,5 +1,5 @@
 // ============================================
-// 📁 LOKASI: backend/src/features/robot/health-monitor.ts
+//  LOKASI: backend/src/features/robot/health-monitor.ts
 // ============================================
 
 import { getSupabaseAdmin } from '../../core/supabase';
@@ -16,7 +16,7 @@ export interface HealthSnapshot {
   checked_at?:     string;
 }
 
-// ── Simpan snapshot health ke DB ──────────────────────────────────────────────
+// -- Simpan snapshot health ke DB ----------------------------------------------
 
 export async function saveHealthSnapshot(
   snapshot: HealthSnapshot,
@@ -40,7 +40,7 @@ export async function saveHealthSnapshot(
   }
 }
 
-// ── Ambil health terbaru — gabungan snapshot + realtime dari reports ──────────
+// -- Ambil health terbaru -- gabungan snapshot + realtime dari reports ----------
 
 export async function getLatestHealth(
   supabase: ReturnType<typeof getSupabaseAdmin>
@@ -82,7 +82,7 @@ export async function getLatestHealth(
   };
 }
 
-// ── Hitung error rate & deteksi anomali ───────────────────────────────────────
+// -- Hitung error rate & deteksi anomali ---------------------------------------
 
 export function buildSnapshot(
   stats: { processed: number; verified: number; rejected: number; errors: number },
@@ -104,11 +104,11 @@ export function detectAnomalies(snapshot: HealthSnapshot): string[] {
   const alerts: string[] = [];
 
   if (snapshot.error_rate > 10)
-    alerts.push(`⚠️ Error rate tinggi: ${snapshot.error_rate}%`);
+    alerts.push(`[!] Error rate tinggi: ${snapshot.error_rate}%`);
   if (snapshot.pending_total > 200)
-    alerts.push(`⚠️ Queue pending menumpuk: ${snapshot.pending_total} laporan`);
+    alerts.push(`[!] Queue pending menumpuk: ${snapshot.pending_total} laporan`);
   if (snapshot.avg_duration_ms > 5000)
-    alerts.push(`⚠️ Robot lambat: rata-rata ${snapshot.avg_duration_ms}ms per laporan`);
+    alerts.push(`[!] Robot lambat: rata-rata ${snapshot.avg_duration_ms}ms per laporan`);
 
   return alerts;
 }

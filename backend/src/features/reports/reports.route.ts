@@ -17,7 +17,7 @@ const reports = new Hono<{
   Variables: { userId: string; userEmail: string };
 }>();
 
-// ── Konstanta ─────────────────────────────────────────────────────────────────
+// -- Konstanta -----------------------------------------------------------------
 
 const LIMITS = {
   TARGET_NUMBER: 32, TARGET_NAME: 100, BANK_NAME: 100, PLATFORM: 100,
@@ -59,7 +59,7 @@ const VALID_PROVINCES = [
   'Papua Selatan', 'Papua Tengah',
 ] as const;
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// -- Helpers -------------------------------------------------------------------
 
 function isValidEvidenceUrl(url: unknown): boolean {
   if (typeof url !== 'string' || !url.trim()) return false;
@@ -134,7 +134,7 @@ async function sendStatusEmail(
   }
 }
 
-// ── POST /api/reports ─────────────────────────────────────────────────────────
+// -- POST /api/reports ---------------------------------------------------------
 
 reports.post('/', authMiddleware, async (c) => {
   try {
@@ -319,7 +319,7 @@ reports.post('/', authMiddleware, async (c) => {
   }
 });
 
-// ── POST /api/reports/withdraw ────────────────────────────────────────────────
+// -- POST /api/reports/withdraw ------------------------------------------------
 
 reports.post('/withdraw', authMiddleware, async (c) => {
   try {
@@ -350,7 +350,7 @@ reports.post('/withdraw', authMiddleware, async (c) => {
   }
 });
 
-// ── PUT /api/reports/:reportId ────────────────────────────────────────────────
+// -- PUT /api/reports/:reportId ------------------------------------------------
 
 reports.put('/:reportId', authMiddleware, async (c) => {
   try {
@@ -445,8 +445,8 @@ reports.put('/:reportId', authMiddleware, async (c) => {
 
 export default reports;
 
-// ── GET /api/reports/check-number/:number ─────────────────────────────────────
-// Public endpoint — cek apakah nomor sudah pernah dilaporkan (untuk duplicate detector)
+// -- GET /api/reports/check-number/:number -------------------------------------
+// Public endpoint -- cek apakah nomor sudah pernah dilaporkan (untuk duplicate detector)
 
 reports.get('/check-number/:number', async (c) => {
   try {

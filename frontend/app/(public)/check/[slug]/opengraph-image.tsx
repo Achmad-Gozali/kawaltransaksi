@@ -42,7 +42,7 @@ export default async function OgImage({ params }: Props) {
       accent: "#ef4444",
       badge: "#fee2e2",
       badgeText: "#991b1b",
-      badgeLabel: "⚠ TERINDIKASI PENIPUAN",
+      badgeLabel: "[!] TERINDIKASI PENIPUAN",
       desc: `${verifiedCount} laporan terverifikasi`,
     },
     warning: {
@@ -50,7 +50,7 @@ export default async function OgImage({ params }: Props) {
       accent: "#f59e0b",
       badge: "#fef3c7",
       badgeText: "#92400e",
-      badgeLabel: "⚡ DALAM INVESTIGASI",
+      badgeLabel: "[!] DALAM INVESTIGASI",
       desc: `${pendingCount} laporan masuk`,
     },
     safe: {
@@ -58,7 +58,7 @@ export default async function OgImage({ params }: Props) {
       accent: "#22c55e",
       badge: "#dcfce7",
       badgeText: "#166534",
-      badgeLabel: "✓ TIDAK ADA LAPORAN",
+      badgeLabel: "[OK] TIDAK ADA LAPORAN",
       desc: "Nomor ini bersih di database kami",
     },
   };

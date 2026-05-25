@@ -1,6 +1,6 @@
 @import "tailwindcss";
 
-/* ── BASE ── */
+/* -- BASE -- */
 *, *::before, *::after {
   box-sizing: border-box;
 }
@@ -11,7 +11,7 @@ html {
   -moz-osx-font-smoothing: grayscale;
 }
 
-/* ── PAGE TRANSITION ── */
+/* -- PAGE TRANSITION -- */
 @keyframes fadeIn {
   from {
     opacity: 0;
@@ -27,7 +27,7 @@ main {
   animation: fadeIn 0.3s ease-out;
 }
 
-/* ── LOADING BAR ── */
+/* -- LOADING BAR -- */
 @keyframes loading {
   0% {
     transform: translateX(-100%);
@@ -37,7 +37,7 @@ main {
   }
 }
 
-/* ── SCROLLBAR ── */
+/* -- SCROLLBAR -- */
 ::-webkit-scrollbar {
   width: 6px;
 }
@@ -54,7 +54,7 @@ main {
   background: #a1a1aa;
 }
 
-/* ── DRAWER ANIMATIONS ── */
+/* -- DRAWER ANIMATIONS -- */
 @keyframes slideInLeft {
   from { transform: translateX(-100%); }
   to   { transform: translateX(0); }
@@ -73,12 +73,12 @@ main {
   animation: slideInRight 0.25s ease-out;
 }
 
-/* ── RECAPTCHA ── */
+/* -- RECAPTCHA -- */
 .grecaptcha-badge {
   visibility: hidden !important;
 }
 
-/* ── DATE INPUT ── */
+/* -- DATE INPUT -- */
 input[type="date"]::-webkit-calendar-picker-indicator {
   opacity: 0.4;
   cursor: pointer;

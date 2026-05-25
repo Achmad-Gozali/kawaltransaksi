@@ -15,7 +15,7 @@ const UUID_REGEX      = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-
 const IP_REGEX        = /^(\d{1,3}\.){3}\d{1,3}$/;
 const BLACKLIST_TTL   = 86400;
 
-// ── Middleware ────────────────────────────────────────────────────────────────
+// -- Middleware ----------------------------------------------------------------
 
 async function requireAdmin(c: { get: (k: string) => string; env: Env; json: (d: unknown, s?: number) => Response }, next: () => Promise<void>) {
   const supabase = getSupabaseAdmin(c.env);
@@ -28,7 +28,7 @@ function validUUID(id: string) {
   return UUID_REGEX.test(id);
 }
 
-// ── Users ─────────────────────────────────────────────────────────────────────
+// -- Users ---------------------------------------------------------------------
 
 admin.get('/users', authMiddleware, requireAdmin, async (c) => {
   try {
@@ -106,7 +106,7 @@ admin.patch('/users/:id/unban', authMiddleware, requireAdmin, async (c) => {
   }
 });
 
-// ── Reports ───────────────────────────────────────────────────────────────────
+// -- Reports -------------------------------------------------------------------
 
 admin.patch('/reports/:id/status', authMiddleware, requireAdmin, async (c) => {
   try {
@@ -143,7 +143,7 @@ admin.patch('/reports/:id/status', authMiddleware, requireAdmin, async (c) => {
   }
 });
 
-// ── Blacklist ─────────────────────────────────────────────────────────────────
+// -- Blacklist -----------------------------------------------------------------
 
 admin.get('/blacklist', authMiddleware, requireAdmin, async (c) => {
   try {
@@ -216,7 +216,7 @@ admin.get('/iplogs', authMiddleware, requireAdmin, async (c) => {
   }
 });
 
-// ── Articles ──────────────────────────────────────────────────────────────────
+// -- Articles ------------------------------------------------------------------
 
 admin.get('/articles', authMiddleware, requireAdmin, async (c) => {
   try {
@@ -291,7 +291,7 @@ admin.delete('/articles/:id', authMiddleware, requireAdmin, async (c) => {
   }
 });
 
-// ── API Keys ──────────────────────────────────────────────────────────────────
+// -- API Keys ------------------------------------------------------------------
 
 admin.get('/apikeys', authMiddleware, requireAdmin, async (c) => {
   try {
@@ -382,7 +382,7 @@ admin.delete('/apikeys/:id', authMiddleware, requireAdmin, async (c) => {
   }
 });
 
-// ── Robot ─────────────────────────────────────────────────────────────────────
+// -- Robot ---------------------------------------------------------------------
 
 admin.get('/robot/health', authMiddleware, requireAdmin, async (c) => {
   try {

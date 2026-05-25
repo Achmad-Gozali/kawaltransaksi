@@ -1,7 +1,7 @@
 {
   "name": "KawalTransaksi",
   "short_name": "KawalTransaksi",
-  "description": "Cek & laporkan nomor penipu — HP, rekening bank, dan e-wallet",
+  "description": "Cek & laporkan nomor penipu -- HP, rekening bank, dan e-wallet",
   "start_url": "/",
   "display": "standalone",
   "background_color": "#0f172a",

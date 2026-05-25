@@ -93,7 +93,7 @@ export default function RekeningSearchForm() {
 
   return (
     <form onSubmit={handleSearch} className="w-full max-w-lg space-y-3">
-      {/* Container kotak search — tombol di dalam */}
+      {/* Container kotak search -- tombol di dalam */}
       <div
         className={`flex items-center gap-2 bg-white border-2 rounded-md px-3 py-2 transition-all ${
           isWrongInput

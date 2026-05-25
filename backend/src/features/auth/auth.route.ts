@@ -10,7 +10,7 @@ const auth = new Hono<{ Bindings: Env }>();
 const LOCK_DURATION_MINUTES = 10;
 const MAX_ATTEMPTS          = 5;
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// -- Helpers -------------------------------------------------------------------
 
 async function checkBreachedPassword(password: string): Promise<{ breached: boolean; count: number }> {
   try {
@@ -78,7 +78,7 @@ async function checkRateLimit(
   }
 }
 
-// ── POST /api/auth/register ───────────────────────────────────────────────────
+// -- POST /api/auth/register ---------------------------------------------------
 
 auth.post('/register', async (c) => {
   try {
@@ -177,7 +177,7 @@ auth.post('/register', async (c) => {
   }
 });
 
-// ── POST /api/auth/login ──────────────────────────────────────────────────────
+// -- POST /api/auth/login ------------------------------------------------------
 
 auth.post('/login', async (c) => {
   try {
@@ -291,7 +291,7 @@ auth.post('/login', async (c) => {
   }
 });
 
-// ── POST /api/auth/forgot-password ────────────────────────────────────────────
+// -- POST /api/auth/forgot-password --------------------------------------------
 
 auth.post('/forgot-password', async (c) => {
   try {

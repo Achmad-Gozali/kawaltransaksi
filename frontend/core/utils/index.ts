@@ -14,7 +14,7 @@ export function formatPhoneNumber(num: string): string {
 
 export function maskNumber(num: string): string {
   if (num.length <= 6) return num;
-  return num.slice(0, 4) + '····' + num.slice(-3);
+  return num.slice(0, 4) + '----' + num.slice(-3);
 }
 
 export function formatNum(num: string): string {

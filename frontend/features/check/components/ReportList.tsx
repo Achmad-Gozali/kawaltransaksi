@@ -48,7 +48,7 @@ function getAllEvidenceUrls(reports: ReportItem[]): string[] {
   return Array.from(urlSet);
 }
 
-// ── Lightbox ──────────────────────────────────────────────────────────────────
+// -- Lightbox ------------------------------------------------------------------
 function Lightbox({ urls, initialIndex, onClose }: { urls: string[]; initialIndex: number; onClose: () => void }) {
   const [current, setCurrent] = useState(initialIndex);
 
@@ -132,7 +132,7 @@ function Lightbox({ urls, initialIndex, onClose }: { urls: string[]; initialInde
   );
 }
 
-// ── Evidence Gallery ──────────────────────────────────────────────────────────
+// -- Evidence Gallery ----------------------------------------------------------
 function EvidenceGallery({ urls }: { urls: string[] }) {
   const [showAll, setShowAll] = useState(false);
   const [lightboxIndex, setLightboxIndex] = useState<number | null>(null);
@@ -175,7 +175,7 @@ function EvidenceGallery({ urls }: { urls: string[] }) {
 
       <div className="flex items-center justify-between mt-2.5">
         <p className="text-[10px] text-slate-400">
-          Ketuk foto untuk perbesar · {urls.length} foto
+          Ketuk foto untuk perbesar - {urls.length} foto
         </p>
         {!showAll && remaining > 0 && (
           <button
@@ -198,7 +198,7 @@ function EvidenceGallery({ urls }: { urls: string[] }) {
   );
 }
 
-// ── Main ──────────────────────────────────────────────────────────────────────
+// -- Main ----------------------------------------------------------------------
 export default function ReportList({
   reports,
   hasWithdrawn = false,
@@ -212,12 +212,12 @@ export default function ReportList({
   return (
     <div className="space-y-4">
 
-      {/* ── Riwayat laporan ── */}
+      {/* -- Riwayat laporan -- */}
       <div>
         <div className="mb-2 px-0.5 flex items-center justify-between flex-wrap gap-1">
           <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 font-medium">Riwayat laporan</p>
           {reports.length > 0 && (
-            <p className="text-[10px] text-slate-400">{reports.length} laporan · {reports.length} korban berbeda</p>
+            <p className="text-[10px] text-slate-400">{reports.length} laporan - {reports.length} korban berbeda</p>
           )}
         </div>
 
@@ -254,7 +254,7 @@ export default function ReportList({
                       <span className={`text-[10px] font-semibold uppercase tracking-wide ${
                         isVerified ? 'text-emerald-700' : 'text-amber-600'
                       }`}>
-                        Laporan #{index + 1} · {isVerified ? 'Terverifikasi' : 'Menunggu'}
+                        Laporan #{index + 1} - {isVerified ? 'Terverifikasi' : 'Menunggu'}
                       </span>
                     </div>
                     <span className="text-[10px] text-slate-400 font-medium shrink-0">
@@ -299,7 +299,7 @@ export default function ReportList({
                 </p>
                 <p className="text-xs text-slate-500 leading-relaxed">
                   {linkedHasVerified
-                    ? 'Nomor ini disebutkan dalam laporan yang sudah diverifikasi oleh tim moderator. Pelaku yang sama terbukti menggunakan beberapa nomor berbeda — lihat peringatan di atas.'
+                    ? 'Nomor ini disebutkan dalam laporan yang sudah diverifikasi oleh tim moderator. Pelaku yang sama terbukti menggunakan beberapa nomor berbeda -- lihat peringatan di atas.'
                     : 'Nomor ini belum pernah dilaporkan secara langsung. Namun berdasarkan laporan komunitas, nomor ini disebutkan sebagai salah satu nomor yang digunakan oleh pelaku yang sama.'}
                 </p>
                 <div className={`mt-2.5 inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-lg border ${
@@ -307,7 +307,7 @@ export default function ReportList({
                     ? 'text-red-700 bg-red-50 border-red-200'
                     : 'text-amber-700 bg-amber-50 border-amber-200'
                 }`}>
-                  {linkedHasVerified ? 'Pelaku terbukti, tetap waspada' : '⚠ Tetap waspada dengan nomor ini'}
+                  {linkedHasVerified ? 'Pelaku terbukti, tetap waspada' : '[!] Tetap waspada dengan nomor ini'}
                 </div>
               </div>
             </div>
@@ -324,7 +324,7 @@ export default function ReportList({
         )}
       </div>
 
-      {/* ── Bukti lampiran ── */}
+      {/* -- Bukti lampiran -- */}
       {allEvidenceUrls.length > 0 && (
         <div>
           <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-2 font-medium px-0.5">

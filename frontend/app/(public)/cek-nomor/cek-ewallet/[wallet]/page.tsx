@@ -288,7 +288,7 @@ export default async function EwalletDetailPage({ params }: PageProps) {
     created_at: string;
   };
 
-  // ✅ OPTIMIZED: hapus query categoryData — prop categoryBreakdown tidak dirender di EwalletPageClient
+  // [OK] OPTIMIZED: hapus query categoryData -- prop categoryBreakdown tidak dirender di EwalletPageClient
   const [{ data: primaryReports }, { data: linkedReports }] = await Promise.all(
     [
       supabase

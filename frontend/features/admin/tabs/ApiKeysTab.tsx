@@ -41,7 +41,7 @@ async function fetchWithTimeout(url: string, options: RequestInit = {}): Promise
 }
 
 function formatRelative(dateStr: string | null): string {
-  if (!dateStr) return '—';
+  if (!dateStr) return '--';
   const diffMs  = Date.now() - new Date(dateStr).getTime();
   const diffMin = Math.floor(diffMs / 60000);
   const diffHr  = Math.floor(diffMin / 60);
@@ -54,7 +54,7 @@ function formatRelative(dateStr: string | null): string {
 }
 
 function formatExpiry(expiresAt: string | null): { label: string; isExpired: boolean } {
-  if (!expiresAt) return { label: '—', isExpired: false };
+  if (!expiresAt) return { label: '--', isExpired: false };
   const diffDays = Math.ceil((new Date(expiresAt).getTime() - Date.now()) / 86400000);
   if (diffDays < 0)  return { label: 'Kadaluarsa', isExpired: true };
   if (diffDays <= 7) return { label: `${diffDays}h lagi`, isExpired: false };
@@ -188,8 +188,8 @@ export default function ApiKeysTab({ token }: { token: string }) {
         <div className="flex items-start justify-between gap-2">
           <div className="min-w-0">
             <p className="text-sm font-bold text-slate-900 truncate">{k.name}</p>
-            <p className="text-[10px] text-slate-400 font-mono mt-0.5">{k.key_prefix ? `${k.key_prefix}...` : '—'}</p>
-            <p className="text-xs text-slate-500 mt-0.5">{k.user_email ?? '—'}</p>
+            <p className="text-[10px] text-slate-400 font-mono mt-0.5">{k.key_prefix ? `${k.key_prefix}...` : '--'}</p>
+            <p className="text-xs text-slate-500 mt-0.5">{k.user_email ?? '--'}</p>
           </div>
           <div className="flex items-center gap-1.5 shrink-0">
             {(['environment','is_active'] as const).map((field) => (
@@ -354,9 +354,9 @@ export default function ApiKeysTab({ token }: { token: string }) {
                     <tr key={k.id} className="hover:bg-slate-50/60 transition-colors">
                       <td className="px-4 py-3.5">
                         <p className="text-sm font-semibold text-slate-900">{k.name}</p>
-                        <p className="text-[10px] text-slate-400 font-mono mt-0.5">{k.key_prefix ? `${k.key_prefix}...` : '—'}</p>
+                        <p className="text-[10px] text-slate-400 font-mono mt-0.5">{k.key_prefix ? `${k.key_prefix}...` : '--'}</p>
                       </td>
-                      <td className="px-4 py-3.5"><p className="text-xs text-slate-600">{k.user_email ?? '—'}</p></td>
+                      <td className="px-4 py-3.5"><p className="text-xs text-slate-600">{k.user_email ?? '--'}</p></td>
                       <td className="px-4 py-3.5">
                         <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${k.environment === 'live' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'}`}>
                           {k.environment ?? 'live'}

@@ -1,7 +1,7 @@
 'use client';
 
 // ============================================
-// ­ƒôü LOKASI: frontend/components/ReportLanding.tsx
+//  LOKASI: frontend/components/ReportLanding.tsx
 // ============================================
 
 import Link from 'next/link';
@@ -48,7 +48,7 @@ export default function ReportLanding() {
   return (
     <div className="min-h-screen bg-slate-50">
 
-      {/* ── HERO SECTION ── */}
+      {/* -- HERO SECTION -- */}
       <div className="max-w-6xl mx-auto px-4 sm:px-6 py-12 sm:py-20">
         <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-start">
 
@@ -156,7 +156,7 @@ export default function ReportLanding() {
         </div>
       </div>
 
-      {/* ── PENJELASAN SECTION — mirip Kredibel ── */}
+      {/* -- PENJELASAN SECTION -- mirip Kredibel -- */}
       <div className="bg-white border-t border-slate-100">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-14 sm:py-20">
           <div className="grid sm:grid-cols-2 gap-x-16 gap-y-10">

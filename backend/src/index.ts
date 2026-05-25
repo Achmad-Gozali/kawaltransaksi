@@ -21,7 +21,7 @@ export { logSuspiciousIp, autoBlacklistIfAbuse };
 
 const app = new Hono<{ Bindings: Env }>();
 
-// ── CORS ──────────────────────────────────────────────────────────────────────
+// -- CORS ----------------------------------------------------------------------
 
 app.use('*', cors({
   origin: (origin, c) => {
@@ -34,7 +34,7 @@ app.use('*', cors({
   credentials: true,
 }));
 
-// ── Security Headers ──────────────────────────────────────────────────────────
+// -- Security Headers ----------------------------------------------------------
 
 app.use('*', async (c, next) => {
   await next();
@@ -50,7 +50,7 @@ app.use('*', async (c, next) => {
   }
 });
 
-// ── Origin Validator ──────────────────────────────────────────────────────────
+// -- Origin Validator ----------------------------------------------------------
 
 const originValidator = async (c: { req: { method: string; header: (k: string) => string | undefined }; env: Env; json: (d: unknown, s?: number) => Response }, next: () => Promise<void>) => {
   if (c.req.method === 'OPTIONS') return next();
@@ -67,7 +67,7 @@ const originValidator = async (c: { req: { method: string; header: (k: string) =
 app.use('/api/auth/*',   originValidator);
 app.use('/api/search/*', originValidator);
 
-// ── Request Size Limits ───────────────────────────────────────────────────────
+// -- Request Size Limits -------------------------------------------------------
 
 const SIZE_LIMITS: Record<string, number> = {
   '/api/auth':     10 * 1024,
@@ -93,7 +93,7 @@ app.use('/api/*', async (c, next) => {
   return next();
 });
 
-// ── IP Blacklist ──────────────────────────────────────────────────────────────
+// -- IP Blacklist --------------------------------------------------------------
 
 app.use('/api/*', async (c, next) => {
   if (!c.env.LIMITER) return next();
@@ -108,7 +108,7 @@ app.use('/api/*', async (c, next) => {
   return next();
 });
 
-// ── Rate Limiters ─────────────────────────────────────────────────────────────
+// -- Rate Limiters -------------------------------------------------------------
 
 app.use('/api/auth/*', async (c, next) => {
   if (c.env.AUTH_RATE_LIMITER) {
@@ -149,7 +149,7 @@ app.use('/api/*', (c, next) => {
 app.use('/api/auth/*',   (c, next) => kvRateLimit(c, next, { key: 'rl_auth_ip_', max: 5,  ttl: 60, label: 'AUTH RL',   logReason: 'Melewati auth rate limit',   blacklist: true }));
 app.use('/api/search/*', (c, next) => kvRateLimit(c, next, { key: 'rl_search_',  max: 30, ttl: 60, label: 'SEARCH RL', logReason: 'Melewati search rate limit' }));
 
-// ── Honeypot ──────────────────────────────────────────────────────────────────
+// -- Honeypot ------------------------------------------------------------------
 
 async function honeypotHandler(c: { req: { header: (k: string) => string | undefined; url: string }; env: Env; json: (d: unknown, s?: number) => Response }) {
   const ip   = c.req.header('CF-Connecting-IP') || 'anonymous';
@@ -166,7 +166,7 @@ async function honeypotHandler(c: { req: { header: (k: string) => string | undef
   return c.json({ success: false, message: 'Endpoint tidak ditemukan.' }, 404);
 }
 
-// ── Health & Robots.txt ───────────────────────────────────────────────────────
+// -- Health & Robots.txt -------------------------------------------------------
 
 app.get('/health',     (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }));
 app.get('/robots.txt', (c) => c.text([
@@ -176,12 +176,12 @@ app.get('/robots.txt', (c) => c.text([
   'Disallow: /api/internal',    'Disallow: /api/robot', '',
 ].join('\n')));
 
-// ── Honeypot Endpoints ────────────────────────────────────────────────────────
+// -- Honeypot Endpoints --------------------------------------------------------
 
 ['/api/v1/accounts', '/api/v1/reports', '/api/v1/keys', '/api/v1/token',
  '/api/v1/users',    '/api/v1/admin',   '/api/internal'].forEach(p => app.all(p, honeypotHandler));
 
-// ── Routes ────────────────────────────────────────────────────────────────────
+// -- Routes --------------------------------------------------------------------
 
 app.route('/api/auth',      authRoutes);
 app.route('/api/reports',   reportsRoutes);
@@ -201,7 +201,7 @@ app.onError((err, c) => {
   return c.json({ success: false, message: 'Terjadi kesalahan server.' }, 500);
 });
 
-// ── Scheduled (Cron) ─────────────────────────────────────────────────────────
+// -- Scheduled (Cron) ---------------------------------------------------------
 
 export default {
   fetch: app.fetch,
@@ -211,7 +211,7 @@ export default {
 
     console.log(`[CRON] Trigger: ${cron}`);
 
-    // Artikel mingguan — Minggu 23:00 UTC
+    // Artikel mingguan -- Minggu 23:00 UTC
     if (cron === '0 23 * * SUN') {
       ctx.waitUntil(
         generateWeeklyArticle(env)
@@ -219,7 +219,7 @@ export default {
       );
     }
 
-    // Robot scheduler — tiap 30 menit
+    // Robot scheduler -- tiap 30 menit
     else if (cron === '*/30 * * * *') {
       ctx.waitUntil(
         runScheduler(supabase)
@@ -227,7 +227,7 @@ export default {
       );
     }
 
-    // Trend detector + confidence decay (hari pertama bulan) — tiap 1 jam
+    // Trend detector + confidence decay (hari pertama bulan) -- tiap 1 jam
     else if (cron === '0 * * * *') {
       const isFirstOfMonth = new Date().getDate() === 1;
       ctx.waitUntil(

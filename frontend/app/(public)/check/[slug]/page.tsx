@@ -169,7 +169,7 @@ function detectCarrier(phone: string): CarrierInfo | null {
   return null;
 }
 
-// ── Blacklist Badge ───────────────────────────────────────────────────────────
+// -- Blacklist Badge -----------------------------------------------------------
 
 type BlacklistLevel = "medium" | "high" | "critical";
 
@@ -289,19 +289,19 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
   const isPhoneNumber = defaultType === "phone" && !defaultBankName && !defaultWalletName;
   const carrierInfo   = isPhoneNumber ? detectCarrier(realNumber) : null;
 
-  // Risk badges — termasuk blacklist & viral
+  // Risk badges -- termasuk blacklist & viral
   const riskBadges: { label: string; color: string }[] = [];
   if (recentReports.length >= 3)
     riskBadges.push({ label: `Dilaporkan ${recentReports.length}x dalam 30 hari`, color: "bg-red-50 text-red-700 border-red-200" });
   if (totalLoss >= 10_000_000)
-    riskBadges.push({ label: `Kerugian besar — ${new Intl.NumberFormat("id-ID", { notation: "compact", maximumFractionDigits: 1 }).format(totalLoss)}`, color: "bg-orange-50 text-orange-700 border-orange-200" });
+    riskBadges.push({ label: `Kerugian besar -- ${new Intl.NumberFormat("id-ID", { notation: "compact", maximumFractionDigits: 1 }).format(totalLoss)}`, color: "bg-orange-50 text-orange-700 border-orange-200" });
   if (multiVictimCount >= 2)
     riskBadges.push({ label: `${multiVictimCount} laporan sebut ada korban lain`, color: "bg-amber-50 text-amber-700 border-amber-200" });
   if (uniquePlatforms.length >= 2)
     riskBadges.push({ label: `Aktif di ${uniquePlatforms.length} platform berbeda`, color: "bg-slate-100 text-slate-600 border-slate-200" });
   // [ROBOT] Viral badge
   if (isViral)
-    riskBadges.push({ label: `🔥 Sedang viral — ${viralCount} laporan dalam 24 jam`, color: "bg-red-50 text-red-700 border-red-200" });
+    riskBadges.push({ label: ` Sedang viral -- ${viralCount} laporan dalam 24 jam`, color: "bg-red-50 text-red-700 border-red-200" });
 
   let status: "safe" | "warning" | "danger" = "safe";
   if (verifiedCount > 0)         status = "danger";
@@ -341,10 +341,10 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
   const config = statusConfig[status];
 
   const shareText = status === "danger"
-    ? `⚠️ waspada! nomor ${formatNum(realNumber)} terindikasi penipu dengan ${verifiedCount} laporan terverifikasi. cek di kawaltransaksi:`
+    ? `[!] waspada! nomor ${formatNum(realNumber)} terindikasi penipu dengan ${verifiedCount} laporan terverifikasi. cek di kawaltransaksi:`
     : status === "warning"
-      ? `⚠️ nomor ${formatNum(realNumber)} sedang dalam proses verifikasi laporan penipuan. cek di kawaltransaksi:`
-      : `✓ nomor ${formatNum(realNumber)} aman — belum ada laporan penipuan di kawaltransaksi:`;
+      ? `[!] nomor ${formatNum(realNumber)} sedang dalam proses verifikasi laporan penipuan. cek di kawaltransaksi:`
+      : `[OK] nomor ${formatNum(realNumber)} aman -- belum ada laporan penipuan di kawaltransaksi:`;
 
   const verificationSteps = linkedHasVerified && reports.length > 0 && verifiedCount === 0
     ? [{ label: "Nomor ditemukan", done: true }, { label: "Terkait laporan terverifikasi", done: true }, { label: "Laporan langsung menunggu review", done: false }]
@@ -429,7 +429,7 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
           <div className="max-w-5xl mx-auto flex items-center gap-2 flex-wrap">
             <div className={`w-2 h-2 rounded-full shrink-0 animate-pulse ${config.dotBg}`} />
             <span className={`text-xs font-semibold uppercase tracking-widest ${config.barLabel}`}>{config.verdict}</span>
-            <span className={`text-xs ${config.barDesc} hidden sm:inline`}>— {config.verdictSub}</span>
+            <span className={`text-xs ${config.barDesc} hidden sm:inline`}>-- {config.verdictSub}</span>
             <span className="ml-auto flex items-center gap-1 text-[10px] text-slate-400">
               <Clock className="w-3 h-3" /> {formatTimestamp(checkedAt)}
             </span>
@@ -439,7 +439,7 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
           </div>
         </div>
 
-        {/* [ROBOT] Blacklist banner — tampil kalau ada di blacklist */}
+        {/* [ROBOT] Blacklist banner -- tampil kalau ada di blacklist */}
         {blacklist && (
           <div className={`px-4 sm:px-6 py-3 border-b ${
             blacklist.level === "critical" ? "bg-red-600 border-red-700" :
@@ -452,7 +452,7 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
                                                 <AlertTriangle className="w-4 h-4 text-white shrink-0" />}
               <div className="flex-1 min-w-0">
                 <span className="text-xs font-bold text-white uppercase tracking-wider">
-                  {blacklist.level === "critical" ? "⚠️ Penipu Berbahaya — Jangan Bertransaksi" :
+                  {blacklist.level === "critical" ? "[!] Penipu Berbahaya -- Jangan Bertransaksi" :
                    blacklist.level === "high"     ? "Penipu Terkonfirmasi" :
                                                     "Terindikasi Penipu"}
                 </span>
@@ -475,13 +475,13 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
               </div>
               <div className="bg-white rounded-xl border border-slate-200 p-3 sm:p-5">
                 <p className={`text-2xl sm:text-4xl font-bold leading-none tabular-nums ${totalLoss > 0 ? "text-red-600" : "text-slate-300"}`}>
-                  {totalLoss > 0 ? new Intl.NumberFormat("id-ID", { notation: "compact", maximumFractionDigits: 1 }).format(totalLoss) : "—"}
+                  {totalLoss > 0 ? new Intl.NumberFormat("id-ID", { notation: "compact", maximumFractionDigits: 1 }).format(totalLoss) : "--"}
                 </p>
                 <p className="text-[10px] text-slate-400 mt-2 uppercase tracking-[0.1em]">Total kerugian</p>
               </div>
               <div className={`rounded-xl border p-3 sm:p-5 ${hasOtherVictims ? "bg-amber-50 border-amber-200" : "bg-white border-slate-200"}`}>
                 <p className={`text-2xl sm:text-4xl font-bold leading-none ${hasOtherVictims ? "text-amber-500" : "text-slate-300"}`}>
-                  {hasOtherVictims ? "!" : "—"}
+                  {hasOtherVictims ? "!" : "--"}
                 </p>
                 <p className="text-[10px] text-slate-400 mt-2 uppercase tracking-[0.1em]">Multi korban</p>
               </div>
@@ -530,11 +530,11 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
                         </p>
                         <p className={`text-xs mt-0.5 ${linkedHasVerified ? "text-red-600" : "text-amber-600"}`}>
                           {r.status === "verified" ? "Laporan terverifikasi" : "Laporan dalam investigasi"}
-                          {r.target_name ? ` · a.n. ${r.target_name}` : ""}
+                          {r.target_name ? ` - a.n. ${r.target_name}` : ""}
                         </p>
                       </div>
                       <span className={`text-xs font-semibold whitespace-nowrap ${linkedHasVerified ? "text-red-600 group-hover:text-red-800" : "text-amber-700 group-hover:text-amber-900"}`}>
-                        Lihat →
+                        Lihat ->
                       </span>
                     </a>
                   ))}
@@ -561,7 +561,7 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
                   <ul className="divide-y divide-amber-100">
                     {waspadaChecklist.map((item, i) => (
                       <li key={i} className="px-4 py-3 flex items-start gap-2.5">
-                        <span className="text-amber-400 mt-0.5 shrink-0">·</span>
+                        <span className="text-amber-400 mt-0.5 shrink-0">-</span>
                         <p className="text-xs text-amber-900 leading-relaxed">{item}</p>
                       </li>
                     ))}
@@ -610,10 +610,10 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
                               {entry.number.replace(/(\d{4})(?=\d)/g, "$1 ")}
                             </span>
                             <p className="text-[10px] text-slate-400 mt-0.5">
-                              {[entry.bank ? entry.bank : (typeLabel[entry.type] ?? "Nomor HP"), entry.name ? `a.n. ${entry.name}` : null].filter(Boolean).join(" · ")}
+                              {[entry.bank ? entry.bank : (typeLabel[entry.type] ?? "Nomor HP"), entry.name ? `a.n. ${entry.name}` : null].filter(Boolean).join(" - ")}
                             </p>
                           </div>
-                          <span className="text-xs text-emerald-600 font-semibold group-hover:underline whitespace-nowrap">Cek →</span>
+                          <span className="text-xs text-emerald-600 font-semibold group-hover:underline whitespace-nowrap">Cek -></span>
                         </a>
                       ))}
                     </div>
@@ -641,8 +641,8 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
                   {linkedHasVerified && verifiedCount === 0 && (
                     <p className="text-[11px] text-slate-400 leading-relaxed mt-4 pt-3 border-t border-slate-100">
                       {reports.length > 0
-                        ? "Laporan di nomor ini sedang direview moderator. Namun nomor ini sudah terbukti terkait pelaku yang telah diverifikasi — tetap waspada."
-                        : "Belum ada laporan langsung di nomor ini. Namun nomor ini sudah terbukti terkait pelaku yang telah diverifikasi — hindari bertransaksi."}
+                        ? "Laporan di nomor ini sedang direview moderator. Namun nomor ini sudah terbukti terkait pelaku yang telah diverifikasi -- tetap waspada."
+                        : "Belum ada laporan langsung di nomor ini. Namun nomor ini sudah terbukti terkait pelaku yang telah diverifikasi -- hindari bertransaksi."}
                     </p>
                   )}
                 </div>

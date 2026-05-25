@@ -34,7 +34,7 @@ export async function GET(request: NextRequest) {
     }
   );
 
-  // Handle reset password — redirect ke halaman reset
+  // Handle reset password -- redirect ke halaman reset
   if (token_hash && type === 'recovery') {
     const { error } = await supabase.auth.verifyOtp({
       token_hash,

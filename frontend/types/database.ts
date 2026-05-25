@@ -1,5 +1,5 @@
 // ============================================
-// 📁 LOKASI: frontend/types/database.ts
+//  LOKASI: frontend/types/database.ts
 // ============================================
 
 export type TargetType       = 'phone' | 'bank_account' | 'ewallet';
@@ -203,7 +203,7 @@ export interface Database {
         Relationships: [];
       };
 
-      // ── Blacklist (robot) ───────────────────────────────────────────────────
+      // -- Blacklist (robot) ---------------------------------------------------
       blacklist: {
         Row: {
           id: string;
@@ -237,7 +237,7 @@ export interface Database {
         Relationships: [];
       };
 
-      // ── Robot Trends ────────────────────────────────────────────────────────
+      // -- Robot Trends --------------------------------------------------------
       robot_trends: {
         Row: {
           id: string;
@@ -266,7 +266,7 @@ export interface Database {
         Relationships: [];
       };
 
-      // ── Robot Logs (audit) ──────────────────────────────────────────────────
+      // -- Robot Logs (audit) --------------------------------------------------
       robot_logs: {
         Row: {
           id: string;
@@ -304,7 +304,7 @@ export interface Database {
         Relationships: [];
       };
 
-      // ── Robot Health ────────────────────────────────────────────────────────
+      // -- Robot Health --------------------------------------------------------
       robot_health: {
         Row: {
           id: string;
@@ -342,7 +342,7 @@ export interface Database {
         Relationships: [];
       };
 
-      // ── Appeal System ───────────────────────────────────────────────────────
+      // -- Appeal System -------------------------------------------------------
       report_appeals: {
         Row: {
           id: string;
@@ -350,8 +350,8 @@ export interface Database {
           user_id: string;
           reason: string;
           status: string; // pending | approved | rejected
-          evidence_urls: string[] | null;  // ← tambah
-          loss_amount: number | null;      // ← tambah
+          evidence_urls: string[] | null;  // <- tambah
+          loss_amount: number | null;      // <- tambah
           reviewed_at: string | null;
           created_at: string;
         };
@@ -361,8 +361,8 @@ export interface Database {
           user_id: string;
           reason: string;
           status?: string;
-          evidence_urls?: string[] | null;  // ← tambah
-          loss_amount?: number | null;      // ← tambah
+          evidence_urls?: string[] | null;  // <- tambah
+          loss_amount?: number | null;      // <- tambah
           reviewed_at?: string | null;
           created_at?: string;
         };
@@ -372,8 +372,8 @@ export interface Database {
           user_id?: string;
           reason?: string;
           status?: string;
-          evidence_urls?: string[] | null;  // ← tambah
-          loss_amount?: number | null;      // ← tambah
+          evidence_urls?: string[] | null;  // <- tambah
+          loss_amount?: number | null;      // <- tambah
           reviewed_at?: string | null;
           created_at?: string;
         };

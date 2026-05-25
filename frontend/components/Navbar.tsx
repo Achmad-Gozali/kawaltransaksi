@@ -139,7 +139,7 @@ export default function Navbar() {
               </span>
             </Link>
 
-            {/* MENU NAVIGASI — desktop */}
+            {/* MENU NAVIGASI -- desktop */}
             <div className="hidden lg:flex flex-1 items-center justify-center gap-0 h-16">
               {menuItems.map((item) => (
                 <Link
@@ -156,7 +156,7 @@ export default function Navbar() {
               ))}
             </div>
 
-            {/* AUTH — kanan (desktop) */}
+            {/* AUTH -- kanan (desktop) */}
             <div className="hidden lg:flex items-center gap-2 shrink-0 ml-auto">
               {isLoading ? (
                 <div className="w-40 h-9 bg-slate-100 animate-pulse rounded-lg" />
@@ -280,7 +280,7 @@ export default function Navbar() {
               ))}
             </div>
 
-            {/* Bottom drawer — kalau belum login */}
+            {/* Bottom drawer -- kalau belum login */}
             {!user && (
               <div className="px-3 pb-8 pt-1 border-t border-slate-100 space-y-2">
                 <Link
@@ -301,7 +301,7 @@ export default function Navbar() {
         </div>
       )}
 
-      {/* MOBILE: RIGHT DRAWER — Profile */}
+      {/* MOBILE: RIGHT DRAWER -- Profile */}
       {isProfileOpen && user && (
         <div className="lg:hidden fixed inset-0 z-[60] flex justify-end">
           <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" onClick={() => setIsProfileOpen(false)} />

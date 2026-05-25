@@ -1,5 +1,5 @@
 // ============================================
-// 📁 LOKASI: backend/src/features/robot/robot.route.ts
+//  LOKASI: backend/src/features/robot/robot.route.ts
 // ============================================
 
 import { Hono } from 'hono';
@@ -18,7 +18,7 @@ function isInternal(c: { req: { header: (k: string) => string | undefined }; env
   return c.req.header('X-Internal-Key') === c.env.INTERNAL_API_KEY;
 }
 
-// ── POST /api/robot/evaluate/:reportId ───────────────────────────────────────
+// -- POST /api/robot/evaluate/:reportId ---------------------------------------
 
 robot.post('/evaluate/:reportId', async (c) => {
   if (!isInternal(c)) return c.json({ success: false, message: 'Akses ditolak.' }, 403);
@@ -27,11 +27,11 @@ robot.post('/evaluate/:reportId', async (c) => {
     .from('reports').select('*').eq('id', c.req.param('reportId')).single();
   if (error || !report) return c.json({ success: false, message: 'Laporan tidak ditemukan.' }, 404);
   const result = await scoreReport(report as RobotReport, supabase);
-  await applyVerdict(report.id, result, supabase, report.status);  // ← pass existing status
+  await applyVerdict(report.id, result, supabase, report.status);  // <- pass existing status
   return c.json({ success: true, data: result });
 });
 
-// ── POST /api/robot/evaluate-number/:number ───────────────────────────────────
+// -- POST /api/robot/evaluate-number/:number -----------------------------------
 
 robot.post('/evaluate-number/:number', async (c) => {
   if (!isInternal(c)) return c.json({ success: false, message: 'Akses ditolak.' }, 403);
@@ -39,7 +39,7 @@ robot.post('/evaluate-number/:number', async (c) => {
   return c.json({ success: true, message: `Re-evaluasi selesai untuk nomor ${c.req.param('number')}.` });
 });
 
-// ── GET /api/robot/blacklist/:number ─────────────────────────────────────────
+// -- GET /api/robot/blacklist/:number -----------------------------------------
 
 robot.get('/blacklist/:number', async (c) => {
   if (!isInternal(c)) return c.json({ success: false, message: 'Akses ditolak.' }, 403);
@@ -47,7 +47,7 @@ robot.get('/blacklist/:number', async (c) => {
   return c.json({ success: true, data: result });
 });
 
-// ── GET /api/robot/blacklist-list — semua entri blacklist (untuk admin) ───────
+// -- GET /api/robot/blacklist-list -- semua entri blacklist (untuk admin) -------
 
 robot.get('/blacklist-list', async (c) => {
   if (!isInternal(c)) return c.json({ success: false, message: 'Akses ditolak.' }, 403);
@@ -59,7 +59,7 @@ robot.get('/blacklist-list', async (c) => {
   return c.json({ success: true, data: data ?? [] });
 });
 
-// ── GET /api/robot/health ─────────────────────────────────────────────────────
+// -- GET /api/robot/health -----------------------------------------------------
 
 robot.get('/health', async (c) => {
   if (!isInternal(c)) return c.json({ success: false, message: 'Akses ditolak.' }, 403);
@@ -67,7 +67,7 @@ robot.get('/health', async (c) => {
   return c.json({ success: true, data: latest });
 });
 
-// ── GET /api/robot/viral ──────────────────────────────────────────────────────
+// -- GET /api/robot/viral ------------------------------------------------------
 
 robot.get('/viral', async (c) => {
   if (!isInternal(c)) return c.json({ success: false, message: 'Akses ditolak.' }, 403);
@@ -75,7 +75,7 @@ robot.get('/viral', async (c) => {
   return c.json({ success: true, data });
 });
 
-// ── GET /api/robot/logs — audit logs terbaru ──────────────────────────────────
+// -- GET /api/robot/logs -- audit logs terbaru ----------------------------------
 
 robot.get('/logs', async (c) => {
   if (!isInternal(c)) return c.json({ success: false, message: 'Akses ditolak.' }, 403);
@@ -87,7 +87,7 @@ robot.get('/logs', async (c) => {
   return c.json({ success: true, data: data ?? [] });
 });
 
-// ── POST /api/robot/run-scheduler ────────────────────────────────────────────
+// -- POST /api/robot/run-scheduler --------------------------------------------
 
 robot.post('/run-scheduler', async (c) => {
   if (!isInternal(c)) return c.json({ success: false, message: 'Akses ditolak.' }, 403);
@@ -95,7 +95,7 @@ robot.post('/run-scheduler', async (c) => {
   return c.json({ success: true, data: result });
 });
 
-// ── POST /api/robot/run-decay ─────────────────────────────────────────────────
+// -- POST /api/robot/run-decay -------------------------------------------------
 
 robot.post('/run-decay', async (c) => {
   if (!isInternal(c)) return c.json({ success: false, message: 'Akses ditolak.' }, 403);
@@ -105,7 +105,7 @@ robot.post('/run-decay', async (c) => {
   return c.json({ success: true, data: result });
 });
 
-// ── POST /api/robot/run-trends ────────────────────────────────────────────────
+// -- POST /api/robot/run-trends ------------------------------------------------
 
 robot.post('/run-trends', async (c) => {
   if (!isInternal(c)) return c.json({ success: false, message: 'Akses ditolak.' }, 403);
@@ -113,7 +113,7 @@ robot.post('/run-trends', async (c) => {
   return c.json({ success: true, data: result });
 });
 
-// ── POST /api/robot/backfill ──────────────────────────────────────────────────
+// -- POST /api/robot/backfill --------------------------------------------------
 
 robot.post('/backfill', async (c) => {
   if (!isInternal(c)) return c.json({ success: false, message: 'Akses ditolak.' }, 403);
@@ -135,11 +135,11 @@ robot.post('/backfill', async (c) => {
   for (const report of reports) {
     try {
       const result = await scoreReport(report as RobotReport, supabase);
-      await applyVerdict(report.id, result, supabase, report.status);  // ← pass existing status
+      await applyVerdict(report.id, result, supabase, report.status);  // <- pass existing status
       stats.processed++;
       if (result.verdict === 'verified') stats.verified++;
       if (result.verdict === 'rejected') stats.rejected++;
-      if (result.verdict === 'pending')  stats.skipped++;  // ← robot belum confident, status tetap
+      if (result.verdict === 'pending')  stats.skipped++;  // <- robot belum confident, status tetap
     } catch (err) {
       console.error(`[BACKFILL] Error evaluasi ${report.id}:`, err);
       stats.errors++;
@@ -153,7 +153,7 @@ robot.post('/backfill', async (c) => {
   return c.json({ success: true, data: stats });
 });
 
-// ── Scheduler ────────────────────────────────────────────────────────────────
+// -- Scheduler ----------------------------------------------------------------
 
 export async function runScheduler(
   supabase: ReturnType<typeof getSupabaseAdmin>
@@ -175,7 +175,7 @@ export async function runScheduler(
       const start = Date.now();
       try {
         const result = await scoreReport(report as RobotReport, supabase);
-        await applyVerdict(report.id, result, supabase, report.status);  // ← pass existing status
+        await applyVerdict(report.id, result, supabase, report.status);  // <- pass existing status
         stats.processed++;
         if (result.verdict === 'verified') stats.verified++;
         if (result.verdict === 'rejected') stats.rejected++;

@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { encodeSlug } from "@/core/utils";
 
-// ── TYPES ─────────────────────────────────────────────────────────────────────
+// -- TYPES ---------------------------------------------------------------------
 interface EwalletData {
   name: string;
   fullName: string;
@@ -51,7 +51,7 @@ interface Props {
   categoryBreakdown: CategoryCount[];
 }
 
-// ── SOCIAL MEDIA MAP ──────────────────────────────────────────────────────────
+// -- SOCIAL MEDIA MAP ----------------------------------------------------------
 const SOCIALS: Record<string, { instagram?: string; tiktok?: string }> = {
   GoPay: {
     instagram: "https://www.instagram.com/gopayindonesia?igsh=amo1enhtbHRocnAx",
@@ -91,7 +91,7 @@ function TiktokIcon() {
   );
 }
 
-// ── MAIN ─────────────────────────────────────────────────────────────────────
+// -- MAIN ---------------------------------------------------------------------
 export default function EwalletPageClient({
   walletData: data,
   walletId,
@@ -108,7 +108,7 @@ export default function EwalletPageClient({
       className="min-h-screen bg-slate-50 text-slate-900 pb-16"
       style={{ fontFamily: "'Inter', sans-serif" }}
     >
-      {/* ── SUBNAVBAR — mobile only ── */}
+      {/* -- SUBNAVBAR -- mobile only -- */}
       <div className="sm:hidden bg-white border-b border-slate-100">
         <div className="px-4 py-3 flex items-center justify-between">
           <Link
@@ -124,7 +124,7 @@ export default function EwalletPageClient({
         </div>
       </div>
 
-      {/* ── HERO ── */}
+      {/* -- HERO -- */}
       <section className="bg-white border-b border-slate-200/80">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
           <div className="grid lg:grid-cols-3 gap-8 items-start">
@@ -147,7 +147,7 @@ export default function EwalletPageClient({
                     {data.fullName}
                   </h1>
                   <p className="text-[10px] text-slate-400 uppercase tracking-[0.15em] mt-0.5 font-medium">
-                    Verifikasi akun · {data.name}
+                    Verifikasi akun - {data.name}
                   </p>
                 </div>
               </div>
@@ -174,7 +174,7 @@ export default function EwalletPageClient({
               </div>
             </div>
 
-            {/* Kanan — sidebar sosmed */}
+            {/* Kanan -- sidebar sosmed */}
             {hasSocials && (
               <div className="lg:col-span-1">
                 <div className="bg-white rounded-[8px] border border-slate-200/80 shadow-sm overflow-hidden">
@@ -251,7 +251,7 @@ export default function EwalletPageClient({
         </div>
       </section>
 
-      {/* ── BODY ── */}
+      {/* -- BODY -- */}
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-6">
         {/* STATS */}
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">

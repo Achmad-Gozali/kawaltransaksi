@@ -191,7 +191,7 @@ export default function BlacklistTab({ token }: { token: string }) {
         <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
           <div>
             <p className="text-sm font-semibold text-slate-800">Log IP Mencurigakan {fetchedLogs && `(${logs.length})`}</p>
-            <p className="text-xs text-slate-400 mt-0.5">IP yang kena rate limit — disimpan 7 hari</p>
+            <p className="text-xs text-slate-400 mt-0.5">IP yang kena rate limit -- disimpan 7 hari</p>
           </div>
           <button onClick={fetchLogs} disabled={loadingLogs}
             className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold rounded-xl disabled:opacity-50 transition-colors">

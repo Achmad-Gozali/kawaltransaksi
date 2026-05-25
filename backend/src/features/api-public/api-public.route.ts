@@ -5,7 +5,7 @@ import type { Env } from '../../types';
 
 const apiPublic = new Hono<{ Bindings: Env }>();
 
-// ── Singleton Supabase client per request context ─────────────────────────────
+// -- Singleton Supabase client per request context -----------------------------
 let _supabase: SupabaseClient | null = null;
 let _supabaseEnv: string | null = null;
 
@@ -19,7 +19,7 @@ function getSupabase(env: Env): SupabaseClient {
   return _supabase;
 }
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// -- Helpers -------------------------------------------------------------------
 
 async function hashKey(key: string): Promise<string> {
   const data = new TextEncoder().encode(key);
@@ -31,7 +31,7 @@ function isValidKeyFormat(key: string): boolean {
   return /^kt_(live|test)_[A-Za-z0-9]{40}$/.test(key);
 }
 
-// ── Cache hasil check nomor di KV (TTL 5 menit) ───────────────────────────────
+// -- Cache hasil check nomor di KV (TTL 5 menit) -------------------------------
 async function getCachedCheckResult(
   limiter: KVNamespace,
   number: string,
@@ -60,7 +60,7 @@ async function setCachedCheckResult(
   }
 }
 
-// ── Rate limit per IP ─────────────────────────────────────────────────────────
+// -- Rate limit per IP ---------------------------------------------------------
 async function checkIpRateLimit(
   limiter: KVNamespace,
   ip: string
@@ -73,7 +73,7 @@ async function checkIpRateLimit(
   return { allowed: true };
 }
 
-// ── Log failed auth attempt + auto-blacklist ──────────────────────────────────
+// -- Log failed auth attempt + auto-blacklist ----------------------------------
 async function logFailedAttempt(
   limiter: KVNamespace,
   ip: string,
@@ -103,7 +103,7 @@ async function logFailedAttempt(
   }
 }
 
-// ── Request deduplication via Idempotency-Key ─────────────────────────────────
+// -- Request deduplication via Idempotency-Key ---------------------------------
 async function checkDeduplication(
   limiter: KVNamespace,
   idempotencyKey: string,
@@ -133,7 +133,7 @@ async function cacheIdempotentResponse(
   }
 }
 
-// ── Anomaly detection ─────────────────────────────────────────────────────────
+// -- Anomaly detection ---------------------------------------------------------
 async function checkAnomaly(
   limiter: KVNamespace,
   keyId: string,
@@ -192,7 +192,7 @@ async function checkAnomaly(
   }
 }
 
-// ── Validasi API key ──────────────────────────────────────────────────────────
+// -- Validasi API key ----------------------------------------------------------
 async function validateApiKey(
   key: string,
   ip: string,
@@ -261,7 +261,7 @@ async function incrementUsage(keyId: string, env: Env): Promise<void> {
   await supabase.rpc('increment_api_usage', { key_id: keyId });
 }
 
-// ── GET /api/v1/check ─────────────────────────────────────────────────────────
+// -- GET /api/v1/check ---------------------------------------------------------
 apiPublic.get('/check', async (c) => {
   try {
     const ip             = c.req.header('CF-Connecting-IP') || 'anonymous';

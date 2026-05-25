@@ -56,7 +56,7 @@ export function TargetEntryCard({
         const data = await res.json();
         if (data.success) setDuplicate(data.data);
       } catch {
-        // silent fail — tidak blokir user
+        // silent fail -- tidak blokir user
       }
     }, 600);
 
@@ -139,7 +139,7 @@ export function TargetEntryCard({
               <p className={`text-xs font-bold ${cfg.color}`}>{cfg.label}</p>
               <p className={`text-xs mt-0.5 ${cfg.color} opacity-80 leading-relaxed`}>
                 Nomor ini sudah dilaporkan <span className="font-bold">{duplicate.totalReports}x</span> oleh pengguna lain.
-                Laporan kamu akan memperkuat data yang ada — sertakan bukti yang berbeda.
+                Laporan kamu akan memperkuat data yang ada -- sertakan bukti yang berbeda.
               </p>
             </div>
           </div>

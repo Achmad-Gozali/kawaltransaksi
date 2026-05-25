@@ -84,7 +84,7 @@ export default function DeveloperClient({ token, isLoggedIn }: Props) {
 
       {revealKey && <KeyRevealModal apiKey={revealKey} onClose={() => setRevealKey(null)} />}
 
-      {/* ── Hero ── */}
+      {/* -- Hero -- */}
       <section className="bg-slate-900 text-white px-4 pt-14 pb-20 sm:pt-20 sm:pb-28">
         <div className="max-w-4xl mx-auto text-center">
           <h1 className="text-3xl sm:text-5xl font-black tracking-tighter uppercase mb-4 leading-tight">
@@ -109,7 +109,7 @@ export default function DeveloperClient({ token, isLoggedIn }: Props) {
         <path d="M0,80 C360,20 1080,60 1440,20 L1440,80 L0,80 Z" fill="#ffffff" />
       </svg>
 
-      {/* ── API Keys ── */}
+      {/* -- API Keys -- */}
       <section id="api-keys" className="bg-white pt-10 pb-12 sm:pt-14 sm:pb-16 px-4">
         <div className="max-w-4xl mx-auto">
           <div className="flex items-end justify-between mb-6">
@@ -249,7 +249,7 @@ export default function DeveloperClient({ token, isLoggedIn }: Props) {
         <path d="M0,0 C240,60 480,20 720,45 C960,70 1200,30 1440,50 L1440,80 L0,80 Z" fill="#f8fafc" />
       </svg>
 
-      {/* ── Dokumentasi ── */}
+      {/* -- Dokumentasi -- */}
       <section id="dokumentasi" className="bg-slate-50 pt-10 pb-16 sm:pt-14 sm:pb-20 px-4">
         <div className="max-w-4xl mx-auto">
           <div className="mb-8">
@@ -282,7 +282,7 @@ export default function DeveloperClient({ token, isLoggedIn }: Props) {
               <p className="text-sm text-slate-600 leading-relaxed">Mulai gunakan API dalam 3 langkah mudah.</p>
               <div className="space-y-3">
                 {[
-                  { step: '1', title: 'Generate API Key', desc: 'Buat API key dari dashboard di atas. Key hanya ditampilkan sekali — simpan di tempat aman.' },
+                  { step: '1', title: 'Generate API Key', desc: 'Buat API key dari dashboard di atas. Key hanya ditampilkan sekali -- simpan di tempat aman.' },
                   { step: '2', title: 'Pasang di Header',  desc: 'Sertakan API key di header setiap request menggunakan X-API-Key.' },
                   { step: '3', title: 'Cek Response',      desc: 'Baca field status di response: safe, warning, atau danger.' },
                 ].map(item => (
@@ -334,7 +334,7 @@ export default function DeveloperClient({ token, isLoggedIn }: Props) {
               </div>
             </DocSection>
 
-            <DocSection title="Endpoint — GET /api/v1/check">
+            <DocSection title="Endpoint -- GET /api/v1/check">
               <p className="text-sm text-slate-600 leading-relaxed">
                 Gunakan untuk mengecek apakah sebuah nomor HP, rekening bank, atau e-wallet terindikasi penipuan berdasarkan laporan komunitas.
               </p>
@@ -431,9 +431,9 @@ export default function DeveloperClient({ token, isLoggedIn }: Props) {
               </p>
               <div className="bg-slate-50 rounded-xl border border-slate-100 px-4 py-3">
                 <ul className="text-sm text-slate-600 space-y-1.5 leading-relaxed">
-                  <li>ÔÇó Kirim header <code className="bg-slate-100 px-1 rounded text-xs font-mono">Idempotency-Key</code> dengan nilai unik (misalnya UUID)</li>
-                  <li>ÔÇó Request duplikat dalam 5 menit dikembalikan dari cache</li>
-                  <li>ÔÇó Response cached ditandai <code className="bg-slate-100 px-1 rounded text-xs font-mono">meta.idempotent: true</code></li>
+                  <li>- Kirim header <code className="bg-slate-100 px-1 rounded text-xs font-mono">Idempotency-Key</code> dengan nilai unik (misalnya UUID)</li>
+                  <li>- Request duplikat dalam 5 menit dikembalikan dari cache</li>
+                  <li>- Response cached ditandai <code className="bg-slate-100 px-1 rounded text-xs font-mono">meta.idempotent: true</code></li>
                 </ul>
               </div>
               <CodeBlock language="curl" code={`curl "https://api.kawaltransaksi.com/api/v1/check?number=08123456789" \\
@@ -493,7 +493,7 @@ if (remaining < 30) {
                   { title: 'Gunakan di server-side', desc: 'Jangan panggil API langsung dari browser. Buat endpoint backend sendiri sebagai proxy.' },
                   { title: 'Cache response', desc: 'Simpan hasil cek di cache (Redis, dll) untuk nomor yang sama selama beberapa menit.' },
                   { title: 'Gunakan Idempotency-Key untuk retry', desc: 'Jika aplikasi melakukan retry otomatis, sertakan Idempotency-Key agar tidak mengurangi limit.' },
-                  { title: 'Handle error dengan baik', desc: 'Selalu cek field success. Jika error, jangan blokir user — tampilkan pesan informatif.' },
+                  { title: 'Handle error dengan baik', desc: 'Selalu cek field success. Jika error, jangan blokir user -- tampilkan pesan informatif.' },
                   { title: 'Monitor sisa request', desc: 'Pantau meta.requests_remaining. Jika mendekati 0, kurangi frekuensi pengecekan.' },
                 ].map((item, i) => (
                   <div key={i} className="flex items-start gap-3 bg-white rounded-xl border border-slate-100 px-4 py-4">
@@ -516,7 +516,7 @@ if (remaining < 30) {
                     version: 'v1.2', date: '19 Mei 2026',
                     badge: 'bg-emerald-50 text-emerald-700 border-emerald-200', label: 'Terbaru',
                     changes: [
-                      'Limit dinaikkan dari 100 → 300 request/hari',
+                      'Limit dinaikkan dari 100 -> 300 request/hari',
                       'Tambah dukungan Idempotency-Key untuk deduplication request',
                       'API key sekarang punya environment: live dan test',
                       'Format key baru: kt_live_... dan kt_test_...',
@@ -530,7 +530,7 @@ if (remaining < 30) {
                     version: 'v1.1', date: '1 Mei 2026',
                     badge: 'bg-slate-100 text-slate-500 border-slate-200', label: null,
                     changes: [
-                      'Tambah field expires_at di API key — bisa set masa berlaku',
+                      'Tambah field expires_at di API key -- bisa set masa berlaku',
                       'Tambah field last_used_at untuk tracking penggunaan',
                     ],
                   },
@@ -556,7 +556,7 @@ if (remaining < 30) {
                     <ul className="space-y-1.5">
                       {release.changes.map((change, j) => (
                         <li key={j} className="flex items-start gap-2 text-sm text-slate-600">
-                          <span className="text-emerald-500 shrink-0 mt-0.5">ÔÇó</span>
+                          <span className="text-emerald-500 shrink-0 mt-0.5">-</span>
                           {change}
                         </li>
                       ))}

@@ -10,7 +10,7 @@ export const metadata: Metadata = {
     'Pelajari berbagai modus penipuan online di Indonesia dan cara melindungi diri dari scam, phishing, investasi bodong, dan modus lainnya.',
 };
 
-// ── DATA ──────────────────────────────────────────────────────────────────────
+// -- DATA ----------------------------------------------------------------------
 const modusData = [
   {
     slug: 'jual-beli-online',
@@ -37,7 +37,7 @@ const modusData = [
     summary:
       'Menjanjikan keuntungan besar dalam waktu singkat. Biasanya menggunakan skema ponzi yang akhirnya kolaps.',
     redFlags: [
-      'Menjanjikan return tetap 10–50% per bulan',
+      'Menjanjikan return tetap 10-50% per bulan',
       'Tidak terdaftar di OJK',
       'Tekanan untuk mengajak orang lain bergabung',
       'Tidak jelas produk investasinya apa',
@@ -64,7 +64,7 @@ const modusData = [
     ],
     tips: [
       'Bank tidak pernah meminta OTP, PIN, atau password',
-      'Selalu cek URL — pastikan domain resmi',
+      'Selalu cek URL -- pastikan domain resmi',
       'Jangan klik link dari SMS/email yang tidak dikenal',
       'Aktifkan 2FA di semua akun penting',
     ],
@@ -96,7 +96,7 @@ const modusData = [
     redFlags: [
       'Tidak terdaftar di OJK',
       'Proses pencairan sangat cepat tanpa verifikasi',
-      'Bunga harian sangat tinggi (1–2% per hari)',
+      'Bunga harian sangat tinggi (1-2% per hari)',
       'Mengakses semua kontak di HP peminjam',
       'Melakukan teror dan ancaman via telepon',
     ],
@@ -122,7 +122,7 @@ const modusData = [
     tips: [
       'Polisi dan jaksa tidak pernah meminta uang lewat telepon',
       'Tutup telepon dan verifikasi ke kantor polisi terdekat',
-      'Jangan panik — penipu memanfaatkan rasa takut korban',
+      'Jangan panik -- penipu memanfaatkan rasa takut korban',
       'Catat nomor penelepon dan laporkan',
     ],
   },
@@ -164,12 +164,12 @@ const modusData = [
   },
 ];
 
-// ── PAGE ──────────────────────────────────────────────────────────────────────
+// -- PAGE ----------------------------------------------------------------------
 export default function EdukasiPage() {
   return (
     <main className="min-h-screen bg-white text-slate-900 font-sans">
 
-      {/* ── Hero — slate-50 ── */}
+      {/* -- Hero -- slate-50 -- */}
       <section className="bg-slate-50 px-4 pt-14 pb-10">
         <div className="max-w-4xl mx-auto text-center">
           <h1 className="text-3xl sm:text-4xl font-black tracking-tighter uppercase mb-2">
@@ -181,12 +181,12 @@ export default function EdukasiPage() {
         </div>
       </section>
 
-      {/* Wave: slate-50 → putih */}
+      {/* Wave: slate-50 -> putih */}
       <svg viewBox="0 0 1440 50" preserveAspectRatio="none" className="w-full block bg-slate-50 -mb-1" xmlns="http://www.w3.org/2000/svg">
         <path d="M0,50 C360,10 720,40 1080,15 C1260,2 1380,30 1440,20 L1440,50 Z" fill="#ffffff" />
       </svg>
 
-      {/* ── Modus cards ── */}
+      {/* -- Modus cards -- */}
       <section className="px-4 py-10">
         <div className="max-w-4xl mx-auto space-y-3">
           {modusData.map((modus, i) => (
@@ -204,7 +204,7 @@ export default function EdukasiPage() {
                 <p className="text-xs text-slate-500 leading-relaxed">{modus.summary}</p>
               </div>
 
-              {/* Body — 2 kolom */}
+              {/* Body -- 2 kolom */}
               <div className="grid sm:grid-cols-2 divide-y sm:divide-y-0 sm:divide-x divide-slate-100">
                 {/* Tanda bahaya */}
                 <div className="px-5 py-4">

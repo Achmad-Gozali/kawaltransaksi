@@ -96,7 +96,7 @@ function formatDate(d: string) {
   return new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
-// ── Shared UI ─────────────────────────────────────────────────────────────────
+// -- Shared UI -----------------------------------------------------------------
 
 function Alert({ type, message }: { type: 'error' | 'success'; message: string }) {
   const s = type === 'error'
@@ -158,7 +158,7 @@ function CategorySelect({ value, onChange }: { value: string; onChange: (v: stri
   );
 }
 
-// ── Main ──────────────────────────────────────────────────────────────────────
+// -- Main ----------------------------------------------------------------------
 
 export default function ArtikelTab({ token }: { token: string }) {
   const [articles, setArticles] = useState<Article[]>([]);
@@ -400,7 +400,7 @@ export default function ArtikelTab({ token }: { token: string }) {
         <>
           <ArticleSection
             title={`Draft (${drafts.length})`}
-            subtitle="Belum dipublish — tambah gambar & review dulu"
+            subtitle="Belum dipublish -- tambah gambar & review dulu"
             articles={drafts}
             loading={loading}
             onRefresh={fetchArticles}
@@ -422,7 +422,7 @@ export default function ArtikelTab({ token }: { token: string }) {
           />
           <ArticleSection
             title={`Published (${published.length})`}
-            subtitle="Tampil di website — bisa unpublish kapan saja"
+            subtitle="Tampil di website -- bisa unpublish kapan saja"
             articles={published}
             loading={loading}
             expandedId={expandedId}
@@ -447,7 +447,7 @@ export default function ArtikelTab({ token }: { token: string }) {
   );
 }
 
-// ── ArticleSection ────────────────────────────────────────────────────────────
+// -- ArticleSection ------------------------------------------------------------
 
 function ArticleSection({
   title, subtitle, articles, loading, onRefresh,
@@ -512,7 +512,7 @@ function ArticleSection({
   );
 }
 
-// ── ArticleRow ────────────────────────────────────────────────────────────────
+// -- ArticleRow ----------------------------------------------------------------
 
 function ArticleRow({
   article, expanded, onToggleExpand, editing, editFields, onEditFields,

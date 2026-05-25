@@ -7,7 +7,7 @@ const developer = new Hono<{ Bindings: Env; Variables: { userId: string; userEma
 
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// -- Helpers -------------------------------------------------------------------
 
 function randomChars(len: number): string {
   const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
@@ -46,7 +46,7 @@ function calcExpiresAt(duration: string | null): string | null {
   return now.toISOString();
 }
 
-// ── GET /api/developer/keys ───────────────────────────────────────────────────
+// -- GET /api/developer/keys ---------------------------------------------------
 developer.get('/keys', authMiddleware, async (c) => {
   try {
     const userId = c.get('userId');
@@ -65,7 +65,7 @@ developer.get('/keys', authMiddleware, async (c) => {
   }
 });
 
-// ── POST /api/developer/keys ──────────────────────────────────────────────────
+// -- POST /api/developer/keys --------------------------------------------------
 developer.post('/keys', authMiddleware, async (c) => {
   try {
     const userId = c.get('userId');
@@ -119,14 +119,14 @@ developer.post('/keys', authMiddleware, async (c) => {
       .single();
 
     if (error) throw error;
-    // ✅ Plain key hanya dikembalikan sekali saat generate
+    // [OK] Plain key hanya dikembalikan sekali saat generate
     return c.json({ success: true, data: { ...data, key: plainKey, show_once: true } });
   } catch {
     return c.json({ success: false, message: 'Gagal membuat API key.' }, 500);
   }
 });
 
-// ── PATCH /api/developer/keys/:id/rename ─────────────────────────────────────
+// -- PATCH /api/developer/keys/:id/rename -------------------------------------
 developer.patch('/keys/:id/rename', authMiddleware, async (c) => {
   try {
     const id = c.req.param('id');
@@ -153,7 +153,7 @@ developer.patch('/keys/:id/rename', authMiddleware, async (c) => {
   }
 });
 
-// ── POST /api/developer/keys/:id/regenerate ───────────────────────────────────
+// -- POST /api/developer/keys/:id/regenerate -----------------------------------
 developer.post('/keys/:id/regenerate', authMiddleware, async (c) => {
   try {
     const id = c.req.param('id');
@@ -180,14 +180,14 @@ developer.post('/keys/:id/regenerate', authMiddleware, async (c) => {
       .single();
 
     if (error) throw error;
-    // ✅ Plain key baru dikembalikan sekali saat regenerate
+    // [OK] Plain key baru dikembalikan sekali saat regenerate
     return c.json({ success: true, data: { ...data, key: plainKey, show_once: true } });
   } catch {
     return c.json({ success: false, message: 'Gagal regenerate API key.' }, 500);
   }
 });
 
-// ── DELETE /api/developer/keys/:id ───────────────────────────────────────────
+// -- DELETE /api/developer/keys/:id -------------------------------------------
 developer.delete('/keys/:id', authMiddleware, async (c) => {
   try {
     const id = c.req.param('id');

@@ -4,7 +4,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
 
-  // ── MAINTENANCE MODE ──────────────────────────────────────────────────────
+  // -- MAINTENANCE MODE ------------------------------------------------------
   const isMaintenance = process.env.MAINTENANCE_MODE === 'true';
   const isMaintenancePage = pathname.startsWith('/maintenance');
   const isStaticAsset = pathname.startsWith('/_next') || pathname.startsWith('/api');
@@ -16,7 +16,7 @@ export async function middleware(request: NextRequest) {
   if (!isMaintenance && isMaintenancePage) {
     return NextResponse.redirect(new URL('/', request.url));
   }
-  // ─────────────────────────────────────────────────────────────────────────
+  // -------------------------------------------------------------------------
 
   let supabaseResponse = NextResponse.next({
     request: { headers: request.headers },
@@ -55,7 +55,7 @@ export async function middleware(request: NextRequest) {
   }
 
   if (pathname.startsWith('/admin') && user) {
-    // Selalu query DB untuk cek role terkini — tidak cache cookie
+    // Selalu query DB untuk cek role terkini -- tidak cache cookie
     // Ini mencegah edge case admin di-demote tapi cookie lama masih valid
     const { data: profile } = await supabase
       .from('profiles')
@@ -71,7 +71,7 @@ export async function middleware(request: NextRequest) {
     }
 
     // Set cookie user_role dengan TTL pendek (15 menit) sebagai hint UI saja
-    // Bukan untuk keputusan keamanan — keamanan tetap dari query DB di atas
+    // Bukan untuk keputusan keamanan -- keamanan tetap dari query DB di atas
     supabaseResponse.cookies.set('user_role', profile.role, {
       httpOnly: true,
       secure: true,

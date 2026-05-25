@@ -12,7 +12,7 @@ import {
 } from "lucide-react";
 import { encodeSlug } from "@/core/utils";
 
-// ── TYPES ─────────────────────────────────────────────────────────────────────
+// -- TYPES ---------------------------------------------------------------------
 interface BankData {
   name: string;
   fullName: string;
@@ -51,7 +51,7 @@ interface Props {
   categoryBreakdown: CategoryCount[];
 }
 
-// ── MAIN ─────────────────────────────────────────────────────────────────────
+// -- MAIN ---------------------------------------------------------------------
 export default function BankPageClient({
   bankData: data,
   bankId,
@@ -65,7 +65,7 @@ export default function BankPageClient({
       className="min-h-screen bg-slate-50 text-slate-900 pb-16"
       style={{ fontFamily: "'Inter', sans-serif" }}
     >
-      {/* ── SUBNAVBAR — mobile only ── */}
+      {/* -- SUBNAVBAR -- mobile only -- */}
       <div className="sm:hidden bg-white border-b border-slate-100">
         <div className="px-4 py-3 flex items-center justify-between">
           <Link
@@ -81,7 +81,7 @@ export default function BankPageClient({
         </div>
       </div>
 
-      {/* ── HERO ── */}
+      {/* -- HERO -- */}
       <section className="bg-white border-b border-slate-200/80">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
           <div className="grid lg:grid-cols-3 gap-8 items-start">
@@ -104,7 +104,7 @@ export default function BankPageClient({
                     {data.fullName}
                   </h1>
                   <p className="text-[10px] text-slate-400 uppercase tracking-[0.15em] mt-0.5 font-medium">
-                    Verifikasi rekening · {data.name}
+                    Verifikasi rekening - {data.name}
                   </p>
                 </div>
               </div>
@@ -131,7 +131,7 @@ export default function BankPageClient({
               </div>
             </div>
 
-            {/* Kanan — sidebar: kode bank + call center */}
+            {/* Kanan -- sidebar: kode bank + call center */}
             <div className="lg:col-span-1">
               <div className="bg-white rounded-[8px] border border-slate-200/80 shadow-sm overflow-hidden">
                 <div className="flex items-start gap-3 px-4 py-4 border-b border-slate-100">
@@ -174,7 +174,7 @@ export default function BankPageClient({
         </div>
       </section>
 
-      {/* ── BODY ── */}
+      {/* -- BODY -- */}
       <div className="max-w-5xl mx-auto px-4 sm:px-6 py-6 space-y-6">
         {/* STATS */}
         <div className="grid grid-cols-3 gap-2">

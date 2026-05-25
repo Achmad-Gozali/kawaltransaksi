@@ -80,7 +80,7 @@ export default async function LoginPage({
         </div>
 
         {/* Footer */}
-        <p className="mt-8 text-center text-xs text-slate-400">© 2026 Informatics Community Project</p>
+        <p className="mt-8 text-center text-xs text-slate-400">(c) 2026 Informatics Community Project</p>
       </div>
     </div>
   );

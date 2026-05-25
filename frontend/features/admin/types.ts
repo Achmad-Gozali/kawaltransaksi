@@ -1,5 +1,5 @@
 // ============================================
-// 📁 LOKASI: frontend/features/admin/types.ts
+//  LOKASI: frontend/features/admin/types.ts
 // ============================================
 
 export interface RobotReason {

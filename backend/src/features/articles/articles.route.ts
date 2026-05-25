@@ -11,7 +11,7 @@ function getSupabase(env: Env) {
   return createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
 }
 
-// ── GET /api/articles ─────────────────────────────────────────────────────────
+// -- GET /api/articles ---------------------------------------------------------
 
 app.get('/', async (c) => {
   const { data, error } = await getSupabase(c.env)
@@ -24,7 +24,7 @@ app.get('/', async (c) => {
   return c.json({ success: true, data });
 });
 
-// ── GET /api/articles/:slug ───────────────────────────────────────────────────
+// -- GET /api/articles/:slug ---------------------------------------------------
 
 app.get('/:slug', async (c) => {
   const { data, error } = await getSupabase(c.env)
@@ -39,7 +39,7 @@ app.get('/:slug', async (c) => {
 
 export default app;
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// -- Helpers -------------------------------------------------------------------
 
 const EDUCATION_THEMES: Record<string, string[]> = {
   'Jual Beli Online':     ['ciri-ciri penjual palsu di marketplace', 'cara aman belanja online', 'modus penipuan COD yang marak'],
@@ -69,7 +69,7 @@ function fixArticleFormat(raw: string): string {
 interface ReportRow { category: string | null; platform: string | null; bank_name: string | null; loss_amount: number | string | null; }
 interface GroqResponse { choices?: { message?: { content?: string } }[]; }
 
-// ── generateWeeklyArticle ─────────────────────────────────────────────────────
+// -- generateWeeklyArticle -----------------------------------------------------
 
 export async function generateWeeklyArticle(env: Env): Promise<void> {
   const supabase    = getSupabase(env);
@@ -111,7 +111,7 @@ export async function generateWeeklyArticle(env: Env): Promise<void> {
   const topBank     = sorted(bankCount)[0];
 
   const totalLossFormatted = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(totalLoss);
-  const weekStr = `${periodStart.toLocaleDateString('id-ID', { day: 'numeric', month: 'long' })} – ${periodEnd.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`;
+  const weekStr = `${periodStart.toLocaleDateString('id-ID', { day: 'numeric', month: 'long' })} - ${periodEnd.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`;
 
   const groqHeaders = { 'Content-Type': 'application/json', Authorization: `Bearer ${env.GROQ_API_KEY}` };
 
@@ -125,7 +125,7 @@ export async function generateWeeklyArticle(env: Env): Promise<void> {
     return data.choices?.[0]?.message?.content ?? '';
   };
 
-  // ── Artikel laporan mingguan ──────────────────────────────────────────────
+  // -- Artikel laporan mingguan ----------------------------------------------
 
   const rawLaporan = await groqFetch(`Kamu adalah analis keamanan digital dari KawalTransaksi, platform komunitas anti-penipuan Indonesia.
 
@@ -167,7 +167,7 @@ Panjang: 400-600 kata. Jangan gunakan asterisk bold (**teks**). Pisahkan setiap 
     const isSame   = periodStart.getMonth() === periodEnd.getMonth();
     const startLabel   = isSame ? `${startDay}` : `${startDay} ${periodStart.toLocaleDateString('id-ID', { month: 'long' })}`;
     const endMonthYear = periodEnd.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
-    const title        = `Laporan Penipuan ${startLabel}–${endDay} ${endMonthYear}`;
+    const title        = `Laporan Penipuan ${startLabel}-${endDay} ${endMonthYear}`;
     const slug         = `laporan-${startDay}-${endDay}-${periodEnd.toLocaleDateString('id-ID', { month: 'long' }).toLowerCase().replace(/ /g, '-')}-${periodEnd.getFullYear()}`;
 
     await supabase.from('articles').upsert({
@@ -181,7 +181,7 @@ Panjang: 400-600 kata. Jangan gunakan asterisk bold (**teks**). Pisahkan setiap 
     console.log(`[CRON] Artikel laporan: ${title}`);
   }
 
-  // ── Artikel edukasi ───────────────────────────────────────────────────────
+  // -- Artikel edukasi -------------------------------------------------------
 
   const educationAngle = getEducationAngle(topCategory?.[0] ?? null, topPlatform?.[0] ?? null);
 

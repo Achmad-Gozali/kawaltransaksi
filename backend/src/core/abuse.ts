@@ -1,4 +1,4 @@
-// core/abuse.ts — extracted dari index.ts untuk menghindari circular import
+// core/abuse.ts -- extracted dari index.ts untuk menghindari circular import
 
 export async function logSuspiciousIp(
   limiter: KVNamespace,

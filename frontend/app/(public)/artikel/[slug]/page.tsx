@@ -5,10 +5,10 @@ import Image from "next/image";
 import type { Metadata } from "next";
 import SidebarArtikel from "./SidebarArtikel";
 
-// ✅ FIX: revalidate 1 jam, bukan 0
+// [OK] FIX: revalidate 1 jam, bukan 0
 export const revalidate = 3600;
 
-// ✅ FIX: URL production yang benar
+// [OK] FIX: URL production yang benar
 const SITE_URL = "https://kawaltransaksi.com";
 
 interface Props {
@@ -19,7 +19,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
   const supabase = await createClient();
 
-  // ✅ FIX: hapus cast `as any`
+  // [OK] FIX: hapus cast `as any`
   const { data } = await supabase
     .from("articles")
     .select("title, summary, cover_image")
@@ -117,7 +117,7 @@ export default async function ArtikelDetailPage({ params }: Props) {
   const { slug } = await params;
   const supabase = await createClient();
 
-  // ✅ FIX: hapus cast `as any`
+  // [OK] FIX: hapus cast `as any`
   const { data: article } = await supabase
     .from("articles")
     .select("*")
@@ -127,7 +127,7 @@ export default async function ArtikelDetailPage({ params }: Props) {
 
   if (!article) notFound();
 
-  // ✅ FIX: hapus cast `as any`
+  // [OK] FIX: hapus cast `as any`
   const { data: others } = await supabase
     .from("articles")
     .select("title, slug, published_at, cover_image, summary, top_category")
@@ -216,7 +216,7 @@ export default async function ArtikelDetailPage({ params }: Props) {
               <span className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                 {formatDate(article.published_at)}
               </span>
-              <span className="text-slate-200">·</span>
+              <span className="text-slate-200">-</span>
               <span className="text-[10px] text-slate-400">
                 {estimateReadTime(article.content)}
               </span>
@@ -264,7 +264,7 @@ export default async function ArtikelDetailPage({ params }: Props) {
                 <p className="text-xs sm:text-sm text-slate-400 leading-relaxed mb-6 max-w-md">
                   Periksa nomor HP atau rekening bank sebelum melakukan
                   transfer. Database kami dibangun dari laporan nyata komunitas
-                  — gratis, tanpa registrasi.
+                  -- gratis, tanpa registrasi.
                 </p>
                 <div className="flex flex-col sm:flex-row gap-3">
                   <Link
@@ -332,7 +332,7 @@ export default async function ArtikelDetailPage({ params }: Props) {
             )}
           </div>
 
-          {/* Sidebar — hanya desktop */}
+          {/* Sidebar -- hanya desktop */}
           {others && others.length > 0 && (
             <aside className="hidden lg:block w-72 shrink-0">
               <SidebarArtikel articles={others} />

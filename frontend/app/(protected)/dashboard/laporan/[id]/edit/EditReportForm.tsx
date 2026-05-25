@@ -1,8 +1,8 @@
 'use client';
 
 // ============================================
-// 📁 LOKASI: frontend/components/EditReportForm.tsx
-// ✅ FIX — standardize BACKEND_URL: throw jika tidak ada
+//  LOKASI: frontend/components/EditReportForm.tsx
+// [OK] FIX -- standardize BACKEND_URL: throw jika tidak ada
 // ============================================
 
 import { useState, useCallback } from 'react';
@@ -190,7 +190,7 @@ export default function EditReportForm({ report }: EditReportFormProps) {
 
         {success && (
           <div className="bg-emerald-50 border border-emerald-200 rounded-xl p-4 text-sm text-emerald-700 font-medium">
-            ✅ Laporan berhasil diperbarui! Mengalihkan...
+            [OK] Laporan berhasil diperbarui! Mengalihkan...
           </div>
         )}
 
@@ -300,7 +300,7 @@ export default function EditReportForm({ report }: EditReportFormProps) {
             <div>
               <label className="text-[11px] text-zinc-400 font-bold uppercase tracking-wider block mb-1.5">Sudah lapor ke</label>
               <div className="flex flex-wrap gap-2">
-                {[{ val: 'polisi', label: '🚔 Polisi' }, { val: 'ojk', label: '🏦 OJK' }, { val: 'platform', label: '📱 Platform' }, { val: 'belum', label: '❌ Belum' }].map(opt => (
+                {[{ val: 'polisi', label: ' Polisi' }, { val: 'ojk', label: ' OJK' }, { val: 'platform', label: ' Platform' }, { val: 'belum', label: '[X] Belum' }].map(opt => (
                   <label key={opt.val} className={`flex items-center gap-1.5 px-3 py-2 rounded-xl border text-xs font-medium cursor-pointer transition-all ${reportedTo.includes(opt.val) ? 'border-emerald-400 bg-emerald-50 text-emerald-700' : 'border-zinc-200 text-zinc-500 hover:border-zinc-300'}`}>
                     <input type="checkbox" checked={reportedTo.includes(opt.val)} onChange={() => handleReportedToToggle(opt.val)} className="sr-only" />
                     {opt.label}
@@ -321,7 +321,7 @@ export default function EditReportForm({ report }: EditReportFormProps) {
             >
               <Upload className="w-6 h-6 text-zinc-300 mx-auto mb-2" />
               <p className="text-sm text-zinc-400">{uploadingEvidence ? 'Mengupload...' : 'Drag & drop atau klik untuk pilih file'}</p>
-              <p className="text-[11px] text-zinc-400 mt-1">JPG, PNG, WebP — maks. 5MB per file, maks. 5 file</p>
+              <p className="text-[11px] text-zinc-400 mt-1">JPG, PNG, WebP -- maks. 5MB per file, maks. 5 file</p>
               <input id="evidence-input" type="file" accept="image/jpeg,image/png,image/webp" multiple className="sr-only"
                 onChange={(e) => { if (e.target.files) handleEvidenceUpload(e.target.files); }} />
             </div>

@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import Image from 'next/image';
 import { Plus, Upload, X, Trash2, AlertCircle } from 'lucide-react';
@@ -47,12 +47,12 @@ export function Step1DataPenipu({
   return (
     <div className="space-y-4">
 
-      {/* ── Nomor Penipu ──────────────────────────────────────────────────── */}
+      {/* -- Nomor Penipu ---------------------------------------------------- */}
       <Card>
         <div className="p-4 sm:p-5">
           <SectionTitle
             title="Nomor Penipu"
-            subtitle={`Tambahkan semua nomor terkait pelaku — maks ${MAX_TARGET_NUMBERS} nomor`}
+            subtitle={`Tambahkan semua nomor terkait pelaku -- maks ${MAX_TARGET_NUMBERS} nomor`}
           />
           <div className="space-y-3">
             {targets.map((entry: TargetEntry, index: number) => (
@@ -79,7 +79,7 @@ export function Step1DataPenipu({
         </div>
       </Card>
 
-      {/* ── Kategori Penipuan (wajib) ─────────────────────────────────────── */}
+      {/* -- Kategori Penipuan (wajib) --------------------------------------- */}
       <Card>
         <div className="p-4 sm:p-5">
           <SectionTitle
@@ -97,7 +97,7 @@ export function Step1DataPenipu({
         </div>
       </Card>
 
-      {/* ── Identitas Tambahan ────────────────────────────────────────────── */}
+      {/* -- Identitas Tambahan ---------------------------------------------- */}
       <Card>
         <div className="p-4 sm:p-5">
           <SectionTitle
@@ -141,7 +141,7 @@ export function Step1DataPenipu({
         </div>
       </Card>
 
-      {/* ── Akun Media Sosial ─────────────────────────────────────────────── */}
+      {/* -- Akun Media Sosial ----------------------------------------------- */}
       <Card>
         <div className="p-4 sm:p-5">
           <SectionTitle
@@ -187,7 +187,7 @@ export function Step1DataPenipu({
         </div>
       </Card>
 
-      {/* ── Foto Profil Penipu ────────────────────────────────────────────── */}
+      {/* -- Foto Profil Penipu ---------------------------------------------- */}
       <Card>
         <div className="p-4 sm:p-5">
           <SectionTitle
@@ -203,7 +203,7 @@ export function Step1DataPenipu({
                 <p className="text-sm font-semibold text-slate-500 group-hover:text-slate-700 transition-colors">
                   Klik untuk upload foto penipu
                 </p>
-                <p className="text-xs text-slate-300 mt-1">JPG, PNG · maks 5MB</p>
+                <p className="text-xs text-slate-300 mt-1">JPG, PNG - maks 5MB</p>
               </div>
               <input
                 type="file"
@@ -238,7 +238,7 @@ export function Step1DataPenipu({
         </div>
       </Card>
 
-      {/* ── Detail Tambahan ───────────────────────────────────────────────── */}
+      {/* -- Detail Tambahan ------------------------------------------------- */}
       <Card>
         <div className="p-4 sm:p-5">
           <SectionTitle
@@ -246,7 +246,7 @@ export function Step1DataPenipu({
             subtitle="Semakin lengkap, semakin cepat laporan diverifikasi"
           />
 
-          {/* Info box — dorong user lengkapi data */}
+          {/* Info box -- dorong user lengkapi data */}
           <div className="flex items-start gap-2.5 p-3 bg-amber-50 border border-amber-100 rounded-xl mb-5">
             <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
             <p className="text-xs text-amber-700 leading-relaxed">

@@ -1,7 +1,7 @@
 'use client';
 
 // ============================================
-// 📁 LOKASI: frontend/features/report/AppealButton.tsx
+//  LOKASI: frontend/features/report/AppealButton.tsx
 // ============================================
 
 import { useState, useRef, useEffect } from 'react';
@@ -186,7 +186,7 @@ export default function AppealButton({ reportId }: { reportId: string }) {
           </button>
         </div>
 
-        {/* Body — scrollable */}
+        {/* Body -- scrollable */}
         <div className="overflow-y-auto flex-1 px-5 py-4 space-y-4">
           {success ? (
             <div className="py-8 text-center">

@@ -57,7 +57,7 @@ export default function KebijakanPrivasiPage() {
               <p>KawalTransaksi <span className="font-semibold text-zinc-700">tidak menjual</span> data pribadi Anda kepada pihak manapun. Data hanya dapat dibagikan dalam kondisi berikut:</p>
               <p className="pl-4">a. Kronologi dan bukti laporan ditampilkan secara publik tanpa mencantumkan identitas pelapor.</p>
               <p className="pl-4">b. Apabila diwajibkan oleh ketentuan hukum yang berlaku atau perintah pengadilan yang sah.</p>
-              <p className="pl-4">c. Untuk keperluan analisis AI melalui layanan Groq, yang hanya memproses konten laporan — bukan data pribadi pengguna.</p>
+              <p className="pl-4">c. Untuk keperluan analisis AI melalui layanan Groq, yang hanya memproses konten laporan -- bukan data pribadi pengguna.</p>
             </div>
           </section>
 

@@ -1,6 +1,6 @@
 // ============================================
-// 📁 LOKASI: hooks/use-mobile.ts
-// 📝 REPLACE — fix hydration mismatch
+//  LOKASI: hooks/use-mobile.ts
+//  REPLACE -- fix hydration mismatch
 // ============================================
 
 import { useState, useEffect } from 'react';

@@ -1,8 +1,8 @@
 // ============================================
-// 📁 LOKASI: backend/src/features/robot/auto-blocker.ts
+//  LOKASI: backend/src/features/robot/auto-blocker.ts
 // ============================================
 
-// ── Durasi block ──────────────────────────────────────────────────────────────
+// -- Durasi block --------------------------------------------------------------
 
 const BLOCK_DURATION = {
   TEMP_24H:  60 * 60 * 24,        // 24 jam
@@ -10,17 +10,17 @@ const BLOCK_DURATION = {
   PERMANENT: 60 * 60 * 24 * 3650, // ~10 tahun (permanent)
 };
 
-// ── Threshold trigger ─────────────────────────────────────────────────────────
+// -- Threshold trigger ---------------------------------------------------------
 
 const THRESHOLD = {
-  REJECT_1H:        3,  // 3x reject dalam 1 jam → temp block 24 jam
-  REJECT_1D:        10, // 10x reject dalam 1 hari → temp block 7 hari
-  REJECT_7D:        20, // 20x reject dalam 7 hari → permanent block
-  TEMP_24H_COUNT:   3,  // 3x kena temp 24h → eskalasi ke 7 hari
-  TEMP_7D_COUNT:    2,  // 2x kena temp 7d → permanent
+  REJECT_1H:        3,  // 3x reject dalam 1 jam -> temp block 24 jam
+  REJECT_1D:        10, // 10x reject dalam 1 hari -> temp block 7 hari
+  REJECT_7D:        20, // 20x reject dalam 7 hari -> permanent block
+  TEMP_24H_COUNT:   3,  // 3x kena temp 24h -> eskalasi ke 7 hari
+  TEMP_7D_COUNT:    2,  // 2x kena temp 7d -> permanent
 };
 
-// ── Key helpers ───────────────────────────────────────────────────────────────
+// -- Key helpers ---------------------------------------------------------------
 
 const keys = {
   block:        (id: string) => `autoblock_${id}`,
@@ -29,7 +29,7 @@ const keys = {
   blockCount7:  (id: string) => `block7d_count_${id}`,
 };
 
-// ── Cek apakah user/IP diblokir ──────────────────────────────────────────────
+// -- Cek apakah user/IP diblokir ----------------------------------------------
 
 export async function isBlocked(
   identifier: string, // bisa userId atau IP
@@ -45,7 +45,7 @@ export async function isBlocked(
   }
 }
 
-// ── Catat laporan reject untuk user/IP ───────────────────────────────────────
+// -- Catat laporan reject untuk user/IP ---------------------------------------
 
 export async function recordRejection(
   userId: string | null,
@@ -142,7 +142,7 @@ async function applyBlock(
   console.log(`[AUTO-BLOCKER] Block ${type} applied to ${identifier}: ${reason}`);
 }
 
-// ── Manual unblock (untuk admin) ──────────────────────────────────────────────
+// -- Manual unblock (untuk admin) ----------------------------------------------
 
 export async function unblock(identifier: string, kv: KVNamespace): Promise<void> {
   await kv.delete(keys.block(identifier));

@@ -187,7 +187,7 @@ export default function NumberCard({
       </p>
 
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-        {/* ── Header: nomor + foto ── */}
+        {/* -- Header: nomor + foto -- */}
         <div className="p-4 sm:p-6">
           <div className="flex justify-between items-start gap-3">
             <div className="flex-1 min-w-0">
@@ -211,7 +211,7 @@ export default function NumberCard({
                     className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-md font-medium border border-slate-200 bg-slate-50 text-slate-400 hover:bg-slate-100 transition-colors"
                   >
                     <Lock className="w-3 h-3" />
-                    a.n. ••••••
+                    a.n. ------
                   </Link>
                 )}
                 {!hasVerified && reports.length > 0 && (
@@ -275,7 +275,7 @@ export default function NumberCard({
           </div>
         </div>
 
-        {/* ── Info grid ── */}
+        {/* -- Info grid -- */}
         {infoGrid.length > 0 && (
           <div className="px-4 sm:px-6 py-3 border-t border-slate-100 grid grid-cols-2 sm:grid-cols-3 gap-x-4 gap-y-3.5">
             {infoGrid.map((item) => (
@@ -304,7 +304,7 @@ export default function NumberCard({
           </div>
         )}
 
-        {/* ── Akun media sosial ── */}
+        {/* -- Akun media sosial -- */}
         {allSocialAccounts.length > 0 && (
           <div className="px-4 sm:px-6 py-3.5 border-t border-slate-100">
             <p className="text-[10px] text-slate-400 mb-2 font-medium">
@@ -337,7 +337,7 @@ export default function NumberCard({
           </div>
         )}
 
-        {/* ── Tautan berbahaya ── */}
+        {/* -- Tautan berbahaya -- */}
         {dangerLink && (
           <div className="px-4 sm:px-6 py-3.5 border-t border-slate-100 bg-red-50/50">
             <p className="text-[10px] text-slate-500 mb-2 font-medium">
@@ -357,7 +357,7 @@ export default function NumberCard({
           </div>
         )}
 
-        {/* ── Sudah dilaporkan ke ── */}
+        {/* -- Sudah dilaporkan ke -- */}
         {allReportedTo.length > 0 && (
           <div className="px-4 sm:px-6 py-3.5 border-t border-slate-100">
             <p className="text-[10px] text-slate-400 mb-2 font-medium">

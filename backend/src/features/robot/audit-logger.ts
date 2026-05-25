@@ -1,5 +1,5 @@
 // ============================================
-// 📁 LOKASI: backend/src/features/robot/audit-logger.ts
+//  LOKASI: backend/src/features/robot/audit-logger.ts
 // ============================================
 
 import { getSupabaseAdmin } from '../../core/supabase';
@@ -36,7 +36,7 @@ export async function writeLog(
   }
 }
 
-// ── Helper: wrap fungsi dengan logging otomatis ───────────────────────────────
+// -- Helper: wrap fungsi dengan logging otomatis -------------------------------
 
 export async function withLog<T>(
   action: LogAction,

@@ -55,7 +55,7 @@ export default function ReportForm() {
   const [suspectPhoto, setSuspectPhoto] = useState<File | null>(null);
   const [suspectPhotoPreview, setSuspectPhotoPreview] = useState<string | null>(null);
 
-  // ── Target handlers ────────────────────────────────────────────────────────
+  // -- Target handlers --------------------------------------------------------
   const updateTarget = (index: number, updated: TargetEntry) =>
     setTargets(prev => prev.map((t, i) => i === index ? updated : t));
   const addTarget = () => {
@@ -63,7 +63,7 @@ export default function ReportForm() {
   };
   const removeTarget = (index: number) => setTargets(prev => prev.filter((_, i) => i !== index));
 
-  // ── Social media handlers ──────────────────────────────────────────────────
+  // -- Social media handlers --------------------------------------------------
   const addSocialField = () =>
     setFormData(f => ({ ...f, social_media_accounts: [...f.social_media_accounts, ''] }));
   const removeSocialField = (i: number) =>
@@ -78,7 +78,7 @@ export default function ReportForm() {
         : [...f.reported_to, val],
     }));
 
-  // ── Suspect photo handlers ─────────────────────────────────────────────────
+  // -- Suspect photo handlers -------------------------------------------------
   const handleSuspectPhotoChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const selected = e.target.files?.[0] || null;
     if (selected && selected.size > 5 * 1024 * 1024) { setError('Ukuran foto melebihi 5MB.'); return; }
@@ -91,7 +91,7 @@ export default function ReportForm() {
   };
   const removeSuspectPhoto = () => { setSuspectPhoto(null); setSuspectPhotoPreview(null); };
 
-  // ── Evidence file handlers ─────────────────────────────────────────────────
+  // -- Evidence file handlers -------------------------------------------------
   const handleEvidenceFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const files = Array.from(e.target.files || []);
     if (!files.length) return;
@@ -109,7 +109,7 @@ export default function ReportForm() {
   const removeEvidenceFile = (index: number) =>
     setEvidenceFiles(prev => prev.filter((_, i) => i !== index));
 
-  // ── Navigation ─────────────────────────────────────────────────────────────
+  // -- Navigation -------------------------------------------------------------
   const handleNextStep = () => {
     setError(null);
     if (currentStep === 1) {
@@ -131,7 +131,7 @@ export default function ReportForm() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
-  // ── Submit ─────────────────────────────────────────────────────────────────
+  // -- Submit -----------------------------------------------------------------
   const handleSubmit = async () => {
     if (!turnstileToken) { setError('Selesaikan verifikasi keamanan terlebih dahulu.'); return; }
     setIsLoading(true);
@@ -214,7 +214,7 @@ export default function ReportForm() {
     }
   };
 
-  // ── Success state ──────────────────────────────────────────────────────────
+  // -- Success state ----------------------------------------------------------
   if (isSuccess) {
     return (
       <div className="flex flex-col items-center justify-center py-28 text-center">
@@ -326,7 +326,7 @@ export default function ReportForm() {
 
       {currentStep === 3 && (
         <p className="text-center text-xs text-slate-300 uppercase tracking-widest font-medium pb-4">
-          Laporan divalidasi sistem · Identitas pelapor terlindungi
+          Laporan divalidasi sistem - Identitas pelapor terlindungi
         </p>
       )}
     </div>

@@ -1,5 +1,5 @@
 // ============================================
-// 📁 LOKASI: backend/src/features/robot/appeal-system.ts
+//  LOKASI: backend/src/features/robot/appeal-system.ts
 // ============================================
 
 import { Hono } from 'hono';
@@ -39,7 +39,7 @@ function sanitizeEvidenceUrls(urls: unknown): string[] {
   return urls.filter(isValidEvidenceUrl).slice(0, MAX_EVIDENCE_FILES) as string[];
 }
 
-// ── POST /api/appeals — ajukan banding ───────────────────────────────────────
+// -- POST /api/appeals -- ajukan banding ---------------------------------------
 
 appeal.post('/', authMiddleware, async (c) => {
   try {
@@ -178,7 +178,7 @@ appeal.post('/', authMiddleware, async (c) => {
   }
 });
 
-// ── GET /api/appeals/:reportId — status banding ───────────────────────────────
+// -- GET /api/appeals/:reportId -- status banding -------------------------------
 
 appeal.get('/:reportId', authMiddleware, async (c) => {
   try {

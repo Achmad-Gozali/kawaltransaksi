@@ -73,18 +73,18 @@ export const platformList = [
 ];
 
 export const categoryList = [
-  { value: 'Jual Beli Online', label: 'Jual Beli Online — barang tidak dikirim / tidak sesuai' },
-  { value: 'Toko Online Palsu', label: 'Toko Online Palsu — website / akun penjual fiktif' },
-  { value: 'Investasi Bodong', label: 'Investasi Bodong — janji untung besar tapi uang raib' },
-  { value: 'Trading Palsu', label: 'Trading Palsu — platform forex / kripto / saham ilegal' },
-  { value: 'Phishing / Soceng', label: 'Phishing / Soceng — minta OTP, PIN, atau data pribadi' },
-  { value: 'Modus Kurir/APK', label: 'Modus Kurir / File APK — disuruh install aplikasi mencurigakan' },
-  { value: 'Impersonasi', label: 'Impersonasi — pura-pura jadi pejabat, polisi, atau CS bank' },
-  { value: 'Lowongan Kerja Palsu', label: 'Lowongan Kerja Palsu — minta uang pelatihan / seragam' },
-  { value: 'Pinjaman Online', label: 'Pinjaman Online Ilegal — bunga mencekik / penagihan kasar' },
-  { value: 'Penipuan Percintaan', label: 'Penipuan Percintaan — kenalan online lalu minta uang' },
-  { value: 'Hadiah / Undian Palsu', label: 'Hadiah / Undian Palsu — minta bayar pajak hadiah duluan' },
-  { value: 'Rental / Sewa Fiktif', label: 'Rental / Sewa Fiktif — kendaraan atau properti tidak ada' },
+  { value: 'Jual Beli Online', label: 'Jual Beli Online -- barang tidak dikirim / tidak sesuai' },
+  { value: 'Toko Online Palsu', label: 'Toko Online Palsu -- website / akun penjual fiktif' },
+  { value: 'Investasi Bodong', label: 'Investasi Bodong -- janji untung besar tapi uang raib' },
+  { value: 'Trading Palsu', label: 'Trading Palsu -- platform forex / kripto / saham ilegal' },
+  { value: 'Phishing / Soceng', label: 'Phishing / Soceng -- minta OTP, PIN, atau data pribadi' },
+  { value: 'Modus Kurir/APK', label: 'Modus Kurir / File APK -- disuruh install aplikasi mencurigakan' },
+  { value: 'Impersonasi', label: 'Impersonasi -- pura-pura jadi pejabat, polisi, atau CS bank' },
+  { value: 'Lowongan Kerja Palsu', label: 'Lowongan Kerja Palsu -- minta uang pelatihan / seragam' },
+  { value: 'Pinjaman Online', label: 'Pinjaman Online Ilegal -- bunga mencekik / penagihan kasar' },
+  { value: 'Penipuan Percintaan', label: 'Penipuan Percintaan -- kenalan online lalu minta uang' },
+  { value: 'Hadiah / Undian Palsu', label: 'Hadiah / Undian Palsu -- minta bayar pajak hadiah duluan' },
+  { value: 'Rental / Sewa Fiktif', label: 'Rental / Sewa Fiktif -- kendaraan atau properti tidak ada' },
   { value: 'Lainnya', label: 'Lainnya' },
 ];
 

@@ -188,12 +188,12 @@ export default async function LaporanPage() {
                               {maskNumber(report.target_number)}
                             </span>
                             {report.target_name && (
-                              <span className="text-sm text-zinc-400">· {report.target_name}</span>
+                              <span className="text-sm text-zinc-400">- {report.target_name}</span>
                             )}
                           </div>
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-[11px] font-bold text-zinc-400 uppercase tracking-wider">{report.category}</span>
-                            <span className="text-zinc-200">·</span>
+                            <span className="text-zinc-200">-</span>
                             <span className="text-[11px] text-zinc-400">{formatDateID(report.created_at)}</span>
                           </div>
                         </div>
@@ -249,7 +249,7 @@ export default async function LaporanPage() {
                       <div className="mt-3 pl-14">
                         <p className="inline-flex items-center gap-1.5 text-[11px] text-amber-600 font-medium">
                           <Clock className="w-3.5 h-3.5" />
-                          Laporan sedang ditinjau sistem, maks. 1×24 jam.
+                          Laporan sedang ditinjau sistem, maks. 1x24 jam.
                         </p>
                       </div>
                     )}

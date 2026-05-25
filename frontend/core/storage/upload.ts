@@ -3,7 +3,7 @@ import { createClient } from '@/core/supabase/browser';
 const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
 const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png'];
 
-// ── Validasi magic bytes di browser ──────────────────────────────────────────
+// -- Validasi magic bytes di browser ------------------------------------------
 async function validateFileSignature(file: File): Promise<boolean> {
   const buffer = await file.arrayBuffer();
   const bytes = new Uint8Array(buffer);
@@ -17,7 +17,7 @@ async function validateFileSignature(file: File): Promise<boolean> {
   return false;
 }
 
-// ── Strip EXIF dengan redraw ke canvas ───────────────────────────────────────
+// -- Strip EXIF dengan redraw ke canvas ---------------------------------------
 async function stripExif(file: File): Promise<File> {
   return new Promise((resolve, reject) => {
     const img = new Image();
@@ -72,7 +72,7 @@ async function stripExif(file: File): Promise<File> {
   });
 }
 
-// ── Upload satu file ke Supabase Storage ─────────────────────────────────────
+// -- Upload satu file ke Supabase Storage -------------------------------------
 export async function uploadToStorage(file: File): Promise<string> {
   if (file.size > MAX_FILE_SIZE) {
     throw new Error('Ukuran file melebihi batas 5MB.');
@@ -114,7 +114,7 @@ export async function uploadToStorage(file: File): Promise<string> {
   return publicUrl;
 }
 
-// ── Upload multiple files sekaligus ──────────────────────────────────────────
+// -- Upload multiple files sekaligus ------------------------------------------
 export async function uploadMultipleToStorage(
   files: File[],
   onProgress?: (current: number, total: number) => void

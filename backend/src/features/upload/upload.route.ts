@@ -18,7 +18,7 @@ function validateMagicBytes(bytes: Uint8Array): boolean {
   return false;
 }
 
-// ── POST /api/upload ──────────────────────────────────────────────────────────
+// -- POST /api/upload ----------------------------------------------------------
 upload.post('/', authMiddleware, async (c) => {
   try {
     const userId = c.get('userId');
@@ -64,7 +64,7 @@ upload.post('/', authMiddleware, async (c) => {
   }
 });
 
-// ── DELETE /api/upload ────────────────────────────────────────────────────────
+// -- DELETE /api/upload --------------------------------------------------------
 upload.delete('/', authMiddleware, async (c) => {
   try {
     const userId = c.get('userId');

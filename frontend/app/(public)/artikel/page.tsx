@@ -3,7 +3,7 @@ import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
 
-// ✅ FIX: revalidate 1 jam, bukan 0 (tidak perlu render ulang setiap request)
+// [OK] FIX: revalidate 1 jam, bukan 0 (tidak perlu render ulang setiap request)
 export const revalidate = 3600;
 
 export const metadata: Metadata = {
@@ -39,7 +39,7 @@ function formatLoss(amount: number): string {
 export default async function ArtikelPage() {
   const supabase = await createClient();
 
-  // ✅ FIX: hapus cast `as any` — database.ts sudah punya definisi kolom status & cover_image
+  // [OK] FIX: hapus cast `as any` -- database.ts sudah punya definisi kolom status & cover_image
   const { data: articles } = await supabase
     .from("articles")
     .select(
@@ -135,7 +135,7 @@ export default async function ArtikelPage() {
                         <span className="text-[10px] text-slate-400">
                           {formatDate(article.published_at)}
                         </span>
-                        <span className="text-slate-200">·</span>
+                        <span className="text-slate-200">-</span>
                         <span className="text-[10px] text-slate-400">
                           {estimateReadTime(article.content)}
                         </span>

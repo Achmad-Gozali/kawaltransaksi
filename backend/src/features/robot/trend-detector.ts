@@ -1,5 +1,5 @@
 // ============================================
-// 📁 LOKASI: backend/src/features/robot/trend-detector.ts
+//  LOKASI: backend/src/features/robot/trend-detector.ts
 // ============================================
 
 import { getSupabaseAdmin } from '../../core/supabase';
@@ -7,7 +7,7 @@ import { writeLog } from './audit-logger';
 
 const VIRAL_THRESHOLD = 10; // laporan dalam 24 jam = viral
 
-// ── Deteksi nomor viral ───────────────────────────────────────────────────────
+// -- Deteksi nomor viral -------------------------------------------------------
 
 export async function detectTrends(
   supabase: ReturnType<typeof getSupabaseAdmin>
@@ -45,7 +45,7 @@ export async function detectTrends(
     stats.updated++;
     if (isViral) {
       stats.viral++;
-      console.log(`[TREND] 🔥 Nomor viral: ${targetNumber} (${count} laporan dalam 24 jam)`);
+      console.log(`[TREND]  Nomor viral: ${targetNumber} (${count} laporan dalam 24 jam)`);
     }
   }
 
@@ -53,7 +53,7 @@ export async function detectTrends(
   return stats;
 }
 
-// ── Ambil daftar nomor viral (untuk homepage / admin) ────────────────────────
+// -- Ambil daftar nomor viral (untuk homepage / admin) ------------------------
 
 export async function getViralNumbers(
   supabase: ReturnType<typeof getSupabaseAdmin>,
@@ -69,7 +69,7 @@ export async function getViralNumbers(
   return data ?? [];
 }
 
-// ── Cek apakah satu nomor sedang viral ───────────────────────────────────────
+// -- Cek apakah satu nomor sedang viral ---------------------------------------
 
 export async function isNumberViral(
   targetNumber: string,

@@ -46,7 +46,7 @@ export default function SearchBar({ defaultValue = '', type, sort }: Props) {
             type="button"
             onClick={handleClear}
             className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-300 hover:text-slate-500 text-lg leading-none transition-colors">
-            ×
+            x
           </button>
         )}
       </div>

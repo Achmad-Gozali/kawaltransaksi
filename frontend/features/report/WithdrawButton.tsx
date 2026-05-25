@@ -1,8 +1,8 @@
 'use client';
 
 // ============================================
-// 📁 LOKASI: frontend/components/WithdrawButton.tsx
-// ✅ FIX — standardize BACKEND_URL: throw jika tidak ada (sama kayak ReportForm)
+//  LOKASI: frontend/components/WithdrawButton.tsx
+// [OK] FIX -- standardize BACKEND_URL: throw jika tidak ada (sama kayak ReportForm)
 // ============================================
 
 import { useState } from 'react';

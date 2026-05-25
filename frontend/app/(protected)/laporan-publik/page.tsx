@@ -144,8 +144,8 @@ export default async function LaporanPublikPage({
   const page = Math.max(1, parseInt(params.page ?? "1"));
   const perPage = 12;
 
-  // ✅ OPTIMIZED: 2 RPC call parallel, gantiin fetch semua data + grouping di JS
-  // Sebelumnya: fetch semua rows → grouping di server memory → slice untuk pagination
+  // [OK] OPTIMIZED: 2 RPC call parallel, gantiin fetch semua data + grouping di JS
+  // Sebelumnya: fetch semua rows -> grouping di server memory -> slice untuk pagination
   // Sesudahnya: DB yang grouping + paginate, server terima data yang sudah siap
   const [laporanResult, statsResult] = await Promise.all([
     supabase.rpc("get_laporan_publik", {
@@ -182,7 +182,7 @@ export default async function LaporanPublikPage({
 
   return (
     <main className="bg-white text-slate-900 font-sans min-h-screen">
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
+      {/* -- Header ----------------------------------------------------------- */}
       <section className="bg-slate-50 px-4 pt-10 pb-8 sm:pt-14 sm:pb-10">
         <div className="max-w-5xl mx-auto">
           <h1 className="text-2xl sm:text-4xl font-black tracking-tighter uppercase mb-2 leading-tight">
@@ -208,7 +208,7 @@ export default async function LaporanPublikPage({
         />
       </svg>
 
-      {/* ── Statistik ──────────────────────────────────────────────────────── */}
+      {/* -- Statistik -------------------------------------------------------- */}
       <section className="px-4 pt-6 pb-2">
         <div className="max-w-5xl mx-auto">
           <div className="flex items-center gap-2 mb-4">
@@ -224,7 +224,7 @@ export default async function LaporanPublikPage({
         </div>
       </section>
 
-      {/* ── Filter & Search ────────────────────────────────────────────────── */}
+      {/* -- Filter & Search -------------------------------------------------- */}
       <section className="px-4 mt-8 pb-4 border-y border-slate-100 bg-white sticky top-16 z-10">
         <div className="max-w-5xl mx-auto space-y-4 py-4">
           <SearchBar defaultValue={q} type={type} sort={sort} />
@@ -314,7 +314,7 @@ export default async function LaporanPublikPage({
         </div>
       </section>
 
-      {/* ── Grid Laporan ───────────────────────────────────────────────────── */}
+      {/* -- Grid Laporan ----------------------------------------------------- */}
       <section className="px-4 py-6 sm:py-8">
         <div className="max-w-5xl mx-auto">
           {paginatedReports.length === 0 ? (
@@ -424,11 +424,11 @@ export default async function LaporanPublikPage({
             </div>
           )}
 
-          {/* ── Pagination ──────────────────────────────────────────────────── */}
+          {/* -- Pagination ---------------------------------------------------- */}
           {totalPages > 1 && (
             <div className="mt-8 sm:mt-10">
               <p className="text-center text-xs text-slate-400 font-medium mb-4">
-                Menampilkan {(safePage - 1) * perPage + 1}–
+                Menampilkan {(safePage - 1) * perPage + 1}-
                 {Math.min(safePage * perPage, totalUniqueNumbers)} dari{" "}
                 {totalUniqueNumbers} nomor
               </p>
@@ -439,11 +439,11 @@ export default async function LaporanPublikPage({
                     scroll={false}
                     className="px-3 py-2 text-xs font-bold border border-slate-200 rounded-lg hover:border-slate-400 hover:bg-slate-50 transition-all"
                   >
-                    ←
+                    <-
                   </Link>
                 ) : (
                   <span className="px-3 py-2 text-xs font-bold border border-slate-100 rounded-lg text-slate-300 cursor-not-allowed">
-                    ←
+                    <-
                   </span>
                 )}
 
@@ -453,7 +453,7 @@ export default async function LaporanPublikPage({
                       key={`dots-${i}`}
                       className="px-2 py-2 text-xs text-slate-300 font-bold"
                     >
-                      ···
+                      ---
                     </span>
                   ) : (
                     <Link
@@ -477,11 +477,11 @@ export default async function LaporanPublikPage({
                     scroll={false}
                     className="px-3 py-2 text-xs font-bold border border-slate-200 rounded-lg hover:border-slate-400 hover:bg-slate-50 transition-all"
                   >
-                    →
+                    ->
                   </Link>
                 ) : (
                   <span className="px-3 py-2 text-xs font-bold border border-slate-100 rounded-lg text-slate-300 cursor-not-allowed">
-                    →
+                    ->
                   </span>
                 )}
               </div>

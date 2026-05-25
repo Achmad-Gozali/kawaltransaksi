@@ -39,7 +39,7 @@ export function Step2Kronologi({ chronology, onChronologyChange }: Step2Props) {
             <span className="text-xs text-slate-400 leading-relaxed">
               {chronology.length < 150
                 ? 'Tambahkan lebih banyak detail untuk memperkuat laporan'
-                : '✔ Kronologi sudah cukup lengkap'}
+                : '[OK] Kronologi sudah cukup lengkap'}
             </span>
             <span className={`text-xs font-semibold shrink-0 ${chronology.length >= 150 ? 'text-emerald-500' : 'text-slate-400'}`}>
               {chronology.length} / 150

@@ -1,5 +1,5 @@
 // ============================================
-// 📁 LOKASI: backend/src/features/robot/blacklist-engine.ts
+//  LOKASI: backend/src/features/robot/blacklist-engine.ts
 // ============================================
 
 import { getSupabaseAdmin } from '../../core/supabase';
@@ -12,7 +12,7 @@ function getLevel(uniqueReporters: number): BlacklistLevel {
   return 'medium';
 }
 
-// ── Update blacklist saat ada laporan verified baru ───────────────────────────
+// -- Update blacklist saat ada laporan verified baru ---------------------------
 
 export async function updateBlacklist(
   targetNumber: string,
@@ -45,10 +45,10 @@ export async function updateBlacklist(
     updated_at:       new Date().toISOString(),
   }, { onConflict: 'target_number' });
 
-  console.log(`[BLACKLIST] ${targetNumber} → ${level} (${uniqueReporters} reporters)`);
+  console.log(`[BLACKLIST] ${targetNumber} -> ${level} (${uniqueReporters} reporters)`);
 }
 
-// ── Remove dari blacklist kalau tidak ada laporan verified ────────────────────
+// -- Remove dari blacklist kalau tidak ada laporan verified --------------------
 
 export async function removeFromBlacklist(
   targetNumber: string,
@@ -66,7 +66,7 @@ export async function removeFromBlacklist(
   }
 }
 
-// ── Cek apakah nomor ada di blacklist ────────────────────────────────────────
+// -- Cek apakah nomor ada di blacklist ----------------------------------------
 
 export async function checkBlacklist(
   targetNumber: string,
@@ -88,7 +88,7 @@ export async function checkBlacklist(
   };
 }
 
-// ── Confidence decay: turunkan level kalau tidak ada laporan baru ─────────────
+// -- Confidence decay: turunkan level kalau tidak ada laporan baru -------------
 // Dipanggil oleh cron tiap bulan
 
 export async function runConfidenceDecay(
@@ -111,11 +111,11 @@ export async function runConfidenceDecay(
     stats.processed++;
 
     if (entry.level === 'medium') {
-      // Medium yang sudah lama → hapus
+      // Medium yang sudah lama -> hapus
       await supabase.from('blacklist').delete().eq('target_number', entry.target_number);
       stats.removed++;
     } else {
-      // High → Medium, Critical → High
+      // High -> Medium, Critical -> High
       const newLevel: BlacklistLevel = entry.level === 'critical' ? 'high' : 'medium';
       await supabase.from('blacklist').update({
         level:      newLevel,

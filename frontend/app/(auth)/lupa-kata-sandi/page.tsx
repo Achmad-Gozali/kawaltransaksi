@@ -58,7 +58,7 @@ function LupaKataSandiContent() {
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
 
-        {/* Tombol back — hidden di desktop, tampil di mobile */}
+        {/* Tombol back -- hidden di desktop, tampil di mobile */}
         <div className="mb-6 md:hidden">
           <Link
             href="/login"
@@ -127,7 +127,7 @@ function LupaKataSandiContent() {
                     href="/login"
                     className="text-sm text-gray-500 hover:text-gray-800 transition-colors"
                   >
-                    ← Kembali ke Login
+                    <- Kembali ke Login
                   </Link>
                 </div>
               </div>

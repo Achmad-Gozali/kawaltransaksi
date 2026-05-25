@@ -1,5 +1,5 @@
 // ============================================
-// 📁 LOKASI: backend/src/features/robot/types.ts
+//  LOKASI: backend/src/features/robot/types.ts
 // ============================================
 
 export interface RobotReport {

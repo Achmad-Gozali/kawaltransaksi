@@ -85,7 +85,7 @@ const articles = [
   },
 ];
 
-// ✅ OPTIMIZED: 3 query → 1 RPC call
+// [OK] OPTIMIZED: 3 query -> 1 RPC call
 async function getStats() {
   try {
     const supabase = await createClient();

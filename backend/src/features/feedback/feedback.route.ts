@@ -6,7 +6,7 @@ import type { Env } from '../../types';
 
 const feedback = new Hono<{ Bindings: Env; Variables: { userId: string; userEmail: string } }>();
 
-// ── Konstanta ─────────────────────────────────────────────────────────────────
+// -- Konstanta -----------------------------------------------------------------
 
 const VALID_CATEGORIES = ['bug', 'feature', 'ui_ux', 'other'] as const;
 const VALID_URGENCIES  = ['low', 'medium', 'high', 'critical'] as const;
@@ -28,7 +28,7 @@ const ALLOWED_SCREENSHOT_HOSTNAMES = [
 
 const FEEDBACK_FIELDS = 'id, user_id, user_email, category, title, description, page_url, urgency, screenshot_urls, status, admin_reply, replied_at, created_at';
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// -- Helpers -------------------------------------------------------------------
 
 function sanitizeText(input: string): string {
   return input
@@ -59,7 +59,7 @@ async function requireAdminRole(c: { get: (k: string) => string; env: Env; json:
   await next();
 }
 
-// ── POST /api/feedback ────────────────────────────────────────────────────────
+// -- POST /api/feedback --------------------------------------------------------
 
 feedback.post('/', authMiddleware, async (c) => {
   try {
@@ -122,7 +122,7 @@ feedback.post('/', authMiddleware, async (c) => {
   }
 });
 
-// ── GET /api/feedback (admin) ─────────────────────────────────────────────────
+// -- GET /api/feedback (admin) -------------------------------------------------
 
 feedback.get('/', authMiddleware, requireAdminRole, async (c) => {
   try {
@@ -138,7 +138,7 @@ feedback.get('/', authMiddleware, requireAdminRole, async (c) => {
   }
 });
 
-// ── PATCH /api/feedback/:id/status (admin) ────────────────────────────────────
+// -- PATCH /api/feedback/:id/status (admin) ------------------------------------
 
 feedback.patch('/:id/status', authMiddleware, requireAdminRole, async (c) => {
   try {
@@ -157,7 +157,7 @@ feedback.patch('/:id/status', authMiddleware, requireAdminRole, async (c) => {
   }
 });
 
-// ── PATCH /api/feedback/:id/reply (admin) ─────────────────────────────────────
+// -- PATCH /api/feedback/:id/reply (admin) -------------------------------------
 
 feedback.patch('/:id/reply', authMiddleware, requireAdminRole, async (c) => {
   try {

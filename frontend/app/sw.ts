@@ -13,7 +13,7 @@ declare const self: ServiceWorkerGlobalScope;
 const serwist = new Serwist({
   precacheEntries: [
     ...(self.__SW_MANIFEST ?? []),
-    { url: '/offline', revision: '1' },  // ← tambah ini
+    { url: '/offline', revision: '1' },  // <- tambah ini
   ],
   skipWaiting: true,
   clientsClaim: true,

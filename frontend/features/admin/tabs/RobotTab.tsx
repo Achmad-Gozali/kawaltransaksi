@@ -1,5 +1,5 @@
 // ============================================
-// 📁 LOKASI: frontend/features/admin/tabs/RobotTab.tsx
+//  LOKASI: frontend/features/admin/tabs/RobotTab.tsx
 // ============================================
 'use client';
 
@@ -14,7 +14,7 @@ import type { RobotHealth, RobotBlacklist, RobotTrend, RobotLog } from '@/featur
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL ?? '';
 
-// ── Helpers ───────────────────────────────────────────────────────────────────
+// -- Helpers -------------------------------------------------------------------
 
 function StatBox({ label, value, sub, color = 'text-slate-900' }: {
   label: string; value: string | number; sub?: string; color?: string;
@@ -34,7 +34,7 @@ const blacklistLevelConfig = {
   critical: { label: 'Critical', bg: 'bg-red-50',    border: 'border-red-200',    text: 'text-red-700',    icon: ShieldX },
 };
 
-// ── Main ──────────────────────────────────────────────────────────────────────
+// -- Main ----------------------------------------------------------------------
 
 export default function RobotTab({ token }: { token: string }) {
   const [health,    setHealth]    = useState<RobotHealth | null>(null);
@@ -44,7 +44,7 @@ export default function RobotTab({ token }: { token: string }) {
   const [loading,   setLoading]   = useState(true);
   const [running,   setRunning]   = useState(false);
 
-  // ✅ Sekarang pakai Authorization Bearer — sama seperti BlacklistTab dll
+  // [OK] Sekarang pakai Authorization Bearer -- sama seperti BlacklistTab dll
   const headers = {
     'Content-Type':  'application/json',
     'Authorization': `Bearer ${token}`,
@@ -132,14 +132,14 @@ export default function RobotTab({ token }: { token: string }) {
             <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 mt-3">
               <StatBox label="Pending Total" value={health?.pending_total ?? 0} color="text-amber-600" />
               <StatBox label="Avg Durasi"
-                value={health?.avg_duration_ms ? `${health.avg_duration_ms}ms` : '—'}
+                value={health?.avg_duration_ms ? `${health.avg_duration_ms}ms` : '--'}
               />
               <StatBox label="Terakhir Cek"
                 value={health?.checked_at
                   ? new Date(health.checked_at).toLocaleString('id-ID', {
                       hour: '2-digit', minute: '2-digit', day: 'numeric', month: 'short',
                     })
-                  : '—'}
+                  : '--'}
               />
             </div>
           </div>
@@ -149,7 +149,7 @@ export default function RobotTab({ token }: { token: string }) {
             <div className="bg-red-50 border border-red-200 rounded-2xl px-5 py-4 flex items-center gap-3">
               <Activity className="w-5 h-5 text-red-500 shrink-0" />
               <p className="text-sm text-red-700 font-medium">
-                ⚠️ Error rate tinggi ({health.error_rate}%) — robot mungkin butuh perhatian
+                [!] Error rate tinggi ({health.error_rate}%) -- robot mungkin butuh perhatian
               </p>
             </div>
           )}
@@ -157,7 +157,7 @@ export default function RobotTab({ token }: { token: string }) {
             <div className="bg-amber-50 border border-amber-200 rounded-2xl px-5 py-4 flex items-center gap-3">
               <Clock className="w-5 h-5 text-amber-500 shrink-0" />
               <p className="text-sm text-amber-700 font-medium">
-                ⚠️ Queue menumpuk — {health.pending_total} laporan pending
+                [!] Queue menumpuk -- {health.pending_total} laporan pending
               </p>
             </div>
           )}
@@ -188,7 +188,7 @@ export default function RobotTab({ token }: { token: string }) {
                               {entry.target_number.replace(/(\d{4})(?=\d)/g, '$1 ')}
                             </p>
                             <p className="text-[10px] text-slate-400 mt-0.5">
-                              {entry.unique_reporters} pelapor · {entry.total_reports} laporan
+                              {entry.unique_reporters} pelapor - {entry.total_reports} laporan
                             </p>
                           </div>
                         </div>
@@ -242,7 +242,7 @@ export default function RobotTab({ token }: { token: string }) {
                       </div>
                       <div className="flex items-center gap-2">
                         <span className="text-[10px] font-bold px-2 py-1 rounded-lg border bg-red-50 border-red-200 text-red-600">
-                          🔥 Viral
+                           Viral
                         </span>
                         <a
                           href={`/check/${trend.target_number}`}
@@ -300,7 +300,7 @@ export default function RobotTab({ token }: { token: string }) {
                             hour: '2-digit', minute: '2-digit', second: '2-digit',
                             day: 'numeric', month: 'short',
                           })}
-                          {log.duration_ms != null && ` · ${log.duration_ms}ms`}
+                          {log.duration_ms != null && ` - ${log.duration_ms}ms`}
                         </p>
                       </div>
                       {log.report_id && (

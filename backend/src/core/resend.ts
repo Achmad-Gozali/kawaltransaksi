@@ -26,7 +26,7 @@ async function sendEmail({
   }
 }
 
-// ── Auth emails ───────────────────────────────────────────────────────────────
+// -- Auth emails ---------------------------------------------------------------
 
 export async function sendWelcomeEmail({
   to,
@@ -44,8 +44,8 @@ export async function sendWelcomeEmail({
     html: `
       <div style="font-family: sans-serif; max-width: 520px; margin: 0 auto; padding: 32px; color: #1e293b;">
         <img src="https://kawaltransaksi.com/logo.png" alt="KawalTransaksi" width="48" style="border-radius: 12px; margin-bottom: 24px;" />
-        <h1 style="font-size: 22px; font-weight: 900; margin: 0 0 8px;">Halo, ${fullName}! 👋</h1>
-        <p style="color: #475569; margin: 0 0 16px;">Selamat bergabung di <strong>KawalTransaksi</strong> — platform pelaporan penipuan digital terpercaya.</p>
+        <h1 style="font-size: 22px; font-weight: 900; margin: 0 0 8px;">Halo, ${fullName}! </h1>
+        <p style="color: #475569; margin: 0 0 16px;">Selamat bergabung di <strong>KawalTransaksi</strong> -- platform pelaporan penipuan digital terpercaya.</p>
         <p style="color: #475569; margin: 0 0 24px;">Akun kamu sudah aktif dan siap digunakan. Bersama-sama, kita bisa melindungi lebih banyak orang dari ancaman penipuan online.</p>
         <p style="color: #475569; margin: 0 0 8px;">Berikut yang bisa kamu lakukan:</p>
         <ul style="color: #475569; margin: 0 0 24px; padding-left: 20px; line-height: 2;">
@@ -75,7 +75,7 @@ export async function sendVerificationEmail({
   await sendEmail({
     to,
     apiKey,
-    subject: 'Satu langkah lagi — verifikasi email kamu',
+    subject: 'Satu langkah lagi -- verifikasi email kamu',
     html: `
       <div style="font-family: sans-serif; max-width: 520px; margin: 0 auto; padding: 32px; color: #1e293b;">
         <img src="https://kawaltransaksi.com/logo.png" alt="KawalTransaksi" width="48" style="border-radius: 12px; margin-bottom: 24px;" />
@@ -105,7 +105,7 @@ export async function sendPasswordResetEmail({
   await sendEmail({
     to,
     apiKey,
-    subject: 'Permintaan reset kata sandi — KawalTransaksi',
+    subject: 'Permintaan reset kata sandi -- KawalTransaksi',
     html: `
       <div style="font-family: sans-serif; max-width: 520px; margin: 0 auto; padding: 32px; color: #1e293b;">
         <img src="https://kawaltransaksi.com/logo.png" alt="KawalTransaksi" width="48" style="border-radius: 12px; margin-bottom: 24px;" />
@@ -121,7 +121,7 @@ export async function sendPasswordResetEmail({
   });
 }
 
-// ── Report emails ─────────────────────────────────────────────────────────────
+// -- Report emails -------------------------------------------------------------
 
 export async function sendReportCreatedEmail({
   to,
@@ -143,17 +143,17 @@ export async function sendReportCreatedEmail({
   const isVerified = status === 'verified';
 
   const statusBadge = isVerified
-    ? '<span style="background: #dcfce7; color: #15803d; padding: 4px 12px; border-radius: 999px; font-size: 13px; font-weight: 700;">✅ Terverifikasi Otomatis</span>'
-    : '<span style="background: #fef9c3; color: #a16207; padding: 4px 12px; border-radius: 999px; font-size: 13px; font-weight: 700;">⏳ Menunggu Verifikasi</span>';
+    ? '<span style="background: #dcfce7; color: #15803d; padding: 4px 12px; border-radius: 999px; font-size: 13px; font-weight: 700;">[OK] Terverifikasi Otomatis</span>'
+    : '<span style="background: #fef9c3; color: #a16207; padding: 4px 12px; border-radius: 999px; font-size: 13px; font-weight: 700;">[...] Menunggu Verifikasi</span>';
 
   const statusDesc = isVerified
     ? 'Laporan kamu memenuhi seluruh kriteria kelengkapan bukti sehingga langsung terverifikasi oleh sistem kami. Nomor ini kini akan tampil sebagai terindikasi penipuan di halaman pengecekan.'
-    : 'Laporan kamu telah kami terima dan sedang dalam antrian tinjauan oleh tim KawalTransaksi. Proses verifikasi biasanya memakan waktu 1–3 hari kerja. Kami akan mengirimkan notifikasi begitu status laporan diperbarui.';
+    : 'Laporan kamu telah kami terima dan sedang dalam antrian tinjauan oleh tim KawalTransaksi. Proses verifikasi biasanya memakan waktu 1-3 hari kerja. Kami akan mengirimkan notifikasi begitu status laporan diperbarui.';
 
   await sendEmail({
     to,
     apiKey,
-    subject: 'Laporan kamu telah kami terima — KawalTransaksi',
+    subject: 'Laporan kamu telah kami terima -- KawalTransaksi',
     html: `
       <div style="font-family: sans-serif; max-width: 520px; margin: 0 auto; padding: 32px; color: #1e293b;">
         <img src="https://kawaltransaksi.com/logo.png" alt="KawalTransaksi" width="48" style="border-radius: 12px; margin-bottom: 24px;" />
@@ -193,27 +193,27 @@ export async function sendReportStatusChangedEmail({
 }) {
   const statusConfig: Record<string, { label: string; color: string; bg: string; desc: string; action?: string }> = {
     verified: {
-      label: '✅ Terverifikasi',
+      label: '[OK] Terverifikasi',
       color: '#15803d',
       bg: '#dcfce7',
       desc: 'Laporan kamu telah ditinjau dan diverifikasi oleh tim KawalTransaksi. Nomor ini kini resmi terdaftar sebagai terindikasi penipuan dan akan muncul di hasil pengecekan untuk memperingatkan pengguna lain.',
       action: 'Terima kasih atas kontribusimu dalam menjaga keamanan ekosistem digital Indonesia.',
     },
     rejected: {
-      label: '❌ Tidak Dapat Diverifikasi',
+      label: '[X] Tidak Dapat Diverifikasi',
       color: '#b91c1c',
       bg: '#fee2e2',
       desc: 'Setelah ditinjau, laporan kamu belum dapat diverifikasi karena bukti yang dilampirkan kurang memadai atau tidak memenuhi kriteria pelaporan kami.',
       action: 'Kamu dapat menarik laporan ini dan mengajukan ulang dengan melengkapi bukti seperti tangkapan layar percakapan, bukti transfer, atau informasi pendukung lainnya.',
     },
     pending: {
-      label: '⏳ Kembali Menunggu Verifikasi',
+      label: '[...] Kembali Menunggu Verifikasi',
       color: '#a16207',
       bg: '#fef9c3',
       desc: 'Laporan kamu kembali masuk ke antrian verifikasi dan sedang ditinjau ulang oleh tim kami. Kami akan menginformasikan hasilnya secepatnya.',
     },
     withdrawn: {
-      label: '🔄 Sedang Direvisi',
+      label: ' Sedang Direvisi',
       color: '#1d4ed8',
       bg: '#dbeafe',
       desc: 'Laporan kamu saat ini berstatus revisi. Kamu dapat melengkapi atau memperbaiki informasi yang ada, lalu mengirimkan ulang laporan untuk ditinjau kembali oleh tim kami.',
@@ -226,7 +226,7 @@ export async function sendReportStatusChangedEmail({
   await sendEmail({
     to,
     apiKey,
-    subject: 'Pembaruan status laporan kamu — KawalTransaksi',
+    subject: 'Pembaruan status laporan kamu -- KawalTransaksi',
     html: `
       <div style="font-family: sans-serif; max-width: 520px; margin: 0 auto; padding: 32px; color: #1e293b;">
         <img src="https://kawaltransaksi.com/logo.png" alt="KawalTransaksi" width="48" style="border-radius: 12px; margin-bottom: 24px;" />
@@ -266,13 +266,13 @@ export async function sendNewReportAdminEmail({
   apiKey: string;
 }) {
   const statusLabel = status === 'verified'
-    ? '<span style="background: #dcfce7; color: #15803d; padding: 4px 12px; border-radius: 999px; font-size: 13px; font-weight: 700;">✅ Terverifikasi Otomatis</span>'
-    : '<span style="background: #fef9c3; color: #a16207; padding: 4px 12px; border-radius: 999px; font-size: 13px; font-weight: 700;">⏳ Perlu Ditinjau</span>';
+    ? '<span style="background: #dcfce7; color: #15803d; padding: 4px 12px; border-radius: 999px; font-size: 13px; font-weight: 700;">[OK] Terverifikasi Otomatis</span>'
+    : '<span style="background: #fef9c3; color: #a16207; padding: 4px 12px; border-radius: 999px; font-size: 13px; font-weight: 700;">[...] Perlu Ditinjau</span>';
 
   await sendEmail({
     to: adminEmail,
     apiKey,
-    subject: `[Admin] Laporan baru masuk — ${targetNumber}`,
+    subject: `[Admin] Laporan baru masuk -- ${targetNumber}`,
     html: `
       <div style="font-family: sans-serif; max-width: 520px; margin: 0 auto; padding: 32px; color: #1e293b;">
         <img src="https://kawaltransaksi.com/logo.png" alt="KawalTransaksi" width="48" style="border-radius: 12px; margin-bottom: 24px;" />
@@ -296,7 +296,7 @@ export async function sendNewReportAdminEmail({
   });
 }
 
-// ── Feedback email ────────────────────────────────────────────────────────────
+// -- Feedback email ------------------------------------------------------------
 
 export async function sendFeedbackReplyEmail({
   to,
@@ -339,7 +339,7 @@ export async function sendFeedbackReplyEmail({
   });
 }
 
-// ── API Anomaly email ─────────────────────────────────────────────────────────
+// -- API Anomaly email ---------------------------------------------------------
 
 export async function sendApiAnomalyEmail({
   to,
@@ -359,11 +359,11 @@ export async function sendApiAnomalyEmail({
   await sendEmail({
     to,
     apiKey,
-    subject: '⚠️ Aktivitas tidak biasa terdeteksi pada API key Anda — KawalTransaksi',
+    subject: '[!] Aktivitas tidak biasa terdeteksi pada API key Anda -- KawalTransaksi',
     html: `
       <div style="font-family: sans-serif; max-width: 520px; margin: 0 auto; padding: 32px; color: #1e293b;">
         <img src="https://kawaltransaksi.com/logo.png" alt="KawalTransaksi" width="48" style="border-radius: 12px; margin-bottom: 24px;" />
-        <h1 style="font-size: 22px; font-weight: 900; margin: 0 0 8px;">⚠️ Aktivitas Tidak Biasa</h1>
+        <h1 style="font-size: 22px; font-weight: 900; margin: 0 0 8px;">[!] Aktivitas Tidak Biasa</h1>
         <p style="color: #475569; margin: 0 0 24px;">Sistem kami mendeteksi lonjakan penggunaan yang tidak biasa pada salah satu API key Anda.</p>
 
         <div style="background: #fef9c3; border: 1px solid #fde68a; border-radius: 12px; padding: 20px; margin-bottom: 24px;">

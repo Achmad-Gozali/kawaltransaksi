@@ -25,7 +25,7 @@ export const authMiddleware = createMiddleware<{
     );
   }
 
-  // FIX: Cek is_banned — user yang di-ban tidak boleh akses protected route
+  // FIX: Cek is_banned -- user yang di-ban tidak boleh akses protected route
   // meskipun token masih valid
   const { data: profile } = await supabase
     .from("profiles")

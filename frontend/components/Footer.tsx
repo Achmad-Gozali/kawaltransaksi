@@ -97,7 +97,7 @@ export default function Footer() {
 
         <div className="pt-8 border-t border-slate-700">
           <p className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">
-            © 2026 KawalTransaksi
+            (c) 2026 KawalTransaksi
           </p>
         </div>
       </footer>

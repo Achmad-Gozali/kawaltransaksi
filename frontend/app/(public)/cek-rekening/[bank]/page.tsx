@@ -336,7 +336,7 @@ export default async function BankDetailPage({ params }: PageProps) {
     created_at: string;
   };
 
-  // ✅ OPTIMIZED: hapus query categoryData — prop categoryBreakdown tidak dirender di BankPageClient
+  // [OK] OPTIMIZED: hapus query categoryData -- prop categoryBreakdown tidak dirender di BankPageClient
   const [{ data: primaryReports }, { data: linkedReports }] = await Promise.all(
     [
       supabase

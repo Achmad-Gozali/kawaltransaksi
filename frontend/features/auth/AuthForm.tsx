@@ -170,7 +170,7 @@ function AuthFormInner({ type }: AuthFormProps) {
   );
   const isSubmitDisabled = isLoading || !!oauthLoading || turnstileStatus !== 'ready' || !turnstileToken || isRegisterInvalid || isLocked;
 
-  // ✅ PERUBAHAN ADA DI SINI
+  // [OK] PERUBAHAN ADA DI SINI
   const handleOAuthLogin = async (provider: OAuthProvider) => {
     setOauthLoading(provider);
     setError(null);
@@ -431,7 +431,7 @@ function AuthFormInner({ type }: AuthFormProps) {
               type={showPassword ? 'text' : 'password'} value={password}
               onChange={(e) => setPassword(e.target.value)}
               onFocus={() => setPasswordFocused(true)} onBlur={() => setPasswordFocused(false)}
-              placeholder={type === 'register' ? 'Min. 8 karakter, huruf besar, angka, simbol' : '••••••••'}
+              placeholder={type === 'register' ? 'Min. 8 karakter, huruf besar, angka, simbol' : '--------'}
               className="w-full pl-10 pr-11 py-3 bg-white border border-slate-200 rounded-xl focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all text-sm font-medium text-slate-900 placeholder:text-slate-400 shadow-sm"
               required minLength={type === 'register' ? 8 : 6}
               autoComplete={type === 'login' ? 'current-password' : 'new-password'}
