@@ -282,7 +282,7 @@ export default async function HomePage() {
 
   return (
     <main className="bg-white text-slate-900 font-sans overflow-x-hidden">
-      {/* -- 1. HERO -- */}
+      {/* ── 1. HERO ── */}
       <section className="relative min-h-[500px] sm:min-h-[600px] flex items-stretch overflow-hidden bg-white">
         <div className="relative z-10 flex flex-col justify-center px-5 sm:px-12 md:pl-20 lg:pl-28 py-14 md:py-20 w-full md:w-[52%]">
           <h1 className="text-4xl sm:text-5xl lg:text-7xl font-black tracking-tighter leading-[0.9] uppercase mb-5 sm:mb-6">
@@ -325,7 +325,7 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* -- STATS CARD -- desktop -- */}
+      {/* ── STATS CARD — desktop ── */}
       <div className="relative bg-white hidden sm:block">
         <svg
           viewBox="0 0 1440 100"
@@ -345,12 +345,12 @@ export default async function HomePage() {
         </div>
       </div>
 
-      {/* -- STATS CARD -- mobile -- */}
+      {/* ── STATS CARD — mobile ── */}
       <div className="sm:hidden bg-slate-50 px-4 pt-4 pb-6">
         <StatsCard stats={stats} />
       </div>
 
-      {/* -- 2. APA ITU KAWALTRANSAKSI -- */}
+      {/* ── 2. APA ITU KAWALTRANSAKSI ── */}
       <section className="bg-slate-50 pt-10 sm:pt-24 pb-12 sm:pb-16">
         <div className="max-w-4xl mx-auto px-5 sm:px-6 text-center">
           <h2 className="text-xl sm:text-2xl lg:text-3xl font-black tracking-tighter uppercase text-slate-900 mb-4 sm:mb-5">
@@ -359,7 +359,7 @@ export default async function HomePage() {
           <p className="text-slate-500 text-sm sm:text-base max-w-xl mx-auto leading-relaxed">
             KawalTransaksi adalah platform komunitas anti-penipuan digital
             Indonesia. Kami membantu Anda memverifikasi nomor HP, rekening bank,
-            dan e-wallet sebelum bertransaksi -- gratis, cepat, dan didukung
+            dan e-wallet sebelum bertransaksi — gratis, cepat, dan didukung
             laporan nyata dari komunitas.
           </p>
         </div>
@@ -377,7 +377,7 @@ export default async function HomePage() {
         />
       </svg>
 
-      {/* -- 3. CARA KERJA -- */}
+      {/* ── 3. CARA KERJA ── */}
       <section className="bg-white py-12 sm:py-16">
         <div className="max-w-6xl mx-auto px-5 sm:px-6">
           <div className="text-center mb-10 sm:mb-12">
@@ -412,7 +412,7 @@ export default async function HomePage() {
         />
       </svg>
 
-      {/* -- 4. LAPORAN MASUK TERKINI -- */}
+      {/* ── 4. LAPORAN MASUK TERKINI ── */}
       <section className="bg-slate-50">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 py-10 sm:py-14">
           <div className="flex items-end justify-between mb-6 sm:mb-8">
@@ -423,7 +423,7 @@ export default async function HomePage() {
               href={lihatSemuaHref}
               className="text-xs font-bold text-slate-500 uppercase tracking-widest hover:text-emerald-700 transition-colors whitespace-nowrap"
             >
-              lihat semua &rarr;
+              lihat semua →
             </Link>
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -513,7 +513,7 @@ export default async function HomePage() {
         />
       </svg>
 
-      {/* -- 5. CTA -- */}
+      {/* ── 5. CTA ── */}
       <section className="bg-white">
         <div className="max-w-5xl mx-auto px-5 sm:px-6 py-16 sm:py-24 text-center">
           <h2 className="text-2xl sm:text-4xl md:text-5xl font-black tracking-tighter uppercase text-slate-900 mb-4">
@@ -553,7 +553,7 @@ export default async function HomePage() {
         />
       </svg>
 
-      {/* -- 6. DEVELOPER API -- */}
+      {/* ── 6. DEVELOPER API ── */}
       <section className="bg-slate-50 py-16 sm:py-20 px-5 sm:px-6">
         <div className="max-w-4xl mx-auto">
           {/* Header */}
@@ -674,6 +674,17 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
+      {/* Legal links */}
+    <section className="bg-slate-50 py-6 border-t border-slate-200">
+      <div className="max-w-6xl mx-auto px-5 sm:px-6 flex items-center justify-center gap-6">
+      <Link href="/kebijakan-privasi" className="text-xs text-slate-400 hover:text-slate-600 transition-colors">
+      Kebijakan Privasi
+    </Link>
+    <Link href="/syarat-ketentuan" className="text-xs text-slate-400 hover:text-slate-600 transition-colors">
+      Syarat & Ketentuan
+    </Link>
+  </div>
+</section>
     </main>
   );
 }
