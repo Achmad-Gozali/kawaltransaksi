@@ -1,7 +1,7 @@
 'use client';
 
 import { useState, useEffect } from 'react';
-import { Plus, RefreshCw, AlertTriangle, ChevronDown } from 'lucide-react';
+import { Plus, RefreshCw, AlertTriangle, ChevronDown, Zap, Lock } from 'lucide-react';
 import { KeyCard, type ApiKey } from '@/features/developer/components/KeyCard';
 import { KeyRevealModal } from '@/features/developer/components/KeyRevealModal';
 import { CodeBlock, CodeTabs } from '@/features/developer/components/CodeBlock';
@@ -9,11 +9,7 @@ import { DocSection } from '@/features/developer/components/DocSection';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL!;
 
-interface Props {
-  token: string;
-  userEmail: string;
-  isLoggedIn: boolean;
-}
+interface Props { token: string; userEmail: string; isLoggedIn: boolean; }
 
 const EXPIRY_OPTIONS = [
   { value: 'never', label: 'Tidak ada kadaluarsa' },
@@ -22,6 +18,136 @@ const EXPIRY_OPTIONS = [
   { value: '90d',   label: '90 hari' },
   { value: '1y',    label: '1 tahun' },
 ];
+
+const PRICING = [
+  {
+    tier: 'Free',
+    price: 'Gratis',
+    description: 'Untuk developer individu & eksperimen',
+    comingSoon: false,
+    features: [
+      { label: '300 request/hari',        available: true },
+      { label: '5 API key per akun',      available: true },
+      { label: 'Endpoint /check',         available: true },
+      { label: 'Idempotency-Key support', available: true },
+      { label: 'Bulk check (maks 20 nomor)', available: false },
+      { label: 'Usage history 30 hari',   available: false },
+      { label: 'Priority support',        available: false },
+    ],
+  },
+  {
+    tier: 'Pro',
+    price: 'Segera Hadir',
+    description: 'Untuk aplikasi production & bisnis',
+    comingSoon: true,
+    features: [
+      { label: '5.000 request/hari',      available: true },
+      { label: '20 API key per akun',     available: true },
+      { label: 'Endpoint /check',         available: true },
+      { label: 'Idempotency-Key support', available: true },
+      { label: 'Bulk check (maks 20 nomor)', available: true },
+      { label: 'Usage history 30 hari',   available: true },
+      { label: 'Priority support',        available: true },
+    ],
+  },
+];
+
+// -- Pricing Section -----------------------------------------------------------
+
+function FeatureIcon({ available, comingSoon }: { available: boolean; comingSoon: boolean }) {
+  if (available) {
+    return (
+      <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${comingSoon ? 'bg-slate-300' : 'bg-emerald-500'}`}>
+        <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 10 8" stroke="currentColor" strokeWidth={2.5}>
+          <path strokeLinecap="round" strokeLinejoin="round" d="M1 4l2.5 2.5L9 1" />
+        </svg>
+      </div>
+    );
+  }
+  return (
+    <div className="w-4 h-4 rounded-full flex items-center justify-center shrink-0 bg-red-100">
+      <svg className="w-2.5 h-2.5 text-red-500" fill="none" viewBox="0 0 10 10" stroke="currentColor" strokeWidth={2.5}>
+        <path strokeLinecap="round" strokeLinejoin="round" d="M2 2l6 6M8 2l-6 6" />
+      </svg>
+    </div>
+  );
+}
+
+function PricingSection({ isLoggedIn }: { isLoggedIn: boolean }) {
+  return (
+    <section className="bg-white pt-10 pb-12 px-4">
+      <div className="max-w-4xl mx-auto">
+        <div className="mb-6">
+          <h2 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 uppercase">Pilih Plan</h2>
+          <p className="text-sm text-slate-500 mt-1">Mulai gratis, upgrade saat butuh lebih.</p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {PRICING.map((plan) => {
+            const isFree = !plan.comingSoon;
+            return (
+              <div key={plan.tier} className={`rounded-2xl border overflow-hidden relative ${
+                plan.comingSoon ? 'border-slate-200 opacity-80' : 'border-emerald-200 ring-1 ring-emerald-100'
+              }`}>
+                <div className="absolute top-4 right-4 flex flex-col items-end gap-1.5">
+                  {isFree && isLoggedIn && (
+                    <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-emerald-500 text-white uppercase tracking-wider">
+                      Plan Anda
+                    </span>
+                  )}
+                  {plan.comingSoon && (
+                    <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-slate-900 text-white uppercase tracking-wider">
+                      Segera Hadir
+                    </span>
+                  )}
+                </div>
+                <div className={`px-5 py-5 ${plan.comingSoon ? 'bg-slate-50' : 'bg-emerald-50'}`}>
+                  <div className="flex items-center gap-2 mb-1">
+                    {plan.comingSoon
+                      ? <Lock className="w-4 h-4 text-slate-400" />
+                      : <Zap className="w-4 h-4 text-emerald-500" />
+                    }
+                    <p className="text-sm font-black text-slate-900 uppercase tracking-wide">{plan.tier}</p>
+                  </div>
+                  <p className={`text-2xl font-black ${plan.comingSoon ? 'text-slate-400' : 'text-emerald-600'}`}>
+                    {plan.price}
+                  </p>
+                  <p className="text-xs text-slate-500 mt-1">{plan.description}</p>
+                </div>
+                <div className="bg-white px-5 py-4 space-y-2.5">
+                  {plan.features.map((f) => (
+                    <div key={f.label} className="flex items-center gap-2.5">
+                      <FeatureIcon available={f.available} comingSoon={plan.comingSoon} />
+                      <span className={`text-sm ${f.available ? 'text-slate-700' : 'text-slate-400 line-through'}`}>
+                        {f.label}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+                <div className="px-5 pb-5">
+                  {plan.comingSoon ? (
+                    <button disabled className="w-full py-2.5 bg-slate-100 text-slate-400 text-sm font-bold rounded-xl cursor-not-allowed">
+                      Segera Hadir
+                    </button>
+                  ) : isLoggedIn ? (
+                    <a href="#api-keys" className="block w-full py-2.5 bg-slate-900 hover:bg-slate-700 text-white text-sm font-bold rounded-xl transition-colors text-center">
+                      Kelola API Key
+                    </a>
+                  ) : (
+                    <a href="#api-keys" className="block w-full py-2.5 bg-emerald-500 hover:bg-emerald-400 text-white text-sm font-bold rounded-xl transition-colors text-center">
+                      Mulai Gratis
+                    </a>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// -- Main Component -----------------------------------------------------------
 
 export default function DeveloperClient({ token, isLoggedIn }: Props) {
   const [keys, setKeys]               = useState<ApiKey[]>([]);
@@ -38,16 +164,10 @@ export default function DeveloperClient({ token, isLoggedIn }: Props) {
   const fetchKeys = async () => {
     setLoading(true);
     try {
-      const res  = await fetch(`${BACKEND_URL}/api/developer/keys`, {
-        headers: { Authorization: `Bearer ${token}` },
-      });
+      const res  = await fetch(`${BACKEND_URL}/api/developer/keys`, { headers: { Authorization: `Bearer ${token}` } });
       const data = await res.json();
-      if (res.status === 403 && data.message?.includes('diblokir')) {
-        setIsBlocked(true);
-      } else if (data.success) {
-        setIsBlocked(false);
-        setKeys(data.data ?? []);
-      }
+      if (res.status === 403 && data.message?.includes('diblokir')) setIsBlocked(true);
+      else if (data.success) { setIsBlocked(false); setKeys(data.data ?? []); }
     } finally { setLoading(false); }
   };
 
@@ -64,9 +184,7 @@ export default function DeveloperClient({ token, isLoggedIn }: Props) {
       if (data.success) {
         const { key: fullKey, ...keyWithoutFull } = data.data;
         setKeys(prev => [keyWithoutFull, ...prev]);
-        setNewKeyName('');
-        setExpiresIn('never');
-        setEnvironment('live');
+        setNewKeyName(''); setExpiresIn('never'); setEnvironment('live');
         if (fullKey) setRevealKey(fullKey);
       }
     } finally { setCreating(false); }
@@ -81,35 +199,45 @@ export default function DeveloperClient({ token, isLoggedIn }: Props) {
 
   return (
     <main className="bg-white font-sans overflow-x-hidden">
-
       {revealKey && <KeyRevealModal apiKey={revealKey} onClose={() => setRevealKey(null)} />}
 
-      {/* -- Hero -- */}
-      <section className="bg-slate-900 text-white px-4 pt-14 pb-20 sm:pt-20 sm:pb-28">
-        <div className="max-w-4xl mx-auto text-center">
-          <h1 className="text-3xl sm:text-5xl font-black tracking-tighter uppercase mb-4 leading-tight">
+      {/* Hero — ikut pattern bg-slate-100 seperti halaman lain */}
+      <section className="bg-slate-100 pt-14 pb-0 sm:pt-20 overflow-hidden px-4">
+        <div className="max-w-4xl mx-auto text-center pb-16 sm:pb-24">
+          <h1 className="text-2xl sm:text-4xl font-black tracking-tighter text-slate-900 uppercase mb-4 leading-tight">
             Integrasikan KawalTransaksi<br />
-            <span className="text-emerald-400">ke Aplikasi Anda</span>
+            <span className="text-emerald-600">ke Aplikasi Anda</span>
           </h1>
-          <p className="text-slate-400 text-sm sm:text-base max-w-xl mx-auto leading-relaxed mb-8">
+          <p className="text-slate-500 text-sm sm:text-base max-w-xl mx-auto leading-relaxed mb-8">
             REST API untuk verifikasi nomor HP, rekening bank, dan e-wallet. Gratis 300 request/hari, tanpa kartu kredit.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <a href="#api-keys" className="w-full sm:w-auto px-6 py-3 bg-emerald-500 hover:bg-emerald-400 text-white text-sm font-bold rounded-xl transition-colors uppercase tracking-wider">
-              Generate API Key
+            <a
+              href="#api-keys"
+              className="w-full sm:w-auto px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-xl transition-colors uppercase tracking-wider"
+            >
+              {isLoggedIn ? 'Kelola API Key' : 'Generate API Key'}
             </a>
-            <a href="#dokumentasi" className="w-full sm:w-auto px-6 py-3 border border-white/20 text-slate-300 hover:text-white text-sm font-bold rounded-xl transition-colors uppercase tracking-wider">
+            
+            <a
+              href="#dokumentasi"
+              className="w-full sm:w-auto px-6 py-3 border border-slate-300 text-slate-600 hover:bg-slate-200 text-sm font-bold rounded-xl transition-colors uppercase tracking-wider"
+            >
               Lihat Dokumentasi
             </a>
           </div>
         </div>
+
+        {/* Wave slate → putih, sama persis dengan halaman lain */}
+        <svg viewBox="0 0 1440 80" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" className="w-full h-10 sm:h-20 block">
+          <path d="M0,20 C360,80 1080,0 1440,60 L1440,80 L0,80 Z" fill="#ffffff" />
+        </svg>
       </section>
 
-      <svg viewBox="0 0 1440 80" preserveAspectRatio="none" className="w-full block bg-slate-900 -mb-1" xmlns="http://www.w3.org/2000/svg">
-        <path d="M0,80 C360,20 1080,60 1440,20 L1440,80 L0,80 Z" fill="#ffffff" />
-      </svg>
+      {/* Pricing */}
+      <PricingSection isLoggedIn={isLoggedIn} />
 
-      {/* -- API Keys -- */}
+      {/* API Keys */}
       <section id="api-keys" className="bg-white pt-10 pb-12 sm:pt-14 sm:pb-16 px-4">
         <div className="max-w-4xl mx-auto">
           <div className="flex items-end justify-between mb-6">
@@ -121,7 +249,6 @@ export default function DeveloperClient({ token, isLoggedIn }: Props) {
           </div>
 
           <div className="space-y-4">
-
             {isBlocked && (
               <div className="bg-red-50 border border-red-200 rounded-xl p-5">
                 <div className="flex items-start gap-3">
@@ -132,13 +259,10 @@ export default function DeveloperClient({ token, isLoggedIn }: Props) {
                     <p className="text-sm font-bold text-red-800 mb-1">IP Anda Diblokir Sementara</p>
                     <p className="text-sm text-red-700 leading-relaxed mb-3">
                       Akses API Anda diblokir selama 24 jam karena terdeteksi aktivitas mencurigakan dari IP Anda.
-                      Ini bisa terjadi karena terlalu banyak percobaan auth yang gagal atau akses ke endpoint yang tidak diizinkan.
                     </p>
-                    <p className="text-sm text-red-700 leading-relaxed">
-                      Jika ini kesalahan, hubungi kami di{' '}
-                      <a href="mailto:kawaltransaksi@gmail.com" className="font-bold underline hover:text-red-900">
-                        kawaltransaksi@gmail.com
-                      </a>
+                    <p className="text-sm text-red-700">
+                      Jika ini kesalahan, hubungi{' '}
+                      <a href="mailto:kawaltransaksi@gmail.com" className="font-bold underline hover:text-red-900">kawaltransaksi@gmail.com</a>
                     </p>
                   </div>
                 </div>
@@ -150,12 +274,10 @@ export default function DeveloperClient({ token, isLoggedIn }: Props) {
                 <p className="text-base font-bold text-slate-700 mb-1">Login untuk generate API key</p>
                 <p className="text-sm text-slate-400 mb-6">API key terhubung ke akun Anda. Gratis, tanpa batas waktu.</p>
                 <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                  <a href="/login?redirectTo=/developer"
-                    className="w-full sm:w-auto px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold rounded-xl transition-colors uppercase tracking-wider">
+                  <a href="/login?redirectTo=/developer" className="w-full sm:w-auto px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold rounded-xl transition-colors uppercase tracking-wider">
                     Login Sekarang
                   </a>
-                  <a href="/register"
-                    className="w-full sm:w-auto px-6 py-3 border-2 border-slate-200 text-slate-700 hover:border-slate-400 text-sm font-bold rounded-xl transition-colors uppercase tracking-wider">
+                  <a href="/register" className="w-full sm:w-auto px-6 py-3 border-2 border-slate-200 text-slate-700 hover:border-slate-400 text-sm font-bold rounded-xl transition-colors uppercase tracking-wider">
                     Daftar Gratis
                   </a>
                 </div>
@@ -166,19 +288,13 @@ export default function DeveloperClient({ token, isLoggedIn }: Props) {
                   <p className="text-sm font-bold text-slate-700 mb-3">Generate API Key Baru</p>
                   <div className="flex flex-col sm:flex-row gap-2 mb-3">
                     <input
-                      type="text"
-                      placeholder="Nama project (contoh: MyApp Production)"
-                      value={newKeyName}
-                      onChange={e => setNewKeyName(e.target.value)}
-                      onKeyDown={e => e.key === 'Enter' && createKey()}
-                      maxLength={50}
+                      type="text" placeholder="Nama project (contoh: MyApp Production)"
+                      value={newKeyName} onChange={e => setNewKeyName(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && createKey()} maxLength={50}
                       className="flex-1 px-3 py-2.5 border border-slate-200 bg-white rounded-xl text-sm focus:outline-none focus:border-emerald-400 transition-all"
                     />
-                    <button
-                      onClick={createKey}
-                      disabled={creating || !newKeyName.trim() || keys.length >= 5}
-                      className="flex items-center justify-center gap-2 px-5 py-2.5 bg-slate-900 text-white text-sm font-bold rounded-xl hover:bg-slate-700 disabled:opacity-50 transition-colors shrink-0"
-                    >
+                    <button onClick={createKey} disabled={creating || !newKeyName.trim() || keys.length >= 5}
+                      className="flex items-center justify-center gap-2 px-5 py-2.5 bg-slate-900 text-white text-sm font-bold rounded-xl hover:bg-slate-700 disabled:opacity-50 transition-colors shrink-0">
                       {creating ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
                       Generate
                     </button>
@@ -189,9 +305,7 @@ export default function DeveloperClient({ token, isLoggedIn }: Props) {
                       <div className="relative">
                         <select value={expiresIn} onChange={e => setExpiresIn(e.target.value)}
                           className="appearance-none pl-3 pr-8 py-1.5 text-sm border border-slate-200 bg-white rounded-lg focus:outline-none focus:border-emerald-400 transition-all cursor-pointer">
-                          {EXPIRY_OPTIONS.map(opt => (
-                            <option key={opt.value} value={opt.value}>{opt.label}</option>
-                          ))}
+                          {EXPIRY_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
                         </select>
                         <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
                       </div>
@@ -249,14 +363,13 @@ export default function DeveloperClient({ token, isLoggedIn }: Props) {
         <path d="M0,0 C240,60 480,20 720,45 C960,70 1200,30 1440,50 L1440,80 L0,80 Z" fill="#f8fafc" />
       </svg>
 
-      {/* -- Dokumentasi -- */}
+      {/* Dokumentasi */}
       <section id="dokumentasi" className="bg-slate-50 pt-10 pb-16 sm:pt-14 sm:pb-20 px-4">
         <div className="max-w-4xl mx-auto">
           <div className="mb-8">
             <h2 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 uppercase">Dokumentasi API</h2>
             <p className="text-sm text-slate-500 mt-1">Panduan lengkap untuk integrasi KawalTransaksi API ke aplikasi Anda.</p>
           </div>
-
           <div className="space-y-3">
 
             <DocSection title="Overview">
@@ -320,8 +433,8 @@ export default function DeveloperClient({ token, isLoggedIn }: Props) {
               </p>
               <div className="rounded-xl border border-slate-200 overflow-hidden">
                 {[
-                  { env: 'kt_live_...', color: 'text-emerald-700 bg-emerald-50 border-emerald-200', title: 'Live', desc: 'Untuk production. Request dihitung terhadap limit harian. Gunakan di aplikasi yang sudah live.' },
-                  { env: 'kt_test_...', color: 'text-amber-700 bg-amber-50 border-amber-200',       title: 'Test', desc: 'Untuk development dan testing. Request tetap dihitung terhadap limit harian. Data yang dikembalikan sama dengan live.' },
+                  { env: 'kt_live_...', color: 'text-emerald-700 bg-emerald-50 border-emerald-200', title: 'Live', desc: 'Untuk production. Request dihitung terhadap limit harian.' },
+                  { env: 'kt_test_...', color: 'text-amber-700 bg-amber-50 border-amber-200',       title: 'Test', desc: 'Untuk development dan testing. Data yang dikembalikan sama dengan live.' },
                 ].map((e, i) => (
                   <div key={e.title} className={`px-4 py-4 bg-white ${i > 0 ? 'border-t border-slate-100' : ''}`}>
                     <div className="flex items-center gap-2 mb-2">
@@ -375,16 +488,16 @@ export default function DeveloperClient({ token, isLoggedIn }: Props) {
   "data": {
     "number": "08123456789",
     "type": "phone",
-    "status": "danger",           // safe | warning | danger
+    "status": "danger",
     "verified_reports": 3,
     "pending_reports": 1,
     "total_reports": 4,
-    "total_loss": 5000000,        // dalam rupiah
+    "total_loss": 5000000,
     "last_reported": "2026-05-10T12:00:00Z",
     "check_url": "https://kawaltransaksi.com/check/08123456789"
   },
   "meta": {
-    "environment": "live",        // live | test
+    "environment": "live",
     "requests_today": 42,
     "daily_limit": 300,
     "requests_remaining": 258,
@@ -394,7 +507,7 @@ export default function DeveloperClient({ token, isLoggedIn }: Props) {
               <div className="rounded-xl border border-slate-200 overflow-hidden">
                 {[
                   { status: 'safe',    color: 'text-emerald-700 bg-emerald-50 border-emerald-200', desc: 'Tidak ditemukan laporan penipuan. Transaksi relatif aman.' },
-                  { status: 'warning', color: 'text-amber-700 bg-amber-50 border-amber-200',       desc: 'Ada laporan masuk tapi belum diverifikasi moderator. Tetap waspada.' },
+                  { status: 'warning', color: 'text-amber-700 bg-amber-50 border-amber-200',       desc: 'Ada laporan masuk tapi belum diverifikasi. Tetap waspada.' },
                   { status: 'danger',  color: 'text-red-700 bg-red-50 border-red-200',             desc: 'Ada laporan terverifikasi. Sangat disarankan hindari transaksi.' },
                 ].map((s, i) => (
                   <div key={s.status} className={`flex items-start gap-4 px-4 py-4 bg-white ${i > 0 ? 'border-t border-slate-100' : ''}`}>
@@ -405,10 +518,10 @@ export default function DeveloperClient({ token, isLoggedIn }: Props) {
               </div>
               <div className="rounded-xl border border-slate-200 overflow-hidden">
                 {[
-                  { code: '400', label: 'Bad Request',       desc: 'Parameter tidak valid. Cek format number dan nilai type.' },
+                  { code: '400', label: 'Bad Request',       desc: 'Parameter tidak valid.' },
                   { code: '401', label: 'Unauthorized',      desc: 'API key tidak valid, tidak aktif, atau sudah kadaluarsa.' },
                   { code: '403', label: 'Forbidden',         desc: 'IP Anda diblokir sementara karena aktivitas mencurigakan.' },
-                  { code: '429', label: 'Too Many Requests', desc: 'Batas request harian sudah tercapai (300/hari). Reset besok 00:00 WIB.' },
+                  { code: '429', label: 'Too Many Requests', desc: 'Batas request harian sudah tercapai. Reset besok 00:00 WIB.' },
                   { code: '500', label: 'Server Error',      desc: 'Terjadi kesalahan di server kami. Coba lagi beberapa saat.' },
                 ].map((e, i) => (
                   <div key={e.code} className={`flex items-start gap-4 px-4 py-3.5 bg-white ${i > 0 ? 'border-t border-slate-100' : ''}`}>
@@ -424,18 +537,9 @@ export default function DeveloperClient({ token, isLoggedIn }: Props) {
 
             <DocSection title="Idempotency" defaultOpen={false}>
               <p className="text-sm text-slate-600 leading-relaxed">
-                Untuk mencegah request duplikat (misalnya karena retry otomatis), gunakan header{' '}
-                <code className="bg-slate-100 px-1.5 py-0.5 rounded text-xs font-mono">Idempotency-Key</code>.
-                Jika request yang sama dikirim ulang dalam 5 menit dengan key yang sama, sistem akan mengembalikan
-                response yang sudah di-cache tanpa menghitung ke limit harian.
+                Gunakan header <code className="bg-slate-100 px-1.5 py-0.5 rounded text-xs font-mono">Idempotency-Key</code> untuk mencegah request duplikat.
+                Request yang sama dalam 5 menit dengan key yang sama dikembalikan dari cache tanpa menghitung ke limit harian.
               </p>
-              <div className="bg-slate-50 rounded-xl border border-slate-100 px-4 py-3">
-                <ul className="text-sm text-slate-600 space-y-1.5 leading-relaxed">
-                  <li>- Kirim header <code className="bg-slate-100 px-1 rounded text-xs font-mono">Idempotency-Key</code> dengan nilai unik (misalnya UUID)</li>
-                  <li>- Request duplikat dalam 5 menit dikembalikan dari cache</li>
-                  <li>- Response cached ditandai <code className="bg-slate-100 px-1 rounded text-xs font-mono">meta.idempotent: true</code></li>
-                </ul>
-              </div>
               <CodeBlock language="curl" code={`curl "https://api.kawaltransaksi.com/api/v1/check?number=08123456789" \\
   -H "X-API-Key: kt_live_your_key_here" \\
   -H "Idempotency-Key: order-check-12345"`} />
@@ -460,23 +564,15 @@ export default function DeveloperClient({ token, isLoggedIn }: Props) {
                   </div>
                 ))}
               </div>
-              <CodeBlock language="javascript" code={`const data = await response.json();
-const remaining = data.meta.requests_remaining;
-if (remaining < 30) {
-  console.warn(\`Sisa request hari ini: \${remaining}\`);
-}`} />
             </DocSection>
 
             <DocSection title="Keamanan API Key" defaultOpen={false}>
-              <p className="text-sm text-slate-600 leading-relaxed">
-                API key adalah kredensial yang memberikan akses ke akun Anda. Jaga keamanannya seperti password.
-              </p>
               <div className="space-y-3">
                 {[
                   { title: 'Simpan di environment variable', desc: 'Jangan hardcode API key di source code. Gunakan .env dan pastikan ada di .gitignore.', code: '# .env\nKAWALTRANSAKSI_API_KEY=kt_live_your_key_here' },
                   { title: 'Gunakan key test untuk development', desc: 'Generate key environment "test" untuk dev. Simpan key live hanya untuk production.', code: null },
                   { title: 'Set expiry date', desc: 'Untuk integrasi sementara, set expiry agar key otomatis tidak bisa dipakai setelah selesai.', code: null },
-                  { title: 'Regenerate kalau dicurigai bocor', desc: 'Jika key terekspos (commit ke repo publik, dll), segera regenerate. Key lama langsung invalid.', code: null },
+                  { title: 'Regenerate kalau dicurigai bocor', desc: 'Jika key terekspos, segera regenerate. Key lama langsung invalid.', code: null },
                 ].map((item, i) => (
                   <div key={i} className="bg-white rounded-xl border border-slate-100 px-4 py-4">
                     <p className="text-sm font-bold text-slate-900 mb-1">{item.title}</p>
@@ -491,7 +587,7 @@ if (remaining < 30) {
               <div className="space-y-3">
                 {[
                   { title: 'Gunakan di server-side', desc: 'Jangan panggil API langsung dari browser. Buat endpoint backend sendiri sebagai proxy.' },
-                  { title: 'Cache response', desc: 'Simpan hasil cek di cache (Redis, dll) untuk nomor yang sama selama beberapa menit.' },
+                  { title: 'Cache response', desc: 'Simpan hasil cek di cache untuk nomor yang sama selama beberapa menit.' },
                   { title: 'Gunakan Idempotency-Key untuk retry', desc: 'Jika aplikasi melakukan retry otomatis, sertakan Idempotency-Key agar tidak mengurangi limit.' },
                   { title: 'Handle error dengan baik', desc: 'Selalu cek field success. Jika error, jangan blokir user -- tampilkan pesan informatif.' },
                   { title: 'Monitor sisa request', desc: 'Pantau meta.requests_remaining. Jika mendekati 0, kurangi frekuensi pengecekan.' },
@@ -516,30 +612,27 @@ if (remaining < 30) {
                     version: 'v1.2', date: '19 Mei 2026',
                     badge: 'bg-emerald-50 text-emerald-700 border-emerald-200', label: 'Terbaru',
                     changes: [
-                      'Limit dinaikkan dari 100 &rarr; 300 request/hari',
-                      'Tambah dukungan Idempotency-Key untuk deduplication request',
-                      'API key sekarang punya environment: live dan test',
+                      'Limit dinaikkan dari 100 ke 300 request/hari',
+                      'Tambah dukungan Idempotency-Key',
+                      'API key environment: live dan test',
                       'Format key baru: kt_live_... dan kt_test_...',
-                      'Keamanan: key disimpan sebagai hash di database',
-                      'Keamanan: rate limit 60 req/menit per IP',
-                      'Keamanan: auto-blacklist IP setelah 10x gagal auth',
-                      'Optimasi: cache hasil check nomor 5 menit di KV',
+                      'Key disimpan sebagai hash di database',
+                      'Rate limit 60 req/menit per IP',
+                      'Auto-blacklist IP setelah 10x gagal auth',
+                      'Cache hasil check nomor 5 menit di KV',
                     ],
                   },
                   {
                     version: 'v1.1', date: '1 Mei 2026',
                     badge: 'bg-slate-100 text-slate-500 border-slate-200', label: null,
-                    changes: [
-                      'Tambah field expires_at di API key -- bisa set masa berlaku',
-                      'Tambah field last_used_at untuk tracking penggunaan',
-                    ],
+                    changes: ['Tambah field expires_at di API key', 'Tambah field last_used_at untuk tracking'],
                   },
                   {
                     version: 'v1.0', date: '15 April 2026',
                     badge: 'bg-slate-100 text-slate-500 border-slate-200', label: null,
                     changes: [
                       'Launch perdana KawalTransaksi API',
-                      'Endpoint GET /api/v1/check untuk cek nomor HP, rekening, dan e-wallet',
+                      'Endpoint GET /api/v1/check',
                       'Free tier 100 request/hari',
                       'Autentikasi via X-API-Key header',
                     ],
@@ -548,9 +641,7 @@ if (remaining < 30) {
                   <div key={i} className="bg-white rounded-xl border border-slate-100 px-4 py-4">
                     <div className="flex items-center gap-2 mb-3">
                       <span className="text-sm font-black text-slate-900 font-mono">{release.version}</span>
-                      {release.label && (
-                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${release.badge}`}>{release.label}</span>
-                      )}
+                      {release.label && <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${release.badge}`}>{release.label}</span>}
                       <span className="text-xs text-slate-400 ml-auto">{release.date}</span>
                     </div>
                     <ul className="space-y-1.5">
@@ -569,7 +660,6 @@ if (remaining < 30) {
           </div>
         </div>
       </section>
-
     </main>
   );
 }

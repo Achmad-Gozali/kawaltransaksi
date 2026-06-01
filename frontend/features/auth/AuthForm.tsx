@@ -176,7 +176,7 @@ function AuthFormInner({ type }: AuthFormProps) {
   setError(null);
   setIsWarning(false);
   
-  const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+  const siteUrl = window.location.origin;
   
   const params = new URLSearchParams({
     client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,

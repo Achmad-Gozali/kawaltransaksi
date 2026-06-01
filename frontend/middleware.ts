@@ -3,6 +3,7 @@ import { NextResponse, type NextRequest } from 'next/server';
 
 export async function middleware(request: NextRequest) {
   const pathname = request.nextUrl.pathname;
+  const isLocalhost = request.nextUrl.hostname === 'localhost';
 
   // -- MAINTENANCE MODE ------------------------------------------------------
   const isMaintenance = process.env.MAINTENANCE_MODE === 'true';
@@ -37,7 +38,7 @@ export async function middleware(request: NextRequest) {
             supabaseResponse.cookies.set(name, value, {
               ...options,
               httpOnly: true,
-              secure: true,
+              secure: !isLocalhost,
               sameSite: 'lax',
             })
           );
@@ -55,8 +56,6 @@ export async function middleware(request: NextRequest) {
   }
 
   if (pathname.startsWith('/admin') && user) {
-    // Selalu query DB untuk cek role terkini -- tidak cache cookie
-    // Ini mencegah edge case admin di-demote tapi cookie lama masih valid
     const { data: profile } = await supabase
       .from('profiles')
       .select('role')
@@ -64,17 +63,14 @@ export async function middleware(request: NextRequest) {
       .single();
 
     if (profile?.role !== 'admin') {
-      // Hapus cookie user_role kalau ada
       supabaseResponse = NextResponse.redirect(new URL('/', request.url));
       supabaseResponse.cookies.delete('user_role');
       return supabaseResponse;
     }
 
-    // Set cookie user_role dengan TTL pendek (15 menit) sebagai hint UI saja
-    // Bukan untuk keputusan keamanan -- keamanan tetap dari query DB di atas
     supabaseResponse.cookies.set('user_role', profile.role, {
       httpOnly: true,
-      secure: true,
+      secure: !isLocalhost,
       sameSite: 'lax',
       maxAge: 60 * 15,
     });

@@ -23,28 +23,46 @@ interface TargetEntryCardProps {
 }
 
 const typeOptions: { id: TargetType; label: string; icon: React.ElementType }[] = [
-  { id: 'phone',        label: 'HP / WA',   icon: Phone },
-  { id: 'bank_account', label: 'Rekening',   icon: Building2 },
-  { id: 'ewallet',      label: 'E-Wallet',   icon: Wallet },
+  { id: 'phone',        label: 'HP / WA',  icon: Phone     },
+  { id: 'bank_account', label: 'Rekening', icon: Building2 },
+  { id: 'ewallet',      label: 'E-Wallet', icon: Wallet    },
 ];
 
 const levelConfig = {
-  medium:   { icon: AlertTriangle, color: 'text-amber-600',  bg: 'bg-amber-50',  border: 'border-amber-200',  label: 'Terindikasi Penipu' },
+  medium:   { icon: AlertTriangle, color: 'text-amber-600',  bg: 'bg-amber-50',  border: 'border-amber-200',  label: 'Terindikasi Penipu'   },
   high:     { icon: ShieldAlert,   color: 'text-orange-600', bg: 'bg-orange-50', border: 'border-orange-200', label: 'Penipu Terkonfirmasi' },
-  critical: { icon: Flame,         color: 'text-red-600',    bg: 'bg-red-50',    border: 'border-red-200',    label: 'Penipu Berbahaya' },
+  critical: { icon: Flame,         color: 'text-red-600',    bg: 'bg-red-50',    border: 'border-red-200',    label: 'Penipu Berbahaya'     },
 };
 
 export function TargetEntryCard({
   entry, index, isPrimary, onChange, onRemove,
 }: TargetEntryCardProps) {
-  const [duplicate, setDuplicate] = useState<DuplicateInfo | null>(null);
+  const [duplicate,         setDuplicate]         = useState<DuplicateInfo | null>(null);
+  const [customBank,        setCustomBank]        = useState('');
+  const [customEwallet,     setCustomEwallet]     = useState('');
+  const [showCustomBank,    setShowCustomBank]    = useState(false);
+  const [showCustomEwallet, setShowCustomEwallet] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const providerList  = entry.type === 'bank_account' ? bankList : ewalletList;
-  const providerValue = entry.type === 'bank_account' ? entry.bank_name : entry.ewallet_name;
-  const providerKey   = entry.type === 'bank_account' ? 'bank_name' : 'ewallet_name';
+  const isBank       = entry.type === 'bank_account';
+  const providerList = isBank ? bankList : ewalletList;
+  const providerValue = isBank ? entry.bank_name : entry.ewallet_name;
+  const providerKey   = isBank ? 'bank_name' : 'ewallet_name';
+  const customValue   = isBank ? customBank   : customEwallet;
+  const showCustom    = isBank ? showCustomBank : showCustomEwallet;
 
-  // Cek duplicate saat nomor berubah (debounce 600ms)
+  const setCustom     = isBank ? setCustomBank     : setCustomEwallet;
+  const setShowCustom = isBank ? setShowCustomBank : setShowCustomEwallet;
+
+  // Reset saat type berubah
+  useEffect(() => {
+    setCustomBank('');
+    setCustomEwallet('');
+    setShowCustomBank(false);
+    setShowCustomEwallet(false);
+  }, [entry.type]);
+
+  // Cek duplicate (debounce 600ms)
   useEffect(() => {
     const num = entry.number.replace(/[^0-9]/g, '');
     if (num.length < 6) { setDuplicate(null); return; }
@@ -55,28 +73,46 @@ export function TargetEntryCard({
         const res  = await fetch(`${BACKEND_URL}/api/reports/check-number/${num}`);
         const data = await res.json();
         if (data.success) setDuplicate(data.data);
-      } catch {
-        // silent fail -- tidak blokir user
-      }
+      } catch { /* silent fail */ }
     }, 600);
 
     return () => { if (debounceRef.current) clearTimeout(debounceRef.current); };
   }, [entry.number]);
 
-  // Reset saat nomor dikosongkan
   useEffect(() => {
     if (!entry.number) setDuplicate(null);
   }, [entry.number]);
 
+  const handleProviderChange = (val: string) => {
+    if (val === 'Lainnya') {
+      setShowCustom(true);
+      setCustom('');
+      onChange({ ...entry, [providerKey]: '' });
+    } else {
+      setShowCustom(false);
+      setCustom('');
+      onChange({ ...entry, [providerKey]: val });
+    }
+  };
+
+  const handleCustomChange = (val: string) => {
+    setCustom(val);
+    onChange({ ...entry, [providerKey]: val });
+  };
+
   const cfg = duplicate?.level ? levelConfig[duplicate.level] : null;
 
   return (
-    <div className={`rounded-2xl border p-4 space-y-4 ${isPrimary ? 'border-slate-200 bg-white' : 'border-slate-100 bg-slate-50'}`}>
+    <div className={`rounded-2xl border p-4 space-y-4 ${
+      isPrimary ? 'border-slate-200 bg-white' : 'border-slate-100 bg-slate-50'
+    }`}>
 
       {/* Header */}
       <div className="flex items-center justify-between">
         <div className="flex items-center gap-2">
-          <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${isPrimary ? 'bg-slate-900 text-white' : 'bg-slate-200 text-slate-600'}`}>
+          <span className={`w-6 h-6 rounded-full flex items-center justify-center text-xs font-bold shrink-0 ${
+            isPrimary ? 'bg-slate-900 text-white' : 'bg-slate-200 text-slate-600'
+          }`}>
             {index + 1}
           </span>
           <span className="text-sm font-semibold text-slate-700">
@@ -109,48 +145,71 @@ export function TargetEntryCard({
 
       {/* Provider selector */}
       {entry.type !== 'phone' && (
-        <Sel value={providerValue}
-          onChange={(e) => onChange({ ...entry, [providerKey]: e.target.value })}>
-          <option value="">Pilih {entry.type === 'bank_account' ? 'bank' : 'e-wallet'}...</option>
-          {providerList.map((item: { value: string; label: string }) => (
-            <option key={item.value} value={item.value}>{item.label}</option>
-          ))}
-        </Sel>
+        <div className="space-y-2">
+          <Sel
+            value={showCustom ? 'Lainnya' : providerValue}
+            onChange={(e) => handleProviderChange(e.target.value)}
+          >
+            <option value="">
+              Pilih {isBank ? 'bank' : 'e-wallet'}...
+            </option>
+            {providerList.map((item: { value: string; label: string }) => (
+              <option key={item.value} value={item.value}>{item.label}</option>
+            ))}
+          </Sel>
+
+          {showCustom && (
+            <Input
+              type="text"
+              value={customValue}
+              onChange={(e) => handleCustomChange(e.target.value)}
+              placeholder={isBank ? 'Tuliskan nama bank...' : 'Tuliskan nama e-wallet...'}
+              maxLength={100}
+            />
+          )}
+        </div>
       )}
 
       {/* Input nomor + nama */}
       <div className="flex flex-col gap-3">
         <div>
           <Label>
-            Nomor {entry.type === 'phone' ? 'HP / WA' : entry.type === 'bank_account' ? 'Rekening' : 'E-Wallet'}
+            Nomor {
+              entry.type === 'phone'        ? 'HP / WA'  :
+              entry.type === 'bank_account' ? 'Rekening' : 'E-Wallet'
+            }
           </Label>
           <Input
             type="text" inputMode="numeric" value={entry.number}
-            onChange={(e) => onChange({ ...entry, number: e.target.value.replace(/[^0-9+]/g, '') })}
+            onChange={(e) =>
+              onChange({ ...entry, number: e.target.value.replace(/[^0-9+]/g, '') })
+            }
             placeholder={entry.type === 'phone' ? '0812xxxxxxxx' : '12345678...'}
           />
         </div>
 
-        {/* [DUPLICATE DETECTOR] Banner info kalau nomor sudah ada */}
+        {/* Duplicate detector */}
         {duplicate?.exists && cfg && (
           <div className={`flex items-start gap-2.5 p-3 rounded-xl border ${cfg.bg} ${cfg.border}`}>
             <cfg.icon className={`w-4 h-4 shrink-0 mt-0.5 ${cfg.color}`} />
             <div>
               <p className={`text-xs font-bold ${cfg.color}`}>{cfg.label}</p>
               <p className={`text-xs mt-0.5 ${cfg.color} opacity-80 leading-relaxed`}>
-                Nomor ini sudah dilaporkan <span className="font-bold">{duplicate.totalReports}x</span> oleh pengguna lain.
-                Laporan kamu akan memperkuat data yang ada -- sertakan bukti yang berbeda.
+                Nomor ini sudah dilaporkan{' '}
+                <span className="font-bold">{duplicate.totalReports}x</span>{' '}
+                oleh pengguna lain. Laporan kamu akan memperkuat data yang ada
+                -- sertakan bukti yang berbeda.
               </p>
             </div>
           </div>
         )}
 
-        {/* Kalau ada laporan tapi belum di blacklist */}
         {duplicate?.exists && !duplicate.level && (
           <div className="flex items-start gap-2.5 p-3 rounded-xl border bg-slate-50 border-slate-200">
             <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5 text-slate-400" />
             <p className="text-xs text-slate-500 leading-relaxed">
-              Nomor ini sudah pernah dilaporkan <span className="font-bold">{duplicate.totalReports}x</span>.
+              Nomor ini sudah pernah dilaporkan{' '}
+              <span className="font-bold">{duplicate.totalReports}x</span>.
               Laporan kamu akan membantu memperkuat data.
             </p>
           </div>

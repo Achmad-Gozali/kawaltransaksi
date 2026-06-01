@@ -17,6 +17,8 @@ interface Step1Props {
   targets: TargetEntry[];
   formData: ReportFormData;
   suspectPhotoPreview: string | null;
+  customCategory: string;
+  customPlatform: string;
   onUpdateTarget: (index: number, updated: TargetEntry) => void;
   onAddTarget: () => void;
   onRemoveTarget: (index: number) => void;
@@ -27,12 +29,16 @@ interface Step1Props {
   onRemoveSocialField: (index: number) => void;
   onUpdateSocialField: (index: number, value: string) => void;
   onToggleReportedTo: (value: string) => void;
+  onCustomCategoryChange: (val: string) => void;
+  onCustomPlatformChange: (val: string) => void;
 }
 
 export function Step1DataPenipu({
   targets,
   formData,
   suspectPhotoPreview,
+  customCategory,
+  customPlatform,
   onUpdateTarget,
   onAddTarget,
   onRemoveTarget,
@@ -43,6 +49,8 @@ export function Step1DataPenipu({
   onRemoveSocialField,
   onUpdateSocialField,
   onToggleReportedTo,
+  onCustomCategoryChange,
+  onCustomPlatformChange,
 }: Step1Props) {
   return (
     <div className="space-y-4">
@@ -79,7 +87,7 @@ export function Step1DataPenipu({
         </div>
       </Card>
 
-      {/* -- Kategori Penipuan (wajib) --------------------------------------- */}
+      {/* -- Kategori Penipuan ----------------------------------------------- */}
       <Card>
         <div className="p-4 sm:p-5">
           <SectionTitle
@@ -88,12 +96,26 @@ export function Step1DataPenipu({
           />
           <Sel
             value={formData.category}
-            onChange={(e) => onFormDataChange({ ...formData, category: e.target.value })}
+            onChange={(e) => {
+              onFormDataChange({ ...formData, category: e.target.value });
+              if (e.target.value !== 'Lainnya') onCustomCategoryChange('');
+            }}
           >
             {categoryList.map((cat: { value: string; label: string }) => (
               <option key={cat.value} value={cat.value}>{cat.label}</option>
             ))}
           </Sel>
+          {formData.category === 'Lainnya' && (
+            <div className="mt-3">
+              <Input
+                type="text"
+                value={customCategory}
+                onChange={(e) => onCustomCategoryChange(e.target.value)}
+                placeholder="Tuliskan kategori penipuan yang dialami..."
+                maxLength={100}
+              />
+            </div>
+          )}
         </div>
       </Card>
 
@@ -246,7 +268,6 @@ export function Step1DataPenipu({
             subtitle="Semakin lengkap, semakin cepat laporan diverifikasi"
           />
 
-          {/* Info box -- dorong user lengkapi data */}
           <div className="flex items-start gap-2.5 p-3 bg-amber-50 border border-amber-100 rounded-xl mb-5">
             <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
             <p className="text-xs text-amber-700 leading-relaxed">
@@ -298,23 +319,53 @@ export function Step1DataPenipu({
             </div>
 
             {/* Platform */}
-            <div>
+            <div className={formData.platform === 'Lainnya' ? 'sm:col-span-2' : ''}>
               <Label optional>Platform</Label>
               <Sel
                 value={formData.platform}
-                onChange={(e) =>
-                  onFormDataChange({ ...formData, platform: e.target.value })
-                }
+                onChange={(e) => {
+                  onFormDataChange({ ...formData, platform: e.target.value });
+                  if (e.target.value !== 'Lainnya') onCustomPlatformChange('');
+                }}
               >
                 <option value="">Pilih platform...</option>
                 {platformList.map((p: { value: string; label: string }) => (
                   <option key={p.value} value={p.value}>{p.label}</option>
                 ))}
               </Sel>
+              {formData.platform === 'Lainnya' && (
+                <div className="mt-2">
+                  <Input
+                    type="text"
+                    value={customPlatform}
+                    onChange={(e) => onCustomPlatformChange(e.target.value)}
+                    placeholder="Tuliskan nama platform..."
+                    maxLength={100}
+                  />
+                </div>
+              )}
             </div>
 
-            {/* Link URL */}
-            <div>
+            {/* Link URL — sembunyikan kalau platform Lainnya biar ga penuh */}
+            {formData.platform !== 'Lainnya' && (
+              <div>
+                <Label optional>Link / URL</Label>
+                <Input
+                  type="url"
+                  inputMode="url"
+                  value={formData.link_url}
+                  onChange={(e) =>
+                    onFormDataChange({ ...formData, link_url: e.target.value })
+                  }
+                  placeholder="https://..."
+                />
+              </div>
+            )}
+          </div>
+
+          {/* Link URL kalau platform Lainnya — taruh di luar grid biar full width */}
+          {formData.platform === 'Lainnya' && (
+            <div className="mb-6">
               <Label optional>Link / URL</Label>
               <Input
                 type="url"
@@ -326,10 +377,10 @@ export function Step1DataPenipu({
                 placeholder="https://..."
               />
             </div>
-          </div>
+          )}
 
-          {/* Korban lain */}
           <div className="space-y-5">
+            {/* Korban lain */}
             <div>
               <Label optional>Ada korban lain yang kamu ketahui?</Label>
               <div className="flex gap-3 mt-1.5">
@@ -391,5 +442,3 @@ export function Step1DataPenipu({
     </div>
   );
 }
-
-

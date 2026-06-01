@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { cors } from 'hono/cors';
+import type { Context, Next } from 'hono';
 import authRoutes      from './features/auth/auth.route';
 import reportsRoutes   from './features/reports/reports.route';
 import adminRoutes     from './features/admin/admin.route';
@@ -18,6 +19,8 @@ import { getSupabaseAdmin } from './core/supabase';
 import type { Env } from './types';
 
 export { logSuspiciousIp, autoBlacklistIfAbuse };
+
+type HonoCtx = Context<{ Bindings: Env }>;
 
 const app = new Hono<{ Bindings: Env }>();
 
@@ -45,14 +48,13 @@ app.use('*', async (c, next) => {
   h.set('Referrer-Policy', 'strict-origin-when-cross-origin');
   h.set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()');
   h.set('Cache-Control', 'no-store');
-  if (c.req.url.startsWith('https://')) {
+  if (c.req.url.startsWith('https://'))
     h.set('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
-  }
 });
 
 // -- Origin Validator ----------------------------------------------------------
 
-const originValidator = async (c: { req: { method: string; header: (k: string) => string | undefined }; env: Env; json: (d: unknown, s?: number) => Response }, next: () => Promise<void>) => {
+const originValidator = async (c: HonoCtx, next: Next) => {
   if (c.req.method === 'OPTIONS') return next();
   const internalKey = c.req.header('X-Internal-Key');
   if (internalKey && internalKey === c.env.INTERNAL_API_KEY) return next();
@@ -120,9 +122,12 @@ app.use('/api/auth/*', async (c, next) => {
 });
 
 const kvRateLimit = async (
-  c: { req: { header: (k: string) => string | undefined; url: string }; env: Env; json: (d: unknown, s?: number) => Response },
-  next: () => Promise<void>,
-  { key, max, ttl, label, logReason, blacklist }: { key: string; max: number; ttl: number; label: string; logReason: string; blacklist?: boolean }
+  c: HonoCtx,
+  next: Next,
+  { key, max, ttl, label, logReason, blacklist }: {
+    key: string; max: number; ttl: number;
+    label: string; logReason: string; blacklist?: boolean;
+  }
 ) => {
   if (!c.env.LIMITER) return next();
   const ip   = c.req.header('CF-Connecting-IP') || 'anonymous';
@@ -151,7 +156,7 @@ app.use('/api/search/*', (c, next) => kvRateLimit(c, next, { key: 'rl_search_', 
 
 // -- Honeypot ------------------------------------------------------------------
 
-async function honeypotHandler(c: { req: { header: (k: string) => string | undefined; url: string }; env: Env; json: (d: unknown, s?: number) => Response }) {
+async function honeypotHandler(c: HonoCtx) {
   const ip   = c.req.header('CF-Connecting-IP') || 'anonymous';
   const path = new URL(c.req.url).pathname;
   if (c.env.LIMITER && ip !== 'anonymous') {
@@ -211,29 +216,21 @@ export default {
 
     console.log(`[CRON] Trigger: ${cron}`);
 
-    // Artikel mingguan -- Minggu 23:00 UTC
     if (cron === '0 23 * * SUN') {
       ctx.waitUntil(
         generateWeeklyArticle(env)
           .catch(err => console.error('[CRON] Artikel error:', err))
       );
-    }
-
-    // Robot scheduler -- tiap 30 menit
-    else if (cron === '*/30 * * * *') {
+    } else if (cron === '*/30 * * * *') {
       ctx.waitUntil(
         runScheduler(supabase)
           .catch(err => console.error('[CRON] Robot scheduler error:', err))
       );
-    }
-
-    // Trend detector + confidence decay (hari pertama bulan) -- tiap 1 jam
-    else if (cron === '0 * * * *') {
+    } else if (cron === '0 * * * *') {
       const isFirstOfMonth = new Date().getDate() === 1;
       ctx.waitUntil(
         Promise.all([
-          detectTrends(supabase)
-            .catch(err => console.error('[CRON] Trend error:', err)),
+          detectTrends(supabase).catch(err => console.error('[CRON] Trend error:', err)),
           isFirstOfMonth
             ? runConfidenceDecay(supabase).catch(err => console.error('[CRON] Decay error:', err))
             : Promise.resolve(),

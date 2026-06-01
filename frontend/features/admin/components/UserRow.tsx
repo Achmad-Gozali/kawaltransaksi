@@ -1,40 +1,28 @@
 'use client';
 
 import { useState } from 'react';
-import {
-  Loader2, Mail, Calendar, FileBarChart,
-  Ban, ShieldOff,
-} from 'lucide-react';
-import { updateUserRole, banUser, unbanUser } from '@/features/admin/actions';
+import { Loader2, Mail, Calendar, FileBarChart, Ban, ShieldOff } from 'lucide-react';
+import { updateUserRole, setBanStatus } from '@/features/admin/actions';
 import type { AdminUser } from '@/features/admin/types';
 
-export default function UserRow({
-  user,
-  onRefresh,
-}: {
-  user: AdminUser;
-  onRefresh: () => void;
-}) {
-  const [loading, setLoading] = useState(false);
-  const [action, setAction] = useState<string | null>(null);
+export default function UserRow({ user, onRefresh }: { user: AdminUser; onRefresh: () => void }) {
+  const [loading, setLoading]   = useState(false);
+  const [action, setAction]     = useState<string | null>(null);
 
   const handleRole = async (r: 'user' | 'admin') => {
     setLoading(true); setAction(r);
-    try { await updateUserRole(user.id, r); onRefresh(); } catch { } finally { setLoading(false); setAction(null); }
+    try { await updateUserRole(user.id, r); onRefresh(); } catch { }
+    finally { setLoading(false); setAction(null); }
   };
 
-  const handleBan = async () => {
-    setLoading(true); setAction('ban');
-    try { await banUser(user.id); onRefresh(); } catch { } finally { setLoading(false); setAction(null); }
+  const handleBanStatus = async (is_banned: boolean) => {
+    setLoading(true); setAction(is_banned ? 'ban' : 'unban');
+    try { await setBanStatus(user.id, is_banned); onRefresh(); } catch { }
+    finally { setLoading(false); setAction(null); }
   };
 
-  const handleUnban = async () => {
-    setLoading(true); setAction('unban');
-    try { await unbanUser(user.id); onRefresh(); } catch { } finally { setLoading(false); setAction(null); }
-  };
-
-  const initial = (user.full_name || 'U').charAt(0).toUpperCase();
-  const isAdmin = user.role === 'admin';
+  const initial  = (user.full_name || 'U').charAt(0).toUpperCase();
+  const isAdmin  = user.role === 'admin';
   const isBanned = user.is_banned;
   const joinDate = user.created_at
     ? new Date(user.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })
@@ -86,13 +74,13 @@ export default function UserRow({
             </button>
           )}
           {!isAdmin && !isBanned && (
-            <button onClick={handleBan} disabled={loading}
+            <button onClick={() => handleBanStatus(true)} disabled={loading}
               className="text-[11px] px-3 py-1.5 bg-red-50 text-red-500 rounded-xl hover:bg-red-100 hover:text-red-700 font-semibold disabled:opacity-50 transition-colors flex items-center gap-1">
               {loading && action === 'ban' ? <Loader2 className="w-3 h-3 animate-spin" /> : <><Ban className="w-3 h-3" /> Ban</>}
             </button>
           )}
           {!isAdmin && isBanned && (
-            <button onClick={handleUnban} disabled={loading}
+            <button onClick={() => handleBanStatus(false)} disabled={loading}
               className="text-[11px] px-3 py-1.5 bg-emerald-50 text-emerald-600 rounded-xl hover:bg-emerald-100 hover:text-emerald-700 font-semibold disabled:opacity-50 transition-colors flex items-center gap-1">
               {loading && action === 'unban' ? <Loader2 className="w-3 h-3 animate-spin" /> : <><ShieldOff className="w-3 h-3" /> Unban</>}
             </button>

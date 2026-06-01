@@ -15,17 +15,40 @@ interface AdminShellProps {
   children: React.ReactNode;
 }
 
-const navItems = [
-  { id: 'dashboard', label: 'Dashboard',    icon: LayoutDashboard, href: '/admin?tab=dashboard' },
-  { id: 'laporan',   label: 'Laporan',      icon: FileText,        href: '/admin?tab=laporan'   },
-  { id: 'artikel',   label: 'Artikel',      icon: Newspaper,       href: '/admin?tab=artikel'   },
-  { id: 'statistik', label: 'Statistik',    icon: BarChart2,       href: '/admin?tab=statistik' },
-  { id: 'pengguna',  label: 'Pengguna',     icon: Users,           href: '/admin?tab=pengguna'  },
-  { id: 'blacklist', label: 'IP Blacklist', icon: ShieldX,         href: '/admin?tab=blacklist' },
-  { id: 'feedback',  label: 'Feedback',     icon: MessageCircle,   href: '/admin?tab=feedback'  },
-  { id: 'apikeys',   label: 'API Keys',     icon: Code2,           href: '/admin?tab=apikeys'   },
-  { id: 'robot',     label: 'Robot',        icon: Bot,             href: '/admin?tab=robot'     },
+const navGroups = [
+  {
+    label: 'OVERVIEW',
+    items: [
+      { id: 'dashboard', label: 'Dashboard', icon: LayoutDashboard, href: '/admin?tab=dashboard' },
+      { id: 'statistik', label: 'Statistik',  icon: BarChart2,       href: '/admin?tab=statistik' },
+    ],
+  },
+  {
+    label: 'KONTEN & MODERASI',
+    items: [
+      { id: 'laporan', label: 'Laporan',  icon: FileText,  href: '/admin?tab=laporan'  },
+      { id: 'artikel', label: 'Artikel',  icon: Newspaper, href: '/admin?tab=artikel'  },
+    ],
+  },
+  {
+    label: 'PENGGUNA & SUPPORT',
+    items: [
+      { id: 'pengguna',  label: 'Pengguna',  icon: Users,         href: '/admin?tab=pengguna'  },
+      { id: 'feedback',  label: 'Feedback',  icon: MessageCircle, href: '/admin?tab=feedback'  },
+    ],
+  },
+  {
+    label: 'SISTEM & KEAMANAN',
+    items: [
+      { id: 'robot',     label: 'Robot',        icon: Bot,    href: '/admin?tab=robot'     },
+      { id: 'blacklist', label: 'IP Blacklist',  icon: ShieldX, href: '/admin?tab=blacklist' },
+      { id: 'apikeys',   label: 'API Keys',      icon: Code2,  href: '/admin?tab=apikeys'   },
+    ],
+  },
 ];
+
+// Flatten for any legacy usage that needs the flat list
+const navItems = navGroups.flatMap((g) => g.items);
 
 interface NavContentProps {
   onNavClick?: () => void;
@@ -34,53 +57,91 @@ interface NavContentProps {
   email: string;
   initial: string;
   onLogout: () => void;
+  pendingCount?: number;
 }
 
-function NavContent({ onNavClick, collapsed, activeTab, email, initial, onLogout }: NavContentProps) {
+function NavContent({ onNavClick, collapsed, activeTab, email, initial, onLogout, pendingCount = 0 }: NavContentProps) {
+  const isDesktopCollapsed = collapsed && !onNavClick;
+
   return (
     <>
-      <nav className="flex-1 py-4 px-2 space-y-1 overflow-y-auto">
-        {navItems.map((item) => {
-          const Icon     = item.icon;
-          const isActive = activeTab === item.id;
-          return (
-            <Link
-              key={item.id}
-              href={item.href}
-              onClick={onNavClick}
-              className={`
-                flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-150
-                ${collapsed && !onNavClick ? 'justify-center px-0 mx-1' : ''}
-                ${isActive
-                  ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-200'
-                  : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}
-              `}
-            >
-              <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
-              {(!collapsed || onNavClick) && <span>{item.label}</span>}
-            </Link>
-          );
-        })}
+      <nav className="flex-1 py-4 px-2 space-y-4 overflow-y-auto">
+        {navGroups.map((group) => (
+          <div key={group.label}>
+            {/* Section label — hidden when collapsed */}
+            {!isDesktopCollapsed && (
+              <p className="px-3 mb-1 text-[10px] font-semibold tracking-wider text-slate-400">
+                {group.label}
+              </p>
+            )}
 
-        <div className="pt-3 mt-3 border-t border-slate-100">
+            <div className="space-y-0.5">
+              {group.items.map((item) => {
+                const Icon     = item.icon;
+                const isActive = activeTab === item.id;
+                const showBadge = item.id === 'laporan' && pendingCount > 0;
+
+                return (
+                  <Link
+                    key={item.id}
+                    href={item.href}
+                    onClick={onNavClick}
+                    className={`
+                      flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] font-medium transition-all duration-150
+                      ${isDesktopCollapsed ? 'justify-center px-0 mx-1' : ''}
+                      ${isActive
+                        ? 'bg-emerald-600 text-white shadow-sm shadow-emerald-200'
+                        : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100'}
+                    `}
+                  >
+                    <Icon className={`w-4 h-4 shrink-0 ${isActive ? 'text-white' : 'text-slate-400'}`} />
+                    {!isDesktopCollapsed && (
+                      <>
+                        <span className="flex-1">{item.label}</span>
+                        {showBadge && (
+                          <span className="ml-auto min-w-[18px] h-[18px] px-1 flex items-center justify-center rounded-full bg-amber-400 text-[10px] font-bold text-amber-900">
+                            {pendingCount}
+                          </span>
+                        )}
+                      </>
+                    )}
+                  </Link>
+                );
+              })}
+            </div>
+
+            {/* Divider between groups — skip the last one */}
+            {!isDesktopCollapsed && group.label !== 'SISTEM & KEAMANAN' && (
+              <div className="mt-3 border-t border-slate-100" />
+            )}
+          </div>
+        ))}
+
+        {/* Utilitas */}
+        <div>
+          {!isDesktopCollapsed && (
+            <p className="px-3 mb-1 text-[10px] font-semibold tracking-wider text-slate-400">
+              UTILITAS
+            </p>
+          )}
           <Link
             href="/"
             onClick={onNavClick}
-            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all ${collapsed && !onNavClick ? 'justify-center px-0 mx-1' : ''}`}
+            className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-[13px] text-slate-400 hover:text-slate-700 hover:bg-slate-100 transition-all ${isDesktopCollapsed ? 'justify-center px-0 mx-1' : ''}`}
           >
             <Home className="w-4 h-4 shrink-0" />
-            {(!collapsed || onNavClick) && <span>Kembali ke Site</span>}
+            {!isDesktopCollapsed && <span>Kembali ke Site</span>}
           </Link>
         </div>
       </nav>
 
       {/* User info */}
-      <div className={`border-t border-slate-100 p-3 shrink-0 ${collapsed && !onNavClick ? 'flex justify-center' : ''}`}>
+      <div className={`border-t border-slate-100 p-3 shrink-0 ${isDesktopCollapsed ? 'flex justify-center' : ''}`}>
         <div className="flex items-center gap-2.5">
           <div className="w-8 h-8 rounded-full bg-emerald-100 flex items-center justify-center text-xs font-bold text-emerald-700 shrink-0">
             {initial}
           </div>
-          {(!collapsed || onNavClick) && (
+          {!isDesktopCollapsed && (
             <div className="flex-1 min-w-0">
               <p className="text-[12px] font-medium text-slate-700 truncate">{email}</p>
               <button
@@ -107,6 +168,9 @@ export default function AdminShell({ email, children }: AdminShellProps) {
   const activeTab    = searchParams.get('tab') || 'dashboard';
   const initial      = (email || 'A').charAt(0).toUpperCase();
 
+  // TODO: pass real pendingCount from parent/server if needed
+  const pendingCount = 0;
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.push('/');
@@ -121,7 +185,7 @@ export default function AdminShell({ email, children }: AdminShellProps) {
     }
   };
 
-  const navProps = { collapsed, activeTab, email, initial, onLogout: handleLogout };
+  const navProps = { collapsed, activeTab, email, initial, onLogout: handleLogout, pendingCount };
 
   return (
     <div className="min-h-screen bg-slate-50 flex">
