@@ -8,7 +8,7 @@
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.39.0",
-    "hono": "^4.0.0",
+    "hono": "^4.12.18",
     "resend": "^6.12.0"
   },
   "devDependencies": {
