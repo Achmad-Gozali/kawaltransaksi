@@ -3,7 +3,6 @@ import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
 
-// [OK] FIX: revalidate 1 jam, bukan 0 (tidak perlu render ulang setiap request)
 export const revalidate = 3600;
 
 export const metadata: Metadata = {
@@ -36,10 +35,19 @@ function formatLoss(amount: number): string {
   }).format(amount);
 }
 
+const artikelSchema = {
+  "@context": "https://schema.org",
+  "@type": "CollectionPage",
+  name: "Artikel Penipuan - KawalTransaksi",
+  description:
+    "Artikel dan analisis pola penipuan online terbaru di Indonesia.",
+  url: "https://kawaltransaksi.com/artikel",
+  isPartOf: { "@id": "https://kawaltransaksi.com/#website" },
+};
+
 export default async function ArtikelPage() {
   const supabase = await createClient();
 
-  // [OK] FIX: hapus cast `as any` -- database.ts sudah punya definisi kolom status & cover_image
   const { data: articles } = await supabase
     .from("articles")
     .select(
@@ -51,7 +59,6 @@ export default async function ArtikelPage() {
 
   return (
     <main className="bg-white min-h-screen font-sans">
-      {/* Header dengan wave bottom */}
       <div className="relative bg-slate-50 pb-16">
         <div className="px-4 pt-10 pb-4 sm:pt-16 sm:pb-6">
           <div className="max-w-5xl mx-auto">
@@ -82,7 +89,6 @@ export default async function ArtikelPage() {
         </div>
       </div>
 
-      {/* Grid artikel */}
       <section className="px-4 py-10 sm:py-14">
         <div className="max-w-5xl mx-auto">
           {!articles || articles.length === 0 ? (
@@ -160,6 +166,11 @@ export default async function ArtikelPage() {
           )}
         </div>
       </section>
+
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(artikelSchema) }}
+      />
     </main>
   );
 }

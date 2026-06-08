@@ -487,64 +487,60 @@ export interface Database {
         Relationships: [];
       };
 
-      api_keys: {
-        Row: {
-          id: string;
-          user_id: string;
-          name: string;
-          key: string;
-          key_hash: string | null;
-          key_prefix: string | null;
-          environment: string;
-          requests_today: number;
-          requests_total: number;
-          daily_limit: number;
-          last_reset_at: string | null;
-          last_used_at: string | null;
-          expires_at: string | null;
-          failed_attempts: number;
-          is_active: boolean;
-          created_at: string;
-        };
-        Insert: {
-          id?: string;
-          user_id: string;
-          name: string;
-          key: string;
-          key_hash?: string | null;
-          key_prefix?: string | null;
-          environment?: string;
-          requests_today?: number;
-          requests_total?: number;
-          daily_limit?: number;
-          last_reset_at?: string | null;
-          last_used_at?: string | null;
-          expires_at?: string | null;
-          failed_attempts?: number;
-          is_active?: boolean;
-          created_at?: string;
-        };
-        Update: {
-          id?: string;
-          user_id?: string;
-          name?: string;
-          key?: string;
-          key_hash?: string | null;
-          key_prefix?: string | null;
-          environment?: string;
-          requests_today?: number;
-          requests_total?: number;
-          daily_limit?: number;
-          last_reset_at?: string | null;
-          last_used_at?: string | null;
-          expires_at?: string | null;
-          failed_attempts?: number;
-          is_active?: boolean;
-          created_at?: string;
-        };
-        Relationships: [];
-      };
-
+api_keys: {
+  Row: {
+    id: string;
+    user_id: string;
+    name: string;
+    key_hash: string;        // NOT NULL sekarang
+    key_prefix: string;      // NOT NULL sekarang
+    environment: string;
+    requests_today: number;
+    requests_total: number;
+    daily_limit: number;
+    last_reset_at: string | null;
+    last_used_at: string | null;
+    expires_at: string | null;
+    failed_attempts: number;
+    is_active: boolean;
+    created_at: string;
+  };
+  Insert: {
+    id?: string;
+    user_id: string;
+    name: string;
+    key_hash: string;        // wajib diisi
+    key_prefix: string;      // wajib diisi
+    environment?: string;
+    requests_today?: number;
+    requests_total?: number;
+    daily_limit?: number;
+    last_reset_at?: string | null;
+    last_used_at?: string | null;
+    expires_at?: string | null;
+    failed_attempts?: number;
+    is_active?: boolean;
+    created_at?: string;
+  };
+  Update: {
+    id?: string;
+    user_id?: string;
+    name?: string;
+    key_hash?: string;
+    key_prefix?: string;
+    environment?: string;
+    requests_today?: number;
+    requests_total?: number;
+    daily_limit?: number;
+    last_reset_at?: string | null;
+    last_used_at?: string | null;
+    expires_at?: string | null;
+    failed_attempts?: number;
+    is_active?: boolean;
+    created_at?: string;
+  };
+  Relationships: [];
+};
     };
 
     Views: { [_ in never]: never };

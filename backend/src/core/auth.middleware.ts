@@ -4,46 +4,49 @@ import type { Env } from '../types';
 
 export const authMiddleware = createMiddleware<{
   Bindings: Env;
-  Variables: { userId: string; userEmail: string };
+  Variables: { userId: string; userEmail: string; userRole: string };
 }>(async (c, next) => {
-  const authHeader = c.req.header("Authorization");
-  if (!authHeader?.startsWith("Bearer ")) {
-    return c.json({ success: false, message: "Token tidak ditemukan." }, 401);
+  const authHeader = c.req.header('Authorization');
+  if (!authHeader?.startsWith('Bearer ')) {
+    return c.json({ success: false, message: 'Token tidak ditemukan.' }, 401);
   }
 
-  const token = authHeader.split(" ")[1];
+  const token    = authHeader.split(' ')[1];
   const supabase = getSupabaseAdmin(c.env);
 
   const {
     data: { user },
     error,
   } = await supabase.auth.getUser(token);
+
   if (error || !user) {
     return c.json(
-      { success: false, message: "Token tidak valid atau sudah kadaluarsa." },
+      { success: false, message: 'Token tidak valid atau sudah kadaluarsa.' },
       401,
     );
   }
 
-  // FIX: Cek is_banned -- user yang di-ban tidak boleh akses protected route
-  // meskipun token masih valid
+  // FIX: Ambil is_banned + role sekaligus dalam 1 query
+  // sebelumnya hanya ambil is_banned, lalu requireAdmin query lagi untuk role
+  // sekarang cukup 1 DB call, role di-set ke context dan dipakai oleh requireAdmin
   const { data: profile } = await supabase
-    .from("profiles")
-    .select("is_banned")
-    .eq("id", user.id)
+    .from('profiles')
+    .select('is_banned, role')
+    .eq('id', user.id)
     .single();
 
   if (profile?.is_banned) {
     return c.json(
       {
         success: false,
-        message: "Akun Anda telah dinonaktifkan. Hubungi admin.",
+        message: 'Akun Anda telah dinonaktifkan. Hubungi admin.',
       },
       403,
     );
   }
 
-  c.set("userId", user.id);
-  c.set("userEmail", user.email ?? "");
+  c.set('userId', user.id);
+  c.set('userEmail', user.email ?? '');
+  c.set('userRole', profile?.role ?? 'user');
   await next();
 });

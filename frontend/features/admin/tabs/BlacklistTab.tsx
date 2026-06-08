@@ -1,11 +1,11 @@
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Loader2, Search, Plus, AlertCircle, CheckCircle2, ShieldX, ShieldOff, Activity } from 'lucide-react';
+import { useState, useEffect, useCallback } from 'react';
+import { Loader2, Search, Plus, AlertCircle, CheckCircle2, ShieldX, ShieldOff, Activity, RefreshCw } from 'lucide-react';
 import SectionTitle from '@/features/admin/components/SectionTitle';
 import type { BlacklistEntry, IpLogEntry } from '@/features/admin/types';
 
-const BACKEND_URL  = process.env.NEXT_PUBLIC_BACKEND_URL!;
+const BACKEND_URL   = process.env.NEXT_PUBLIC_BACKEND_URL!;
 const FETCH_TIMEOUT = 15000;
 
 async function fetchWithTimeout(url: string, options: RequestInit = {}): Promise<Response> {
@@ -24,8 +24,6 @@ export default function BlacklistTab({ token }: { token: string }) {
   const [loading, setLoading]         = useState(false);
   const [loadingLogs, setLoadingLogs] = useState(false);
   const [loadingIp, setLoadingIp]     = useState<string | null>(null);
-  const [fetched, setFetched]         = useState(false);
-  const [fetchedLogs, setFetchedLogs] = useState(false);
   const [newIp, setNewIp]             = useState('');
   const [newReason, setNewReason]     = useState('');
   const [adding, setAdding]           = useState(false);
@@ -34,55 +32,84 @@ export default function BlacklistTab({ token }: { token: string }) {
 
   const authHeader = { Authorization: `Bearer ${token}` };
 
-  useEffect(() => { fetchBlacklist(); fetchLogs(); }, []);
-
-  const fetchBlacklist = async () => {
-    setLoading(true); setError(null);
+  const fetchBlacklist = useCallback(async () => {
+    setLoading(true);
+    setError(null);
     try {
       const res  = await fetchWithTimeout(`${BACKEND_URL}/api/admin/blacklist`, { headers: authHeader });
       const data = await res.json();
-      if (data.success) { setEntries(data.data); setFetched(true); }
+      if (data.success) setEntries(data.data ?? []);
       else setError('Gagal memuat blacklist.');
-    } catch { setError('Gagal memuat blacklist.'); }
-    finally { setLoading(false); }
-  };
+    } catch {
+      setError('Gagal memuat blacklist.');
+    } finally {
+      setLoading(false);
+    }
+  }, [token]);
 
-  const fetchLogs = async () => {
-    setLoadingLogs(true); setError(null);
+  const fetchLogs = useCallback(async () => {
+    setLoadingLogs(true);
+    setError(null);
     try {
       const res  = await fetchWithTimeout(`${BACKEND_URL}/api/admin/iplogs`, { headers: authHeader });
       const data = await res.json();
-      if (data.success) { setLogs(data.data); setFetchedLogs(true); }
+      if (data.success) setLogs(data.data ?? []);
       else setError('Gagal memuat log IP.');
-    } catch { setError('Gagal memuat log IP.'); }
-    finally { setLoadingLogs(false); }
-  };
+    } catch {
+      setError('Gagal memuat log IP.');
+    } finally {
+      setLoadingLogs(false);
+    }
+  }, [token]);
+
+  useEffect(() => {
+    fetchBlacklist();
+    fetchLogs();
+  }, [fetchBlacklist, fetchLogs]);
+
+  // Auto-clear alert setelah 4 detik
+  useEffect(() => {
+    if (!error && !success) return;
+    const t = setTimeout(() => { setError(null); setSuccess(null); }, 4000);
+    return () => clearTimeout(t);
+  }, [error, success]);
 
   const postBlacklist = async (ip: string, reason: string): Promise<{ success: boolean; message?: string }> => {
-    const res  = await fetchWithTimeout(`${BACKEND_URL}/api/admin/blacklist`, {
-      method: 'POST',
+    const res = await fetchWithTimeout(`${BACKEND_URL}/api/admin/blacklist`, {
+      method:  'POST',
       headers: { ...authHeader, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ ip, reason }),
+      body:    JSON.stringify({ ip, reason }),
     });
     return res.json();
   };
 
   const handleAdd = async () => {
     if (!newIp.trim()) return;
-    setAdding(true); setError(null); setSuccess(null);
+    setAdding(true);
+    setError(null);
+    setSuccess(null);
     try {
       const data = await postBlacklist(newIp.trim(), newReason.trim());
       if (data.success) {
         setSuccess('IP berhasil ditambahkan ke blacklist.');
-        setNewIp(''); setNewReason('');
-        fetchBlacklist();
-      } else setError(data.message || 'Gagal menambahkan IP.');
-    } catch { setError('Gagal menambahkan IP.'); }
-    finally { setAdding(false); }
+        setNewIp('');
+        setNewReason('');
+        // Delay sedikit karena KV Cloudflare eventual consistency
+        setTimeout(() => fetchBlacklist(), 500);
+      } else {
+        setError(data.message || 'Gagal menambahkan IP.');
+      }
+    } catch {
+      setError('Gagal menambahkan IP.');
+    } finally {
+      setAdding(false);
+    }
   };
 
   const handleRemove = async (ip: string) => {
-    setLoadingIp(ip); setError(null); setSuccess(null);
+    setLoadingIp(ip);
+    setError(null);
+    setSuccess(null);
     try {
       const res  = await fetchWithTimeout(`${BACKEND_URL}/api/admin/blacklist/${ip}`, {
         method: 'DELETE', headers: authHeader,
@@ -91,18 +118,30 @@ export default function BlacklistTab({ token }: { token: string }) {
       if (data.success) {
         setSuccess('IP berhasil dihapus dari blacklist.');
         setEntries(prev => prev.filter(e => e.ip !== ip));
-      } else setError(data.message || 'Gagal menghapus IP.');
-    } catch { setError('Gagal menghapus IP.'); }
-    finally { setLoadingIp(null); }
+      } else {
+        setError(data.message || 'Gagal menghapus IP.');
+      }
+    } catch {
+      setError('Gagal menghapus IP.');
+    } finally {
+      setLoadingIp(null);
+    }
   };
 
   const handleBlacklistFromLog = async (ip: string, reason: string) => {
-    setError(null); setSuccess(null);
+    setError(null);
+    setSuccess(null);
     try {
       const data = await postBlacklist(ip, `[Dari Log] ${reason}`);
-      if (data.success) { setSuccess(`IP ${ip} berhasil ditambahkan ke blacklist.`); fetchBlacklist(); }
-      else setError(data.message || 'Gagal menambahkan IP.');
-    } catch { setError('Gagal menambahkan IP.'); }
+      if (data.success) {
+        setSuccess(`IP ${ip} berhasil ditambahkan ke blacklist.`);
+        setTimeout(() => fetchBlacklist(), 500);
+      } else {
+        setError(data.message || 'Gagal menambahkan IP.');
+      }
+    } catch {
+      setError('Gagal menambahkan IP.');
+    }
   };
 
   return (
@@ -113,15 +152,29 @@ export default function BlacklistTab({ token }: { token: string }) {
       <div className="bg-white rounded-2xl border border-slate-200 p-5">
         <p className="text-sm font-semibold text-slate-800 mb-4">Blacklist IP Manual</p>
         <div className="flex flex-col sm:flex-row gap-3">
-          <input type="text" value={newIp} onChange={e => setNewIp(e.target.value)}
+          <input
+            type="text"
+            value={newIp}
+            onChange={e => setNewIp(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleAdd()}
             placeholder="Contoh: 192.168.1.1"
-            className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-50 transition-all font-mono" />
-          <input type="text" value={newReason} onChange={e => setNewReason(e.target.value)}
+            className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-red-400 focus:ring-2 focus:ring-red-50 transition-all font-mono"
+          />
+          <input
+            type="text"
+            value={newReason}
+            onChange={e => setNewReason(e.target.value)}
+            onKeyDown={e => e.key === 'Enter' && handleAdd()}
             placeholder="Alasan (opsional)"
-            className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-slate-400 transition-all" />
-          <button onClick={handleAdd} disabled={adding || !newIp.trim()}
-            className="flex items-center gap-2 px-5 py-2.5 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-xl disabled:opacity-50 transition-colors shrink-0">
-            {adding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} Blacklist
+            className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-slate-400 transition-all"
+          />
+          <button
+            onClick={handleAdd}
+            disabled={adding || !newIp.trim()}
+            className="flex items-center gap-2 px-5 py-2.5 bg-red-500 hover:bg-red-600 text-white text-sm font-semibold rounded-xl disabled:opacity-50 transition-colors shrink-0"
+          >
+            {adding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+            Blacklist
           </button>
         </div>
       </div>
@@ -143,17 +196,31 @@ export default function BlacklistTab({ token }: { token: string }) {
       {/* Daftar IP diblokir */}
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
-          <p className="text-sm font-semibold text-slate-800">Daftar IP Diblokir {fetched && `(${entries.length})`}</p>
-          <button onClick={fetchBlacklist} disabled={loading}
-            className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold rounded-xl disabled:opacity-50 transition-colors">
-            {loading ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Search className="w-3.5 h-3.5" />} Refresh
+          <p className="text-sm font-semibold text-slate-800">
+            Daftar IP Diblokir{!loading && ` (${entries.length})`}
+          </p>
+          <button
+            onClick={fetchBlacklist}
+            disabled={loading}
+            className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold rounded-xl disabled:opacity-50 transition-colors"
+          >
+            {loading
+              ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              : <RefreshCw className="w-3.5 h-3.5" />}
+            Refresh
           </button>
         </div>
-        {loading && !fetched ? (
-          <div className="p-16 text-center"><Loader2 className="w-6 h-6 text-slate-300 animate-spin mx-auto mb-3" /><p className="text-sm text-slate-400">Memuat data...</p></div>
+
+        {loading ? (
+          <div className="p-16 text-center">
+            <Loader2 className="w-6 h-6 text-slate-300 animate-spin mx-auto mb-3" />
+            <p className="text-sm text-slate-400">Memuat data...</p>
+          </div>
         ) : entries.length === 0 ? (
           <div className="p-16 text-center">
-            <div className="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto mb-3"><CheckCircle2 className="w-6 h-6 text-emerald-400" /></div>
+            <div className="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
+              <CheckCircle2 className="w-6 h-6 text-emerald-400" />
+            </div>
             <p className="text-sm font-medium text-slate-500">Tidak ada IP yang diblokir</p>
           </div>
         ) : (
@@ -166,7 +233,11 @@ export default function BlacklistTab({ token }: { token: string }) {
                 <div className="flex-1 min-w-0">
                   <div className="flex items-center gap-2 mb-1">
                     <span className="text-sm font-bold text-slate-900 font-mono">{entry.ip}</span>
-                    <span className={`text-[10px] px-2 py-0.5 rounded-lg font-semibold border ${entry.auto ? 'bg-orange-50 text-orange-600 border-orange-200' : 'bg-red-50 text-red-600 border-red-200'}`}>
+                    <span className={`text-[10px] px-2 py-0.5 rounded-lg font-semibold border ${
+                      entry.auto
+                        ? 'bg-orange-50 text-orange-600 border-orange-200'
+                        : 'bg-red-50 text-red-600 border-red-200'
+                    }`}>
                       {entry.auto ? 'Auto' : 'Manual'}
                     </span>
                   </div>
@@ -176,9 +247,14 @@ export default function BlacklistTab({ token }: { token: string }) {
                     <span>{new Date(entry.created_at).toLocaleString('id-ID')}</span>
                   </div>
                 </div>
-                <button onClick={() => handleRemove(entry.ip)} disabled={loadingIp === entry.ip}
-                  className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-600 text-slate-500 text-xs font-semibold rounded-xl disabled:opacity-50 transition-colors shrink-0">
-                  {loadingIp === entry.ip ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <><ShieldOff className="w-3.5 h-3.5" /> Hapus</>}
+                <button
+                  onClick={() => handleRemove(entry.ip)}
+                  disabled={loadingIp === entry.ip}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-slate-100 hover:bg-emerald-50 hover:text-emerald-600 text-slate-500 text-xs font-semibold rounded-xl disabled:opacity-50 transition-colors shrink-0"
+                >
+                  {loadingIp === entry.ip
+                    ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    : <><ShieldOff className="w-3.5 h-3.5" /> Hapus</>}
                 </button>
               </div>
             ))}
@@ -190,19 +266,33 @@ export default function BlacklistTab({ token }: { token: string }) {
       <div className="bg-white rounded-2xl border border-slate-200 overflow-hidden">
         <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between">
           <div>
-            <p className="text-sm font-semibold text-slate-800">Log IP Mencurigakan {fetchedLogs && `(${logs.length})`}</p>
-            <p className="text-xs text-slate-400 mt-0.5">IP yang kena rate limit -- disimpan 7 hari</p>
+            <p className="text-sm font-semibold text-slate-800">
+              Log IP Mencurigakan{!loadingLogs && ` (${logs.length})`}
+            </p>
+            <p className="text-xs text-slate-400 mt-0.5">IP yang kena rate limit — disimpan 7 hari</p>
           </div>
-          <button onClick={fetchLogs} disabled={loadingLogs}
-            className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold rounded-xl disabled:opacity-50 transition-colors">
-            {loadingLogs ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Activity className="w-3.5 h-3.5" />} Refresh
+          <button
+            onClick={fetchLogs}
+            disabled={loadingLogs}
+            className="flex items-center gap-2 px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-600 text-xs font-semibold rounded-xl disabled:opacity-50 transition-colors"
+          >
+            {loadingLogs
+              ? <Loader2 className="w-3.5 h-3.5 animate-spin" />
+              : <Activity className="w-3.5 h-3.5" />}
+            Refresh
           </button>
         </div>
-        {loadingLogs && !fetchedLogs ? (
-          <div className="p-16 text-center"><Loader2 className="w-6 h-6 text-slate-300 animate-spin mx-auto mb-3" /><p className="text-sm text-slate-400">Memuat log...</p></div>
+
+        {loadingLogs ? (
+          <div className="p-16 text-center">
+            <Loader2 className="w-6 h-6 text-slate-300 animate-spin mx-auto mb-3" />
+            <p className="text-sm text-slate-400">Memuat log...</p>
+          </div>
         ) : logs.length === 0 ? (
           <div className="p-16 text-center">
-            <div className="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto mb-3"><CheckCircle2 className="w-6 h-6 text-emerald-400" /></div>
+            <div className="w-14 h-14 bg-emerald-50 rounded-2xl flex items-center justify-center mx-auto mb-3">
+              <CheckCircle2 className="w-6 h-6 text-emerald-400" />
+            </div>
             <p className="text-sm font-medium text-slate-500">Tidak ada aktivitas mencurigakan</p>
           </div>
         ) : (
@@ -218,7 +308,9 @@ export default function BlacklistTab({ token }: { token: string }) {
                     <div className="flex items-center gap-2 mb-1">
                       <span className="text-sm font-bold text-slate-900 font-mono">{log.ip}</span>
                       {isBlacklisted && (
-                        <span className="text-[10px] px-2 py-0.5 rounded-lg font-semibold border bg-red-50 text-red-600 border-red-200">Sudah diblokir</span>
+                        <span className="text-[10px] px-2 py-0.5 rounded-lg font-semibold border bg-red-50 text-red-600 border-red-200">
+                          Sudah diblokir
+                        </span>
                       )}
                     </div>
                     <div className="flex flex-wrap items-center gap-x-3 gap-y-0.5 text-[11px] text-slate-400">
@@ -228,8 +320,10 @@ export default function BlacklistTab({ token }: { token: string }) {
                     </div>
                   </div>
                   {!isBlacklisted && (
-                    <button onClick={() => handleBlacklistFromLog(log.ip, log.reason)}
-                      className="flex items-center gap-1.5 px-3 py-2 bg-red-50 hover:bg-red-100 text-red-500 text-xs font-semibold rounded-xl transition-colors shrink-0">
+                    <button
+                      onClick={() => handleBlacklistFromLog(log.ip, log.reason)}
+                      className="flex items-center gap-1.5 px-3 py-2 bg-red-50 hover:bg-red-100 text-red-500 text-xs font-semibold rounded-xl transition-colors shrink-0"
+                    >
                       <ShieldX className="w-3.5 h-3.5" /> Blacklist
                     </button>
                   )}

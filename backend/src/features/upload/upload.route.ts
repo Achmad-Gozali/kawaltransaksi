@@ -7,87 +7,96 @@ const upload = new Hono<{
   Variables: { userId: string; userEmail: string };
 }>();
 
-const MAX_FILE_SIZE = 5 * 1024 * 1024; // 5MB
-const ALLOWED_MIME_TYPES = ['image/jpeg', 'image/png'];
+const MAX_FILE_SIZE    = 5 * 1024 * 1024; // 5MB
+const ALLOWED_MIME     = ['image/jpeg', 'image/png'];
+const UPLOAD_RL        = { PER_HOUR_USER: 20, PER_HOUR_IP: 30, TTL: 3600 };
 
-function validateMagicBytes(bytes: Uint8Array): boolean {
-  // JPEG: FF D8 FF
-  if (bytes[0] === 0xFF && bytes[1] === 0xD8 && bytes[2] === 0xFF) return true;
-  // PNG: 89 50 4E 47
-  if (bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4E && bytes[3] === 0x47) return true;
-  return false;
+// -- Helpers ------------------------------------------------------------------
+
+const validateMagicBytes = (b: Uint8Array) =>
+  (b[0] === 0xFF && b[1] === 0xD8 && b[2] === 0xFF) ||       // JPEG
+  (b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4E && b[3] === 0x47); // PNG
+
+async function checkUploadRateLimit(
+  limiter: KVNamespace, userId: string, ip: string
+): Promise<{ blocked: boolean; reason?: string }> {
+  try {
+    const [userCount, ipCount] = await Promise.all([
+      limiter.get(`rl_upload_user_${userId}`).then(v => parseInt(v ?? '0')),
+      limiter.get(`rl_upload_ip_${ip}`).then(v => parseInt(v ?? '0')),
+    ]);
+    if (userCount >= UPLOAD_RL.PER_HOUR_USER)
+      return { blocked: true, reason: `Batas upload tercapai (${UPLOAD_RL.PER_HOUR_USER}x/jam). Coba lagi nanti.` };
+    if (ipCount >= UPLOAD_RL.PER_HOUR_IP)
+      return { blocked: true, reason: 'Terlalu banyak upload dari perangkat ini. Coba lagi nanti.' };
+    await Promise.all([
+      limiter.put(`rl_upload_user_${userId}`, (userCount + 1).toString(), { expirationTtl: UPLOAD_RL.TTL }),
+      limiter.put(`rl_upload_ip_${ip}`,       (ipCount  + 1).toString(), { expirationTtl: UPLOAD_RL.TTL }),
+    ]);
+    return { blocked: false };
+  } catch (err) {
+    console.error('[UPLOAD RATE LIMIT] Error:', err);
+    return { blocked: false };
+  }
 }
 
-// -- POST /api/upload ----------------------------------------------------------
+// -- POST /api/upload ---------------------------------------------------------
+
 upload.post('/', authMiddleware, async (c) => {
   try {
     const userId = c.get('userId');
+    const ip     = c.req.header('CF-Connecting-IP') || 'anonymous';
+
+    if (c.env.LIMITER && ip !== 'anonymous') {
+      const { blocked, reason } = await checkUploadRateLimit(c.env.LIMITER, userId, ip);
+      if (blocked) return c.json({ success: false, message: reason }, 429);
+    }
 
     const formData = await c.req.formData();
-    const file = formData.get('file') as File | null;
+    const file     = formData.get('file') as File | null;
 
-    if (!file) {
-      return c.json({ success: false, message: 'File tidak ditemukan.' }, 400);
-    }
-
-    if (file.size > MAX_FILE_SIZE) {
-      return c.json({ success: false, message: 'Ukuran file melebihi batas 5MB.' }, 400);
-    }
-
-    if (!ALLOWED_MIME_TYPES.includes(file.type)) {
-      return c.json({ success: false, message: 'Tipe file tidak didukung. Hanya JPEG dan PNG.' }, 400);
-    }
+    if (!file)                              return c.json({ success: false, message: 'File tidak ditemukan.' }, 400);
+    if (file.size > MAX_FILE_SIZE)          return c.json({ success: false, message: 'Ukuran file melebihi batas 5MB.' }, 400);
+    if (!ALLOWED_MIME.includes(file.type))  return c.json({ success: false, message: 'Tipe file tidak didukung. Hanya JPEG dan PNG.' }, 400);
 
     const buffer = await file.arrayBuffer();
-    const bytes = new Uint8Array(buffer);
+    const bytes  = new Uint8Array(buffer);
 
-    if (!validateMagicBytes(bytes)) {
-      return c.json({ success: false, message: 'File tidak valid atau telah dimanipulasi.' }, 400);
-    }
+    if (!validateMagicBytes(bytes)) return c.json({ success: false, message: 'File tidak valid atau telah dimanipulasi.' }, 400);
 
     const ext = file.type === 'image/png' ? 'png' : 'jpg';
-    const fileName = `${userId}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+
+    // FIX: sanitasi userId untuk mencegah path traversal
+    const safeUserId = userId.replace(/[^a-zA-Z0-9-]/g, '');
+    const fileName   = `${safeUserId}/${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${ext}`;
 
     await c.env.BUCKET.put(fileName, buffer, {
-      httpMetadata: {
-        contentType: file.type,
-        cacheControl: 'public, max-age=31536000',
-      },
+      httpMetadata: { contentType: file.type, cacheControl: 'public, max-age=31536000' },
     });
 
-    const publicUrl = `${c.env.R2_PUBLIC_URL}/${fileName}`;
-
-    return c.json({ success: true, url: publicUrl }, 201);
+    return c.json({ success: true, url: `${c.env.R2_PUBLIC_URL}/${fileName}` }, 201);
   } catch (err) {
     console.error('[UPLOAD] Error:', err);
     return c.json({ success: false, message: 'Gagal mengupload file.' }, 500);
   }
 });
 
-// -- DELETE /api/upload --------------------------------------------------------
+// -- DELETE /api/upload -------------------------------------------------------
+
 upload.delete('/', authMiddleware, async (c) => {
   try {
     const userId = c.get('userId');
     const { url } = await c.req.json();
 
-    if (!url || typeof url !== 'string') {
-      return c.json({ success: false, message: 'URL tidak valid.' }, 400);
-    }
+    if (!url || typeof url !== 'string')        return c.json({ success: false, message: 'URL tidak valid.' }, 400);
+    if (!url.startsWith(c.env.R2_PUBLIC_URL))   return c.json({ success: false, message: 'URL tidak diizinkan.' }, 400);
 
-    const publicUrl = c.env.R2_PUBLIC_URL;
-    if (!url.startsWith(publicUrl)) {
-      return c.json({ success: false, message: 'URL tidak diizinkan.' }, 400);
-    }
+    const fileName = url.replace(`${c.env.R2_PUBLIC_URL}/`, '');
+    const safeUserId = userId.replace(/[^a-zA-Z0-9-]/g, '');
 
-    const fileName = url.replace(`${publicUrl}/`, '');
-
-    // Pastikan user hanya bisa hapus file miliknya sendiri
-    if (!fileName.startsWith(`${userId}/`)) {
-      return c.json({ success: false, message: 'Akses ditolak.' }, 403);
-    }
+    if (!fileName.startsWith(`${safeUserId}/`)) return c.json({ success: false, message: 'Akses ditolak.' }, 403);
 
     await c.env.BUCKET.delete(fileName);
-
     return c.json({ success: true });
   } catch (err) {
     console.error('[UPLOAD DELETE] Error:', err);

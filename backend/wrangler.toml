@@ -37,4 +37,5 @@ crons = [
   "0 23 * * SUN",   # Artikel mingguan -- Minggu 23:00 UTC (Senin 06:00 WIB)
   "*/30 * * * *",   # Robot scheduler -- tiap 30 menit (evaluate laporan pending)
   "0 * * * *",      # Trend detector -- tiap 1 jam (deteksi nomor viral)
+  "0 19 * * *",     # Cleanup robot_logs -- tiap hari 19:00 UTC (02:00 WIB)
 ]

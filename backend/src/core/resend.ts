@@ -109,41 +109,19 @@ export async function sendPasswordResetEmail({ to, fullName, resetLink, apiKey }
 
 // -- Report emails -------------------------------------------------------------
 
-const REPORT_STATUS: Record<string, { label: string; color: string; bg: string; desc: string; action?: string }> = {
-  verified: {
-    label: 'Terverifikasi',
-    color: '#15803d', bg: '#dcfce7',
-    desc: 'Laporan kamu telah ditinjau dan resmi diverifikasi oleh tim KawalTransaksi. Nomor ini kini terdaftar sebagai terindikasi penipuan dan akan muncul sebagai peringatan bagi pengguna lain yang melakukan pengecekan.',
-    action: 'Kontribusimu nyata — kamu baru saja membantu melindungi orang lain dari ancaman yang sama. Terima kasih.',
-  },
-  rejected: {
-    label: 'Tidak Dapat Diverifikasi',
-    color: '#b91c1c', bg: '#fee2e2',
-    desc: 'Setelah ditinjau, laporan kamu belum dapat kami verifikasi karena bukti yang dilampirkan kurang memadai atau tidak memenuhi kriteria pelaporan kami. Kami memahami ini mungkin mengecewakan.',
-    action: 'Kamu bisa menarik laporan ini dan mengajukan ulang dengan melengkapi bukti seperti tangkapan layar percakapan, bukti transfer, atau informasi pendukung lainnya. Tim kami siap membantu jika ada pertanyaan.',
-  },
-  pending: {
-    label: 'Menunggu Verifikasi',
-    color: '#a16207', bg: '#fef9c3',
-    desc: 'Laporan kamu kembali masuk ke antrian verifikasi dan sedang ditinjau ulang oleh tim kami. Kami akan segera menginformasikan hasilnya.',
-  },
-  withdrawn: {
-    label: 'Sedang Direvisi',
-    color: '#1d4ed8', bg: '#dbeafe',
-    desc: 'Laporan kamu saat ini berstatus revisi. Kamu dapat melengkapi atau memperbaiki informasi yang ada, lalu mengirimkan ulang untuk ditinjau kembali oleh tim kami.',
-    action: 'Tips: semakin lengkap dan jelas bukti yang kamu lampirkan, semakin cepat proses verifikasi dapat diselesaikan.',
-  },
-};
-
-export async function sendReportCreatedEmail({ to, fullName, targetNumber, category, status, reportUrl, apiKey }: { to: string; fullName: string; targetNumber: string; category: string; status: 'pending' | 'verified'; reportUrl: string; apiKey: string }) {
-  const isVerified = status === 'verified';
-  const statusBadge = isVerified
-    ? badge('Terverifikasi Otomatis', '#15803d', '#dcfce7')
-    : badge('Menunggu Verifikasi', '#a16207', '#fef9c3');
-  const statusDesc = isVerified
-    ? 'Laporan kamu memenuhi seluruh kriteria kelengkapan bukti sehingga langsung diverifikasi oleh sistem kami. Nomor ini kini tampil sebagai terindikasi penipuan di halaman pengecekan.'
-    : 'Laporan kamu sudah masuk dan sedang dalam antrian tinjauan tim KawalTransaksi. Proses verifikasi biasanya memakan waktu 1-3 hari kerja. Kami akan mengirimkan notifikasi begitu ada pembaruan.';
-
+export async function sendReportCreatedEmail({ 
+  to, 
+  fullName, 
+  targetNumber, 
+  category, 
+  apiKey 
+}: { 
+  to: string; 
+  fullName: string; 
+  targetNumber: string; 
+  category: string; 
+  apiKey: string;
+}) {
   await sendEmail({
     to, apiKey,
     subject: 'Laporan kamu telah kami terima - KawalTransaksi',
@@ -151,16 +129,39 @@ export async function sendReportCreatedEmail({ to, fullName, targetNumber, categ
       <h1 style="font-size:20px;font-weight:900;margin:0 0 8px;">Laporan Berhasil Dikirim</h1>
       <p style="color:#475569;margin:0 0 20px;">Halo, <strong>${fullName}</strong>. Terima kasih telah mengambil langkah nyata untuk melindungi orang lain dari penipuan digital. Laporan kamu sudah kami terima.</p>
       ${card([['Nomor yang dilaporkan', targetNumber], ['Kategori penipuan', category]])}
-      <p style="margin:0 0 6px;font-size:11px;color:#94a3b8;text-transform:uppercase;">Status laporan</p>
-      ${statusBadge}
-      <p style="color:#475569;margin:16px 0 20px;font-size:14px;line-height:1.7;">${statusDesc}</p>
-      ${btn(reportUrl, 'Lihat Detail Laporan')}
+      <p style="color:#475569;margin:0 0 20px;font-size:14px;line-height:1.7;">Laporan kamu sedang dalam antrian tinjauan tim KawalTransaksi. Proses verifikasi biasanya memakan waktu 1–3 hari kerja. Pantau status laporan kamu langsung di dashboard.</p>
+      ${btn('https://kawaltransaksi.com/dashboard/laporan', 'Lihat Laporan Saya')}
     `),
-    text: `Halo ${fullName},\n\nTerima kasih telah mengambil langkah nyata untuk melindungi orang lain. Laporan kamu sudah kami terima.\n\nNomor: ${targetNumber}\nKategori: ${category}\nStatus: ${isVerified ? 'Terverifikasi Otomatis' : 'Menunggu Verifikasi'}\n\nDetail laporan: ${reportUrl}\n\nSalam,\nTim KawalTransaksi`,
+    text: `Halo ${fullName},\n\nTerima kasih telah mengambil langkah nyata untuk melindungi orang lain. Laporan kamu sudah kami terima.\n\nNomor: ${targetNumber}\nKategori: ${category}\n\nPantau status laporan kamu di: https://kawaltransaksi.com/dashboard/laporan\n\nSalam,\nTim KawalTransaksi`,
   });
 }
 
 export async function sendReportStatusChangedEmail({ to, fullName, targetNumber, newStatus, reportUrl, apiKey }: { to: string; fullName: string; targetNumber: string; newStatus: 'pending' | 'verified' | 'rejected' | 'withdrawn'; reportUrl: string; apiKey: string }) {
+  const REPORT_STATUS: Record<string, { label: string; color: string; bg: string; desc: string; action?: string }> = {
+    verified: {
+      label: 'Terverifikasi',
+      color: '#15803d', bg: '#dcfce7',
+      desc: 'Laporan kamu telah ditinjau dan resmi diverifikasi oleh tim KawalTransaksi. Nomor ini kini terdaftar sebagai terindikasi penipuan dan akan muncul sebagai peringatan bagi pengguna lain yang melakukan pengecekan.',
+      action: 'Kontribusimu nyata — kamu baru saja membantu melindungi orang lain dari ancaman yang sama. Terima kasih.',
+    },
+    rejected: {
+      label: 'Tidak Dapat Diverifikasi',
+      color: '#b91c1c', bg: '#fee2e2',
+      desc: 'Setelah ditinjau, laporan kamu belum dapat kami verifikasi karena bukti yang dilampirkan kurang memadai atau tidak memenuhi kriteria pelaporan kami.',
+      action: 'Kamu bisa menarik laporan ini dan mengajukan ulang dengan melengkapi bukti seperti tangkapan layar percakapan, bukti transfer, atau informasi pendukung lainnya.',
+    },
+    pending: {
+      label: 'Menunggu Verifikasi',
+      color: '#a16207', bg: '#fef9c3',
+      desc: 'Laporan kamu kembali masuk ke antrian verifikasi dan sedang ditinjau ulang oleh tim kami. Kami akan segera menginformasikan hasilnya.',
+    },
+    withdrawn: {
+      label: 'Sedang Direvisi',
+      color: '#1d4ed8', bg: '#dbeafe',
+      desc: 'Laporan kamu saat ini berstatus revisi. Kamu dapat melengkapi atau memperbaiki informasi yang ada, lalu mengirimkan ulang untuk ditinjau kembali oleh tim kami.',
+      action: 'Tips: semakin lengkap dan jelas bukti yang kamu lampirkan, semakin cepat proses verifikasi dapat diselesaikan.',
+    },
+  };
   const cfg = REPORT_STATUS[newStatus] ?? REPORT_STATUS['pending'];
   await sendEmail({
     to, apiKey,
@@ -173,7 +174,7 @@ export async function sendReportStatusChangedEmail({ to, fullName, targetNumber,
       ${badge(cfg.label, cfg.color, cfg.bg)}
       <p style="color:#475569;margin:16px 0 ${cfg.action ? '12px' : '20px'};font-size:14px;line-height:1.7;">${cfg.desc}</p>
       ${cfg.action ? `<p style="color:#475569;margin:0 0 20px;font-size:14px;line-height:1.7;">${cfg.action}</p>` : ''}
-      ${btn(reportUrl, 'Lihat Detail Laporan')}
+      ${btn(reportUrl, 'Lihat Laporan Saya')}
     `),
     text: `Halo ${fullName},\n\nAda pembaruan untuk laporan kamu.\n\nNomor: ${targetNumber}\nStatus: ${cfg.label}\n\n${cfg.desc}${cfg.action ? '\n\n' + cfg.action : ''}\n\nDetail laporan: ${reportUrl}\n\nSalam,\nTim KawalTransaksi`,
   });

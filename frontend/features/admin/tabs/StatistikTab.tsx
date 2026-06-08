@@ -1,7 +1,10 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Phone, Building2, TrendingUp, TrendingDown, ShieldCheck, Clock, Users, Share2, Landmark } from 'lucide-react';
+import {
+  Phone, Building2, TrendingUp, TrendingDown,
+  ShieldCheck, Clock, Users,
+} from 'lucide-react';
 import DailyChart from '@/features/admin/DailyChart';
 import { formatRupiah } from '@/core/utils';
 import type { Report, Stats } from '@/features/admin/types';
@@ -18,12 +21,10 @@ export default function StatistikTab({
     [reports]
   );
 
-  const avgLossPerReport = useMemo(
-    () => reports.filter(r => Number(r.loss_amount) > 0).length > 0
-      ? totalLoss / reports.filter(r => Number(r.loss_amount) > 0).length
-      : 0,
-    [reports, totalLoss]
-  );
+  const avgLossPerReport = useMemo(() => {
+    const withLoss = reports.filter(r => Number(r.loss_amount) > 0);
+    return withLoss.length > 0 ? totalLoss / withLoss.length : 0;
+  }, [reports, totalLoss]);
 
   const multiVictimCount = useMemo(
     () => reports.filter(r => r.has_other_victims === 'yes').length,
@@ -69,7 +70,6 @@ export default function StatistikTab({
   const rejectionRate = stats.total > 0 ? Math.round((stats.rejected / stats.total) * 100) : 0;
   const pendingRate   = stats.total > 0 ? Math.round((stats.pending  / stats.total) * 100) : 0;
 
-  // Laporan per minggu (4 minggu terakhir)
   const weeklyData = useMemo(() => {
     const weeks: number[] = [0, 0, 0, 0];
     const now = new Date();
@@ -86,17 +86,17 @@ export default function StatistikTab({
       {/* Header */}
       <div>
         <h1 className="text-xl font-bold text-slate-900">Statistik</h1>
-        <p className="text-xs text-slate-400 mt-0.5">Analisis mendalam data laporan</p>
+        <p className="text-xs text-slate-400 mt-0.5">Analisis mendalam pola penipuan</p>
       </div>
 
       {/* Rate cards */}
       <div className="grid grid-cols-3 gap-2 sm:gap-3">
         {[
-          { label: 'Approval Rate', value: approvalRate, color: 'text-emerald-600', bg: 'bg-emerald-50', border: 'border-emerald-100', bar: 'bg-emerald-500', icon: ShieldCheck },
-          { label: 'Rejection Rate', value: rejectionRate, color: 'text-red-500', bg: 'bg-red-50', border: 'border-red-100', bar: 'bg-red-400', icon: TrendingDown },
-          { label: 'Pending Rate', value: pendingRate, color: 'text-amber-600', bg: 'bg-amber-50', border: 'border-amber-100', bar: 'bg-amber-400', icon: Clock },
+          { label: 'Approval Rate', value: approvalRate, color: 'text-emerald-600', bg: 'bg-emerald-50', bar: 'bg-emerald-500', icon: ShieldCheck },
+          { label: 'Rejection Rate', value: rejectionRate, color: 'text-red-500', bg: 'bg-red-50', bar: 'bg-red-400', icon: TrendingDown },
+          { label: 'Pending Rate', value: pendingRate, color: 'text-amber-600', bg: 'bg-amber-50', bar: 'bg-amber-400', icon: Clock },
         ].map(s => (
-          <div key={s.label} className={`bg-white border border-slate-200 rounded-lg p-3 sm:p-4`}>
+          <div key={s.label} className="bg-white border border-slate-200 rounded-lg p-3 sm:p-4">
             <div className="flex items-center justify-between mb-2">
               <p className="text-[11px] text-slate-400 font-medium">{s.label}</p>
               <div className={`w-6 h-6 ${s.bg} rounded-md flex items-center justify-center`}>
@@ -131,12 +131,13 @@ export default function StatistikTab({
         ))}
       </div>
 
-      {/* Chart + Kategori */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        <div className="bg-white border border-slate-200 rounded-lg p-4 sm:p-5">
-          <DailyChart reports={reports} />
-        </div>
+      {/* Area chart dengan toggle period — analytical */}
+      <div className="bg-white border border-slate-200 rounded-lg p-4 sm:p-5">
+        <DailyChart reports={reports} />
+      </div>
 
+      {/* Kategori + Platform */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
         <div className="bg-white border border-slate-200 rounded-lg p-4 sm:p-5">
           <h3 className="text-sm font-semibold text-slate-900 mb-4">Kategori Penipuan</h3>
           {categoryStats.length === 0 ? (
@@ -160,36 +161,6 @@ export default function StatistikTab({
                       className="h-full bg-emerald-500 rounded-full transition-all duration-500"
                       style={{ width: `${(count / maxCat) * 100}%` }}
                     />
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Bank + Platform */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        <div className="bg-white border border-slate-200 rounded-lg p-4 sm:p-5">
-          <h3 className="text-sm font-semibold text-slate-900 mb-4">Bank & E-Wallet</h3>
-          {bankStats.length === 0 ? (
-            <p className="text-sm text-slate-400 text-center py-8">Belum ada data</p>
-          ) : (
-            <div className="space-y-2">
-              {bankStats.map(([label, data], i) => (
-                <div key={label} className="flex items-center gap-3 py-1.5">
-                  <span className="text-[10px] text-slate-300 w-3 shrink-0">{i + 1}</span>
-                  <div className="w-7 h-7 bg-slate-50 border border-slate-100 rounded-md flex items-center justify-center shrink-0">
-                    {label === 'Nomor Telepon'
-                      ? <Phone className="w-3 h-3 text-slate-400" />
-                      : <Building2 className="w-3 h-3 text-slate-400" />}
-                  </div>
-                  <span className="text-xs text-slate-700 flex-1 truncate">{label}</span>
-                  <div className="flex items-center gap-2 shrink-0">
-                    {data.loss > 0 && (
-                      <span className="text-[11px] text-red-400 font-medium hidden sm:block">{formatRupiah(data.loss)}</span>
-                    )}
-                    <span className="text-xs bg-slate-100 text-slate-600 font-semibold px-2 py-0.5 rounded-md min-w-[24px] text-center">{data.count}</span>
                   </div>
                 </div>
               ))}
@@ -228,10 +199,37 @@ export default function StatistikTab({
         </div>
       </div>
 
-      {/* Weekly trend + info tambahan */}
+      {/* Bank & E-Wallet — full list */}
+      <div className="bg-white border border-slate-200 rounded-lg p-4 sm:p-5">
+        <h3 className="text-sm font-semibold text-slate-900 mb-4">Bank & E-Wallet</h3>
+        {bankStats.length === 0 ? (
+          <p className="text-sm text-slate-400 text-center py-8">Belum ada data</p>
+        ) : (
+          <div className="space-y-2">
+            {bankStats.map(([label, data], i) => (
+              <div key={label} className="flex items-center gap-3 py-1.5">
+                <span className="text-[10px] text-slate-300 w-3 shrink-0">{i + 1}</span>
+                <div className="w-7 h-7 bg-slate-50 border border-slate-100 rounded-md flex items-center justify-center shrink-0">
+                  {label === 'Nomor Telepon'
+                    ? <Phone className="w-3 h-3 text-slate-400" />
+                    : <Building2 className="w-3 h-3 text-slate-400" />}
+                </div>
+                <span className="text-xs text-slate-700 flex-1 truncate">{label}</span>
+                <div className="flex items-center gap-2 shrink-0">
+                  {data.loss > 0 && (
+                    <span className="text-[11px] text-red-400 font-medium hidden sm:block">{formatRupiah(data.loss)}</span>
+                  )}
+                  <span className="text-xs bg-slate-100 text-slate-600 font-semibold px-2 py-0.5 rounded-md min-w-[24px] text-center">{data.count}</span>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
+      {/* Tren 4 minggu + Detail laporan */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
 
-        {/* Weekly trend */}
         <div className="bg-white border border-slate-200 rounded-lg p-4 sm:p-5">
           <h3 className="text-sm font-semibold text-slate-900 mb-4">Tren 4 Minggu Terakhir</h3>
           {weeklyData.every(w => w.value === 0) ? (
@@ -259,39 +257,14 @@ export default function StatistikTab({
           )}
         </div>
 
-        {/* Info tambahan */}
         <div className="bg-white border border-slate-200 rounded-lg p-4 sm:p-5">
           <h3 className="text-sm font-semibold text-slate-900 mb-4">Detail Laporan</h3>
           <div className="space-y-2">
             {[
-              {
-                label: 'Multi korban dilaporkan',
-                value: multiVictimCount,
-                total: stats.total,
-                color: 'bg-violet-400',
-                textColor: 'text-violet-600',
-              },
-              {
-                label: 'Ada data sosial media',
-                value: hasSosmedCount,
-                total: stats.total,
-                color: 'bg-blue-400',
-                textColor: 'text-blue-600',
-              },
-              {
-                label: 'Sudah lapor ke instansi',
-                value: reportedToInstansi,
-                total: stats.total,
-                color: 'bg-emerald-400',
-                textColor: 'text-emerald-600',
-              },
-              {
-                label: 'Ada kerugian tercatat',
-                value: reports.filter(r => Number(r.loss_amount) > 0).length,
-                total: stats.total,
-                color: 'bg-red-400',
-                textColor: 'text-red-500',
-              },
+              { label: 'Multi korban dilaporkan', value: multiVictimCount, total: stats.total, color: 'bg-violet-400', textColor: 'text-violet-600' },
+              { label: 'Ada data sosial media', value: hasSosmedCount, total: stats.total, color: 'bg-blue-400', textColor: 'text-blue-600' },
+              { label: 'Sudah lapor ke instansi', value: reportedToInstansi, total: stats.total, color: 'bg-emerald-400', textColor: 'text-emerald-600' },
+              { label: 'Ada kerugian tercatat', value: reports.filter(r => Number(r.loss_amount) > 0).length, total: stats.total, color: 'bg-red-400', textColor: 'text-red-500' },
             ].map(item => (
               <div key={item.label}>
                 <div className="flex items-center justify-between mb-1">

@@ -6,10 +6,10 @@ import type { Env } from '../../types';
 const search = new Hono<{ Bindings: Env }>();
 
 async function hashToken(token: string): Promise<string> {
-  const encoder = new TextEncoder();
-  const data = encoder.encode(token);
+  const encoder    = new TextEncoder();
+  const data       = encoder.encode(token);
   const hashBuffer = await crypto.subtle.digest('SHA-256', data);
-  const hashArray = Array.from(new Uint8Array(hashBuffer));
+  const hashArray  = Array.from(new Uint8Array(hashBuffer));
   return hashArray.map((b) => b.toString(16).padStart(2, '0')).join('');
 }
 
@@ -30,22 +30,34 @@ async function getOptionalUserId(
   }
 }
 
+// KNOWN LIMITATION: Rate limiter di sini menggunakan Cloudflare KV yang eventually consistent,
+// bukan strongly consistent. Artinya dua request bersamaan bisa membaca nilai yang sama
+// dan keduanya lolos, sehingga limit bisa sedikit terlampaui dalam kondisi burst tinggi.
+//
+// Ini adalah trade-off yang diterima karena:
+// 1. KV tidak mendukung atomic increment
+// 2. Solusi yang benar (Durable Objects) memerlukan paket berbayar
+// 3. Limit search (5-15/menit) tidak sekritis limit payment/auth
+// 4. Lapisan pertahanan lain (Cloudflare WAF, Upstash di frontend) tetap aktif
+//
+// Jika perlu atomic rate limiting, pertimbangkan migrasi ke Cloudflare Durable Objects.
+
 search.use('*', async (c, next) => {
   if (!c.env.LIMITER) {
     console.warn('[SEARCH RATE LIMIT] KV LIMITER tidak tersedia. Rate limiting dinonaktifkan.');
     return next();
   }
 
-  const ip = c.req.header('CF-Connecting-IP') || 'anonymous';
-  const userId = await getOptionalUserId(c.req.header('Authorization'), c.env);
-  const isLoggedIn = !!userId;
+  const ip       = c.req.header('CF-Connecting-IP') || 'anonymous';
+  const userId   = await getOptionalUserId(c.req.header('Authorization'), c.env);
+  const isLoggedIn  = !!userId;
   const maxRequests = isLoggedIn ? 15 : 5;
 
   try {
     if (isLoggedIn) {
-      const userKey = `search_user_${userId}`;
+      const userKey   = `search_user_${userId}`;
       const userCount = await c.env.LIMITER.get(userKey);
-      const userHits = userCount ? parseInt(userCount) : 0;
+      const userHits  = userCount ? parseInt(userCount) : 0;
 
       if (userHits >= maxRequests) {
         return c.json({
@@ -54,9 +66,9 @@ search.use('*', async (c, next) => {
         }, 429);
       }
 
-      const ipKey = `search_auth_ip_${ip}`;
+      const ipKey   = `search_auth_ip_${ip}`;
       const ipCount = await c.env.LIMITER.get(ipKey);
-      const ipHits = ipCount ? parseInt(ipCount) : 0;
+      const ipHits  = ipCount ? parseInt(ipCount) : 0;
 
       if (ipHits >= maxRequests) {
         return c.json({
@@ -67,12 +79,12 @@ search.use('*', async (c, next) => {
 
       await Promise.all([
         c.env.LIMITER.put(userKey, (userHits + 1).toString(), { expirationTtl: 60 }),
-        c.env.LIMITER.put(ipKey, (ipHits + 1).toString(), { expirationTtl: 60 }),
+        c.env.LIMITER.put(ipKey,   (ipHits  + 1).toString(), { expirationTtl: 60 }),
       ]);
     } else {
-      const ipKey = `search_anon_ip_${ip}`;
+      const ipKey   = `search_anon_ip_${ip}`;
       const ipCount = await c.env.LIMITER.get(ipKey);
-      const ipHits = ipCount ? parseInt(ipCount) : 0;
+      const ipHits  = ipCount ? parseInt(ipCount) : 0;
 
       if (ipHits >= maxRequests) {
         return c.json({
@@ -100,9 +112,9 @@ search.post('/verify-turnstile', async (c) => {
 
     if (c.env.LIMITER) {
       try {
-        const hashed = await hashToken(token);
+        const hashed       = await hashToken(token);
         const blacklistKey = `turnstile_used_${hashed}`;
-        const alreadyUsed = await c.env.LIMITER.get(blacklistKey);
+        const alreadyUsed  = await c.env.LIMITER.get(blacklistKey);
         if (alreadyUsed) {
           return c.json({
             success: false,
@@ -121,7 +133,7 @@ search.post('/verify-turnstile', async (c) => {
 
     if (c.env.LIMITER) {
       try {
-        const hashed = await hashToken(token);
+        const hashed       = await hashToken(token);
         const blacklistKey = `turnstile_used_${hashed}`;
         await c.env.LIMITER.put(blacklistKey, '1', { expirationTtl: 300 });
       } catch (err) {

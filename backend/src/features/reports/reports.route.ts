@@ -14,23 +14,23 @@ import type { Env } from '../../types';
 
 const reports = new Hono<{
   Bindings: Env;
-  Variables: { userId: string; userEmail: string };
+  Variables: { userId: string; userEmail: string; userRole: string };
 }>();
 
 // -- Konstanta ----------------------------------------------------------------
 
 const LIMITS = {
-  TARGET_NUMBER:        32,
+  TARGET_NUMBER:       32,
   TARGET_NAME:         100,
   BANK_NAME:           100,
   PLATFORM:            100,
   LINK_URL:            500,
   CATEGORY:            100,
-  CHRONOLOGY_MIN:       20,
-  CHRONOLOGY_MAX:     5000,
+  CHRONOLOGY_MIN:      20,
+  CHRONOLOGY_MAX:      5000,
   SOCIAL_ACCOUNT:      100,
   SOCIAL_ACCOUNTS_COUNT: 10,
-  LOSS_AMOUNT_MAX: 999_999_999_999,
+  LOSS_AMOUNT_MAX:     999_999_999_999,
   STORE_NAME:          150,
 };
 
@@ -42,6 +42,7 @@ const ALLOWED_STORAGE_HOSTNAMES = [
 const MAX_EVIDENCE_FILES = 10;
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const VALID_TARGET_TYPES = ['phone', 'bank_account', 'ewallet'] as const;
+const DASHBOARD_LAPORAN_URL = 'https://kawaltransaksi.com/dashboard/laporan';
 
 const VALID_PROVINCES = [
   'Aceh', 'Sumatera Utara', 'Sumatera Barat', 'Riau', 'Kepulauan Riau',
@@ -56,22 +57,38 @@ const VALID_PROVINCES = [
   'Papua Selatan', 'Papua Tengah',
 ] as const;
 
+// -- Types --------------------------------------------------------------------
+
+// FIX: ganti any dengan interface yang proper
+interface TargetNumberItem {
+  number: string;
+  type:   string;
+  bank:   string | null;
+  name:   string | null;
+}
+
 // -- Helpers ------------------------------------------------------------------
+
+const sanitizeText = (s: string) =>
+  s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+   .replace(/"/g, '&quot;').replace(/'/g, '&#x27;').trim();
+
+const sanitizeChronology = (s: string) =>
+  s.replace(/<[^>]*>/g, '').replace(/javascript:/gi, '').replace(/on\w+\s*=/gi, '').trim();
+
+const sanitizeArray = (arr: string[]) => arr.map(sanitizeText).filter(Boolean);
 
 function isValidEvidenceUrl(url: unknown): boolean {
   if (typeof url !== 'string' || !url.trim()) return false;
   try {
     const p = new URL(url);
-    return p.protocol === 'https:' &&
-      ALLOWED_STORAGE_HOSTNAMES.includes(p.hostname);
+    return p.protocol === 'https:' && ALLOWED_STORAGE_HOSTNAMES.includes(p.hostname);
   } catch { return false; }
 }
 
 function sanitizeEvidenceUrls(urls: unknown): string[] {
   if (!Array.isArray(urls)) return [];
-  return urls
-    .filter(isValidEvidenceUrl)
-    .slice(0, MAX_EVIDENCE_FILES) as string[];
+  return urls.filter(isValidEvidenceUrl).slice(0, MAX_EVIDENCE_FILES) as string[];
 }
 
 function isValidHttpUrl(url: unknown): string | null {
@@ -82,47 +99,24 @@ function isValidHttpUrl(url: unknown): string | null {
   } catch { return null; }
 }
 
-const sanitizeText = (s: string) =>
-  s.replace(/&/g, '&amp;')
-   .replace(/</g, '&lt;')
-   .replace(/>/g, '&gt;')
-   .replace(/"/g, '&quot;')
-   .replace(/'/g, '&#x27;')
-   .trim();
-
-const sanitizeChronology = (s: string) =>
-  s.replace(/<[^>]*>/g, '')
-   .replace(/javascript:/gi, '')
-   .replace(/on\w+\s*=/gi, '')
-   .trim();
-
-const sanitizeArray = (arr: string[]) =>
-  arr.map(sanitizeText).filter(Boolean);
-
 async function checkReportRateLimit(
   supabase: ReturnType<typeof getSupabaseAdmin>,
   userId: string
 ): Promise<{ blocked: boolean; reason?: string }> {
   const oneDayAgo = new Date(Date.now() - 86400000).toISOString();
   const { data, error } = await supabase
-    .from('reports')
-    .select('created_at')
-    .eq('reporter_id', userId)
-    .gte('created_at', oneDayAgo)
+    .from('reports').select('created_at')
+    .eq('reporter_id', userId).gte('created_at', oneDayAgo)
     .order('created_at', { ascending: false });
 
   if (error) return { blocked: false };
 
   const now      = Date.now();
-  const hourCount = (data ?? []).filter(
-    r => new Date(r.created_at).getTime() >= now - 3600000
-  ).length;
-  const dayCount = (data ?? []).length;
+  const hourCount = (data ?? []).filter(r => new Date(r.created_at).getTime() >= now - 3600000).length;
+  const dayCount  = (data ?? []).length;
 
-  if (hourCount >= 3)
-    return { blocked: true, reason: 'Terlalu banyak laporan dalam 1 jam. Coba lagi nanti.' };
-  if (dayCount >= 10)
-    return { blocked: true, reason: 'Batas laporan harian tercapai.' };
+  if (hourCount >= 3) return { blocked: true, reason: 'Terlalu banyak laporan dalam 1 jam. Coba lagi nanti.' };
+  if (dayCount  >= 10) return { blocked: true, reason: 'Batas laporan harian tercapai.' };
   return { blocked: false };
 }
 
@@ -136,17 +130,14 @@ async function sendStatusEmail(
 ) {
   try {
     const { data: profile } = await supabase
-      .from('profiles')
-      .select('full_name, email')
-      .eq('id', userId)
-      .single();
+      .from('profiles').select('full_name, email').eq('id', userId).single();
     if (!profile?.email) return;
     await sendReportStatusChangedEmail({
       to:           profile.email,
       fullName:     profile.full_name ?? 'Pengguna',
       targetNumber,
       newStatus,
-      reportUrl:    `https://kawaltransaksi.com/dashboard/laporan/${reportId}`,
+      reportUrl:    `${DASHBOARD_LAPORAN_URL}/${reportId}`,
       apiKey:       resendApiKey,
     });
   } catch (err) {
@@ -165,36 +156,28 @@ function validateReportBody(body: Record<string, unknown>): string | null {
     [body.link_url,      LIMITS.LINK_URL,      'URL'],
     [body.store_name,    LIMITS.STORE_NAME,    'Nama toko'],
   ];
-  for (const [val, max, label] of fieldChecks) {
+  for (const [val, max, label] of fieldChecks)
     if (val && String(val).length > max)
       return `${label} terlalu panjang. Maks ${max} karakter.`;
-  }
 
   const categoryRaw = String(body.category ?? '').trim();
-  if (!categoryRaw)
-    return 'Kategori wajib diisi.';
-  if (categoryRaw.length > LIMITS.CATEGORY)
-    return `Kategori terlalu panjang. Maks ${LIMITS.CATEGORY} karakter.`;
+  if (!categoryRaw)                              return 'Kategori wajib diisi.';
+  if (categoryRaw.length > LIMITS.CATEGORY)      return `Kategori terlalu panjang. Maks ${LIMITS.CATEGORY} karakter.`;
 
   const chronologyRaw = String(body.chronology ?? '');
-  if (chronologyRaw.trim().length < LIMITS.CHRONOLOGY_MIN)
-    return `Kronologi minimal ${LIMITS.CHRONOLOGY_MIN} karakter.`;
-  if (chronologyRaw.length > LIMITS.CHRONOLOGY_MAX)
-    return `Kronologi terlalu panjang. Maks ${LIMITS.CHRONOLOGY_MAX} karakter.`;
+  if (chronologyRaw.trim().length < LIMITS.CHRONOLOGY_MIN) return `Kronologi minimal ${LIMITS.CHRONOLOGY_MIN} karakter.`;
+  if (chronologyRaw.length > LIMITS.CHRONOLOGY_MAX)        return `Kronologi terlalu panjang. Maks ${LIMITS.CHRONOLOGY_MAX} karakter.`;
 
   if (body.loss_amount && Number(body.loss_amount) > LIMITS.LOSS_AMOUNT_MAX)
     return 'Nominal kerugian tidak valid.';
 
-  if (body.suspect_city &&
-      !VALID_PROVINCES.includes(body.suspect_city as never))
+  if (body.suspect_city && !VALID_PROVINCES.includes(body.suspect_city as never))
     return 'Provinsi tidak valid.';
 
   if (Array.isArray(body.social_media_accounts)) {
     if (body.social_media_accounts.length > LIMITS.SOCIAL_ACCOUNTS_COUNT)
       return `Maksimal ${LIMITS.SOCIAL_ACCOUNTS_COUNT} akun media sosial.`;
-    if (body.social_media_accounts.some(
-      (s: unknown) => typeof s === 'string' && s.length > LIMITS.SOCIAL_ACCOUNT
-    ))
+    if (body.social_media_accounts.some((s: unknown) => typeof s === 'string' && s.length > LIMITS.SOCIAL_ACCOUNT))
       return `Akun media sosial terlalu panjang. Maks ${LIMITS.SOCIAL_ACCOUNT} karakter.`;
   }
 
@@ -213,13 +196,10 @@ reports.post('/', authMiddleware, async (c) => {
     if (c.env.LIMITER) {
       const [userBlock, ipBlock] = await Promise.all([
         isBlocked(userId, c.env.LIMITER),
-        isBlocked(ip,     c.env.LIMITER),
+        isBlocked(ip, c.env.LIMITER),
       ]);
       if (userBlock.blocked || ipBlock.blocked)
-        return c.json({
-          success: false,
-          message: 'Akun Anda telah diblokir sementara karena aktivitas mencurigakan.',
-        }, 403);
+        return c.json({ success: false, message: 'Akun Anda telah diblokir sementara karena aktivitas mencurigakan.' }, 403);
     }
 
     if (!body.turnstile_token)
@@ -240,53 +220,39 @@ reports.post('/', authMiddleware, async (c) => {
 
     const cleanNumber = String(body.target_number).replace(/[^0-9]/g, '');
     const { count: dupCount } = await supabase
-      .from('reports')
-      .select('*', { count: 'exact', head: true })
-      .eq('reporter_id', userId)
-      .eq('target_number', cleanNumber)
-      .neq('status', 'withdrawn');
+      .from('reports').select('*', { count: 'exact', head: true })
+      .eq('reporter_id', userId).eq('target_number', cleanNumber).neq('status', 'withdrawn');
     if ((dupCount ?? 0) > 0)
-      return c.json({
-        success: false,
-        message: 'Kamu sudah pernah melaporkan nomor ini sebelumnya.',
-      }, 409);
+      return c.json({ success: false, message: 'Kamu sudah pernah melaporkan nomor ini sebelumnya.' }, 409);
 
     const chronologyRaw = String(body.chronology ?? '');
     const categoryClean = sanitizeText(String(body.category ?? '').trim());
     const evidenceUrls  = sanitizeEvidenceUrls(
-      body.evidence_urls?.length > 0
-        ? body.evidence_urls
-        : body.evidence_url ? [body.evidence_url] : []
+      body.evidence_urls?.length > 0 ? body.evidence_urls : body.evidence_url ? [body.evidence_url] : []
     );
 
-    const rawTargetNumbers = Array.isArray(body.target_numbers)
-      ? body.target_numbers : [];
-    const cleanTargetNumbers = rawTargetNumbers.map((item: unknown) => {
-      if (typeof item === 'object' && item !== null && 'number' in item) {
-        const obj = item as {
-          number: string; type?: string; bank?: string; name?: string;
-        };
-        const num = String(obj.number).replace(/[^0-9]/g, '');
+    // FIX: ganti any dengan TargetNumberItem
+    const cleanTargetNumbers: TargetNumberItem[] = (Array.isArray(body.target_numbers) ? body.target_numbers : [])
+      .map((item: unknown): TargetNumberItem | null => {
+        if (typeof item === 'object' && item !== null && 'number' in item) {
+          const obj = item as { number: string; type?: string; bank?: string; name?: string };
+          const num = String(obj.number).replace(/[^0-9]/g, '');
+          if (!num || num.length > LIMITS.TARGET_NUMBER) return null;
+          return { number: num, type: obj.type ?? 'phone', bank: obj.bank ?? null, name: obj.name ?? null };
+        }
+        const num = String(item).replace(/[^0-9]/g, '');
         if (!num || num.length > LIMITS.TARGET_NUMBER) return null;
-        return {
-          number: num,
-          type:   obj.type ?? 'phone',
-          bank:   obj.bank ?? null,
-          name:   obj.name ?? null,
-        };
-      }
-      const num = String(item).replace(/[^0-9]/g, '');
-      if (!num || num.length > LIMITS.TARGET_NUMBER) return null;
-      return { number: num, type: 'phone', bank: null, name: null };
-    }).filter(Boolean).slice(0, 5);
+        return { number: num, type: 'phone', bank: null, name: null };
+      })
+      .filter((item: TargetNumberItem | null): item is TargetNumberItem => item !== null)
+      .slice(0, 5);
 
-    if (!cleanTargetNumbers.some((t: any) => t?.number === cleanNumber)) {
+    if (!cleanTargetNumbers.some((t: TargetNumberItem) => t.number === cleanNumber)) {
       cleanTargetNumbers.unshift({
         number: cleanNumber,
         type:   body.target_type ?? 'phone',
         bank:   body.bank_name ?? null,
-        name:   body.target_name
-          ? sanitizeText(String(body.target_name)) : null,
+        name:   body.target_name ? sanitizeText(String(body.target_name)) : null,
       });
     }
 
@@ -295,32 +261,25 @@ reports.post('/', authMiddleware, async (c) => {
       .insert({
         reporter_id:           userId,
         target_number:         cleanNumber,
-        target_name:           body.target_name
-          ? sanitizeText(String(body.target_name)) : null,
+        target_name:           body.target_name ? sanitizeText(String(body.target_name)) : null,
         target_type:           body.target_type,
         category:              categoryClean,
         chronology:            sanitizeChronology(chronologyRaw),
         evidence_url:          evidenceUrls[0] || null,
         evidence_urls:         evidenceUrls,
         status:                'pending',
-        bank_name:             body.bank_name
-          ? sanitizeText(String(body.bank_name)) : null,
+        bank_name:             body.bank_name ? sanitizeText(String(body.bank_name)) : null,
         loss_amount:           body.loss_amount || null,
         incident_date:         body.incident_date || null,
-        platform:              body.platform
-          ? sanitizeText(String(body.platform)) : null,
+        platform:              body.platform ? sanitizeText(String(body.platform)) : null,
         link_url:              isValidHttpUrl(body.link_url),
-        social_media_accounts: body.social_media_accounts
-          ? sanitizeArray(body.social_media_accounts) : [],
+        social_media_accounts: body.social_media_accounts ? sanitizeArray(body.social_media_accounts) : [],
         has_other_victims:     body.has_other_victims || null,
         reported_to:           body.reported_to ?? [],
-        suspect_photo_url:     isValidEvidenceUrl(body.suspect_photo_url)
-          ? body.suspect_photo_url : null,
+        suspect_photo_url:     isValidEvidenceUrl(body.suspect_photo_url) ? body.suspect_photo_url : null,
         target_numbers:        cleanTargetNumbers,
-        store_name:            body.store_name
-          ? sanitizeText(String(body.store_name)) : null,
-        suspect_city:          body.suspect_city
-          ? sanitizeText(String(body.suspect_city)) : null,
+        store_name:            body.store_name ? sanitizeText(String(body.store_name)) : null,
+        suspect_city:          body.suspect_city ? sanitizeText(String(body.suspect_city)) : null,
       })
       .select('id')
       .single();
@@ -335,45 +294,26 @@ reports.post('/', authMiddleware, async (c) => {
     c.executionCtx.waitUntil((async () => {
       try {
         const { data: profile } = await supabase
-          .from('profiles')
-          .select('full_name, email')
-          .eq('id', userId)
-          .single();
+          .from('profiles').select('full_name, email').eq('id', userId).single();
         const { data: freshReport } = await supabase
           .from('reports').select('*').eq('id', reportId).single();
-
-        let finalStatus: 'pending' | 'verified' | 'rejected' = 'pending';
 
         if (freshReport) {
           const result = await scoreReport(freshReport as RobotReport, supabase);
           await applyVerdict(reportId, result, supabase);
-          finalStatus = result.verdict;
 
           if (result.verdict === 'rejected' && c.env.LIMITER)
             await recordRejection(userId, ip, c.env.LIMITER);
 
           await reEvaluateByNumber(cleanNumber, supabase);
-
-          if (
-            (finalStatus === 'verified' || finalStatus === 'rejected') &&
-            profile?.email
-          ) {
-            await sendStatusEmail(
-              supabase, userId, cleanNumber,
-              reportId, finalStatus, c.env.RESEND_API_KEY
-            );
-          }
         }
 
-        const reportUrl = `https://kawaltransaksi.com/check/${cleanNumber}`;
         await Promise.all([
           profile?.email && sendReportCreatedEmail({
             to:           profile.email,
             fullName:     profile.full_name ?? 'Pengguna',
             targetNumber: cleanNumber,
             category:     categoryClean,
-            status:       finalStatus === 'verified' ? 'verified' : 'pending',
-            reportUrl,
             apiKey:       c.env.RESEND_API_KEY,
           }).catch(err => console.error('[EMAIL] User:', err)),
           c.env.ADMIN_EMAIL && sendNewReportAdminEmail({
@@ -381,7 +321,7 @@ reports.post('/', authMiddleware, async (c) => {
             reporterName: profile?.full_name ?? 'Pengguna',
             targetNumber: cleanNumber,
             category:     categoryClean,
-            status:       finalStatus === 'verified' ? 'verified' : 'pending',
+            status:       'pending',
             reportUrl:    'https://kawaltransaksi.com/admin',
             apiKey:       c.env.RESEND_API_KEY,
           }).catch(err => console.error('[EMAIL] Admin:', err)),
@@ -401,7 +341,7 @@ reports.post('/', authMiddleware, async (c) => {
 
 reports.post('/withdraw', authMiddleware, async (c) => {
   try {
-    const userId      = c.get('userId');
+    const userId       = c.get('userId');
     const { reportId } = await c.req.json();
 
     if (!reportId || !UUID_REGEX.test(reportId))
@@ -409,31 +349,21 @@ reports.post('/withdraw', authMiddleware, async (c) => {
 
     const supabase = getSupabaseAdmin(c.env);
     const { data: report, error: fetchError } = await supabase
-      .from('reports')
-      .select('id, status, reporter_id, target_number')
-      .eq('id', reportId)
-      .eq('reporter_id', userId)
-      .single();
+      .from('reports').select('id, status, reporter_id, target_number')
+      .eq('id', reportId).eq('reporter_id', userId).single();
 
     if (fetchError || !report)
       return c.json({ success: false, message: 'Laporan tidak ditemukan.' }, 404);
     if (report.status === 'withdrawn')
-      return c.json({
-        success: false, message: 'Laporan sudah dalam status revisi.',
-      }, 400);
+      return c.json({ success: false, message: 'Laporan sudah dalam status revisi.' }, 400);
 
     const { error } = await supabase
-      .from('reports')
-      .update({ status: 'withdrawn' })
-      .eq('id', reportId)
-      .eq('reporter_id', userId);
+      .from('reports').update({ status: 'withdrawn' })
+      .eq('id', reportId).eq('reporter_id', userId);
     if (error) throw error;
 
     c.executionCtx.waitUntil(
-      sendStatusEmail(
-        supabase, userId, report.target_number,
-        reportId, 'withdrawn', c.env.RESEND_API_KEY
-      )
+      sendStatusEmail(supabase, userId, report.target_number, reportId, 'withdrawn', c.env.RESEND_API_KEY)
     );
 
     return c.json({ success: true, message: 'Laporan berhasil ditarik.' });
@@ -453,66 +383,48 @@ reports.put('/:reportId', authMiddleware, async (c) => {
       return c.json({ success: false, message: 'ID laporan tidak valid.' }, 400);
 
     const body = await c.req.json();
-
     const validationError = validateReportBody(body);
     if (validationError)
       return c.json({ success: false, message: validationError }, 400);
 
     const supabase = getSupabaseAdmin(c.env);
     const { data: report, error: fetchError } = await supabase
-      .from('reports')
-      .select('id, status, reporter_id, target_number')
-      .eq('id', reportId)
-      .eq('reporter_id', userId)
-      .single();
+      .from('reports').select('id, status, reporter_id, target_number')
+      .eq('id', reportId).eq('reporter_id', userId).single();
 
     if (fetchError || !report)
       return c.json({ success: false, message: 'Laporan tidak ditemukan.' }, 404);
     if (report.status !== 'withdrawn')
-      return c.json({
-        success: false,
-        message: 'Hanya laporan "Sedang Direvisi" yang dapat diedit.',
-      }, 400);
+      return c.json({ success: false, message: 'Hanya laporan "Sedang Direvisi" yang dapat diedit.' }, 400);
 
-    const chronologyRaw    = String(body.chronology ?? '');
-    const categoryClean    = sanitizeText(String(body.category ?? '').trim());
     const editedEvidenceUrls = sanitizeEvidenceUrls(body.evidence_urls);
 
     const { error } = await supabase
       .from('reports')
       .update({
-        target_name:           body.target_name
-          ? sanitizeText(String(body.target_name)) : null,
-        category:              categoryClean,
-        chronology:            sanitizeChronology(chronologyRaw),
-        bank_name:             body.bank_name
-          ? sanitizeText(String(body.bank_name)) : null,
+        target_name:           body.target_name ? sanitizeText(String(body.target_name)) : null,
+        category:              sanitizeText(String(body.category ?? '').trim()),
+        chronology:            sanitizeChronology(String(body.chronology ?? '')),
+        bank_name:             body.bank_name ? sanitizeText(String(body.bank_name)) : null,
         loss_amount:           body.loss_amount || null,
         incident_date:         body.incident_date || null,
-        platform:              body.platform
-          ? sanitizeText(String(body.platform)) : null,
+        platform:              body.platform ? sanitizeText(String(body.platform)) : null,
         link_url:              isValidHttpUrl(body.link_url),
-        social_media_accounts: body.social_media_accounts
-          ? sanitizeArray(body.social_media_accounts) : [],
+        social_media_accounts: body.social_media_accounts ? sanitizeArray(body.social_media_accounts) : [],
         has_other_victims:     body.has_other_victims || null,
         reported_to:           body.reported_to ?? [],
         evidence_urls:         editedEvidenceUrls,
         evidence_url:          editedEvidenceUrls[0] || null,
-        suspect_photo_url:     isValidEvidenceUrl(body.suspect_photo_url)
-          ? body.suspect_photo_url : null,
-        store_name:            body.store_name
-          ? sanitizeText(String(body.store_name)) : null,
-        suspect_city:          body.suspect_city
-          ? sanitizeText(String(body.suspect_city)) : null,
+        suspect_photo_url:     isValidEvidenceUrl(body.suspect_photo_url) ? body.suspect_photo_url : null,
+        store_name:            body.store_name ? sanitizeText(String(body.store_name)) : null,
+        suspect_city:          body.suspect_city ? sanitizeText(String(body.suspect_city)) : null,
         status:                'pending',
         robot_score:           0,
         robot_status:          'pending',
         robot_verdict_at:      null,
         robot_reasons:         [],
       })
-      .eq('id', reportId)
-      .eq('reporter_id', userId);
-
+      .eq('id', reportId).eq('reporter_id', userId);
     if (error) throw error;
 
     c.executionCtx.waitUntil((async () => {
@@ -523,10 +435,7 @@ reports.put('/:reportId', authMiddleware, async (c) => {
           const result = await scoreReport(freshReport as RobotReport, supabase);
           await applyVerdict(reportId, result, supabase);
         }
-        await sendStatusEmail(
-          supabase, userId, report.target_number,
-          reportId, 'pending', c.env.RESEND_API_KEY
-        );
+        await sendStatusEmail(supabase, userId, report.target_number, reportId, 'pending', c.env.RESEND_API_KEY);
       } catch (err) {
         console.error('[REPORTS] Background resubmit error:', err);
       }
@@ -538,8 +447,6 @@ reports.put('/:reportId', authMiddleware, async (c) => {
   }
 });
 
-export default reports;
-
 // -- GET /api/reports/check-number/:number ------------------------------------
 
 reports.get('/check-number/:number', async (c) => {
@@ -550,29 +457,22 @@ reports.get('/check-number/:number', async (c) => {
 
     const supabase = getSupabaseAdmin(c.env);
     const { count: totalReports } = await supabase
-      .from('reports')
-      .select('id', { count: 'exact', head: true })
-      .eq('target_number', number)
-      .neq('status', 'withdrawn');
+      .from('reports').select('id', { count: 'exact', head: true })
+      .eq('target_number', number).neq('status', 'withdrawn');
 
     if (!totalReports || totalReports === 0)
       return c.json({ success: true, data: { exists: false, totalReports: 0 } });
 
     const { data: blacklist } = await supabase
-      .from('blacklist')
-      .select('level')
-      .eq('target_number', number)
-      .single();
+      .from('blacklist').select('level').eq('target_number', number).single();
 
     return c.json({
       success: true,
-      data: {
-        exists:       true,
-        totalReports: totalReports ?? 0,
-        level:        blacklist?.level ?? null,
-      },
+      data: { exists: true, totalReports: totalReports ?? 0, level: blacklist?.level ?? null },
     });
   } catch {
     return c.json({ success: false, message: 'Terjadi kesalahan.' }, 500);
   }
 });
+
+export default reports;

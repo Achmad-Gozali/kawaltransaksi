@@ -1,65 +1,80 @@
-// ============================================
-//  LOKASI: app/faq/page.tsx
-// ============================================
-
-import Link from 'next/link';
-import { ArrowLeft, HelpCircle } from 'lucide-react';
-import type { Metadata } from 'next';
+import Link from "next/link";
+import { ArrowLeft, HelpCircle } from "lucide-react";
+import type { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: 'FAQ - KawalTransaksi',
+  title: "FAQ - KawalTransaksi",
   description:
-    'Pertanyaan yang sering diajukan tentang KawalTransaksi, platform anti-penipuan komunitas.',
+    "Pertanyaan yang sering diajukan tentang KawalTransaksi, platform anti-penipuan komunitas.",
 };
 
 const faqs = [
   {
-    q: 'Apa itu KawalTransaksi?',
-    a: 'KawalTransaksi adalah platform komunitas yang memungkinkan siapa saja untuk mengecek dan melaporkan nomor telepon atau rekening bank yang terindikasi penipuan. Database kami dibangun dan diverifikasi oleh komunitas pengguna.',
+    q: "Apa itu KawalTransaksi?",
+    a: "KawalTransaksi adalah platform komunitas yang memungkinkan siapa saja untuk mengecek dan melaporkan nomor telepon atau rekening bank yang terindikasi penipuan. Database kami dibangun dan diverifikasi oleh komunitas pengguna.",
   },
   {
-    q: 'Apakah KawalTransaksi gratis?',
-    a: 'Ya, sepenuhnya gratis. Siapa saja bisa mengecek nomor tanpa perlu daftar akun. Untuk membuat laporan, Anda perlu mendaftar akun terlebih dahulu.',
+    q: "Apakah KawalTransaksi gratis?",
+    a: "Ya, sepenuhnya gratis. Siapa saja bisa mengecek nomor tanpa perlu daftar akun. Untuk membuat laporan, Anda perlu mendaftar akun terlebih dahulu.",
   },
   {
-    q: 'Bagaimana cara melaporkan nomor penipu?',
+    q: "Bagaimana cara melaporkan nomor penipu?",
     a: 'Daftar akun atau login, lalu klik "Laporkan" di menu navigasi. Isi formulir dengan nomor target, kategori penipuan, kronologi kejadian, dan lampirkan bukti jika ada. Laporan Anda akan diproses oleh sistem AI dan tim moderator.',
   },
   {
-    q: 'Bagaimana proses verifikasi laporan?',
-    a: 'Setiap laporan yang masuk dianalisis oleh AI kami untuk mendeteksi pola penipuan. Jika AI yakin laporan valid (risk level tinggi + kronologi detail), laporan akan otomatis diverifikasi. Jika tidak, laporan akan ditinjau manual oleh tim moderator dalam 1x24 jam.',
+    q: "Bagaimana proses verifikasi laporan?",
+    a: "Setiap laporan yang masuk dianalisis oleh AI kami untuk mendeteksi pola penipuan. Jika AI yakin laporan valid (risk level tinggi + kronologi detail), laporan akan otomatis diverifikasi. Jika tidak, laporan akan ditinjau manual oleh tim moderator dalam 1x24 jam.",
   },
   {
-    q: 'Apakah identitas pelapor dijaga kerahasiaannya?',
-    a: 'Ya. Identitas pelapor (email, nama) tidak pernah ditampilkan di halaman publik. Yang ditampilkan hanya kronologi, kategori, dan status laporan.',
+    q: "Apakah identitas pelapor dijaga kerahasiaannya?",
+    a: "Ya. Identitas pelapor (email, nama) tidak pernah ditampilkan di halaman publik. Yang ditampilkan hanya kronologi, kategori, dan status laporan.",
   },
   {
-    q: 'Apa yang terjadi jika seseorang membuat laporan palsu?',
-    a: 'Laporan palsu atau pencemaran nama baik merupakan pelanggaran serius. Akun pelaku akan diblokir permanen, dan dapat dikenakan konsekuensi hukum sesuai UU ITE yang berlaku di Indonesia.',
+    q: "Apa yang terjadi jika seseorang membuat laporan palsu?",
+    a: "Laporan palsu atau pencemaran nama baik merupakan pelanggaran serius. Akun pelaku akan diblokir permanen, dan dapat dikenakan konsekuensi hukum sesuai UU ITE yang berlaku di Indonesia.",
   },
   {
-    q: 'Bagaimana cara kerja fitur AI Analysis?',
-    a: 'Fitur AI kami menggunakan teknologi Groq untuk menganalisis dua hal: (1) Kronologi -- AI mendeteksi pola penipuan dari cerita Anda dan menentukan tingkat risiko. (2) Bukti screenshot -- AI memindai keaslian gambar dan mengidentifikasi red flags.',
+    q: "Bagaimana cara kerja fitur AI Analysis?",
+    a: "Fitur AI kami menggunakan teknologi Groq untuk menganalisis dua hal: (1) Kronologi -- AI mendeteksi pola penipuan dari cerita Anda dan menentukan tingkat risiko. (2) Bukti screenshot -- AI memindai keaslian gambar dan mengidentifikasi red flags.",
   },
   {
-    q: 'Apakah data di KawalTransaksi akurat?',
-    a: 'Data kami berasal dari laporan komunitas yang telah melalui proses verifikasi (AI + manual). Meskipun kami berusaha menjaga akurasi, kami menyarankan pengguna untuk tetap melakukan verifikasi mandiri sebelum mengambil keputusan.',
+    q: "Apakah data di KawalTransaksi akurat?",
+    a: "Data kami berasal dari laporan komunitas yang telah melalui proses verifikasi (AI + manual). Meskipun kami berusaha menjaga akurasi, kami menyarankan pengguna untuk tetap melakukan verifikasi mandiri sebelum mengambil keputusan.",
   },
   {
-    q: 'Saya korban penipuan, apa yang harus dilakukan?',
-    a: 'Segera laporkan ke pihak kepolisian (buat laporan polisi), hubungi bank Anda untuk memblokir transaksi, dan laporkan nomor penipu di KawalTransaksi agar orang lain tidak menjadi korban yang sama.',
+    q: "Saya korban penipuan, apa yang harus dilakukan?",
+    a: "Segera laporkan ke pihak kepolisian (buat laporan polisi), hubungi bank Anda untuk memblokir transaksi, dan laporkan nomor penipu di KawalTransaksi agar orang lain tidak menjadi korban yang sama.",
   },
   {
-    q: 'Bagaimana cara menghapus laporan yang salah?',
+    q: "Bagaimana cara menghapus laporan yang salah?",
     a: 'Jika Anda adalah pelapor dan laporan masih berstatus "pending", Anda bisa menghubungi kami melalui halaman Kontak untuk meminta penghapusan. Laporan yang sudah diverifikasi hanya bisa dihapus oleh tim moderator setelah review.',
   },
 ];
 
+const faqSchema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebPage",
+      "@id": "https://kawaltransaksi.com/faq",
+      url: "https://kawaltransaksi.com/faq",
+      name: "FAQ - KawalTransaksi",
+      isPartOf: { "@id": "https://kawaltransaksi.com/#website" },
+    },
+    {
+      "@type": "FAQPage",
+      mainEntity: faqs.map((faq) => ({
+        "@type": "Question",
+        name: faq.q,
+        acceptedAnswer: { "@type": "Answer", text: faq.a },
+      })),
+    },
+  ],
+};
+
 export default function FAQPage() {
   return (
     <div className="min-h-screen bg-zinc-50">
-
-      {/* Subnav Kembali - hanya muncul di mobile */}
       <div className="border-b border-zinc-200 bg-white sm:hidden">
         <div className="max-w-4xl mx-auto px-4 py-4">
           <Link
@@ -74,18 +89,16 @@ export default function FAQPage() {
 
       <div className="max-w-4xl mx-auto px-4 py-16">
         <div className="text-center mb-14">
-
-          {/* Badge FAQ - hanya muncul di mobile */}
           <div className="sm:hidden inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-zinc-100 text-zinc-600 text-[10px] font-bold uppercase tracking-[0.2em] mb-6">
             <HelpCircle className="w-3 h-3" />
             FAQ
           </div>
-
           <h1 className="text-4xl font-extrabold text-zinc-900 tracking-tight mb-3">
             Pertanyaan Umum
           </h1>
           <p className="text-zinc-500 text-lg max-w-xl mx-auto">
-            Jawaban untuk pertanyaan yang paling sering diajukan tentang KawalTransaksi.
+            Jawaban untuk pertanyaan yang paling sering diajukan tentang
+            KawalTransaksi.
           </p>
         </div>
 
@@ -113,6 +126,11 @@ export default function FAQPage() {
           </Link>
         </div>
       </div>
+
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(faqSchema) }}
+      />
     </div>
   );
 }

@@ -7,11 +7,66 @@ import {
   TrendingDown, TrendingUp, Users, AlertCircle,
   ChevronRight, Phone, Building2,
 } from 'lucide-react';
-import StatCard from '@/features/admin/components/StatCard';
-import SectionTitle from '@/features/admin/components/SectionTitle';
-import DailyChart from '@/features/admin/DailyChart';
 import { formatRupiah } from '@/core/utils';
 import type { Report, Stats } from '@/features/admin/types';
+
+// Simple inline bar chart — no recharts dependency, fixed 7 hari
+function WeekBarChart({ reports }: { reports: { created_at: string }[] }) {
+  const data = useMemo(() => {
+    const days: { date: string; label: string; count: number }[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - i);
+      const dateStr = d.toLocaleDateString('en-CA');
+      const label = i === 0
+        ? 'Hari ini'
+        : d.toLocaleDateString('id-ID', { weekday: 'short' });
+      days.push({ date: dateStr, label, count: 0 });
+    }
+    reports.forEach(r => {
+      const d = new Date(r.created_at).toLocaleDateString('en-CA');
+      const day = days.find(x => x.date === d);
+      if (day) day.count++;
+    });
+    return days;
+  }, [reports]);
+
+  const max = Math.max(...data.map(d => d.count), 1);
+  const total = data.reduce((s, d) => s + d.count, 0);
+
+  return (
+    <div>
+      <div className="flex items-center justify-between mb-4">
+        <div>
+          <h3 className="text-sm font-semibold text-slate-900">Laporan Masuk</h3>
+          <p className="text-[11px] text-slate-400 mt-0.5">{total} laporan dalam 7 hari terakhir</p>
+        </div>
+      </div>
+      <div className="flex items-end gap-1.5 h-28">
+        {data.map((d, i) => {
+          const isToday = i === data.length - 1;
+          const heightPct = Math.max((d.count / max) * 100, 4);
+          return (
+            <div key={d.date} className="flex-1 flex flex-col items-center gap-1.5">
+              <span className="text-[10px] font-semibold text-slate-600">{d.count > 0 ? d.count : ''}</span>
+              <div className="w-full flex items-end" style={{ height: '72px' }}>
+                <div
+                  className={`w-full rounded-t-md transition-all duration-500 ${
+                    isToday ? 'bg-emerald-500' : 'bg-slate-200 hover:bg-slate-300'
+                  }`}
+                  style={{ height: `${heightPct}%` }}
+                />
+              </div>
+              <span className={`text-[9px] text-center leading-tight ${isToday ? 'text-emerald-600 font-semibold' : 'text-slate-400'}`}>
+                {d.label}
+              </span>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
+}
 
 export default function DashboardTab({
   stats,
@@ -40,10 +95,12 @@ export default function DashboardTab({
     [reports]
   );
   const pendingReports = useMemo(
-    () => reports.filter(r => r.status === 'pending').slice(0, 5),
+    () => reports.filter(r => r.status === 'pending').slice(0, 6),
     [reports]
   );
-  const bankStats = useMemo(() => {
+
+  // Top 4 bank/nomor saja
+  const topBanks = useMemo(() => {
     const map: Record<string, { count: number; loss: number }> = {};
     reports.forEach(r => {
       const label = r.bank_name || (r.target_type === 'phone' ? 'Nomor Telepon' : 'Lainnya');
@@ -51,19 +108,9 @@ export default function DashboardTab({
       map[label].count++;
       map[label].loss += (Number(r.loss_amount) || 0);
     });
-    return Object.entries(map).sort((a, b) => b[1].count - a[1].count);
+    return Object.entries(map).sort((a, b) => b[1].count - a[1].count).slice(0, 4);
   }, [reports]);
 
-  const categoryStats = useMemo(() => {
-    const map: Record<string, number> = {};
-    reports.forEach(r => {
-      const cat = r.category || 'Lainnya';
-      map[cat] = (map[cat] || 0) + 1;
-    });
-    return Object.entries(map).sort((a, b) => b[1] - a[1]).slice(0, 5);
-  }, [reports]);
-
-  const maxCategory = categoryStats[0]?.[1] || 1;
   const verifiedRate = stats.total > 0 ? Math.round((stats.verified / stats.total) * 100) : 0;
 
   return (
@@ -73,7 +120,7 @@ export default function DashboardTab({
       <div className="flex items-center justify-between">
         <div>
           <h1 className="text-xl font-bold text-slate-900">Dashboard</h1>
-          <p className="text-xs text-slate-400 mt-0.5">Overview semua laporan masuk</p>
+          <p className="text-xs text-slate-400 mt-0.5">Overview operasional hari ini</p>
         </div>
         <div className="text-right hidden sm:block">
           <p className="text-xs text-slate-400">
@@ -119,7 +166,7 @@ export default function DashboardTab({
         ))}
       </div>
 
-      {/* Stat cards sekunder */}
+      {/* Stat hari ini */}
       <div className="grid grid-cols-3 gap-2 sm:gap-3">
         {[
           { label: 'Masuk Hari Ini', value: todayReports.length, color: 'text-blue-600', iconBg: 'bg-blue-50', icon: TrendingUp },
@@ -138,7 +185,7 @@ export default function DashboardTab({
         ))}
       </div>
 
-      {/* Verified rate bar */}
+      {/* Tingkat verifikasi */}
       <div className="bg-white border border-slate-200 rounded-lg p-4">
         <div className="flex items-center justify-between mb-2">
           <p className="text-xs font-medium text-slate-600">Tingkat Verifikasi</p>
@@ -156,71 +203,23 @@ export default function DashboardTab({
         </div>
       </div>
 
-      {/* Chart + Bank stats */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
-        <div className="bg-white border border-slate-200 rounded-lg p-4 sm:p-5">
-          <DailyChart reports={reports} />
-        </div>
-        <div className="bg-white border border-slate-200 rounded-lg p-4 sm:p-5">
-          <h3 className="text-sm font-semibold text-slate-900 mb-4">Platform Terbanyak Dilaporkan</h3>
-          {bankStats.length === 0 ? (
-            <p className="text-sm text-slate-400 text-center py-8">Belum ada data</p>
-          ) : (
-            <div className="space-y-2.5">
-              {bankStats.slice(0, 6).map(([label, data], i) => (
-                <div key={label} className="flex items-center gap-3">
-                  <span className="text-[10px] text-slate-400 w-3 shrink-0">{i + 1}</span>
-                  <div className="w-7 h-7 bg-slate-50 border border-slate-100 rounded-md flex items-center justify-center shrink-0">
-                    {label === 'Nomor Telepon'
-                      ? <Phone className="w-3 h-3 text-slate-400" />
-                      : <Building2 className="w-3 h-3 text-slate-400" />}
-                  </div>
-                  <span className="text-sm text-slate-700 flex-1 truncate">{label}</span>
-                  <div className="flex items-center gap-2 shrink-0">
-                    {data.loss > 0 && (
-                      <span className="text-[11px] text-red-400 font-medium hidden sm:block">{formatRupiah(data.loss)}</span>
-                    )}
-                    <span className="text-xs bg-slate-100 text-slate-600 font-semibold px-2 py-0.5 rounded-md min-w-[24px] text-center">{data.count}</span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      </div>
-
-      {/* Kategori + Pending reports */}
+      {/* Bar chart 7 hari + Perlu Direview */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
 
-        {/* Kategori penipuan */}
+        {/* Bar chart */}
         <div className="bg-white border border-slate-200 rounded-lg p-4 sm:p-5">
-          <h3 className="text-sm font-semibold text-slate-900 mb-4">Kategori Penipuan</h3>
-          {categoryStats.length === 0 ? (
-            <p className="text-sm text-slate-400 text-center py-8">Belum ada data</p>
-          ) : (
-            <div className="space-y-3">
-              {categoryStats.map(([cat, count]) => (
-                <div key={cat}>
-                  <div className="flex items-center justify-between mb-1">
-                    <span className="text-xs text-slate-600 truncate max-w-[180px]">{cat}</span>
-                    <span className="text-xs font-semibold text-slate-700 ml-2">{count}</span>
-                  </div>
-                  <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                    <div
-                      className="h-full bg-emerald-400 rounded-full transition-all duration-500"
-                      style={{ width: `${(count / maxCategory) * 100}%` }}
-                    />
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+          <WeekBarChart reports={reports} />
         </div>
 
-        {/* Laporan pending */}
+        {/* Perlu Direview — lebih prominent */}
         <div className="bg-white border border-slate-200 rounded-lg p-4 sm:p-5">
           <div className="flex items-center justify-between mb-4">
-            <h3 className="text-sm font-semibold text-slate-900">Perlu Direview</h3>
+            <div>
+              <h3 className="text-sm font-semibold text-slate-900">Perlu Direview</h3>
+              {stats.pending > 0 && (
+                <p className="text-[11px] text-amber-500 mt-0.5">{stats.pending} laporan menunggu</p>
+              )}
+            </div>
             {stats.pending > 0 && (
               <button
                 onClick={() => router.push('/admin?tab=laporan')}
@@ -231,12 +230,14 @@ export default function DashboardTab({
             )}
           </div>
           {pendingReports.length === 0 ? (
-            <div className="flex flex-col items-center justify-center py-8 gap-2">
-              <CheckCircle2 className="w-8 h-8 text-emerald-200" />
+            <div className="flex flex-col items-center justify-center py-10 gap-2">
+              <div className="w-12 h-12 bg-emerald-50 rounded-full flex items-center justify-center">
+                <CheckCircle2 className="w-6 h-6 text-emerald-300" />
+              </div>
               <p className="text-sm text-slate-400">Semua laporan sudah direview</p>
             </div>
           ) : (
-            <div className="space-y-2">
+            <div className="space-y-1.5">
               {pendingReports.map(r => (
                 <button
                   key={r.id}
@@ -256,8 +257,40 @@ export default function DashboardTab({
             </div>
           )}
         </div>
-
       </div>
+
+      {/* Top 4 bank — ringkas */}
+      <div className="bg-white border border-slate-200 rounded-lg p-4 sm:p-5">
+        <div className="flex items-center justify-between mb-3">
+          <h3 className="text-sm font-semibold text-slate-900">Nomor Terbanyak Dilaporkan</h3>
+          <button
+            onClick={() => router.push('/admin?tab=statistik')}
+            className="text-xs text-slate-400 hover:text-slate-600 flex items-center gap-0.5"
+          >
+            Lihat detail <ChevronRight className="w-3 h-3" />
+          </button>
+        </div>
+        {topBanks.length === 0 ? (
+          <p className="text-sm text-slate-400 text-center py-4">Belum ada data</p>
+        ) : (
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            {topBanks.map(([label, data], i) => (
+              <div key={label} className="bg-slate-50 rounded-lg p-3 flex items-center gap-2.5">
+                <div className="w-7 h-7 bg-white border border-slate-200 rounded-md flex items-center justify-center shrink-0">
+                  {label === 'Nomor Telepon'
+                    ? <Phone className="w-3 h-3 text-slate-400" />
+                    : <Building2 className="w-3 h-3 text-slate-400" />}
+                </div>
+                <div className="min-w-0">
+                  <p className="text-xs font-semibold text-slate-700 truncate">{label}</p>
+                  <p className="text-[11px] text-slate-400">{data.count} laporan</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
+      </div>
+
     </div>
   );
 }

@@ -35,6 +35,32 @@ const DEV_USE_CASES = [
   { title: "Sistem CRM & Customer Service", desc: "Bekali agen customer service dengan kemampuan verifikasi nomor secara langsung saat menangani aduan." },
 ];
 
+const websiteSchema = {
+  "@context": "https://schema.org",
+  "@graph": [
+    {
+      "@type": "WebSite",
+      "@id": "https://kawaltransaksi.com/#website",
+      "url": "https://kawaltransaksi.com",
+      "name": "KawalTransaksi",
+      "description": "Platform komunitas anti-penipuan digital Indonesia",
+      "inLanguage": "id-ID",
+      "potentialAction": {
+        "@type": "SearchAction",
+        "target": { "@type": "EntryPoint", "urlTemplate": "https://kawaltransaksi.com/check/{search_term_string}" },
+        "query-input": "required name=search_term_string"
+      }
+    },
+    {
+      "@type": "Organization",
+      "@id": "https://kawaltransaksi.com/#organization",
+      "name": "KawalTransaksi",
+      "url": "https://kawaltransaksi.com",
+      "logo": "https://kawaltransaksi.com/icons/icon-192x192.png",
+    }
+  ]
+};
+
 function getPlatformLogo(type: string, bankName: string | null): string | null {
   if (!bankName) return null;
   const key = bankName.toLowerCase();
@@ -192,7 +218,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Wave putih → abu */}
       <div className="bg-white overflow-hidden">
         <svg viewBox="0 0 1440 60" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" className="w-full h-8 sm:h-14 block">
           <path d="M0,0 C480,60 960,0 1440,40 L1440,60 L0,60 Z" fill="#f1f5f9" />
@@ -212,7 +237,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Wave abu → putih */}
       <div className="bg-slate-100 overflow-hidden">
         <svg viewBox="0 0 1440 60" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" className="w-full h-8 sm:h-14 block">
           <path d="M0,40 C360,0 1080,60 1440,20 L1440,60 L0,60 Z" fill="#ffffff" />
@@ -269,7 +293,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Wave putih → abu */}
       <div className="bg-white overflow-hidden">
         <svg viewBox="0 0 1440 60" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" className="w-full h-8 sm:h-14 block">
           <path d="M0,20 C360,60 1080,0 1440,50 L1440,60 L0,60 Z" fill="#f1f5f9" />
@@ -290,7 +313,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Wave abu → putih */}
       <div className="bg-slate-100 overflow-hidden">
         <svg viewBox="0 0 1440 60" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" className="w-full h-8 sm:h-14 block">
           <path d="M0,40 C360,0 1080,60 1440,20 L1440,60 L0,60 Z" fill="#ffffff" />
@@ -372,7 +394,6 @@ export default async function HomePage() {
         </div>
       </section>
 
-      {/* Legal links */}
       <section className="bg-white py-6 border-t border-slate-200">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 flex items-center justify-center gap-6">
           <Link href="/kebijakan-privasi" className="text-xs text-slate-400 hover:text-slate-600 transition-colors">Kebijakan Privasi</Link>
@@ -380,6 +401,7 @@ export default async function HomePage() {
         </div>
       </section>
 
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }} />
     </main>
   );
 }
