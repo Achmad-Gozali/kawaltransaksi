@@ -26,7 +26,14 @@ const app = new Hono<{ Bindings: Env }>();
 
 app.use('*', cors({
   origin: (origin, c) => {
-    const allowed = ['http://localhost:3000', 'http://localhost:3001', 'https://kawaltransaksi.com', c.env.FRONTEND_URL].filter(Boolean);
+    const allowed = [
+      'http://localhost:3000',
+      'http://localhost:3001',
+      'https://kawaltransaksi.com',
+      'https://www.kawaltransaksi.com',
+      c.env.FRONTEND_URL,
+      c.env.FRONTEND_URL_CLONE,
+    ].filter(Boolean);
     if (!origin) return '*';
     return allowed.includes(origin) ? origin : null;
   },
@@ -54,8 +61,15 @@ const originValidator = async (c: HonoCtx, next: Next) => {
   if (internalKey && internalKey === c.env.INTERNAL_API_KEY) return next();
   const origin = c.req.header('Origin') || c.req.header('Referer') || '';
   if (!origin.trim()) return next();
-  const allowed = ['http://localhost:3000', 'http://localhost:3001', 'https://kawaltransaksi.com', c.env.FRONTEND_URL].filter(Boolean);
-  if (!allowed.some((a: string) => origin.startsWith(a)))
+  const allowed = [
+    'http://localhost:3000',
+    'http://localhost:3001',
+    'https://kawaltransaksi.com',
+    'https://www.kawaltransaksi.com',
+    c.env.FRONTEND_URL,
+    c.env.FRONTEND_URL_CLONE,
+  ].filter((x): x is string => Boolean(x));
+  if (!allowed.some((a) => origin.startsWith(a)))
     return c.json({ success: false, message: 'Akses ditolak.' }, 403);
   return next();
 };
@@ -133,8 +147,6 @@ const kvRateLimit = async (
   return next();
 };
 
-// FIX: tambah /api/v1 ke skip list agar tidak kena global rate limit 20/menit
-// /api/v1 punya rate limit sendiri di api-public.route.ts (60 req/menit per IP)
 app.use('/api/*', (c, next) => {
   const path = new URL(c.req.url).pathname;
   if (path.startsWith('/api/robot') || path.startsWith('/api/v1')) return next();

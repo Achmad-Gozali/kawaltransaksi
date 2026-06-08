@@ -10,32 +10,28 @@ routes = [
 [vars]
 NODE_ENV = "production"
 FRONTEND_URL = "https://kawaltransaksi.com"
+FRONTEND_URL_CLONE = "https://kawaltransaksi-605520424162.asia-southeast1.run.app"
 ADMIN_EMAIL = "kawaltransaksi@gmail.com"
 R2_PUBLIC_URL = "https://cdn.kawaltransaksi.com"
-# TURNSTILE_SECRET_KEY & SUPABASE secrets -> gunakan: wrangler secret put
-# R2_ACCESS_KEY_ID & R2_SECRET_ACCESS_KEY -> gunakan: wrangler secret put
 
 [[kv_namespaces]]
 binding = "LIMITER"
 id = "a218c09fba30472abde923a131764ba0"
 
-# -- R2 Bucket -----------------------------------------------------------------
 [[r2_buckets]]
 binding = "BUCKET"
 bucket_name = "kawaltransaksi"
 
-# -- Cloudflare native rate limiting -------------------------------------------
 [[unsafe.bindings]]
 name = "AUTH_RATE_LIMITER"
 type = "ratelimit"
 namespace_id = "1001"
 simple = { limit = 100, period = 60 }
 
-# -- Cron Triggers -------------------------------------------------------------
 [triggers]
 crons = [
-  "0 23 * * SUN",   # Artikel mingguan -- Minggu 23:00 UTC (Senin 06:00 WIB)
-  "*/30 * * * *",   # Robot scheduler -- tiap 30 menit (evaluate laporan pending)
-  "0 * * * *",      # Trend detector -- tiap 1 jam (deteksi nomor viral)
-  "0 19 * * *",     # Cleanup robot_logs -- tiap hari 19:00 UTC (02:00 WIB)
+  "0 23 * * SUN",
+  "*/30 * * * *",
+  "0 * * * *",
+  "0 19 * * *",
 ]
