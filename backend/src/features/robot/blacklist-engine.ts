@@ -1,10 +1,8 @@
-// ============================================
-//  LOKASI: backend/src/features/robot/blacklist-engine.ts
-// ============================================
-
 import { getSupabaseAdmin } from '../../core/supabase';
 
 type BlacklistLevel = 'medium' | 'high' | 'critical';
+
+const MIN_UNIQUE_REPORTERS = 2;
 
 function getLevel(uniqueReporters: number): BlacklistLevel {
   if (uniqueReporters >= 20) return 'critical';
@@ -12,13 +10,10 @@ function getLevel(uniqueReporters: number): BlacklistLevel {
   return 'medium';
 }
 
-// -- Update blacklist saat ada laporan verified baru ---------------------------
-
 export async function updateBlacklist(
   targetNumber: string,
   supabase: ReturnType<typeof getSupabaseAdmin>
 ): Promise<void> {
-  // Hitung total laporan & unique reporters untuk nomor ini
   const { data: stats } = await supabase
     .from('reports')
     .select('reporter_id')
@@ -30,12 +25,10 @@ export async function updateBlacklist(
   const totalReports    = stats.length;
   const uniqueReporters = new Set(stats.map(r => r.reporter_id).filter(Boolean)).size;
 
-  // Hanya masuk blacklist kalau minimal 5 unique reporters
-  if (uniqueReporters < 5) return;
+  if (uniqueReporters < MIN_UNIQUE_REPORTERS) return;
 
   const level = getLevel(uniqueReporters);
 
-  // Upsert ke tabel blacklist
   await supabase.from('blacklist').upsert({
     target_number:    targetNumber,
     level,
@@ -47,8 +40,6 @@ export async function updateBlacklist(
 
   console.log(`[BLACKLIST] ${targetNumber} -> ${level} (${uniqueReporters} reporters)`);
 }
-
-// -- Remove dari blacklist kalau tidak ada laporan verified --------------------
 
 export async function removeFromBlacklist(
   targetNumber: string,
@@ -65,8 +56,6 @@ export async function removeFromBlacklist(
     console.log(`[BLACKLIST] ${targetNumber} dihapus dari blacklist`);
   }
 }
-
-// -- Cek apakah nomor ada di blacklist ----------------------------------------
 
 export async function checkBlacklist(
   targetNumber: string,
@@ -88,9 +77,7 @@ export async function checkBlacklist(
   };
 }
 
-// -- Confidence decay: turunkan level kalau tidak ada laporan baru -------------
-// Dipanggil oleh cron tiap bulan
-
+// Dipanggil cron tiap bulan — turunkan level entri blacklist yang sudah lama tidak aktif
 export async function runConfidenceDecay(
   supabase: ReturnType<typeof getSupabaseAdmin>
 ): Promise<{ processed: number; downgraded: number; removed: number }> {
@@ -99,31 +86,37 @@ export async function runConfidenceDecay(
   const sixMonthsAgo = new Date();
   sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6);
 
-  // Ambil semua blacklist yang tidak ada laporan baru dalam 6 bulan
   const { data: staleEntries } = await supabase
     .from('blacklist')
-    .select('*')
+    .select('target_number, level')
     .lt('last_reported_at', sixMonthsAgo.toISOString());
 
   if (!staleEntries?.length) return stats;
 
-  for (const entry of staleEntries) {
-    stats.processed++;
+  stats.processed = staleEntries.length;
 
-    if (entry.level === 'medium') {
-      // Medium yang sudah lama -> hapus
-      await supabase.from('blacklist').delete().eq('target_number', entry.target_number);
-      stats.removed++;
-    } else {
-      // High -> Medium, Critical -> High
-      const newLevel: BlacklistLevel = entry.level === 'critical' ? 'high' : 'medium';
-      await supabase.from('blacklist').update({
-        level:      newLevel,
-        updated_at: new Date().toISOString(),
-      }).eq('target_number', entry.target_number);
-      stats.downgraded++;
-    }
-  }
+  const toDelete    = staleEntries.filter(e => e.level === 'medium').map(e => e.target_number);
+  const toCritical  = staleEntries.filter(e => e.level === 'critical').map(e => e.target_number);
+  const toDowngrade = staleEntries.filter(e => e.level === 'high').map(e => e.target_number);
+  const now         = new Date().toISOString();
+
+  // Bulk ops — dari N query jadi maksimal 3 query
+  await Promise.all([
+    toDelete.length
+      ? supabase.from('blacklist').delete().in('target_number', toDelete)
+      : Promise.resolve(),
+
+    toCritical.length
+      ? supabase.from('blacklist').update({ level: 'high', updated_at: now }).in('target_number', toCritical)
+      : Promise.resolve(),
+
+    toDowngrade.length
+      ? supabase.from('blacklist').update({ level: 'medium', updated_at: now }).in('target_number', toDowngrade)
+      : Promise.resolve(),
+  ]);
+
+  stats.removed    = toDelete.length;
+  stats.downgraded = toCritical.length + toDowngrade.length;
 
   console.log('[BLACKLIST] Confidence decay selesai:', stats);
   return stats;

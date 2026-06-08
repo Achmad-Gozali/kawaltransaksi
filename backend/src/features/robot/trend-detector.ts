@@ -1,59 +1,83 @@
-// ============================================
-//  LOKASI: backend/src/features/robot/trend-detector.ts
-// ============================================
-
 import { getSupabaseAdmin } from '../../core/supabase';
-import { writeLog } from './audit-logger';
+import { writeLog }         from './audit-logger';
 
-const VIRAL_THRESHOLD = 10; // laporan dalam 24 jam = viral
-
-// -- Deteksi nomor viral -------------------------------------------------------
+const VIRAL_THRESHOLD = 10;
 
 export async function detectTrends(
   supabase: ReturnType<typeof getSupabaseAdmin>
-): Promise<{ viral: number; updated: number }> {
-  const stats = { viral: 0, updated: 0 };
-
+): Promise<{ viral: number; updated: number; reset: number }> {
+  const stats    = { viral: 0, updated: 0, reset: 0 };
   const since24h = new Date(Date.now() - 86400000).toISOString();
+  const now      = new Date().toISOString();
 
-  // Ambil semua nomor yang dilaporkan dalam 24 jam terakhir
   const { data: recentReports } = await supabase
     .from('reports')
     .select('target_number')
     .gte('created_at', since24h)
     .neq('status', 'withdrawn');
 
-  if (!recentReports?.length) return stats;
-
-  // Hitung jumlah laporan per nomor
   const countMap: Record<string, number> = {};
-  for (const r of recentReports) {
+  for (const r of recentReports ?? []) {
     countMap[r.target_number] = (countMap[r.target_number] ?? 0) + 1;
   }
 
-  for (const [targetNumber, count] of Object.entries(countMap)) {
-    const isViral = count >= VIRAL_THRESHOLD;
+  const activeNumbers = Object.keys(countMap);
 
-    await supabase.from('robot_trends').upsert({
-      target_number: targetNumber,
-      report_count:  count,
-      is_viral:      isViral,
-      updated_at:    new Date().toISOString(),
-      ...(isViral && { detected_at: new Date().toISOString() }),
-    }, { onConflict: 'target_number' });
+  if (activeNumbers.length > 0) {
+    // Bulk upsert semua sekaligus — dari N query jadi 1
+    const upsertRows = activeNumbers.map(num => {
+      const count   = countMap[num];
+      const isViral = count >= VIRAL_THRESHOLD;
+      if (isViral) stats.viral++;
+      return {
+        target_number: num,
+        report_count:  count,
+        is_viral:      isViral,
+        updated_at:    now,
+        ...(isViral && { detected_at: now }),
+      };
+    });
 
-    stats.updated++;
-    if (isViral) {
-      stats.viral++;
-      console.log(`[TREND]  Nomor viral: ${targetNumber} (${count} laporan dalam 24 jam)`);
+    await supabase.from('robot_trends').upsert(upsertRows, { onConflict: 'target_number' });
+    stats.updated = activeNumbers.length;
+
+    if (stats.viral > 0) {
+      console.log(`[TREND] ${stats.viral} nomor viral terdeteksi`);
     }
+
+    // Reset nomor yang sudah tidak aktif dalam 24 jam
+    const { data: staleViral } = await supabase
+      .from('robot_trends')
+      .select('target_number')
+      .eq('is_viral', true)
+      .not('target_number', 'in', `(${activeNumbers.map(n => `"${n}"`).join(',')})`);
+
+    if (staleViral?.length) {
+      await supabase
+        .from('robot_trends')
+        .update({ is_viral: false, updated_at: now })
+        .in('target_number', staleViral.map(r => r.target_number));
+
+      stats.reset = staleViral.length;
+      console.log(`[TREND] Reset ${stats.reset} nomor yang tidak lagi viral`);
+    }
+  } else {
+    // Tidak ada laporan sama sekali dalam 24 jam — reset semua yang masih viral
+    const { count: resetCount } = await supabase
+      .from('robot_trends')
+      .update({ is_viral: false, updated_at: now })
+      .eq('is_viral', true);
+
+    stats.reset = resetCount ?? 0;
   }
 
-  await writeLog({ action: 'scheduler', reasons: [{ type: 'trend_detection', ...stats }] }, supabase).catch(() => {});
+  await writeLog({
+    action:  'scheduler',
+    reasons: [{ type: 'trend_detection', ...stats }],
+  }, supabase).catch(() => {});
+
   return stats;
 }
-
-// -- Ambil daftar nomor viral (untuk homepage / admin) ------------------------
 
 export async function getViralNumbers(
   supabase: ReturnType<typeof getSupabaseAdmin>,
@@ -68,8 +92,6 @@ export async function getViralNumbers(
 
   return data ?? [];
 }
-
-// -- Cek apakah satu nomor sedang viral ---------------------------------------
 
 export async function isNumberViral(
   targetNumber: string,

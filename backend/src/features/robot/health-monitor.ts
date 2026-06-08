@@ -1,9 +1,5 @@
-// ============================================
-//  LOKASI: backend/src/features/robot/health-monitor.ts
-// ============================================
-
 import { getSupabaseAdmin } from '../../core/supabase';
-import { writeLog } from './audit-logger';
+import { writeLog }         from './audit-logger';
 
 export interface HealthSnapshot {
   processed:       number;
@@ -15,8 +11,6 @@ export interface HealthSnapshot {
   error_rate:      number;
   checked_at?:     string;
 }
-
-// -- Simpan snapshot health ke DB ----------------------------------------------
 
 export async function saveHealthSnapshot(
   snapshot: HealthSnapshot,
@@ -40,49 +34,37 @@ export async function saveHealthSnapshot(
   }
 }
 
-// -- Ambil health terbaru -- gabungan snapshot + realtime dari reports ----------
-
 export async function getLatestHealth(
   supabase: ReturnType<typeof getSupabaseAdmin>
 ): Promise<HealthSnapshot | null> {
-  // Ambil snapshot terakhir (untuk checked_at, avg_duration_ms, error_rate)
-  const { data: latest } = await supabase
-    .from('robot_health')
-    .select('*')
-    .order('checked_at', { ascending: false })
-    .limit(1)
-    .single();
+  // Dua query ini independen — jalankan paralel
+  const [{ data: latest }, { count: pendingCount }] = await Promise.all([
+    supabase
+      .from('robot_health')
+      .select('*')
+      .order('checked_at', { ascending: false })
+      .limit(1)
+      .single(),
 
-  // Ambil data realtime dari tabel reports (total kumulatif)
-  const [
-    { count: verifiedCount },
-    { count: rejectedCount },
-    { count: pendingCount },
-  ] = await Promise.all([
-    supabase.from('reports').select('id', { count: 'exact', head: true }).eq('status', 'verified'),
-    supabase.from('reports').select('id', { count: 'exact', head: true }).eq('status', 'rejected'),
-    supabase.from('reports').select('id', { count: 'exact', head: true }).eq('status', 'pending'),
+    supabase
+      .from('reports')
+      .select('id', { count: 'exact', head: true })
+      .eq('status', 'pending'),
   ]);
 
-  const verified      = verifiedCount  ?? 0;
-  const rejected      = rejectedCount  ?? 0;
-  const pending_total = pendingCount   ?? 0;
-  const processed     = verified + rejected;
+  if (!latest) return null;
 
-  // Gabungkan: data realtime untuk angka, snapshot untuk metadata waktu
   return {
-    processed,
-    verified,
-    rejected,
-    errors:          latest?.errors          ?? 0,
-    avg_duration_ms: latest?.avg_duration_ms ?? 0,
-    pending_total,
-    error_rate:      latest?.error_rate      ?? 0,
-    checked_at:      latest?.checked_at      ?? null,
+    processed:       latest.processed,
+    verified:        latest.verified,
+    rejected:        latest.rejected,
+    errors:          latest.errors,
+    avg_duration_ms: latest.avg_duration_ms,
+    pending_total:   pendingCount ?? 0,
+    error_rate:      latest.error_rate,
+    checked_at:      latest.checked_at,
   };
 }
-
-// -- Hitung error rate & deteksi anomali ---------------------------------------
 
 export function buildSnapshot(
   stats: { processed: number; verified: number; rejected: number; errors: number },
