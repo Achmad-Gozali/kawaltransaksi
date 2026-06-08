@@ -2,16 +2,15 @@ import type { Metadata, Viewport } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
 import { Analytics } from '@vercel/analytics/next';
-import { GoogleAnalytics } from '@next/third-parties/google';
 import Script from 'next/script';
 import { PostHogProvider } from '@/providers/PostHogProvider';
 
 const inter = Inter({
-  subsets: ['latin'],
-  display: 'swap',
-  preload: true,
+  subsets:  ['latin'],
+  display:  'swap',
+  preload:  true,
   variable: '--font-inter',
-  weight: ['400', '500', '600', '700'],
+  weight:   ['400', '500', '600', '700'],
 });
 
 export const metadata: Metadata = {
@@ -20,12 +19,10 @@ export const metadata: Metadata = {
   metadataBase: new URL('https://kawaltransaksi.com'),
   icons: {
     icon: [
-      { url: '/icons/favicon-32x32.png', sizes: '32x32', type: 'image/png' },
-      { url: '/icons/icon-192x192.png', sizes: '192x192', type: 'image/png' },
+      { url: '/icons/favicon-32x32.png',  sizes: '32x32',   type: 'image/png' },
+      { url: '/icons/icon-192x192.png',   sizes: '192x192', type: 'image/png' },
     ],
-    apple: [
-      { url: '/icons/apple-touch-icon.png', sizes: '180x180', type: 'image/png' },
-    ],
+    apple:    [{ url: '/icons/apple-touch-icon.png', sizes: '180x180', type: 'image/png' }],
     shortcut: '/icons/favicon-32x32.png',
   },
   manifest: '/manifest.json',
@@ -52,45 +49,41 @@ export const metadata: Metadata = {
     'blacklist penipu', 'blacklist rekening penipu', 'kawaltransaksi', 'kawal transaksi',
     'kawaltransaksi.com',
   ],
-  authors: [{ name: 'KawalTransaksi' }],
-  creator: 'KawalTransaksi',
+  authors:   [{ name: 'KawalTransaksi' }],
+  creator:   'KawalTransaksi',
   publisher: 'KawalTransaksi',
   openGraph: {
-    title: 'KawalTransaksi - Cek & Laporkan Nomor Penipu',
+    title:       'KawalTransaksi - Cek & Laporkan Nomor Penipu',
     description: 'Cek nomor HP, rekening bank, dan e-wallet terindikasi penipuan secara gratis. Database laporan komunitas anti-penipuan Indonesia.',
-    type: 'website',
-    locale: 'id_ID',
-    siteName: 'KawalTransaksi',
-    url: 'https://kawaltransaksi.com',
-    images: [
-      {
-        url: '/og-image.png',
-        width: 1200,
-        height: 630,
-        alt: 'KawalTransaksi - Cek & Laporkan Nomor Penipu',
-      },
-    ],
+    type:        'website',
+    locale:      'id_ID',
+    siteName:    'KawalTransaksi',
+    url:         'https://kawaltransaksi.com',
+    images: [{
+      url:    '/og-image.png',
+      width:  1200,
+      height: 630,
+      alt:    'KawalTransaksi - Cek & Laporkan Nomor Penipu',
+    }],
   },
   twitter: {
-    card: 'summary_large_image',
-    title: 'KawalTransaksi - Cek & Laporkan Nomor Penipu',
+    card:        'summary_large_image',
+    title:       'KawalTransaksi - Cek & Laporkan Nomor Penipu',
     description: 'Cek nomor HP, rekening bank, dan e-wallet terindikasi penipuan secara gratis.',
-    images: ['/og-image.png'],
+    images:      ['/og-image.png'],
   },
-  robots: { index: true, follow: true },
-  alternates: {
-    canonical: 'https://kawaltransaksi.com',
-  },
+  robots:     { index: true, follow: true },
+  alternates: { canonical: 'https://kawaltransaksi.com' },
   appleWebApp: {
-    capable: true,
+    capable:        true,
     statusBarStyle: 'black-translucent',
-    title: 'KawalTransaksi',
+    title:          'KawalTransaksi',
   },
 };
 
 export const viewport: Viewport = {
-  themeColor: '#0f172a',
-  width: 'device-width',
+  themeColor:   '#0f172a',
+  width:        'device-width',
   initialScale: 1,
 };
 
@@ -98,17 +91,35 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
   return (
     <html lang="id" className={`scroll-smooth ${inter.variable}`}>
       <head>
-        <link rel="preconnect" href="https://o45112203640541953.ingest.us.sentry.io" />
+        <link rel="preconnect"   href="https://o45112203640541953.ingest.us.sentry.io" />
+        <link rel="preconnect"   href="https://us.i.posthog.com" />
+        <link rel="dns-prefetch" href="https://us-assets.i.posthog.com" />
       </head>
       <body
         className={`${inter.className} bg-zinc-50 text-zinc-900 min-h-screen flex flex-col selection:bg-red-100 selection:text-red-900`}
         suppressHydrationWarning
       >
         <div className="fixed inset-0 -z-10 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px] [mask-image:radial-gradient(ellipse_50%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-50" />
+
         <PostHogProvider>
           {children}
           <Analytics mode="auto" />
-          <GoogleAnalytics gaId="G-BBFDTC3WQX" />
+
+          {/* Google Analytics — lazyOnload: load setelah browser idle, data tetap masuk normal */}
+          <Script
+            src="https://www.googletagmanager.com/gtag/js?id=G-BBFDTC3WQX"
+            strategy="lazyOnload"
+          />
+          <Script id="ga-init" strategy="lazyOnload">
+            {`
+              window.dataLayer = window.dataLayer || [];
+              function gtag(){dataLayer.push(arguments);}
+              gtag('js', new Date());
+              gtag('config', 'G-BBFDTC3WQX');
+            `}
+          </Script>
+
+          {/* Microsoft Clarity */}
           <Script id="microsoft-clarity" strategy="afterInteractive">
             {`
               (function(c,l,a,r,i,t,y){

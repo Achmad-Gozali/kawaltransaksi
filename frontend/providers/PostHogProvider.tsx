@@ -6,17 +6,15 @@ import { usePathname, useSearchParams } from 'next/navigation';
 import { useEffect, Suspense } from 'react';
 
 function PostHogPageView() {
-  const pathname = usePathname();
+  const pathname    = usePathname();
   const searchParams = useSearchParams();
-  const ph = usePostHog();
+  const ph          = usePostHog();
 
   useEffect(() => {
-    if (pathname && ph) {
-      let url = window.origin + pathname;
-      const search = searchParams.toString();
-      if (search) url += `?${search}`;
-      ph.capture('$pageview', { $current_url: url });
-    }
+    if (!pathname || !ph) return;
+    const search = searchParams.toString();
+    const url    = window.origin + pathname + (search ? `?${search}` : '');
+    ph.capture('$pageview', { $current_url: url });
   }, [pathname, searchParams, ph]);
 
   return null;
@@ -24,9 +22,11 @@ function PostHogPageView() {
 
 if (typeof window !== 'undefined') {
   posthog.init('phc_xszesErW9x2iLygAmg8Lu2AGsKHH3rdErMswt3jpw58g', {
-    api_host: 'https://us.i.posthog.com',
+    api_host:        'https://us.i.posthog.com',
     capture_pageview: false,
     capture_pageleave: true,
+    // Disable surveys script → hemat ~25 KiB
+    disable_surveys: true,
   });
 }
 
