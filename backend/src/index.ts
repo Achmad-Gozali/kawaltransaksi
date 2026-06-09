@@ -93,8 +93,8 @@ app.use('/api/*', async (c, next) => {
   if (['GET', 'HEAD', 'OPTIONS'].includes(c.req.method)) return next();
   const cl = c.req.header('Content-Length');
   if (cl) {
-    const size  = parseInt(cl, 10);
-    const path  = new URL(c.req.url).pathname;
+    const size = parseInt(cl, 10);
+    const path = new URL(c.req.url).pathname;
     const limit = Object.entries(SIZE_LIMITS).find(([prefix]) => path.startsWith(prefix))?.[1] ?? 1024 * 1024;
     if (size > limit) return c.json({ success: false, message: 'Ukuran request terlalu besar.' }, 413);
   }
@@ -103,7 +103,7 @@ app.use('/api/*', async (c, next) => {
 
 app.use('/api/*', async (c, next) => {
   if (!c.env.LIMITER) return next();
-  const ip   = c.req.header('CF-Connecting-IP') || 'anonymous';
+  const ip = c.req.header('CF-Connecting-IP') || 'anonymous';
   const path = new URL(c.req.url).pathname;
   if (ip === 'anonymous' || ip === '127.0.0.1') return next();
   if (path.startsWith('/api/admin/blacklist') || path.startsWith('/api/admin/iplogs')) return next();
@@ -118,7 +118,8 @@ app.use('/api/auth/*', async (c, next) => {
   if (c.env.AUTH_RATE_LIMITER) {
     const ip = c.req.header('CF-Connecting-IP') || 'anonymous';
     const { success } = await c.env.AUTH_RATE_LIMITER.limit({ key: ip });
-    if (!success) return c.json({ success: false, message: 'Terlalu banyak permintaan. Coba lagi nanti.', retry_after: 60 }, 429);
+    if (!success)
+      return c.json({ success: false, message: 'Terlalu banyak permintaan. Coba lagi nanti.', retry_after: 60 }, 429);
   }
   return next();
 });
@@ -132,7 +133,7 @@ const kvRateLimit = async (
   }
 ) => {
   if (!c.env.LIMITER) return next();
-  const ip   = c.req.header('CF-Connecting-IP') || 'anonymous';
+  const ip = c.req.header('CF-Connecting-IP') || 'anonymous';
   const path = new URL(c.req.url).pathname;
   try {
     const kvKey = `${key}${ip}`;
@@ -147,23 +148,32 @@ const kvRateLimit = async (
   return next();
 };
 
+// Proteksi global — sekarang /api/v1 ikut terkena rate limit global
 app.use('/api/*', (c, next) => {
   const path = new URL(c.req.url).pathname;
-  if (path.startsWith('/api/robot') || path.startsWith('/api/v1')) return next();
-  return kvRateLimit(c, next, { key: 'rl_global_', max: 20, ttl: 60, label: 'GLOBAL RL', logReason: 'Melewati global rate limit', blacklist: true });
+  if (path.startsWith('/api/robot')) return next();
+  return kvRateLimit(c, next, {
+    key: 'rl_global_',
+    max: 20,
+    ttl: 60,
+    label: 'GLOBAL RL',
+    logReason: 'Melewati global rate limit',
+    blacklist: true,
+  });
 });
 
 app.use('/api/auth/*',   (c, next) => kvRateLimit(c, next, { key: 'rl_auth_ip_', max: 5,  ttl: 60, label: 'AUTH RL',   logReason: 'Melewati auth rate limit',   blacklist: true }));
 app.use('/api/search/*', (c, next) => kvRateLimit(c, next, { key: 'rl_search_',  max: 30, ttl: 60, label: 'SEARCH RL', logReason: 'Melewati search rate limit' }));
 
 async function honeypotHandler(c: HonoCtx) {
-  const ip   = c.req.header('CF-Connecting-IP') || 'anonymous';
+  const ip = c.req.header('CF-Connecting-IP') || 'anonymous';
   const path = new URL(c.req.url).pathname;
   if (c.env.LIMITER && ip !== 'anonymous') {
     const key = `blacklist_${ip}`;
     if (!await c.env.LIMITER.get(key)) {
       await c.env.LIMITER.put(key, JSON.stringify({
-        ip, reason: `Honeypot hit: ${path}`, auto: true, label: 'scanner', created_at: new Date().toISOString(),
+        ip, reason: `Honeypot hit: ${path}`, auto: true, label: 'scanner',
+        created_at: new Date().toISOString(),
       }), { expirationTtl: 86400 });
     }
     await logSuspiciousIp(c.env.LIMITER, ip, 'Honeypot hit: scanner detected', path);
@@ -171,7 +181,16 @@ async function honeypotHandler(c: HonoCtx) {
   return c.json({ success: false, message: 'Endpoint tidak ditemukan.' }, 404);
 }
 
-app.get('/health',     (c) => c.json({ status: 'ok', timestamp: new Date().toISOString() }));
+// Fix #2: /health diproteksi dengan secret header
+// Jika tidak ada monitoring eksternal, hapus endpoint ini sepenuhnya
+app.get('/health', async (c) => {
+  const token = c.req.header('X-Health-Token');
+  if (!token || token !== c.env.HEALTH_SECRET) {
+    return c.json({ success: false, message: 'Endpoint tidak ditemukan.' }, 404);
+  }
+  return c.json({ status: 'ok', timestamp: new Date().toISOString() });
+});
+
 app.get('/robots.txt', (c) => c.text([
   'User-agent: *', 'Allow: /', '',
   'Disallow: /api/v1/accounts', 'Disallow: /api/v1/reports', 'Disallow: /api/v1/keys',
@@ -204,7 +223,7 @@ export default {
   fetch: app.fetch,
   async scheduled(event: ScheduledEvent, env: Env, ctx: ExecutionContext) {
     const supabase = getSupabaseAdmin(env);
-    const cron     = event.cron;
+    const cron = event.cron;
 
     console.log(`[CRON] Trigger: ${cron}`);
 

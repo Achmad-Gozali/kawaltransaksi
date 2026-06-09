@@ -13,6 +13,7 @@ export interface Env {
   R2_PUBLIC_URL: string;
   INTERNAL_API_KEY: string;
   FRONTEND_URL_CLONE?: string;
+  HEALTH_SECRET: string;
 
   // Cloudflare R2
   BUCKET: R2Bucket;
