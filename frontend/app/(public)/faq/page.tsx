@@ -11,7 +11,7 @@ export const metadata: Metadata = {
 const faqs = [
   {
     q: "Apa itu KawalTransaksi?",
-    a: "KawalTransaksi adalah platform komunitas yang memungkinkan siapa saja untuk mengecek dan melaporkan nomor telepon atau rekening bank yang terindikasi penipuan. Database kami dibangun dan diverifikasi oleh komunitas pengguna.",
+    a: "KawalTransaksi adalah platform komunitas yang memungkinkan siapa saja untuk mengecek dan melaporkan nomor telepon, rekening bank, atau e-wallet yang terindikasi penipuan. Database kami dibangun dan diverifikasi oleh komunitas pengguna.",
   },
   {
     q: "Apakah KawalTransaksi gratis?",
@@ -19,11 +19,11 @@ const faqs = [
   },
   {
     q: "Bagaimana cara melaporkan nomor penipu?",
-    a: 'Daftar akun atau login, lalu klik "Laporkan" di menu navigasi. Isi formulir dengan nomor target, kategori penipuan, kronologi kejadian, dan lampirkan bukti jika ada. Laporan Anda akan diproses oleh sistem AI dan tim moderator.',
+    a: 'Daftar akun atau login, lalu klik "Laporkan" di menu navigasi. Isi formulir dengan nomor target, kategori penipuan, kronologi kejadian, dan lampirkan bukti jika ada. Laporan Anda akan langsung diproses oleh sistem robot kami.',
   },
   {
     q: "Bagaimana proses verifikasi laporan?",
-    a: "Setiap laporan yang masuk dianalisis oleh AI kami untuk mendeteksi pola penipuan. Jika AI yakin laporan valid (risk level tinggi + kronologi detail), laporan akan otomatis diverifikasi. Jika tidak, laporan akan ditinjau manual oleh tim moderator dalam 1x24 jam.",
+    a: "Setiap laporan dianalisis secara otomatis oleh sistem robot kami yang terdiri dari scoring engine, trend detector, dan blacklist engine. Sistem ini memproses sekitar 95% laporan secara otomatis berdasarkan pola, skor risiko, dan riwayat nomor. Hanya sebagian kecil laporan yang memerlukan tinjauan manual oleh moderator.",
   },
   {
     q: "Apakah identitas pelapor dijaga kerahasiaannya?",
@@ -34,12 +34,16 @@ const faqs = [
     a: "Laporan palsu atau pencemaran nama baik merupakan pelanggaran serius. Akun pelaku akan diblokir permanen, dan dapat dikenakan konsekuensi hukum sesuai UU ITE yang berlaku di Indonesia.",
   },
   {
-    q: "Bagaimana cara kerja fitur AI Analysis?",
-    a: "Fitur AI kami menggunakan teknologi Groq untuk menganalisis dua hal: (1) Kronologi -- AI mendeteksi pola penipuan dari cerita Anda dan menentukan tingkat risiko. (2) Bukti screenshot -- AI memindai keaslian gambar dan mengidentifikasi red flags.",
+    q: "Bagaimana cara kerja sistem robot KawalTransaksi?",
+    a: "Sistem robot kami bekerja layaknya crawler otomatis — terus memantau, menganalisis, dan memperbarui database secara real-time. Setiap laporan masuk akan dievaluasi oleh scoring engine untuk menentukan tingkat risiko, dicocokkan oleh blacklist engine dengan data historis, dan dipantau oleh trend detector untuk mendeteksi pola penipuan baru. Hasilnya, nomor berisiko tinggi dapat otomatis diblacklist tanpa perlu menunggu moderator.",
   },
   {
     q: "Apakah data di KawalTransaksi akurat?",
-    a: "Data kami berasal dari laporan komunitas yang telah melalui proses verifikasi (AI + manual). Meskipun kami berusaha menjaga akurasi, kami menyarankan pengguna untuk tetap melakukan verifikasi mandiri sebelum mengambil keputusan.",
+    a: "Data kami berasal dari laporan komunitas yang telah melalui proses verifikasi otomatis oleh sistem robot kami. Meskipun kami berusaha menjaga akurasi setinggi mungkin, kami tetap menyarankan pengguna untuk melakukan verifikasi mandiri sebelum mengambil keputusan.",
+  },
+  {
+    q: "Dari mana artikel edukasi di KawalTransaksi berasal?",
+    a: "Artikel edukasi kami digenerate secara otomatis oleh sistem AI yang menganalisis tren dan pola penipuan terbaru dari database laporan. Artikel ini diperbarui secara berkala agar selalu relevan dengan modus penipuan yang sedang beredar.",
   },
   {
     q: "Saya korban penipuan, apa yang harus dilakukan?",
