@@ -382,7 +382,7 @@ export default function FeedbackButton() {
         aria-label="Beri feedback"
       >
         <MessageCircle className="w-4 h-4" />
-        <span className="hidden sm:inline">Feedback</span>
+        <span>Feedback</span>
       </button>
 
       {/* -- Backdrop -- */}
