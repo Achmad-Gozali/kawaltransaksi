@@ -378,7 +378,7 @@ export default function FeedbackButton() {
       {/* -- Floating Button -- */}
       <button
         onClick={() => setOpen(true)}
-        className="fixed bottom-6 right-20 z-40 flex items-center gap-2 px-4 py-2.5 bg-slate-900 text-white text-sm font-medium rounded-full shadow-lg hover:bg-slate-700 active:scale-95 transition-all"
+        className="fixed bottom-6 left-6 z-40 flex items-center gap-2 px-4 py-2.5 bg-slate-900 text-white text-sm font-medium rounded-full shadow-lg hover:bg-slate-700 active:scale-95 transition-all"
         aria-label="Beri feedback"
       >
         <MessageCircle className="w-4 h-4" />
