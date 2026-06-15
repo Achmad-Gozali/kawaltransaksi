@@ -80,6 +80,7 @@ app.use('/api/search/*', originValidator);
 const SIZE_LIMITS: Record<string, number> = {
   '/api/auth':     10 * 1024,
   '/api/reports':  512 * 1024,
+  '/api/admin/articles':     5 * 1024 * 1024,
   '/api/admin':    50 * 1024,
   '/api/search':   5 * 1024,
   '/api/upload':   6 * 1024 * 1024,
