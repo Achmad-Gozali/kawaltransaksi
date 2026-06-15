@@ -23,7 +23,7 @@ const faqs = [
   },
   {
     q: "Bagaimana proses verifikasi laporan?",
-    a: "Setiap laporan masuk langsung dianalisis oleh scoring engine kami. Sistem memberikan skor 0–100 berdasarkan sejumlah faktor: jumlah pelapor unik untuk nomor yang sama, kelengkapan dan jumlah bukti foto, detail kronologi, usia akun pelapor, riwayat laporan sebelumnya, nominal kerugian, hingga tanggal kejadian. Laporan dengan skor ≥60 otomatis terverifikasi, skor 30–59 masuk antrean pending, dan skor di bawah 30 ditolak.",
+    a: "Setiap laporan masuk langsung dianalisis oleh scoring engine kami. Sistem memberikan skor 0-100 berdasarkan sejumlah faktor: jumlah pelapor unik untuk nomor yang sama, kelengkapan dan jumlah bukti foto, detail kronologi, usia akun pelapor, riwayat laporan sebelumnya, nominal kerugian, hingga tanggal kejadian. Laporan dengan skor ≥60 otomatis terverifikasi, skor 30–59 masuk antrean pending, dan skor di bawah 30 ditolak.",
   },
   {
     q: "Faktor apa saja yang memengaruhi hasil verifikasi laporan saya?",
