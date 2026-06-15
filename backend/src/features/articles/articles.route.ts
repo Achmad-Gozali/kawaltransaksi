@@ -11,7 +11,9 @@ function getSupabase(env: Env) {
   return createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
 }
 
-// -- GET /api/articles ---------------------------------------------------------
+// ---------------------------------------------------------------------------
+// GET /api/articles
+// ---------------------------------------------------------------------------
 
 app.get('/', async (c) => {
   const { data, error } = await getSupabase(c.env)
@@ -20,26 +22,41 @@ app.get('/', async (c) => {
     .eq('status', 'published')
     .order('published_at', { ascending: false })
     .limit(20);
-  if (error) return c.json({ success: false, message: 'Gagal mengambil artikel.' }, 500);
+
+  if (error) {
+    console.error('[articles] fetch list error:', error.message);
+    return c.json({ success: false, message: 'Gagal mengambil artikel.' }, 500);
+  }
+
   return c.json({ success: true, data });
 });
 
-// -- GET /api/articles/:slug ---------------------------------------------------
+// ---------------------------------------------------------------------------
+// GET /api/articles/:slug
+// ---------------------------------------------------------------------------
 
 app.get('/:slug', async (c) => {
+  const slug = c.req.param('slug');
+
   const { data, error } = await getSupabase(c.env)
     .from('articles')
     .select(ARTICLE_DETAIL_FIELDS)
-    .eq('slug', c.req.param('slug'))
+    .eq('slug', slug)
     .eq('status', 'published')
     .single();
-  if (error || !data) return c.json({ success: false, message: 'Artikel tidak ditemukan.' }, 404);
+
+  if (error || !data) {
+    return c.json({ success: false, message: 'Artikel tidak ditemukan.' }, 404);
+  }
+
   return c.json({ success: true, data });
 });
 
 export default app;
 
-// -- Helpers -------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Helpers
+// ---------------------------------------------------------------------------
 
 const EDUCATION_THEMES: Record<string, string[]> = {
   'Jual Beli Online':     ['ciri-ciri penjual palsu di marketplace', 'cara aman belanja online', 'modus penipuan COD yang marak'],
@@ -66,10 +83,12 @@ function fixArticleFormat(raw: string): string {
     .trim();
 }
 
-interface ReportRow { category: string | null; platform: string | null; bank_name: string | null; loss_amount: number | string | null; }
+interface ReportRow    { category: string | null; platform: string | null; bank_name: string | null; loss_amount: number | string | null; }
 interface GroqResponse { choices?: { message?: { content?: string } }[]; }
 
-// -- generateWeeklyArticle -----------------------------------------------------
+// ---------------------------------------------------------------------------
+// generateWeeklyArticle — dipanggil oleh cron job
+// ---------------------------------------------------------------------------
 
 export async function generateWeeklyArticle(env: Env): Promise<void> {
   const supabase    = getSupabase(env);
@@ -85,7 +104,7 @@ export async function generateWeeklyArticle(env: Env): Promise<void> {
     .in('status', ['verified', 'pending']);
 
   if (!reports || reports.length === 0) {
-    console.log('[CRON] Tidak ada laporan minggu ini, skip.');
+    console.log('[cron] tidak ada laporan minggu ini, skip.');
     return;
   }
 
@@ -102,25 +121,44 @@ export async function generateWeeklyArticle(env: Env): Promise<void> {
     if (r.bank_name) bankCount[r.bank_name]   = (bankCount[r.bank_name]   ?? 0) + 1;
   }
 
-  const sorted  = (obj: Record<string, number>) => Object.entries(obj).sort((a, b) => b[1] - a[1]);
-  const toList  = (entries: [string, number][], suffix: string) =>
+  const sorted = (obj: Record<string, number>) =>
+    Object.entries(obj).sort((a, b) => b[1] - a[1]);
+
+  const toList = (entries: [string, number][], suffix: string) =>
     entries.map(([name, count]) => `- ${name}: ${count} ${suffix}`).join('\n') || '- Tidak ada data';
 
   const topCategory = sorted(categoryCount)[0];
   const topPlatform = sorted(platformCount)[0];
   const topBank     = sorted(bankCount)[0];
 
-  const totalLossFormatted = new Intl.NumberFormat('id-ID', { style: 'currency', currency: 'IDR', maximumFractionDigits: 0 }).format(totalLoss);
+  const totalLossFormatted = new Intl.NumberFormat('id-ID', {
+    style: 'currency', currency: 'IDR', maximumFractionDigits: 0,
+  }).format(totalLoss);
+
   const weekStr = `${periodStart.toLocaleDateString('id-ID', { day: 'numeric', month: 'long' })} - ${periodEnd.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`;
 
-  const groqHeaders = { 'Content-Type': 'application/json', Authorization: `Bearer ${env.GROQ_API_KEY}` };
+  const groqHeaders = {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${env.GROQ_API_KEY}`,
+  };
 
   const groqFetch = async (prompt: string, temperature: number): Promise<string> => {
     const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST', headers: groqHeaders,
-      body: JSON.stringify({ model: 'llama-3.3-70b-versatile', messages: [{ role: 'user', content: prompt }], max_tokens: 1500, temperature }),
+      method: 'POST',
+      headers: groqHeaders,
+      body: JSON.stringify({
+        model: 'llama-3.3-70b-versatile',
+        messages: [{ role: 'user', content: prompt }],
+        max_tokens: 1500,
+        temperature,
+      }),
     });
-    if (!res.ok) return '';
+
+    if (!res.ok) {
+      console.error('[groq] request failed:', res.status, await res.text());
+      return '';
+    }
+
     const data = await res.json() as GroqResponse;
     return data.choices?.[0]?.message?.content ?? '';
   };
@@ -160,25 +198,32 @@ Gunakan format Markdown berikut, dengan baris kosong di antara setiap section:
 Panjang: 400-600 kata. Jangan gunakan asterisk bold (**teks**). Pisahkan setiap section dengan baris kosong.`, 0.7);
 
   if (rawLaporan) {
-    const content  = fixArticleFormat(rawLaporan);
-    const summary  = content.replace(/^##.*$/gm, '').trim().split('\n').filter(Boolean)[0] ?? '';
-    const startDay = periodStart.getDate();
-    const endDay   = periodEnd.getDate();
-    const isSame   = periodStart.getMonth() === periodEnd.getMonth();
-    const startLabel   = isSame ? `${startDay}` : `${startDay} ${periodStart.toLocaleDateString('id-ID', { month: 'long' })}`;
+    const content      = fixArticleFormat(rawLaporan);
+    const summary      = content.replace(/^##.*$/gm, '').trim().split('\n').filter(Boolean)[0] ?? '';
+    const startDay     = periodStart.getDate();
+    const endDay       = periodEnd.getDate();
+    const isSameMonth  = periodStart.getMonth() === periodEnd.getMonth();
+    const startLabel   = isSameMonth ? `${startDay}` : `${startDay} ${periodStart.toLocaleDateString('id-ID', { month: 'long' })}`;
     const endMonthYear = periodEnd.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
     const title        = `Laporan Penipuan ${startLabel}-${endDay} ${endMonthYear}`;
     const slug         = `laporan-${startDay}-${endDay}-${periodEnd.toLocaleDateString('id-ID', { month: 'long' }).toLowerCase().replace(/ /g, '-')}-${periodEnd.getFullYear()}`;
 
-    await supabase.from('articles').upsert({
+    const { error } = await supabase.from('articles').upsert({
       title, slug, content, summary,
-      period_start: periodStart.toISOString(), period_end: periodEnd.toISOString(),
-      total_reports: totalReports, total_loss: totalLoss,
-      top_category: topCategory?.[0] ?? null, top_platform: topPlatform?.[0] ?? null, top_bank: topBank?.[0] ?? null,
-      published_at: new Date().toISOString(), status: 'draft', cover_image: null,
+      period_start:   periodStart.toISOString(),
+      period_end:     periodEnd.toISOString(),
+      total_reports:  totalReports,
+      total_loss:     totalLoss,
+      top_category:   topCategory?.[0] ?? null,
+      top_platform:   topPlatform?.[0] ?? null,
+      top_bank:       topBank?.[0]     ?? null,
+      published_at:   new Date().toISOString(),
+      status:         'draft',
+      cover_image:    null,
     }, { onConflict: 'slug' });
 
-    console.log(`[CRON] Artikel laporan: ${title}`);
+    if (error) console.error('[cron] gagal simpan artikel laporan:', error.message);
+    else console.log('[cron] artikel laporan berhasil:', title);
   }
 
   // -- Artikel edukasi -------------------------------------------------------
@@ -210,19 +255,29 @@ Gunakan format Markdown berikut, dengan baris kosong di antara setiap section:
 Panjang: 500-700 kata. Jangan gunakan asterisk bold (**teks**). Pisahkan setiap section dengan baris kosong.`, 0.8);
 
   if (rawEdukasi) {
-    const content      = fixArticleFormat(rawEdukasi);
-    const summary      = content.replace(/^##.*$/gm, '').trim().split('\n').filter(Boolean)[0] ?? '';
+    const content     = fixArticleFormat(rawEdukasi);
+    const summary     = content.replace(/^##.*$/gm, '').trim().split('\n').filter(Boolean)[0] ?? '';
     const titleEdukasi = educationAngle.charAt(0).toUpperCase() + educationAngle.slice(1);
     const slugEdukasi  = `edukasi-${educationAngle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}-${periodEnd.getFullYear()}-${periodEnd.getMonth() + 1}-${periodEnd.getDate()}`;
 
-    await supabase.from('articles').upsert({
-      title: titleEdukasi, slug: slugEdukasi, content, summary,
-      period_start: periodStart.toISOString(), period_end: periodEnd.toISOString(),
-      total_reports: null, total_loss: null,
-      top_category: topCategory?.[0] ?? null, top_platform: topPlatform?.[0] ?? null, top_bank: null,
-      published_at: new Date().toISOString(), status: 'draft', cover_image: null,
+    const { error } = await supabase.from('articles').upsert({
+      title:         titleEdukasi,
+      slug:          slugEdukasi,
+      content,
+      summary,
+      period_start:  periodStart.toISOString(),
+      period_end:    periodEnd.toISOString(),
+      total_reports: null,
+      total_loss:    null,
+      top_category:  topCategory?.[0] ?? null,
+      top_platform:  topPlatform?.[0] ?? null,
+      top_bank:      null,
+      published_at:  new Date().toISOString(),
+      status:        'draft',
+      cover_image:   null,
     }, { onConflict: 'slug' });
 
-    console.log(`[CRON] Artikel edukasi: ${titleEdukasi}`);
+    if (error) console.error('[cron] gagal simpan artikel edukasi:', error.message);
+    else console.log('[cron] artikel edukasi berhasil:', titleEdukasi);
   }
 }

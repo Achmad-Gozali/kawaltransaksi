@@ -13,20 +13,11 @@ const admin = new Hono<{
   Variables: { userId: string; userEmail: string; userRole: string };
 }>();
 
-const VALID_STATUSES = [
-  "pending",
-  "verified",
-  "rejected",
-  "withdrawn",
-] as const;
-const VALID_ROLES = ["user", "admin"] as const;
-const UUID_REGEX =
-  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const IP_REGEX = /^(\d{1,3}\.){3}\d{1,3}$|^[0-9a-f:]+$/i;
+const VALID_STATUSES = ["pending", "verified", "rejected", "withdrawn"] as const;
+const VALID_ROLES    = ["user", "admin"] as const;
+const UUID_REGEX     = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const IP_REGEX       = /^(\d{1,3}\.){3}\d{1,3}$|^[0-9a-f:]+$/i;
 
-// FIX: TTL dibedakan manual vs auto
-// auto-ban (dari robot) = 24 jam
-// manual-ban (dari admin) = permanent (tanpa expirationTtl)
 const AUTO_BLACKLIST_TTL = 86400;
 
 type AdminCtx = Context<{
@@ -34,8 +25,6 @@ type AdminCtx = Context<{
   Variables: { userId: string; userEmail: string; userRole: string };
 }>;
 
-// FIX: requireAdmin tidak perlu query DB lagi
-// role sudah diambil di authMiddleware dan di-set ke context
 async function requireAdmin(c: AdminCtx, next: Next) {
   if (c.get("userRole") !== "admin") {
     return c.json({ success: false, message: "Akses ditolak." }, 403);
@@ -45,7 +34,9 @@ async function requireAdmin(c: AdminCtx, next: Next) {
 
 const validUUID = (id: string) => UUID_REGEX.test(id);
 
-// -- Users ---------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Users
+// ---------------------------------------------------------------------------
 
 admin.get("/users", authMiddleware, requireAdmin, async (c) => {
   try {
@@ -69,10 +60,7 @@ admin.get("/users", authMiddleware, requireAdmin, async (c) => {
       })),
     });
   } catch {
-    return c.json(
-      { success: false, message: "Terjadi kesalahan server." },
-      500,
-    );
+    return c.json({ success: false, message: "Terjadi kesalahan server." }, 500);
   }
 });
 
@@ -80,10 +68,7 @@ admin.get("/users/:userId/banned", authMiddleware, requireAdmin, async (c) => {
   try {
     const userId = c.req.param("userId");
     if (!validUUID(userId))
-      return c.json(
-        { success: false, message: "ID pengguna tidak valid." },
-        400,
-      );
+      return c.json({ success: false, message: "ID pengguna tidak valid." }, 400);
     const { data } = await getSupabaseAdmin(c.env)
       .from("profiles")
       .select("is_banned")
@@ -99,18 +84,12 @@ admin.patch("/users/:id/role", authMiddleware, requireAdmin, async (c) => {
   try {
     const id = c.req.param("id");
     if (!validUUID(id))
-      return c.json(
-        { success: false, message: "ID pengguna tidak valid." },
-        400,
-      );
+      return c.json({ success: false, message: "ID pengguna tidak valid." }, 400);
     const { role } = await c.req.json();
     if (!role || !VALID_ROLES.includes(role))
       return c.json({ success: false, message: "Role tidak valid." }, 400);
     if (c.get("userId") === id)
-      return c.json(
-        { success: false, message: "Tidak dapat mengubah role diri sendiri." },
-        400,
-      );
+      return c.json({ success: false, message: "Tidak dapat mengubah role diri sendiri." }, 400);
     const { error } = await getSupabaseAdmin(c.env)
       .from("profiles")
       .update({ role })
@@ -118,64 +97,40 @@ admin.patch("/users/:id/role", authMiddleware, requireAdmin, async (c) => {
     if (error) throw error;
     return c.json({ success: true });
   } catch {
-    return c.json(
-      { success: false, message: "Terjadi kesalahan server." },
-      500,
-    );
+    return c.json({ success: false, message: "Terjadi kesalahan server." }, 500);
   }
 });
 
-admin.patch(
-  "/users/:id/ban-status",
-  authMiddleware,
-  requireAdmin,
-  async (c) => {
-    try {
-      const id = c.req.param("id");
-      if (!validUUID(id))
-        return c.json(
-          { success: false, message: "ID pengguna tidak valid." },
-          400,
-        );
-      if (c.get("userId") === id)
-        return c.json(
-          {
-            success: false,
-            message: "Tidak dapat mengubah status diri sendiri.",
-          },
-          400,
-        );
-      const { is_banned } = await c.req.json();
-      if (typeof is_banned !== "boolean")
-        return c.json(
-          { success: false, message: "is_banned harus boolean." },
-          400,
-        );
-      const { error } = await getSupabaseAdmin(c.env)
-        .from("profiles")
-        .update({ is_banned })
-        .eq("id", id);
-      if (error) throw error;
-      return c.json({ success: true });
-    } catch {
-      return c.json(
-        { success: false, message: "Terjadi kesalahan server." },
-        500,
-      );
-    }
-  },
-);
+admin.patch("/users/:id/ban-status", authMiddleware, requireAdmin, async (c) => {
+  try {
+    const id = c.req.param("id");
+    if (!validUUID(id))
+      return c.json({ success: false, message: "ID pengguna tidak valid." }, 400);
+    if (c.get("userId") === id)
+      return c.json({ success: false, message: "Tidak dapat mengubah status diri sendiri." }, 400);
+    const { is_banned } = await c.req.json();
+    if (typeof is_banned !== "boolean")
+      return c.json({ success: false, message: "is_banned harus boolean." }, 400);
+    const { error } = await getSupabaseAdmin(c.env)
+      .from("profiles")
+      .update({ is_banned })
+      .eq("id", id);
+    if (error) throw error;
+    return c.json({ success: true });
+  } catch {
+    return c.json({ success: false, message: "Terjadi kesalahan server." }, 500);
+  }
+});
 
-// -- Reports -------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Reports
+// ---------------------------------------------------------------------------
 
 admin.patch("/reports/:id/status", authMiddleware, requireAdmin, async (c) => {
   try {
     const id = c.req.param("id");
     if (!validUUID(id))
-      return c.json(
-        { success: false, message: "ID laporan tidak valid." },
-        400,
-      );
+      return c.json({ success: false, message: "ID laporan tidak valid." }, 400);
     const { status } = await c.req.json();
     if (!status || !VALID_STATUSES.includes(status))
       return c.json({ success: false, message: "Status tidak valid." }, 400);
@@ -187,20 +142,11 @@ admin.patch("/reports/:id/status", authMiddleware, requireAdmin, async (c) => {
       .eq("id", id)
       .single();
     if (fetchError || !report)
-      return c.json(
-        { success: false, message: "Laporan tidak ditemukan." },
-        404,
-      );
+      return c.json({ success: false, message: "Laporan tidak ditemukan." }, 404);
 
-    const { error } = await supabase
-      .from("reports")
-      .update({ status })
-      .eq("id", id);
+    const { error } = await supabase.from("reports").update({ status }).eq("id", id);
     if (error) throw error;
 
-    // FIX: gunakan c.executionCtx.waitUntil() agar email tidak di-kill
-    // sebelumnya fire-and-forget tanpa waitUntil, di Cloudflare Workers
-    // background Promise bisa di-terminasi setelah response dikirim
     c.executionCtx.waitUntil(
       (async () => {
         try {
@@ -220,21 +166,20 @@ admin.patch("/reports/:id/status", authMiddleware, requireAdmin, async (c) => {
             });
           }
         } catch (err) {
-          console.error("[EMAIL] Gagal kirim email status laporan:", err);
+          console.error("[email] gagal kirim notifikasi status laporan:", err);
         }
       })(),
     );
 
     return c.json({ success: true });
   } catch {
-    return c.json(
-      { success: false, message: "Terjadi kesalahan server." },
-      500,
-    );
+    return c.json({ success: false, message: "Terjadi kesalahan server." }, 500);
   }
 });
 
-// -- Blacklist -----------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Blacklist
+// ---------------------------------------------------------------------------
 
 admin.get("/blacklist", authMiddleware, requireAdmin, async (c) => {
   try {
@@ -245,19 +190,12 @@ admin.get("/blacklist", authMiddleware, requireAdmin, async (c) => {
       list.keys.map(async (key: { name: string }) => {
         const value = await c.env.LIMITER.get(key.name);
         if (!value) return null;
-        try {
-          return JSON.parse(value);
-        } catch {
-          return null;
-        }
+        try { return JSON.parse(value); } catch { return null; }
       }),
     );
     return c.json({ success: true, data: items.filter(Boolean) });
   } catch {
-    return c.json(
-      { success: false, message: "Terjadi kesalahan server." },
-      500,
-    );
+    return c.json({ success: false, message: "Terjadi kesalahan server." }, 500);
   }
 });
 
@@ -270,35 +208,24 @@ admin.post("/blacklist", authMiddleware, requireAdmin, async (c) => {
       return c.json({ success: false, message: "Format IP tidak valid." }, 400);
     const key = `blacklist_${ip.trim()}`;
     if (await c.env.LIMITER.get(key))
-      return c.json(
-        { success: false, message: "IP sudah ada di blacklist." },
-        409,
-      );
+      return c.json({ success: false, message: "IP sudah ada di blacklist." }, 409);
 
-    // FIX: manual ban dari admin = permanent (tanpa expirationTtl)
-    // auto-ban dari robot = 24 jam (AUTO_BLACKLIST_TTL)
-    // sebelumnya keduanya sama-sama 24 jam, yang bikin manual ban hilang sendiri
+    // Manual ban = permanent (tanpa expirationTtl)
+    // Auto ban dari robot = 24 jam (AUTO_BLACKLIST_TTL)
     await c.env.LIMITER.put(
       key,
       JSON.stringify({
-        ip: ip.trim(),
-        reason: reason?.trim() || "Diblokir manual oleh admin",
-        auto: false,
-        admin: c.get("userEmail"),
+        ip:         ip.trim(),
+        reason:     reason?.trim() || "Diblokir manual oleh admin",
+        auto:       false,
+        admin:      c.get("userEmail"),
         created_at: new Date().toISOString(),
       }),
     );
-    // Tidak ada expirationTtl = permanent sampai admin hapus manual
 
-    return c.json({
-      success: true,
-      message: "IP berhasil ditambahkan ke blacklist.",
-    });
+    return c.json({ success: true, message: "IP berhasil ditambahkan ke blacklist." });
   } catch {
-    return c.json(
-      { success: false, message: "Terjadi kesalahan server." },
-      500,
-    );
+    return c.json({ success: false, message: "Terjadi kesalahan server." }, 500);
   }
 });
 
@@ -313,15 +240,9 @@ admin.delete("/blacklist/:ip", authMiddleware, requireAdmin, async (c) => {
     if (!(await c.env.LIMITER.get(key)))
       return c.json({ success: false, message: "IP tidak ditemukan." }, 404);
     await c.env.LIMITER.delete(key);
-    return c.json({
-      success: true,
-      message: "IP berhasil dihapus dari blacklist.",
-    });
+    return c.json({ success: true, message: "IP berhasil dihapus dari blacklist." });
   } catch {
-    return c.json(
-      { success: false, message: "Terjadi kesalahan server." },
-      500,
-    );
+    return c.json({ success: false, message: "Terjadi kesalahan server." }, 500);
   }
 });
 
@@ -334,11 +255,7 @@ admin.get("/iplogs", authMiddleware, requireAdmin, async (c) => {
       list.keys.map(async (key: { name: string }) => {
         const value = await c.env.LIMITER.get(key.name);
         if (!value) return null;
-        try {
-          return JSON.parse(value);
-        } catch {
-          return null;
-        }
+        try { return JSON.parse(value); } catch { return null; }
       }),
     );
     const logs = items
@@ -349,22 +266,19 @@ admin.get("/iplogs", authMiddleware, requireAdmin, async (c) => {
       );
     return c.json({ success: true, data: logs });
   } catch {
-    return c.json(
-      { success: false, message: "Terjadi kesalahan server." },
-      500,
-    );
+    return c.json({ success: false, message: "Terjadi kesalahan server." }, 500);
   }
 });
 
-// -- Articles ------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Articles
+// ---------------------------------------------------------------------------
 
 admin.get("/articles", authMiddleware, requireAdmin, async (c) => {
   try {
     const { data, error } = await getSupabaseAdmin(c.env)
       .from("articles")
-      .select(
-        "id, title, slug, summary, content, status, cover_image, published_at, total_reports, top_category, created_at",
-      )
+      .select("id, title, slug, summary, content, status, cover_image, published_at, total_reports, top_category, created_at")
       .order("created_at", { ascending: false });
     if (error) throw error;
     return c.json({ success: true, data });
@@ -373,54 +287,11 @@ admin.get("/articles", authMiddleware, requireAdmin, async (c) => {
   }
 });
 
-admin.patch("/articles/:id", authMiddleware, requireAdmin, async (c) => {
-  try {
-    const id = c.req.param("id");
-    if (!validUUID(id))
-      return c.json({ success: false, message: "ID tidak valid." }, 400);
-    const body = await c.req.json();
-    const allowed = ["title", "content", "summary", "status", "cover_image"];
-    const update: Record<string, unknown> = {};
-    for (const key of allowed) {
-      if (key in body) update[key] = body[key];
-    }
-    if (!Object.keys(update).length)
-      return c.json(
-        { success: false, message: "Tidak ada field yang diupdate." },
-        400,
-      );
-    const { error } = await getSupabaseAdmin(c.env)
-      .from("articles")
-      .update(update)
-      .eq("id", id);
-    if (error) throw error;
-    return c.json({ success: true });
-  } catch {
-    return c.json({ success: false, message: "Gagal update artikel." }, 500);
-  }
-});
-
-admin.post("/articles/generate", authMiddleware, requireAdmin, async (c) => {
-  try {
-    const { generateWeeklyArticle } =
-      await import("../articles/articles.route");
-    await generateWeeklyArticle(c.env);
-    return c.json({ success: true, message: "Artikel berhasil di-generate." });
-  } catch (err: unknown) {
-    const message =
-      err instanceof Error ? err.message : "Gagal generate artikel.";
-    return c.json({ success: false, message }, 500);
-  }
-});
-
 admin.post("/articles", authMiddleware, requireAdmin, async (c) => {
   try {
     const { title, content, summary, top_category } = await c.req.json();
     if (!title || !content || !summary)
-      return c.json(
-        { success: false, message: "Title, content, dan summary wajib diisi." },
-        400,
-      );
+      return c.json({ success: false, message: "Title, content, dan summary wajib diisi." }, 400);
     const slug = `${title
       .toLowerCase()
       .replace(/[^a-z0-9]+/g, "-")
@@ -433,9 +304,9 @@ admin.post("/articles", authMiddleware, requireAdmin, async (c) => {
         summary,
         slug,
         top_category: top_category || null,
-        status: "draft",
+        status:       "draft",
         published_at: new Date().toISOString(),
-        created_at: new Date().toISOString(),
+        created_at:   new Date().toISOString(),
       })
       .select("id")
       .single();
@@ -446,15 +317,115 @@ admin.post("/articles", authMiddleware, requireAdmin, async (c) => {
   }
 });
 
+admin.post("/articles/generate", authMiddleware, requireAdmin, async (c) => {
+  try {
+    const { generateWeeklyArticle } = await import("../articles/articles.route");
+    await generateWeeklyArticle(c.env);
+    return c.json({ success: true, message: "Artikel berhasil di-generate." });
+  } catch (err: unknown) {
+    const message = err instanceof Error ? err.message : "Gagal generate artikel.";
+    return c.json({ success: false, message }, 500);
+  }
+});
+
+// Upload cover gambar artikel — terima multipart/form-data dari frontend,
+// upload ke Supabase Storage pakai service role key, return public URL
+admin.post("/articles/:id/cover", authMiddleware, requireAdmin, async (c) => {
+  try {
+    const id = c.req.param("id");
+    if (!validUUID(id))
+      return c.json({ success: false, message: "ID tidak valid." }, 400);
+
+    // Parse multipart form
+    const formData = await c.req.formData();
+    const entry = formData.get("file");
+
+    if (!entry || typeof entry === "string")
+      return c.json({ success: false, message: "File tidak ditemukan." }, 400);
+
+    const file = entry as File;
+
+    // Validasi tipe file
+    const allowedTypes = ["image/jpeg", "image/png", "image/webp"];
+    if (!allowedTypes.includes(file.type))
+      return c.json({ success: false, message: "Format gambar harus JPG, PNG, atau WebP." }, 400);
+
+    // Validasi ukuran file (maks 5MB)
+    const MAX_SIZE = 5 * 1024 * 1024;
+    if (file.size > MAX_SIZE)
+      return c.json({ success: false, message: "Ukuran gambar maksimal 5MB." }, 400);
+
+    // Buat path unik biar tidak konflik kalau upload ulang
+    const ext  = file.name.split(".").pop() ?? "jpg";
+    const path = `articles/${id}-${Date.now()}.${ext}`;
+
+    // Upload ke Supabase Storage pakai service role — bypass RLS
+    const supabase        = getSupabaseAdmin(c.env);
+    const fileBuffer      = await file.arrayBuffer();
+    const { error: uploadError } = await supabase.storage
+      .from("reports")
+      .upload(path, fileBuffer, {
+        contentType: file.type,
+        upsert:      true,
+      });
+
+    if (uploadError) {
+      console.error("[cover-upload] supabase storage error:", uploadError.message);
+      return c.json({ success: false, message: "Gagal upload ke storage." }, 500);
+    }
+
+    // Ambil public URL
+    const { data: urlData } = supabase.storage.from("reports").getPublicUrl(path);
+    const coverUrl = urlData.publicUrl;
+
+    // Simpan URL cover ke tabel articles
+    const { error: updateError } = await supabase
+      .from("articles")
+      .update({ cover_image: coverUrl })
+      .eq("id", id);
+
+    if (updateError) {
+      console.error("[cover-upload] gagal update cover_image:", updateError.message);
+      return c.json({ success: false, message: "Upload berhasil tapi gagal menyimpan URL." }, 500);
+    }
+
+    return c.json({ success: true, cover_url: coverUrl });
+  } catch (err) {
+    console.error("[cover-upload] unexpected error:", err);
+    return c.json({ success: false, message: "Terjadi kesalahan server." }, 500);
+  }
+});
+
+admin.patch("/articles/:id", authMiddleware, requireAdmin, async (c) => {
+  try {
+    const id = c.req.param("id");
+    if (!validUUID(id))
+      return c.json({ success: false, message: "ID tidak valid." }, 400);
+    const body    = await c.req.json();
+    const allowed = ["title", "content", "summary", "status", "cover_image"];
+    const update: Record<string, unknown> = {};
+    for (const key of allowed) {
+      if (key in body) update[key] = body[key];
+    }
+    if (!Object.keys(update).length)
+      return c.json({ success: false, message: "Tidak ada field yang diupdate." }, 400);
+    const { error } = await getSupabaseAdmin(c.env)
+      .from("articles")
+      .update(update)
+      .eq("id", id);
+    if (error) throw error;
+    return c.json({ success: true });
+  } catch {
+    return c.json({ success: false, message: "Gagal update artikel." }, 500);
+  }
+});
+
 admin.delete("/articles/:id", authMiddleware, requireAdmin, async (c) => {
   try {
     const id = c.req.param("id");
     if (!validUUID(id))
       return c.json({ success: false, message: "ID tidak valid." }, 400);
-    const { error } = await getSupabaseAdmin(c.env)
-      .from("articles")
-      .delete()
-      .eq("id", id);
+    const { error } = await getSupabaseAdmin(c.env).from("articles").delete().eq("id", id);
     if (error) throw error;
     return c.json({ success: true });
   } catch {
@@ -462,24 +433,20 @@ admin.delete("/articles/:id", authMiddleware, requireAdmin, async (c) => {
   }
 });
 
-// -- API Keys ------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// API Keys
+// ---------------------------------------------------------------------------
 
 admin.get("/apikeys", authMiddleware, requireAdmin, async (c) => {
   try {
     const supabase = getSupabaseAdmin(c.env);
     const { data: keys, error } = await supabase
       .from("api_keys")
-      .select(
-        "id, user_id, name, key_prefix, environment, failed_attempts, requests_today, requests_total, daily_limit, last_reset_at, last_used_at, expires_at, is_active, created_at",
-      )
+      .select("id, user_id, name, key_prefix, environment, failed_attempts, requests_today, requests_total, daily_limit, last_reset_at, last_used_at, expires_at, is_active, created_at")
       .order("created_at", { ascending: false });
     if (error) throw error;
 
-    const userIds = [
-      ...new Set(
-        (keys ?? []).map((k: { user_id: string }) => k.user_id).filter(Boolean),
-      ),
-    ];
+    const userIds = [...new Set((keys ?? []).map((k: { user_id: string }) => k.user_id).filter(Boolean))];
     const emailMap: Record<string, string> = {};
     if (userIds.length > 0) {
       const { data: profiles } = await supabase
@@ -499,10 +466,7 @@ admin.get("/apikeys", authMiddleware, requireAdmin, async (c) => {
       })),
     });
   } catch {
-    return c.json(
-      { success: false, message: "Gagal mengambil API keys." },
-      500,
-    );
+    return c.json({ success: false, message: "Gagal mengambil API keys." }, 500);
   }
 });
 
@@ -547,10 +511,7 @@ admin.patch("/apikeys/:id/limit", authMiddleware, requireAdmin, async (c) => {
       return c.json({ success: false, message: "ID tidak valid." }, 400);
     const { daily_limit } = await c.req.json();
     if (!daily_limit || typeof daily_limit !== "number" || daily_limit < 1)
-      return c.json(
-        { success: false, message: "daily_limit tidak valid." },
-        400,
-      );
+      return c.json({ success: false, message: "daily_limit tidak valid." }, 400);
     const { error } = await getSupabaseAdmin(c.env)
       .from("api_keys")
       .update({ daily_limit })
@@ -562,39 +523,28 @@ admin.patch("/apikeys/:id/limit", authMiddleware, requireAdmin, async (c) => {
   }
 });
 
-admin.patch(
-  "/apikeys/:id/reset-failed",
-  authMiddleware,
-  requireAdmin,
-  async (c) => {
-    try {
-      const id = c.req.param("id");
-      if (!validUUID(id))
-        return c.json({ success: false, message: "ID tidak valid." }, 400);
-      const { error } = await getSupabaseAdmin(c.env)
-        .from("api_keys")
-        .update({ failed_attempts: 0 })
-        .eq("id", id);
-      if (error) throw error;
-      return c.json({ success: true });
-    } catch {
-      return c.json(
-        { success: false, message: "Gagal reset failed attempts." },
-        500,
-      );
-    }
-  },
-);
-
-admin.delete("/apikeys/:id", authMiddleware, requireAdmin, async (c) => {
+admin.patch("/apikeys/:id/reset-failed", authMiddleware, requireAdmin, async (c) => {
   try {
     const id = c.req.param("id");
     if (!validUUID(id))
       return c.json({ success: false, message: "ID tidak valid." }, 400);
     const { error } = await getSupabaseAdmin(c.env)
       .from("api_keys")
-      .delete()
+      .update({ failed_attempts: 0 })
       .eq("id", id);
+    if (error) throw error;
+    return c.json({ success: true });
+  } catch {
+    return c.json({ success: false, message: "Gagal reset failed attempts." }, 500);
+  }
+});
+
+admin.delete("/apikeys/:id", authMiddleware, requireAdmin, async (c) => {
+  try {
+    const id = c.req.param("id");
+    if (!validUUID(id))
+      return c.json({ success: false, message: "ID tidak valid." }, 400);
+    const { error } = await getSupabaseAdmin(c.env).from("api_keys").delete().eq("id", id);
     if (error) throw error;
     return c.json({ success: true });
   } catch {
@@ -602,17 +552,16 @@ admin.delete("/apikeys/:id", authMiddleware, requireAdmin, async (c) => {
   }
 });
 
-// -- Robot ---------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Robot
+// ---------------------------------------------------------------------------
 
 admin.get("/robot/health", authMiddleware, requireAdmin, async (c) => {
   try {
     const latest = await getLatestHealth(getSupabaseAdmin(c.env));
     return c.json({ success: true, data: latest });
   } catch {
-    return c.json(
-      { success: false, message: "Gagal mengambil health data." },
-      500,
-    );
+    return c.json({ success: false, message: "Gagal mengambil health data." }, 500);
   }
 });
 
@@ -625,10 +574,7 @@ admin.get("/robot/blacklist-list", authMiddleware, requireAdmin, async (c) => {
       .limit(50);
     return c.json({ success: true, data: data ?? [] });
   } catch {
-    return c.json(
-      { success: false, message: "Gagal mengambil blacklist." },
-      500,
-    );
+    return c.json({ success: false, message: "Gagal mengambil blacklist." }, 500);
   }
 });
 
@@ -637,10 +583,7 @@ admin.get("/robot/viral", authMiddleware, requireAdmin, async (c) => {
     const data = await getViralNumbers(getSupabaseAdmin(c.env));
     return c.json({ success: true, data });
   } catch {
-    return c.json(
-      { success: false, message: "Gagal mengambil data viral." },
-      500,
-    );
+    return c.json({ success: false, message: "Gagal mengambil data viral." }, 500);
   }
 });
 
@@ -662,10 +605,7 @@ admin.post("/robot/run-scheduler", authMiddleware, requireAdmin, async (c) => {
     const result = await runScheduler(getSupabaseAdmin(c.env));
     return c.json({ success: true, data: result });
   } catch {
-    return c.json(
-      { success: false, message: "Gagal menjalankan scheduler." },
-      500,
-    );
+    return c.json({ success: false, message: "Gagal menjalankan scheduler." }, 500);
   }
 });
 
