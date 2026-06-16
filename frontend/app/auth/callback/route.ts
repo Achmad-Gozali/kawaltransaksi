@@ -6,7 +6,6 @@ import type { NextRequest } from 'next/server';
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
   const code = searchParams.get('code');
-  console.log('[AUTH CALLBACK] origin:', origin, '| NODE_ENV:', process.env.NODE_ENV, '| siteUrl:', process.env.NEXT_PUBLIC_SITE_URL);  // <- tambah sini
   const token_hash = searchParams.get('token_hash');
   const type = searchParams.get('type');
   const state = searchParams.get('state');

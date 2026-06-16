@@ -300,7 +300,7 @@ reports.post('/', authMiddleware, async (c) => {
 
         if (freshReport) {
           const result = await scoreReport(freshReport as RobotReport, supabase);
-          await applyVerdict(reportId, result, supabase);
+          await applyVerdict(freshReport as RobotReport, result, supabase);
 
           if (result.verdict === 'rejected' && c.env.LIMITER)
             await recordRejection(userId, ip, c.env.LIMITER);
@@ -433,7 +433,7 @@ reports.put('/:reportId', authMiddleware, async (c) => {
           .from('reports').select('*').eq('id', reportId).single();
         if (freshReport) {
           const result = await scoreReport(freshReport as RobotReport, supabase);
-          await applyVerdict(reportId, result, supabase);
+          await applyVerdict(freshReport as RobotReport, result, supabase);
         }
         await sendStatusEmail(supabase, userId, report.target_number, reportId, 'pending', c.env.RESEND_API_KEY);
       } catch (err) {

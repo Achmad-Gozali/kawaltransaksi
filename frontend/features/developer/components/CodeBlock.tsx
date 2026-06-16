@@ -57,7 +57,6 @@ const data = await response.json();
 if (data.success) {
   const { status, verified_reports } = data.data; // safe | warning | danger
   const { requests_remaining } = data.meta;
-  console.log({ status, verified_reports, requests_remaining });
 }`,
 };
 
