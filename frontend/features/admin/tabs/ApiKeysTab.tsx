@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useMemo } from 'react';
 import { Code2, RefreshCw, Power, PowerOff, Trash2, ChevronUp, ChevronDown, Search, Clock, ShieldAlert } from 'lucide-react';
 import SectionTitle from '@/features/admin/components/SectionTitle';
 
@@ -61,6 +61,132 @@ function formatExpiry(expiresAt: string | null): { label: string; isExpired: boo
   return { label: new Date(expiresAt).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }), isExpired: false };
 }
 
+// ─── Sub-components (di luar ApiKeysTab agar tidak re-create setiap render) ───
+
+function EmptyState() {
+  return (
+    <div className="p-12 text-center">
+      <Code2 className="w-8 h-8 text-slate-200 mx-auto mb-3" />
+      <p className="text-sm font-semibold text-slate-400">Belum ada API key</p>
+    </div>
+  );
+}
+
+function LoadingState() {
+  return (
+    <div className="p-12 text-center">
+      <RefreshCw className="w-6 h-6 text-slate-300 animate-spin mx-auto mb-2" />
+      <p className="text-sm text-slate-400">Memuat data...</p>
+    </div>
+  );
+}
+
+function SortIcon({ field, sortField, sortDir }: { field: keyof ApiKey; sortField: keyof ApiKey; sortDir: 'asc' | 'desc' }) {
+  if (sortField !== field) return null;
+  return sortDir === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />;
+}
+
+interface MobileCardProps {
+  k: ApiKey;
+  actionLoading: string | null;
+  onToggle: (id: string, current: boolean) => void;
+  onResetUsage: (id: string) => void;
+  onResetFailed: (id: string) => void;
+  onUpdateLimit: (id: string, limit: number) => void;
+  onDelete: (id: string) => void;
+}
+
+function MobileCard({ k, actionLoading, onToggle, onResetUsage, onResetFailed, onUpdateLimit, onDelete }: MobileCardProps) {
+  const expiry = formatExpiry(k.expires_at);
+  return (
+    <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-3">
+      <div className="flex items-start justify-between gap-2">
+        <div className="min-w-0">
+          <p className="text-sm font-bold text-slate-900 truncate">{k.name}</p>
+          <p className="text-[10px] text-slate-400 font-mono mt-0.5">{k.key_prefix ? `${k.key_prefix}...` : '--'}</p>
+          <p className="text-xs text-slate-500 mt-0.5">{k.user_email ?? '--'}</p>
+        </div>
+        <div className="flex items-center gap-1.5 shrink-0">
+          {(['environment', 'is_active'] as const).map((field) => (
+            <span key={field} className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
+              field === 'environment'
+                ? k.environment === 'live' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'
+                : k.is_active ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-500 border-slate-200'
+            }`}>
+              {field === 'environment' ? k.environment : (k.is_active ? 'Aktif' : 'Nonaktif')}
+            </span>
+          ))}
+        </div>
+      </div>
+
+      <div className="grid grid-cols-3 gap-2 bg-slate-50 rounded-lg p-3">
+        {[
+          { label: 'Hari Ini', value: `${k.requests_today}/${k.daily_limit}`, red: k.requests_today >= k.daily_limit },
+          { label: 'Total Req', value: k.requests_total.toLocaleString('id-ID'), red: false },
+          { label: 'Failed', value: String(k.failed_attempts || 0), red: (k.failed_attempts || 0) >= 5 },
+        ].map(s => (
+          <div key={s.label} className="text-center">
+            <p className={`text-sm font-bold tabular-nums ${s.red ? 'text-red-600' : 'text-slate-800'}`}>{s.value}</p>
+            <p className="text-[10px] text-slate-400">{s.label}</p>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-400">
+        <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{formatRelative(k.last_used_at)}</span>
+        {k.expires_at && <span className={expiry.isExpired ? 'text-red-600 font-semibold' : ''}>Exp: {expiry.label}</span>}
+        <span>Dibuat {new Date(k.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
+      </div>
+
+      <div className="flex items-center gap-2">
+        <span className="text-xs text-slate-500 shrink-0">Daily limit:</span>
+        <input type="number" defaultValue={k.daily_limit} min={1}
+          onBlur={e => onUpdateLimit(k.id, parseInt(e.target.value))}
+          className="w-20 px-2 py-1 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-emerald-400 text-center" />
+      </div>
+
+      <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
+        <button onClick={() => onResetUsage(k.id)} disabled={actionLoading === `reset-${k.id}`}
+          className="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors">
+          <RefreshCw className={`w-3.5 h-3.5 ${actionLoading === `reset-${k.id}` ? 'animate-spin' : ''}`} /> Reset Req
+        </button>
+        {(k.failed_attempts || 0) > 0 && (
+          <button onClick={() => onResetFailed(k.id)} disabled={actionLoading === `failed-${k.id}`}
+            className="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
+            <RefreshCw className={`w-3.5 h-3.5 ${actionLoading === `failed-${k.id}` ? 'animate-spin' : ''}`} /> Reset Failed
+          </button>
+        )}
+        <button onClick={() => onToggle(k.id, k.is_active)} disabled={actionLoading === k.id}
+          className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-lg transition-colors ${k.is_active ? 'text-amber-600 bg-amber-50 hover:bg-amber-100' : 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100'}`}>
+          {k.is_active ? <PowerOff className="w-3.5 h-3.5" /> : <Power className="w-3.5 h-3.5" />}
+          {k.is_active ? 'Nonaktif' : 'Aktifkan'}
+        </button>
+        <button onClick={() => onDelete(k.id)} disabled={actionLoading === `delete-${k.id}`}
+          className="w-9 h-9 flex items-center justify-center text-red-400 bg-red-50 hover:bg-red-100 rounded-lg transition-colors shrink-0">
+          <Trash2 className="w-4 h-4" />
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ─── Main Component ────────────────────────────────────────────────────────────
+
+const TABLE_COLS = [
+  { label: 'Nama / Prefix',    field: 'name'            },
+  { label: 'User',             field: 'user_email'      },
+  { label: 'Env',              field: 'environment'     },
+  { label: 'Req Hari Ini',     field: 'requests_today'  },
+  { label: 'Total Req',        field: 'requests_total'  },
+  { label: 'Daily Limit',      field: 'daily_limit'     },
+  { label: 'Terakhir Dipakai', field: 'last_used_at'    },
+  { label: 'Kadaluarsa',       field: 'expires_at'      },
+  { label: 'Failed',           field: 'failed_attempts' },
+  { label: 'Status',           field: 'is_active'       },
+  { label: 'Dibuat',           field: 'created_at'      },
+  { label: 'Aksi',             field: null              },
+] as const;
+
 export default function ApiKeysTab({ token }: { token: string }) {
   const [keys, setKeys]           = useState<ApiKey[]>([]);
   const [loading, setLoading]     = useState(true);
@@ -70,7 +196,7 @@ export default function ApiKeysTab({ token }: { token: string }) {
   const [sortDir, setSortDir]     = useState<'asc' | 'desc'>('desc');
   const [actionLoading, setActionLoading] = useState<string | null>(null);
 
-  const authHeader = { Authorization: `Bearer ${token}` };
+  const authHeader = useMemo(() => ({ Authorization: `Bearer ${token}` }), [token]);
 
   const fetchKeys = useCallback(async () => {
     setLoading(true);
@@ -83,51 +209,53 @@ export default function ApiKeysTab({ token }: { token: string }) {
     } finally {
       setLoading(false);
     }
-  }, [token]);
+  }, [authHeader]);
 
-  useEffect(() => { fetchKeys(); }, [fetchKeys]);
+  useEffect(() => {
+    fetchKeys();
+  }, [fetchKeys]);
 
-  const patchKey = async (id: string, path: string, body?: object) => {
+  const patchKey = useCallback(async (id: string, path: string, body?: object) => {
     await fetchWithTimeout(`${BACKEND_URL}/api/admin/apikeys/${id}/${path}`, {
       method: 'PATCH',
       headers: { ...authHeader, 'Content-Type': 'application/json' },
       ...(body ? { body: JSON.stringify(body) } : {}),
     });
-  };
+  }, [authHeader]);
 
-  const toggleActive = async (id: string, current: boolean) => {
+  const toggleActive = useCallback(async (id: string, current: boolean) => {
     setActionLoading(id);
     try {
       await patchKey(id, 'toggle', { is_active: !current });
       setKeys(prev => prev.map(k => k.id === id ? { ...k, is_active: !current } : k));
     } finally { setActionLoading(null); }
-  };
+  }, [patchKey]);
 
-  const resetUsage = async (id: string) => {
+  const resetUsage = useCallback(async (id: string) => {
     setActionLoading(`reset-${id}`);
     try {
       await patchKey(id, 'reset');
       setKeys(prev => prev.map(k => k.id === id ? { ...k, requests_today: 0 } : k));
     } finally { setActionLoading(null); }
-  };
+  }, [patchKey]);
 
-  const resetFailed = async (id: string) => {
+  const resetFailed = useCallback(async (id: string) => {
     setActionLoading(`failed-${id}`);
     try {
       await patchKey(id, 'reset-failed');
       setKeys(prev => prev.map(k => k.id === id ? { ...k, failed_attempts: 0 } : k));
     } finally { setActionLoading(null); }
-  };
+  }, [patchKey]);
 
-  const updateLimit = async (id: string, newLimit: number) => {
+  const updateLimit = useCallback(async (id: string, newLimit: number) => {
     if (isNaN(newLimit) || newLimit < 1) return;
     try {
       await patchKey(id, 'limit', { daily_limit: newLimit });
       setKeys(prev => prev.map(k => k.id === id ? { ...k, daily_limit: newLimit } : k));
     } catch (err) { console.error('Gagal update limit:', err); }
-  };
+  }, [patchKey]);
 
-  const deleteKey = async (id: string) => {
+  const deleteKey = useCallback(async (id: string) => {
     if (!confirm('Yakin hapus API key ini?')) return;
     setActionLoading(`delete-${id}`);
     try {
@@ -136,7 +264,7 @@ export default function ApiKeysTab({ token }: { token: string }) {
       });
       setKeys(prev => prev.filter(k => k.id !== id));
     } finally { setActionLoading(null); }
-  };
+  }, [authHeader]);
 
   const handleSort = (field: keyof ApiKey) => {
     if (sortField === field) setSortDir(d => d === 'asc' ? 'desc' : 'asc');
@@ -157,118 +285,10 @@ export default function ApiKeysTab({ token }: { token: string }) {
       return sortDir === 'asc' ? av.localeCompare(bv) : bv.localeCompare(av);
     });
 
-  const SortIcon = ({ field }: { field: keyof ApiKey }) =>
-    sortField === field
-      ? sortDir === 'asc' ? <ChevronUp className="w-3 h-3" /> : <ChevronDown className="w-3 h-3" />
-      : null;
-
   const totalActive   = keys.filter(k => k.is_active).length;
   const totalRequests = keys.reduce((s, k) => s + k.requests_total, 0);
   const neverUsed     = keys.filter(k => !k.last_used_at).length;
   const totalFailed   = keys.reduce((s, k) => s + (k.failed_attempts || 0), 0);
-
-  const EmptyState = () => (
-    <div className="p-12 text-center">
-      <Code2 className="w-8 h-8 text-slate-200 mx-auto mb-3" />
-      <p className="text-sm font-semibold text-slate-400">Belum ada API key</p>
-    </div>
-  );
-
-  const LoadingState = () => (
-    <div className="p-12 text-center">
-      <RefreshCw className="w-6 h-6 text-slate-300 animate-spin mx-auto mb-2" />
-      <p className="text-sm text-slate-400">Memuat data...</p>
-    </div>
-  );
-
-  const MobileCard = ({ k }: { k: ApiKey }) => {
-    const expiry = formatExpiry(k.expires_at);
-    return (
-      <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-3">
-        <div className="flex items-start justify-between gap-2">
-          <div className="min-w-0">
-            <p className="text-sm font-bold text-slate-900 truncate">{k.name}</p>
-            <p className="text-[10px] text-slate-400 font-mono mt-0.5">{k.key_prefix ? `${k.key_prefix}...` : '--'}</p>
-            <p className="text-xs text-slate-500 mt-0.5">{k.user_email ?? '--'}</p>
-          </div>
-          <div className="flex items-center gap-1.5 shrink-0">
-            {(['environment','is_active'] as const).map((field) => (
-              <span key={field} className={`text-[10px] font-bold px-2 py-0.5 rounded-full border ${
-                field === 'environment'
-                  ? k.environment === 'live' ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-amber-50 text-amber-700 border-amber-200'
-                  : k.is_active ? 'bg-emerald-50 text-emerald-700 border-emerald-200' : 'bg-slate-100 text-slate-500 border-slate-200'
-              }`}>
-                {field === 'environment' ? k.environment : (k.is_active ? 'Aktif' : 'Nonaktif')}
-              </span>
-            ))}
-          </div>
-        </div>
-
-        <div className="grid grid-cols-3 gap-2 bg-slate-50 rounded-lg p-3">
-          {[
-            { label: 'Hari Ini', value: `${k.requests_today}/${k.daily_limit}`, red: k.requests_today >= k.daily_limit },
-            { label: 'Total Req', value: k.requests_total.toLocaleString('id-ID'), red: false },
-            { label: 'Failed', value: String(k.failed_attempts || 0), red: (k.failed_attempts || 0) >= 5 },
-          ].map(s => (
-            <div key={s.label} className="text-center">
-              <p className={`text-sm font-bold tabular-nums ${s.red ? 'text-red-600' : 'text-slate-800'}`}>{s.value}</p>
-              <p className="text-[10px] text-slate-400">{s.label}</p>
-            </div>
-          ))}
-        </div>
-
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-slate-400">
-          <span className="flex items-center gap-1"><Clock className="w-3 h-3" />{formatRelative(k.last_used_at)}</span>
-          {k.expires_at && <span className={expiry.isExpired ? 'text-red-600 font-semibold' : ''}>Exp: {expiry.label}</span>}
-          <span>Dibuat {new Date(k.created_at).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' })}</span>
-        </div>
-
-        <div className="flex items-center gap-2">
-          <span className="text-xs text-slate-500 shrink-0">Daily limit:</span>
-          <input type="number" defaultValue={k.daily_limit} min={1}
-            onBlur={e => updateLimit(k.id, parseInt(e.target.value))}
-            className="w-20 px-2 py-1 text-xs border border-slate-200 rounded-lg focus:outline-none focus:border-emerald-400 text-center" />
-        </div>
-
-        <div className="flex items-center gap-2 pt-1 border-t border-slate-100">
-          <button onClick={() => resetUsage(k.id)} disabled={actionLoading === `reset-${k.id}`}
-            className="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold text-slate-600 bg-slate-100 hover:bg-slate-200 rounded-lg transition-colors">
-            <RefreshCw className={`w-3.5 h-3.5 ${actionLoading === `reset-${k.id}` ? 'animate-spin' : ''}`} /> Reset Req
-          </button>
-          {(k.failed_attempts || 0) > 0 && (
-            <button onClick={() => resetFailed(k.id)} disabled={actionLoading === `failed-${k.id}`}
-              className="flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold text-blue-600 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors">
-              <RefreshCw className={`w-3.5 h-3.5 ${actionLoading === `failed-${k.id}` ? 'animate-spin' : ''}`} /> Reset Failed
-            </button>
-          )}
-          <button onClick={() => toggleActive(k.id, k.is_active)} disabled={actionLoading === k.id}
-            className={`flex-1 flex items-center justify-center gap-1.5 py-2 text-xs font-semibold rounded-lg transition-colors ${k.is_active ? 'text-amber-600 bg-amber-50 hover:bg-amber-100' : 'text-emerald-600 bg-emerald-50 hover:bg-emerald-100'}`}>
-            {k.is_active ? <PowerOff className="w-3.5 h-3.5" /> : <Power className="w-3.5 h-3.5" />}
-            {k.is_active ? 'Nonaktif' : 'Aktifkan'}
-          </button>
-          <button onClick={() => deleteKey(k.id)} disabled={actionLoading === `delete-${k.id}`}
-            className="w-9 h-9 flex items-center justify-center text-red-400 bg-red-50 hover:bg-red-100 rounded-lg transition-colors shrink-0">
-            <Trash2 className="w-4 h-4" />
-          </button>
-        </div>
-      </div>
-    );
-  };
-
-  const TABLE_COLS = [
-    { label: 'Nama / Prefix',    field: 'name'            },
-    { label: 'User',             field: 'user_email'      },
-    { label: 'Env',              field: 'environment'     },
-    { label: 'Req Hari Ini',     field: 'requests_today'  },
-    { label: 'Total Req',        field: 'requests_total'  },
-    { label: 'Daily Limit',      field: 'daily_limit'     },
-    { label: 'Terakhir Dipakai', field: 'last_used_at'    },
-    { label: 'Kadaluarsa',       field: 'expires_at'      },
-    { label: 'Failed',           field: 'failed_attempts' },
-    { label: 'Status',           field: 'is_active'       },
-    { label: 'Dibuat',           field: 'created_at'      },
-    { label: 'Aksi',             field: null              },
-  ] as const;
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
@@ -324,7 +344,20 @@ export default function ApiKeysTab({ token }: { token: string }) {
       {/* Mobile */}
       <div className="block lg:hidden">
         {loading ? <LoadingState /> : filtered.length === 0 ? <EmptyState /> : (
-          <div className="space-y-3">{filtered.map(k => <MobileCard key={k.id} k={k} />)}</div>
+          <div className="space-y-3">
+            {filtered.map(k => (
+              <MobileCard
+                key={k.id}
+                k={k}
+                actionLoading={actionLoading}
+                onToggle={toggleActive}
+                onResetUsage={resetUsage}
+                onResetFailed={resetFailed}
+                onUpdateLimit={updateLimit}
+                onDelete={deleteKey}
+              />
+            ))}
+          </div>
         )}
       </div>
 
@@ -341,7 +374,7 @@ export default function ApiKeysTab({ token }: { token: string }) {
                       className={`px-4 py-3 text-[10px] font-medium text-slate-400 uppercase tracking-[0.12em] whitespace-nowrap ${col.field ? 'cursor-pointer hover:text-slate-600' : ''}`}>
                       <span className="flex items-center gap-1">
                         {col.label}
-                        {col.field && <SortIcon field={col.field as keyof ApiKey} />}
+                        {col.field && <SortIcon field={col.field as keyof ApiKey} sortField={sortField} sortDir={sortDir} />}
                       </span>
                     </th>
                   ))}
