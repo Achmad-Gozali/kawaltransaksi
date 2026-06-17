@@ -211,7 +211,7 @@ export default function NumberCard({
                     className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-md font-medium border border-slate-200 bg-slate-50 text-slate-400 hover:bg-slate-100 transition-colors"
                   >
                     <Lock className="w-3 h-3" />
-                    a.n. ------
+                    a.n. ••••••••
                   </Link>
                 )}
                 {!hasVerified && reports.length > 0 && (
