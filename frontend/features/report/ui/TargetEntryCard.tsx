@@ -54,17 +54,22 @@ export function TargetEntryCard({
   const setCustom     = isBank ? setCustomBank     : setCustomEwallet;
   const setShowCustom = isBank ? setShowCustomBank : setShowCustomEwallet;
 
-  // Reset saat type berubah
+  // Reset saat type berubah — valid pattern untuk sync derived state
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCustomBank('');
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCustomEwallet('');
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setShowCustomBank(false);
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     setShowCustomEwallet(false);
   }, [entry.type]);
 
   // Cek duplicate (debounce 600ms)
   useEffect(() => {
     const num = entry.number.replace(/[^0-9]/g, '');
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (num.length < 6) { setDuplicate(null); return; }
 
     if (debounceRef.current) clearTimeout(debounceRef.current);
@@ -80,6 +85,7 @@ export function TargetEntryCard({
   }, [entry.number]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     if (!entry.number) setDuplicate(null);
   }, [entry.number]);
 

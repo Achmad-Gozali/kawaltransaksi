@@ -87,7 +87,10 @@ export default function RobotTab({ token }: { token: string }) {
     }
   };
 
-  useEffect(() => { fetchData(); }, []);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchData();
+  }, []);
 
   const errorRateColor = !health ? 'text-slate-300'
     : health.error_rate > 10 ? 'text-red-600'

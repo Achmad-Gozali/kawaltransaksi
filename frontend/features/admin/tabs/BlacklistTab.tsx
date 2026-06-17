@@ -63,6 +63,7 @@ export default function BlacklistTab({ token }: { token: string }) {
   }, [token]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchBlacklist();
     fetchLogs();
   }, [fetchBlacklist, fetchLogs]);

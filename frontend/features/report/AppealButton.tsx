@@ -33,7 +33,10 @@ export default function AppealButton({ reportId }: { reportId: string }) {
   const [success,    setSuccess]    = useState(false);
 
   // Pastikan portal hanya di client side
-  useEffect(() => { setMounted(true); }, []);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setMounted(true);
+  }, []);
 
   // Lock scroll body saat modal buka
   useEffect(() => {

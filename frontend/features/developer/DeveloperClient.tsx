@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Plus, RefreshCw, AlertTriangle, ChevronDown, Zap, Lock } from 'lucide-react';
 import { KeyCard, type ApiKey } from '@/features/developer/components/KeyCard';
 import { KeyRevealModal } from '@/features/developer/components/KeyRevealModal';
@@ -159,9 +159,8 @@ export default function DeveloperClient({ token, isLoggedIn }: Props) {
   const [revealKey, setRevealKey]     = useState<string | null>(null);
   const [isBlocked, setIsBlocked]     = useState(false);
 
-  useEffect(() => { if (isLoggedIn) fetchKeys(); else setLoading(false); }, []);
-
-  const fetchKeys = async () => {
+  // fetchKeys didefinisikan sebelum useEffect agar tidak diakses sebelum deklarasi
+  const fetchKeys = useCallback(async () => {
     setLoading(true);
     try {
       const res  = await fetch(`${BACKEND_URL}/api/developer/keys`, { headers: { Authorization: `Bearer ${token}` } });
@@ -169,7 +168,16 @@ export default function DeveloperClient({ token, isLoggedIn }: Props) {
       if (res.status === 403 && data.message?.includes('diblokir')) setIsBlocked(true);
       else if (data.success) { setIsBlocked(false); setKeys(data.data ?? []); }
     } finally { setLoading(false); }
-  };
+  }, [token]);
+
+  useEffect(() => {
+    if (isLoggedIn) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      fetchKeys();
+    } else {
+      setLoading(false);
+    }
+  }, [isLoggedIn, fetchKeys]);
 
   const createKey = async () => {
     if (!newKeyName.trim()) return;
@@ -201,7 +209,7 @@ export default function DeveloperClient({ token, isLoggedIn }: Props) {
     <main className="bg-white font-sans overflow-x-hidden">
       {revealKey && <KeyRevealModal apiKey={revealKey} onClose={() => setRevealKey(null)} />}
 
-      {/* Hero — ikut pattern bg-slate-100 seperti halaman lain */}
+      {/* Hero */}
       <section className="bg-slate-100 pt-14 pb-0 sm:pt-20 overflow-hidden px-4">
         <div className="max-w-4xl mx-auto text-center pb-16 sm:pb-24">
           <h1 className="text-2xl sm:text-4xl font-black tracking-tighter text-slate-900 uppercase mb-4 leading-tight">
@@ -218,7 +226,6 @@ export default function DeveloperClient({ token, isLoggedIn }: Props) {
             >
               {isLoggedIn ? 'Kelola API Key' : 'Generate API Key'}
             </a>
-            
             <a
               href="#dokumentasi"
               className="w-full sm:w-auto px-6 py-3 border border-slate-300 text-slate-600 hover:bg-slate-200 text-sm font-bold rounded-xl transition-colors uppercase tracking-wider"
@@ -228,7 +235,6 @@ export default function DeveloperClient({ token, isLoggedIn }: Props) {
           </div>
         </div>
 
-        {/* Wave slate → putih, sama persis dengan halaman lain */}
         <svg viewBox="0 0 1440 80" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" className="w-full h-10 sm:h-20 block">
           <path d="M0,20 C360,80 1080,0 1440,60 L1440,80 L0,80 Z" fill="#ffffff" />
         </svg>

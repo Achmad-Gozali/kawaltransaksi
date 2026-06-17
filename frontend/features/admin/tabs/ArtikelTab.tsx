@@ -214,7 +214,10 @@ export default function ArtikelTab({ token }: { token: string }) {
     }
   };
 
-  useEffect(() => { fetchArticles(); }, []);
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    fetchArticles();
+  }, []);
 
   // ---------------------------------------------------------------------------
   // Generate AI

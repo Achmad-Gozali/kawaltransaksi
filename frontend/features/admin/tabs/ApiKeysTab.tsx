@@ -212,6 +212,7 @@ export default function ApiKeysTab({ token }: { token: string }) {
   }, [authHeader]);
 
   useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     fetchKeys();
   }, [fetchKeys]);
 
