@@ -58,22 +58,6 @@ export default app;
 // Helpers
 // ---------------------------------------------------------------------------
 
-const EDUCATION_THEMES: Record<string, string[]> = {
-  'Jual Beli Online':     ['ciri-ciri penjual palsu di marketplace', 'cara aman belanja online', 'modus penipuan COD yang marak'],
-  'Phishing / Soceng':    ['cara mengenali link phishing', 'modus social engineering terbaru', 'tips melindungi akun dari phishing'],
-  'Investasi Bodong':     ['ciri-ciri investasi bodong', 'cara menghindari money game', 'tips sebelum berinvestasi online'],
-  'Lowongan Kerja Palsu': ['cara mengenali lowongan kerja palsu', 'modus penipuan rekrutmen online', 'tips aman mencari kerja online'],
-  'Penipuan Percintaan':  ['modus romance scam yang marak', 'cara mengenali akun palsu di media sosial', 'tips aman berkenalan online'],
-  'Pinjaman Online':      ['ciri-ciri pinjol ilegal', 'cara melaporkan pinjol ilegal', 'tips aman meminjam uang online'],
-  'default':              ['tips aman bertransaksi online', 'cara melindungi data pribadi di internet', 'modus penipuan online yang perlu diwaspadai'],
-};
-
-function getEducationAngle(topCategory: string | null, topPlatform: string | null): string {
-  const themes = (topCategory && EDUCATION_THEMES[topCategory]) || EDUCATION_THEMES['default'];
-  const theme  = themes[Math.floor(Math.random() * themes.length)];
-  return topPlatform ? `${theme} khususnya yang terjadi di ${topPlatform}` : theme;
-}
-
 function fixArticleFormat(raw: string): string {
   return raw
     .replace(/([^\n])\n(## )/g, '$1\n\n$2')
@@ -224,60 +208,5 @@ Panjang: 400-600 kata. Jangan gunakan asterisk bold (**teks**). Pisahkan setiap 
 
     if (error) console.error('[cron] gagal simpan artikel laporan:', error.message);
     else console.log('[cron] artikel laporan berhasil:', title);
-  }
-
-  // -- Artikel edukasi -------------------------------------------------------
-
-  const educationAngle = getEducationAngle(topCategory?.[0] ?? null, topPlatform?.[0] ?? null);
-
-  const rawEdukasi = await groqFetch(`Kamu adalah analis keamanan digital dari KawalTransaksi, platform komunitas anti-penipuan Indonesia.
-
-Minggu ini modus terbanyak adalah "${topCategory?.[0] ?? 'penipuan online'}" via "${topPlatform?.[0] ?? 'media sosial'}".
-
-Tulis artikel edukasi tentang: ${educationAngle}
-
-Gunakan format Markdown berikut, dengan baris kosong di antara setiap section:
-
-## Pendahuluan
-
-## Bagaimana Modus Ini Bekerja
-
-## Tanda-tanda yang Perlu Diwaspadai
-(gunakan format list dengan -)
-
-## Langkah Pencegahan
-(gunakan format list dengan -)
-
-## Apa yang Harus Dilakukan Jika Sudah Menjadi Korban
-
-## Penutup
-
-Panjang: 500-700 kata. Jangan gunakan asterisk bold (**teks**). Pisahkan setiap section dengan baris kosong.`, 0.8);
-
-  if (rawEdukasi) {
-    const content     = fixArticleFormat(rawEdukasi);
-    const summary     = content.replace(/^##.*$/gm, '').trim().split('\n').filter(Boolean)[0] ?? '';
-    const titleEdukasi = educationAngle.charAt(0).toUpperCase() + educationAngle.slice(1);
-    const slugEdukasi  = `edukasi-${educationAngle.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}-${periodEnd.getFullYear()}-${periodEnd.getMonth() + 1}-${periodEnd.getDate()}`;
-
-    const { error } = await supabase.from('articles').upsert({
-      title:         titleEdukasi,
-      slug:          slugEdukasi,
-      content,
-      summary,
-      period_start:  periodStart.toISOString(),
-      period_end:    periodEnd.toISOString(),
-      total_reports: null,
-      total_loss:    null,
-      top_category:  topCategory?.[0] ?? null,
-      top_platform:  topPlatform?.[0] ?? null,
-      top_bank:      null,
-      published_at:  new Date().toISOString(),
-      status:        'draft',
-      cover_image:   null,
-    }, { onConflict: 'slug' });
-
-    if (error) console.error('[cron] gagal simpan artikel edukasi:', error.message);
-    else console.log('[cron] artikel edukasi berhasil:', titleEdukasi);
   }
 }

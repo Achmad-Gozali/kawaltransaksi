@@ -236,13 +236,20 @@ export default async function ArtikelDetailPage({ params }: Props) {
               {article.title}
             </h1>
 
+            {/* FIX: container tidak lagi dipatok aspect-video + fill + object-cover.
+               Sekarang width/height jadi rasio dasar, tinggi otomatis ikut lebar
+               (h-auto), dan object-contain memastikan gambar utuh -- penting
+               karena cover image di sini berupa infografis bertekst yang tidak
+               boleh terpotong di tepi. */}
             {article.cover_image && (
-              <div className="relative w-full aspect-video rounded-2xl overflow-hidden mb-8">
+              <div className="relative w-full rounded-2xl overflow-hidden mb-8 bg-slate-100">
                 <Image
                   src={article.cover_image}
                   alt={article.title}
-                  fill
-                  className="object-cover"
+                  width={1200}
+                  height={675}
+                  sizes="(max-width: 768px) 100vw, 768px"
+                  className="w-full h-auto object-contain"
                   priority
                 />
               </div>
@@ -296,13 +303,17 @@ export default async function ArtikelDetailPage({ params }: Props) {
                       href={`/artikel/${a.slug}`}
                       className="group flex flex-col bg-white border border-slate-200 rounded-2xl overflow-hidden hover:shadow-xl hover:border-slate-300 hover:-translate-y-1 transition-all duration-200 shadow-sm"
                     >
+                      {/* FIX: h-40 dipertahankan (supaya grid 3 kolom tetap rata),
+                         tapi object-cover -> object-contain + bg-slate-100 supaya
+                         infografis tidak terpotong, hanya jadi ada sedikit ruang
+                         kosong di kiri/kanan atau atas/bawah kalau rasionya beda. */}
                       {a.cover_image ? (
-                        <div className="relative w-full h-40 overflow-hidden">
+                        <div className="relative w-full h-40 overflow-hidden bg-slate-100">
                           <Image
                             src={a.cover_image}
                             alt={a.title}
                             fill
-                            className="object-cover group-hover:scale-105 transition-transform duration-300"
+                            className="object-contain group-hover:scale-105 transition-transform duration-300"
                           />
                         </div>
                       ) : (
@@ -342,4 +353,4 @@ export default async function ArtikelDetailPage({ params }: Props) {
       </div>
     </main>
   );
-}
+} 

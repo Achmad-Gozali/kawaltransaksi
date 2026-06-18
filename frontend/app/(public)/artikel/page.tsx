@@ -108,13 +108,21 @@ export default async function ArtikelPage() {
                   href={`/artikel/${article.slug}`}
                   className="group flex flex-col bg-white border border-slate-200 rounded-2xl overflow-hidden hover:shadow-xl hover:border-slate-300 hover:-translate-y-1 transition-all duration-200 shadow-sm"
                 >
+                  {/* FIX: h-48 fixed dihapus. Sekarang pakai width/height
+                     natural (rasio dasar 4:5) + w-full h-auto, sehingga
+                     tinggi container murni ikut rasio asli tiap gambar.
+                     Hasilnya: nol spasi kosong, gambar selalu utuh.
+                     Trade-off: tinggi card antar artikel di grid TIDAK
+                     akan sejajar/rata kalau rasio gambar berbeda-beda. */}
                   {article.cover_image ? (
-                    <div className="relative w-full h-48 overflow-hidden">
+                    <div className="relative w-full overflow-hidden bg-slate-100">
                       <Image
                         src={article.cover_image}
                         alt={article.title}
-                        fill
-                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                        width={1000}
+                        height={1250}
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                        className="w-full h-auto object-contain group-hover:scale-105 transition-transform duration-300"
                       />
                     </div>
                   ) : (
