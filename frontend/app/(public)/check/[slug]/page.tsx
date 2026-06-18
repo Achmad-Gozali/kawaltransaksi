@@ -169,8 +169,6 @@ function detectCarrier(phone: string): CarrierInfo | null {
   return null;
 }
 
-// -- Blacklist Badge -----------------------------------------------------------
-
 type BlacklistLevel = "medium" | "high" | "critical";
 
 const blacklistConfig: Record<BlacklistLevel, { label: string; bg: string; border: string; text: string; icon: React.ElementType }> = {
@@ -253,10 +251,8 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
   ] = await Promise.all([
     supabase.auth.getUser(),
     supabase.rpc("get_check_page_data", { p_number: realNumber }),
-    // [ROBOT] Cek blacklist
     supabase.from("blacklist").select("level, total_reports, unique_reporters")
       .eq("target_number", realNumber).single(),
-    // [ROBOT] Cek viral
     supabase.from("robot_trends").select("is_viral, report_count")
       .eq("target_number", realNumber).single(),
   ]);
@@ -279,7 +275,6 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
   const totalLoss       = reports.reduce((sum, r) => sum + (Number(r.loss_amount) || 0), 0);
   const hasOtherVictims = reports.some(r => r.has_other_victims === "yes");
 
-  // Dipindah ke luar render agar tidak dianggap impure
   const now = checkedAt.getTime();
   const thirtyDaysAgo   = new Date(now - 30 * 24 * 60 * 60 * 1000);
   const recentReports   = reports.filter(r => new Date(r.created_at) >= thirtyDaysAgo);
@@ -289,7 +284,6 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
   const isPhoneNumber = defaultType === "phone" && !defaultBankName && !defaultWalletName;
   const carrierInfo   = isPhoneNumber ? detectCarrier(realNumber) : null;
 
-  // Risk badges -- termasuk blacklist & viral
   const riskBadges: { label: string; color: string }[] = [];
   if (recentReports.length >= 3)
     riskBadges.push({ label: `Dilaporkan ${recentReports.length}x dalam 30 hari`, color: "bg-red-50 text-red-700 border-red-200" });
@@ -299,7 +293,6 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
     riskBadges.push({ label: `${multiVictimCount} laporan sebut ada korban lain`, color: "bg-amber-50 text-amber-700 border-amber-200" });
   if (uniquePlatforms.length >= 2)
     riskBadges.push({ label: `Aktif di ${uniquePlatforms.length} platform berbeda`, color: "bg-slate-100 text-slate-600 border-slate-200" });
-  // [ROBOT] Viral badge
   if (isViral)
     riskBadges.push({ label: ` Sedang viral -- ${viralCount} laporan dalam 24 jam`, color: "bg-red-50 text-red-700 border-red-200" });
 
@@ -387,31 +380,86 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
 
   const typeLabel: Record<string, string> = { phone: "Nomor HP", bank_account: "Rekening Bank", ewallet: "E-Wallet" };
 
-  const structuredData = {
-    "@context": "https://schema.org", "@type": "WebPage",
-    name: status === "danger"
-      ? `Nomor ${formatNum(realNumber)} - Terindikasi Penipuan | KawalTransaksi`
-      : status === "warning"
-        ? `Nomor ${formatNum(realNumber)} - Dalam Investigasi | KawalTransaksi`
-        : `Cek Nomor ${formatNum(realNumber)} - Tidak Ada Laporan | KawalTransaksi`,
-    description: status === "danger"
-      ? `Nomor ${formatNum(realNumber)} terindikasi penipuan dengan ${verifiedCount} laporan terverifikasi.`
-      : status === "warning"
-        ? `Nomor ${formatNum(realNumber)} sedang dalam investigasi dengan laporan masuk.`
-        : `Nomor ${formatNum(realNumber)} belum memiliki laporan penipuan di database KawalTransaksi.`,
-    url: `https://kawaltransaksi.com/check/${slug}`,
-    about: {
-      "@type": "Dataset",
-      name: `Laporan penipuan untuk nomor ${realNumber}`,
-      description: `Database laporan penipuan komunitas untuk nomor ${realNumber}`,
-      license: "https://creativecommons.org/licenses/by-nc/4.0/",
-      creator: { "@type": "Organization", name: "KawalTransaksi", url: "https://kawaltransaksi.com" },
-    },
+  // ============================================================
+  // PERUBAHAN: structuredData diupgrade ke FAQPage
+  // + tambah breadcrumbData terpisah
+  // ============================================================
+  const formatLossForSchema = (n: number) => {
+    if (n >= 1_000_000_000) return `Rp ${(n / 1_000_000_000).toFixed(1)} miliar`;
+    if (n >= 1_000_000)     return `Rp ${(n / 1_000_000).toFixed(1)} juta`;
+    if (n >= 1_000)         return `Rp ${(n / 1_000).toFixed(0)} ribu`;
+    return `Rp ${n}`;
   };
+
+  const structuredData = {
+    "@context": "https://schema.org",
+    "@type": "FAQPage",
+    mainEntity: [
+      {
+        "@type": "Question",
+        name: `Apakah nomor ${formatNum(realNumber)} penipu?`,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text:
+            status === "danger"
+              ? `Ya, nomor ${formatNum(realNumber)} terindikasi penipu. Terdapat ${verifiedCount} laporan terverifikasi${totalLoss > 0 ? ` dengan total kerugian ${formatLossForSchema(totalLoss)}` : ""}. Hindari bertransaksi dengan nomor ini.`
+              : status === "warning"
+                ? `Nomor ${formatNum(realNumber)} sedang dalam proses investigasi. Terdapat laporan masuk yang belum selesai diverifikasi. Tetap waspada sebelum bertransaksi.`
+                : `Nomor ${formatNum(realNumber)} belum memiliki laporan penipuan terverifikasi di database KawalTransaksi. Tetap waspada dan laporkan jika menemukan aktivitas mencurigakan.`,
+        },
+      },
+      {
+        "@type": "Question",
+        name: `Berapa laporan untuk nomor ${formatNum(realNumber)}?`,
+        acceptedAnswer: {
+          "@type": "Answer",
+          text:
+            reports.length > 0
+              ? `Nomor ${formatNum(realNumber)} memiliki ${reports.length} laporan masuk, dengan ${verifiedCount} laporan terverifikasi.`
+              : `Nomor ${formatNum(realNumber)} belum memiliki laporan penipuan di database KawalTransaksi.`,
+        },
+      },
+      {
+        "@type": "Question",
+        name: "Bagaimana cara melaporkan nomor penipu?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text: "Kamu bisa melaporkan nomor penipu secara gratis di KawalTransaksi. Kunjungi kawaltransaksi.com/report, isi data nomor penipu, kronologi kejadian, dan bukti transfer. Laporan akan diverifikasi oleh tim moderator.",
+        },
+      },
+    ],
+  };
+
+  const breadcrumbData = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Beranda",
+        item: "https://kawaltransaksi.com",
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "Cek Nomor",
+        item: "https://kawaltransaksi.com/cek-nomor",
+      },
+      {
+        "@type": "ListItem",
+        position: 3,
+        name: `Nomor ${formatNum(realNumber)}`,
+        item: `https://kawaltransaksi.com/check/${slug}`,
+      },
+    ],
+  };
+  // ============================================================
 
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbData) }} />
       <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
 
         {/* Mobile back nav */}
@@ -439,7 +487,7 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
           </div>
         </div>
 
-        {/* [ROBOT] Blacklist banner -- tampil kalau ada di blacklist */}
+        {/* Blacklist banner */}
         {blacklist && (
           <div className={`px-4 sm:px-6 py-3 border-b ${
             blacklist.level === "critical" ? "bg-red-600 border-red-700" :

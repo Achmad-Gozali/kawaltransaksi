@@ -6,9 +6,41 @@ import type { Metadata } from "next";
 export const revalidate = 3600;
 
 export const metadata: Metadata = {
-  title: "Artikel Penipuan - KawalTransaksi",
+  title: "Artikel & Edukasi Penipuan Online - KawalTransaksi",
   description:
-    "Artikel dan analisis pola penipuan online terbaru di Indonesia.",
+    "Artikel, analisis pola, dan edukasi seputar penipuan online di Indonesia. Diperbarui setiap minggu berdasarkan laporan nyata komunitas.",
+
+  alternates: {
+    canonical: "https://kawaltransaksi.com/artikel",
+  },
+
+  openGraph: {
+    title: "Artikel & Edukasi Penipuan Online - KawalTransaksi",
+    description:
+      "Artikel, analisis pola, dan edukasi seputar penipuan online di Indonesia. Diperbarui setiap minggu berdasarkan laporan nyata komunitas.",
+    url: "https://kawaltransaksi.com/artikel",
+    siteName: "KawalTransaksi",
+    locale: "id_ID",
+    type: "website",
+  },
+
+  twitter: {
+    card: "summary_large_image",
+    title: "Artikel & Edukasi Penipuan Online - KawalTransaksi",
+    description:
+      "Artikel, analisis pola, dan edukasi seputar penipuan online di Indonesia.",
+  },
+
+  robots: {
+    index: true,
+    follow: true,
+    googleBot: {
+      index: true,
+      follow: true,
+      "max-image-preview": "large",
+      "max-snippet": -1,
+    },
+  },
 };
 
 function formatDate(dateStr: string): string {
@@ -38,11 +70,33 @@ function formatLoss(amount: number): string {
 const artikelSchema = {
   "@context": "https://schema.org",
   "@type": "CollectionPage",
-  name: "Artikel Penipuan - KawalTransaksi",
+  name: "Artikel & Edukasi Penipuan Online - KawalTransaksi",
   description:
-    "Artikel dan analisis pola penipuan online terbaru di Indonesia.",
+    "Artikel, analisis pola, dan edukasi seputar penipuan online di Indonesia.",
   url: "https://kawaltransaksi.com/artikel",
-  isPartOf: { "@id": "https://kawaltransaksi.com/#website" },
+  isPartOf: {
+    "@type": "WebSite",
+    "@id": "https://kawaltransaksi.com/#website",
+    name: "KawalTransaksi",
+    url: "https://kawaltransaksi.com",
+  },
+  breadcrumb: {
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      {
+        "@type": "ListItem",
+        position: 1,
+        name: "Beranda",
+        item: "https://kawaltransaksi.com",
+      },
+      {
+        "@type": "ListItem",
+        position: 2,
+        name: "Artikel",
+        item: "https://kawaltransaksi.com/artikel",
+      },
+    ],
+  },
 };
 
 export default async function ArtikelPage() {
@@ -108,12 +162,6 @@ export default async function ArtikelPage() {
                   href={`/artikel/${article.slug}`}
                   className="group flex flex-col bg-white border border-slate-200 rounded-2xl overflow-hidden hover:shadow-xl hover:border-slate-300 hover:-translate-y-1 transition-all duration-200 shadow-sm"
                 >
-                  {/* FIX: h-48 fixed dihapus. Sekarang pakai width/height
-                     natural (rasio dasar 4:5) + w-full h-auto, sehingga
-                     tinggi container murni ikut rasio asli tiap gambar.
-                     Hasilnya: nol spasi kosong, gambar selalu utuh.
-                     Trade-off: tinggi card antar artikel di grid TIDAK
-                     akan sejajar/rata kalau rasio gambar berbeda-beda. */}
                   {article.cover_image ? (
                     <div className="relative w-full overflow-hidden bg-slate-100">
                       <Image
