@@ -14,7 +14,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "daily",
       priority: 1.0,
     },
-    // Halaman cek nomor (HP / ewallet) -- path yang benar sesuai struktur folder
     {
       url: `${BASE_URL}/cek-nomor`,
       lastModified: new Date(),
@@ -40,7 +39,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.8,
     },
     {
-      url: `${BASE_URL}/cek-nomor/cek-ewallet/shopeepay`, // FIX: was "shopee"
+      url: `${BASE_URL}/cek-nomor/cek-ewallet/shopeepay`,
       lastModified: new Date(),
       changeFrequency: "weekly",
       priority: 0.8,
@@ -51,7 +50,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "weekly",
       priority: 0.8,
     },
-    // Halaman cek rekening bank -- path yang benar sesuai struktur folder
     {
       url: `${BASE_URL}/cek-rekening`,
       lastModified: new Date(),
@@ -94,7 +92,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "weekly",
       priority: 0.8,
     },
-    // Konten publik
     {
       url: `${BASE_URL}/artikel`,
       lastModified: new Date(),
@@ -143,14 +140,18 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "monthly",
       priority: 0.4,
     },
-    // Halaman yang tidak perlu diindex dihapus dari sitemap:
-    // /login, /register, /report -- sudah di-disallow di robots.ts
+    {
+      url: `${BASE_URL}/report`,
+      lastModified: new Date(),
+      changeFrequency: "monthly",
+      priority: 0.6,
+    },
+    // /login dan /register dihapus -- sudah di-disallow di robots.ts
   ];
 
   try {
     const supabase = await createClient();
 
-    // Halaman check per nomor -- hanya yang verified
     const { data: reports } = await supabase
       .from("reports")
       .select("target_number, created_at")
@@ -160,13 +161,11 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
 
     const dynamicPages: MetadataRoute.Sitemap = (reports ?? []).map((r) => ({
       url: `${BASE_URL}/check/${encodeSlug(r.target_number)}`,
-      // Pakai updated_at kalau ada, fallback ke created_at
       lastModified: new Date(r.created_at),
       changeFrequency: "weekly" as const,
       priority: 0.7,
     }));
 
-    // Artikel -- tambah cover_image untuk Google Discover
     const { data: articles } = await supabase
       .from("articles")
       .select("slug, published_at, title, cover_image")
@@ -179,7 +178,6 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: new Date(a.published_at),
       changeFrequency: "monthly" as const,
       priority: 0.7,
-      // images membantu Google Discover dan Image Search
       ...(a.cover_image && {
         images: [a.cover_image],
       }),
