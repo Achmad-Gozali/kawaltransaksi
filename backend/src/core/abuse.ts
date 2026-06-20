@@ -37,9 +37,8 @@ export async function autoBlacklistIfAbuse(
         limiter.delete(abuseKey),
       ]);
     } else {
-      // Fixed window — TTL hanya di-set saat hit pertama
-      const opts = newCount === 1 ? { expirationTtl: 3600 } : undefined;
-      await limiter.put(abuseKey, newCount.toString(), opts);
+      // FIX #5: selalu set TTL konsisten, tidak hanya di hit pertama
+      await limiter.put(abuseKey, newCount.toString(), { expirationTtl: 3600 });
     }
   } catch (err) {
     console.error('[AUTO BLACKLIST] Error:', err);

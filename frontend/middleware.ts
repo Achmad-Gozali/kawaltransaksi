@@ -42,10 +42,11 @@ function getLimiters(redis: Redis): Map<LimitKey, Ratelimit> {
   return _limiters;
 }
 
+// FIX #6: gunakan cf-connecting-ip saja, tidak trust x-forwarded-for
 function getIp(request: NextRequest): string {
   return (
-    request.headers.get('x-forwarded-for')?.split(',')[0].trim() ||
     request.headers.get('cf-connecting-ip') ||
+    request.headers.get('x-real-ip') ||
     'anonymous'
   );
 }
@@ -109,6 +110,14 @@ async function applyRateLimit(
   return null;
 }
 
+// FIX #3: whitelist safe redirect paths
+const SAFE_REDIRECT_PREFIXES = ['/dashboard', '/profil'];
+
+function getSafeRedirect(pathname: string): string {
+  if (SAFE_REDIRECT_PREFIXES.some(p => pathname.startsWith(p))) return pathname;
+  return '/dashboard';
+}
+
 export async function middleware(request: NextRequest) {
   const pathname    = request.nextUrl.pathname;
   const isLocalhost = request.nextUrl.hostname === 'localhost';
@@ -162,40 +171,34 @@ export async function middleware(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser();
 
-  // FIX: /admin redirect tanpa redirectTo agar path tidak terekspos di URL
-  if (pathname.startsWith('/admin') && !user) {
+  if (pathname.startsWith('/admin') && !user)
     return NextResponse.redirect(new URL('/login', request.url));
-  }
 
-  // /dashboard tetap pakai redirectTo untuk UX
   if (pathname.startsWith('/dashboard') && !user) {
     const url = new URL('/login', request.url);
-    url.searchParams.set('redirectTo', pathname);
+    // FIX #3: hanya redirect ke path yang aman
+    url.searchParams.set('redirectTo', getSafeRedirect(pathname));
     return NextResponse.redirect(url);
   }
 
   if (pathname.startsWith('/admin') && user) {
-    const cachedRole = request.cookies.get('user_role')?.value;
+    // FIX #4: hapus cookie role shortcut — selalu verify ke DB
+    const { data: profile } = await supabase
+      .from('profiles').select('role').eq('id', user.id).single();
 
-    if (cachedRole === 'admin') {
-      // Role sudah tervalidasi
-    } else {
-      const { data: profile } = await supabase
-        .from('profiles').select('role').eq('id', user.id).single();
-
-      if (profile?.role !== 'admin') {
-        supabaseResponse = NextResponse.redirect(new URL('/', request.url));
-        supabaseResponse.cookies.delete('user_role');
-        return supabaseResponse;
-      }
-
-      supabaseResponse.cookies.set('user_role', profile.role, {
-        httpOnly: true,
-        secure:   !isLocalhost,
-        sameSite: 'lax',
-        maxAge:   60 * 15,
-      });
+    if (profile?.role !== 'admin') {
+      supabaseResponse = NextResponse.redirect(new URL('/', request.url));
+      supabaseResponse.cookies.delete('user_role');
+      return supabaseResponse;
     }
+
+    // Tetap set cookie untuk downstream use, bukan untuk auth decision
+    supabaseResponse.cookies.set('user_role', profile.role, {
+      httpOnly: true,
+      secure:   !isLocalhost,
+      sameSite: 'lax',
+      maxAge:   60 * 15,
+    });
   }
 
   supabaseResponse.headers.delete('x-vercel-id');

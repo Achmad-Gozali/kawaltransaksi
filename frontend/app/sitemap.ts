@@ -10,143 +10,142 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticPages: MetadataRoute.Sitemap = [
     {
       url: BASE_URL,
-      lastModified: new Date(),
+      lastModified: new Date("2025-01-01"),
       changeFrequency: "daily",
       priority: 1.0,
     },
     {
       url: `${BASE_URL}/cek-nomor`,
-      lastModified: new Date(),
+      lastModified: new Date("2025-01-01"),
       changeFrequency: "weekly",
       priority: 0.9,
     },
     {
       url: `${BASE_URL}/cek-nomor/cek-ewallet/gopay`,
-      lastModified: new Date(),
+      lastModified: new Date("2025-01-01"),
       changeFrequency: "weekly",
       priority: 0.8,
     },
     {
       url: `${BASE_URL}/cek-nomor/cek-ewallet/dana`,
-      lastModified: new Date(),
+      lastModified: new Date("2025-01-01"),
       changeFrequency: "weekly",
       priority: 0.8,
     },
     {
       url: `${BASE_URL}/cek-nomor/cek-ewallet/ovo`,
-      lastModified: new Date(),
+      lastModified: new Date("2025-01-01"),
       changeFrequency: "weekly",
       priority: 0.8,
     },
     {
       url: `${BASE_URL}/cek-nomor/cek-ewallet/shopeepay`,
-      lastModified: new Date(),
+      lastModified: new Date("2025-01-01"),
       changeFrequency: "weekly",
       priority: 0.8,
     },
     {
       url: `${BASE_URL}/cek-nomor/cek-ewallet/linkaja`,
-      lastModified: new Date(),
+      lastModified: new Date("2025-01-01"),
       changeFrequency: "weekly",
       priority: 0.8,
     },
     {
       url: `${BASE_URL}/cek-rekening`,
-      lastModified: new Date(),
+      lastModified: new Date("2025-01-01"),
       changeFrequency: "weekly",
       priority: 0.9,
     },
     {
       url: `${BASE_URL}/cek-rekening/bca`,
-      lastModified: new Date(),
+      lastModified: new Date("2025-01-01"),
       changeFrequency: "weekly",
       priority: 0.8,
     },
     {
       url: `${BASE_URL}/cek-rekening/bri`,
-      lastModified: new Date(),
+      lastModified: new Date("2025-01-01"),
       changeFrequency: "weekly",
       priority: 0.8,
     },
     {
       url: `${BASE_URL}/cek-rekening/bni`,
-      lastModified: new Date(),
+      lastModified: new Date("2025-01-01"),
       changeFrequency: "weekly",
       priority: 0.8,
     },
     {
       url: `${BASE_URL}/cek-rekening/mandiri`,
-      lastModified: new Date(),
+      lastModified: new Date("2025-01-01"),
       changeFrequency: "weekly",
       priority: 0.8,
     },
     {
       url: `${BASE_URL}/cek-rekening/bsi`,
-      lastModified: new Date(),
+      lastModified: new Date("2025-01-01"),
       changeFrequency: "weekly",
       priority: 0.8,
     },
     {
       url: `${BASE_URL}/cek-rekening/cimb`,
-      lastModified: new Date(),
+      lastModified: new Date("2025-01-01"),
       changeFrequency: "weekly",
       priority: 0.8,
     },
     {
       url: `${BASE_URL}/artikel`,
-      lastModified: new Date(),
+      lastModified: new Date("2025-01-01"),
       changeFrequency: "weekly",
       priority: 0.8,
     },
     {
       url: `${BASE_URL}/laporan-publik`,
-      lastModified: new Date(),
+      lastModified: new Date("2025-01-01"),
       changeFrequency: "daily",
       priority: 0.8,
     },
     {
       url: `${BASE_URL}/edukasi`,
-      lastModified: new Date(),
+      lastModified: new Date("2025-01-01"),
       changeFrequency: "weekly",
       priority: 0.7,
     },
     {
       url: `${BASE_URL}/faq`,
-      lastModified: new Date(),
+      lastModified: new Date("2025-01-01"),
       changeFrequency: "monthly",
       priority: 0.6,
     },
     {
       url: `${BASE_URL}/developer`,
-      lastModified: new Date(),
+      lastModified: new Date("2025-01-01"),
       changeFrequency: "monthly",
       priority: 0.6,
     },
     {
       url: `${BASE_URL}/kontak`,
-      lastModified: new Date(),
+      lastModified: new Date("2025-01-01"),
       changeFrequency: "monthly",
       priority: 0.5,
     },
     {
       url: `${BASE_URL}/kebijakan-privasi`,
-      lastModified: new Date(),
+      lastModified: new Date("2025-01-01"),
       changeFrequency: "monthly",
       priority: 0.4,
     },
     {
       url: `${BASE_URL}/syarat-ketentuan`,
-      lastModified: new Date(),
+      lastModified: new Date("2025-01-01"),
       changeFrequency: "monthly",
       priority: 0.4,
     },
     {
       url: `${BASE_URL}/report`,
-      lastModified: new Date(),
+      lastModified: new Date("2025-01-01"),
       changeFrequency: "monthly",
       priority: 0.6,
     },
-    // /login dan /register dihapus -- sudah di-disallow di robots.ts
   ];
 
   try {
@@ -159,16 +158,25 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       .order("created_at", { ascending: false })
       .limit(50000);
 
-    const dynamicPages: MetadataRoute.Sitemap = (reports ?? []).map((r) => ({
-      url: `${BASE_URL}/check/${encodeSlug(r.target_number)}`,
-      lastModified: new Date(r.created_at),
+    const uniqueReports = new Map<string, string>();
+    for (const r of reports ?? []) {
+      if (!uniqueReports.has(r.target_number)) {
+        uniqueReports.set(r.target_number, r.created_at);
+      }
+    }
+
+    const dynamicPages: MetadataRoute.Sitemap = [
+      ...uniqueReports.entries(),
+    ].map(([number, date]) => ({
+      url: `${BASE_URL}/check/${encodeSlug(number)}`,
+      lastModified: new Date(date),
       changeFrequency: "weekly" as const,
       priority: 0.7,
     }));
 
     const { data: articles } = await supabase
       .from("articles")
-      .select("slug, published_at, title, cover_image")
+      .select("slug, published_at, cover_image")
       .eq("status", "published")
       .order("published_at", { ascending: false })
       .limit(500);
@@ -178,9 +186,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       lastModified: new Date(a.published_at),
       changeFrequency: "monthly" as const,
       priority: 0.7,
-      ...(a.cover_image && {
-        images: [a.cover_image],
-      }),
+      ...(a.cover_image && { images: [a.cover_image] }),
     }));
 
     return [...staticPages, ...dynamicPages, ...articlePages];

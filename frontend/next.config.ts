@@ -35,7 +35,6 @@ const nextConfig: NextConfig = {
   experimental: {
     optimisticClientCache:  true,
     optimizePackageImports: ['lucide-react', 'motion'],
-    // Inline critical CSS → defer non-critical → ~430ms LCP savings
     optimizeCss: true,
   },
 
@@ -52,7 +51,7 @@ const nextConfig: NextConfig = {
         headers: [
           { key: 'X-Content-Type-Options',   value: 'nosniff' },
           { key: 'X-Frame-Options',           value: 'DENY' },
-          { key: 'X-XSS-Protection',          value: '1; mode=block' },
+          // FIX #7/#8: hapus Expect-CT (deprecated) dan X-XSS-Protection (obsolete)
           { key: 'Referrer-Policy',           value: 'strict-origin-when-cross-origin' },
           {
             key: 'Permissions-Policy',
@@ -62,16 +61,18 @@ const nextConfig: NextConfig = {
             ].join(', '),
           },
           { key: 'Strict-Transport-Security',    value: 'max-age=63072000; includeSubDomains; preload' },
-          { key: 'Expect-CT',                    value: 'max-age=86400, enforce' },
           { key: 'Cross-Origin-Opener-Policy',   value: 'same-origin' },
           { key: 'Cross-Origin-Embedder-Policy', value: 'unsafe-none' },
           { key: 'Cross-Origin-Resource-Policy', value: 'cross-origin' },
           {
             key: 'Content-Security-Policy',
+            // FIX #1: hapus unsafe-inline dan unsafe-eval dari script-src
+            // unsafe-inline masih di style-src karena Next.js inject inline styles
+            // untuk menghilangkan sepenuhnya butuh nonce injection via middleware
             value: [
               "default-src 'self'",
               "worker-src 'self' blob:",
-              "script-src 'self' 'unsafe-inline' 'unsafe-eval' https://challenges.cloudflare.com https://*.challenges.cloudflare.com https://static.cloudflareinsights.com https://www.googletagmanager.com https://www.clarity.ms https://us-assets.i.posthog.com",
+              "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com https://*.challenges.cloudflare.com https://static.cloudflareinsights.com https://www.googletagmanager.com https://www.clarity.ms https://us-assets.i.posthog.com",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
               "img-src 'self' data: blob: https://*.supabase.co https://picsum.photos https://cdn.kawaltransaksi.com https://www.google-analytics.com https://www.clarity.ms",
@@ -105,7 +106,7 @@ const nextConfig: NextConfig = {
       {
         source: '/sw.js',
         headers: [
-          { key: 'Cache-Control',        value: 'public, max-age=0, must-revalidate' },
+          { key: 'Cache-Control',          value: 'public, max-age=0, must-revalidate' },
           { key: 'Service-Worker-Allowed', value: '/' },
         ],
       },
