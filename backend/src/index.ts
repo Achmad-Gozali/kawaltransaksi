@@ -263,12 +263,20 @@ export default {
       );
     } else if (cron === '0 19 * * *') {
       const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString();
+      const oneDayAgo     = new Date(Date.now() - 86400000).toISOString();
+
       ctx.waitUntil(
-        Promise.resolve(
-          supabase.from('robot_logs').delete().lt('created_at', thirtyDaysAgo)
-        )
-          .then(() => console.log('[CRON] Robot logs cleanup selesai'))
-          .catch(err => console.error('[CRON] Cleanup error:', err))
+        Promise.all([
+          (async () => {
+          await supabase.from('robot_logs').delete().lt('created_at', thirtyDaysAgo);
+            console.log('[CRON] Robot logs cleanup selesai');
+            })().catch(err => console.error('[CRON] Robot logs cleanup error:', err)),
+
+          (async () => {
+          await supabase.from('reports').delete().eq('status', 'rejected').lt('created_at', oneDayAgo);
+            console.log('[CRON] Rejected reports cleanup selesai');
+            })().catch(err => console.error('[CRON] Rejected reports cleanup error:', err)),
+        ])
       );
     }
   },

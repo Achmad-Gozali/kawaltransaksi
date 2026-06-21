@@ -3,13 +3,11 @@ import { redirect } from "next/navigation";
 import Link from "next/link";
 import {
   Clock, CheckCircle2, XCircle, FileText, PlusCircle,
-  ArrowRight, Phone, Building2, FilePen, Bot, AlertCircle,
+  ArrowRight, Phone, Building2, Bot, AlertCircle,
 } from "lucide-react";
 import type { Metadata } from "next";
 import * as motion from "motion/react-client";
 import { formatDateID, maskNumber } from "@/core/utils";
-import WithdrawButton from "@/features/report/WithdrawButton";
-import EditReportButton from "@/features/report/EditReportButton";
 import AppealButton from "@/features/report/AppealButton";
 
 export const metadata: Metadata = {
@@ -35,18 +33,13 @@ const STATUS_CONFIG = {
     icon: XCircle,
     className: "bg-red-50 text-red-700 border-red-200",
   },
-  withdrawn: {
-    label: "Sedang Direvisi",
-    icon: FilePen,
-    className: "bg-blue-50 text-blue-700 border-blue-200",
-  },
 } as const;
 
 const STAT_CARDS = [
-  { key: "total",    label: "Total",        color: "text-zinc-900",   sub: "Laporan dibuat" },
-  { key: "pending",  label: "Menunggu",     color: "text-amber-500",  sub: "Dalam review" },
+  { key: "total",    label: "Total",         color: "text-zinc-900",    sub: "Laporan dibuat" },
+  { key: "pending",  label: "Menunggu",      color: "text-amber-500",   sub: "Dalam review" },
   { key: "verified", label: "Terverifikasi", color: "text-emerald-500", sub: "Dipublikasi" },
-  { key: "rejected", label: "Ditolak",      color: "text-red-500",    sub: "Tidak lolos" },
+  { key: "rejected", label: "Ditolak",       color: "text-red-500",     sub: "Tidak lolos" },
 ] as const;
 
 export default async function LaporanPage() {
@@ -58,19 +51,17 @@ export default async function LaporanPage() {
   const { data: reports, error } = await supabase
     .from("reports")
     .select(
-      "id, target_number, target_name, target_type, category, chronology, status, created_at, bank_name, loss_amount, incident_date, platform, link_url, social_media_accounts, has_other_victims, reported_to, robot_score, robot_status, robot_verdict_at"
+      "id, target_number, target_name, target_type, category, chronology, status, created_at, bank_name, loss_amount, robot_score, robot_verdict_at"
     )
     .eq("reporter_id", user.id)
     .order("created_at", { ascending: false });
 
-  // Ambil daftar appeal yang sudah diajukan user
   const { data: appeals } = await supabase
     .from("report_appeals")
     .select("report_id, status")
     .eq("user_id", user.id);
 
-  const appealMap = new Map((appeals ?? []).map(a => [a.report_id, a.status]));
-
+  const appealMap  = new Map((appeals ?? []).map(a => [a.report_id, a.status]));
   const allReports = (reports ?? []) as any[];
 
   const stats = {
@@ -80,7 +71,6 @@ export default async function LaporanPage() {
     rejected: allReports.filter(r => r.status === "rejected").length,
   };
 
-  // Dipindah ke luar render agar tidak dianggap impure
   const now = new Date().getTime();
 
   return (
@@ -156,10 +146,8 @@ export default async function LaporanPage() {
                 const status     = STATUS_CONFIG[report.status as keyof typeof STATUS_CONFIG] ?? STATUS_CONFIG.pending;
                 const StatusIcon = status.icon;
                 const isPhone    = report.target_type === "phone";
-                const isWithdrawn = report.status === "withdrawn";
                 const appealStatus = appealMap.get(report.id) ?? null;
 
-                // Cek apakah masih dalam window 7 hari untuk banding
                 const canAppeal = report.status === "rejected"
                   && !appealStatus
                   && report.robot_verdict_at
@@ -170,9 +158,7 @@ export default async function LaporanPage() {
                     initial={{ opacity: 0, y: 15 }} animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.3 + i * 0.06, ease: [0.16, 1, 0.3, 1] }}
                     whileHover={{ y: -1 }}
-                    className={`bg-white border rounded-2xl p-5 hover:shadow-md transition-all ${
-                      isWithdrawn ? "border-blue-100" : "border-zinc-200 hover:border-zinc-300"
-                    }`}>
+                    className="bg-white border border-zinc-200 rounded-2xl p-5 hover:shadow-md hover:border-zinc-300 transition-all">
 
                     {/* Top row */}
                     <div className="flex items-start justify-between gap-4">
@@ -279,27 +265,13 @@ export default async function LaporanPage() {
                         )}
                       </div>
                     )}
-                    {report.status === "withdrawn" && (
-                      <div className="mt-3 pl-14">
-                        <p className="inline-flex items-center gap-1.5 text-[11px] text-blue-600 font-medium">
-                          <FilePen className="w-3.5 h-3.5" />
-                          Laporan sedang kamu revisi. Edit dan kirim ulang untuk direview.
-                        </p>
+
+                    {/* Actions — hanya appeal */}
+                    {canAppeal && (
+                      <div className="mt-4 pl-14">
+                        <AppealButton reportId={report.id} />
                       </div>
                     )}
-
-                    {/* Actions */}
-                    <div className="mt-4 pl-14 flex items-center gap-2 flex-wrap">
-                      {(report.status === "pending" || report.status === "verified") && (
-                        <WithdrawButton reportId={report.id} />
-                      )}
-                      {report.status === "withdrawn" && (
-                        <EditReportButton report={report} />
-                      )}
-                      {canAppeal && (
-                        <AppealButton reportId={report.id} />
-                      )}
-                    </div>
                   </motion.div>
                 );
               })}

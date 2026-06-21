@@ -12,10 +12,10 @@ const appeal = new Hono<{
   Variables: { userId: string; userEmail: string };
 }>();
 
-const UUID_REGEX         = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
-const APPEAL_WINDOW_DAYS = 7;
-const MIN_REASON_LENGTH  = 50;
-const MAX_EVIDENCE_FILES = 5;
+const UUID_REGEX          = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
+const APPEAL_WINDOW_HOURS = 23;
+const MIN_REASON_LENGTH   = 50;
+const MAX_EVIDENCE_FILES  = 5;
 
 const ALLOWED_STORAGE_HOSTNAMES = [
   'xcljigqrbwtqkiuraohr.supabase.co',
@@ -35,7 +35,6 @@ function sanitizeEvidenceUrls(urls: unknown): string[] {
   return urls.filter(isValidEvidenceUrl).slice(0, MAX_EVIDENCE_FILES) as string[];
 }
 
-// POST /api/appeals
 appeal.post('/', authMiddleware, async (c) => {
   try {
     const userId = c.get('userId');
@@ -54,7 +53,6 @@ appeal.post('/', authMiddleware, async (c) => {
 
     const supabase = getSupabaseAdmin(c.env);
 
-    // Ambil semua field yang dibutuhkan scoreReport sekaligus — tidak perlu fetch ulang nanti
     const { data: report, error: fetchError } = await supabase
       .from('reports')
       .select('id, status, reporter_id, target_number, robot_verdict_at, evidence_urls, evidence_url, loss_amount, chronology, created_at, incident_date, has_other_victims')
@@ -68,9 +66,9 @@ appeal.post('/', authMiddleware, async (c) => {
       return c.json({ success: false, message: 'Hanya laporan yang ditolak yang dapat diajukan banding.' }, 400);
 
     if (report.robot_verdict_at) {
-      const verdictAge = (Date.now() - new Date(report.robot_verdict_at).getTime()) / 86400000;
-      if (verdictAge > APPEAL_WINDOW_DAYS)
-        return c.json({ success: false, message: `Batas waktu banding ${APPEAL_WINDOW_DAYS} hari sudah lewat.` }, 400);
+      const verdictAgeHours = (Date.now() - new Date(report.robot_verdict_at).getTime()) / 3600000;
+      if (verdictAgeHours > APPEAL_WINDOW_HOURS)
+        return c.json({ success: false, message: `Batas waktu banding ${APPEAL_WINDOW_HOURS} jam sudah lewat.` }, 400);
     }
 
     const { data: existing } = await supabase
@@ -82,8 +80,8 @@ appeal.post('/', authMiddleware, async (c) => {
     if (existing)
       return c.json({ success: false, message: 'Kamu sudah pernah mengajukan banding untuk laporan ini.' }, 409);
 
-    const existingEvidence = Array.isArray(report.evidence_urls) ? report.evidence_urls : [];
-    const mergedEvidence   = [...new Set([...existingEvidence, ...newEvidenceUrls])].slice(0, 10);
+    const existingEvidence  = Array.isArray(report.evidence_urls) ? report.evidence_urls : [];
+    const mergedEvidence    = [...new Set([...existingEvidence, ...newEvidenceUrls])].slice(0, 10);
     const updatedChronology = `${report.chronology}\n\n[BANDING] ${reason.trim()}`;
 
     const updateData: Record<string, unknown> = {
@@ -113,7 +111,6 @@ appeal.post('/', authMiddleware, async (c) => {
 
     if (error) throw error;
 
-    // Konstruk freshReport dari data yang sudah kita punya — tidak perlu fetch ulang
     const freshReport: RobotReport = {
       id:                report.id,
       reporter_id:       report.reporter_id,
@@ -131,8 +128,6 @@ appeal.post('/', authMiddleware, async (c) => {
     c.executionCtx.waitUntil((async () => {
       try {
         const result = await scoreReport(freshReport, supabase);
-
-        // Threshold lebih rendah untuk appeal: 45 sudah cukup verified
         const appealVerdict = result.score >= 45 ? 'verified' : result.verdict;
 
         if (appealVerdict === 'verified') {
@@ -176,7 +171,6 @@ appeal.post('/', authMiddleware, async (c) => {
   }
 });
 
-// GET /api/appeals/:reportId
 appeal.get('/:reportId', authMiddleware, async (c) => {
   try {
     const userId   = c.get('userId');
