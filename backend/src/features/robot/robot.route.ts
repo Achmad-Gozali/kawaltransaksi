@@ -1,7 +1,3 @@
-// ============================================
-//  LOKASI: backend/src/features/robot/robot.route.ts
-// ============================================
-
 import { Hono } from 'hono';
 import { getSupabaseAdmin } from '../../core/supabase';
 import { scoreReport, applyVerdict, reEvaluateByNumber } from './scoring-engine';
@@ -18,8 +14,6 @@ function isInternal(c: { req: { header: (k: string) => string | undefined }; env
   return c.req.header('X-Internal-Key') === c.env.INTERNAL_API_KEY;
 }
 
-// -- POST /api/robot/evaluate/:reportId ---------------------------------------
-
 robot.post('/evaluate/:reportId', async (c) => {
   if (!isInternal(c)) return c.json({ success: false, message: 'Akses ditolak.' }, 403);
   const supabase = getSupabaseAdmin(c.env);
@@ -27,11 +21,9 @@ robot.post('/evaluate/:reportId', async (c) => {
     .from('reports').select('*').eq('id', c.req.param('reportId')).single();
   if (error || !report) return c.json({ success: false, message: 'Laporan tidak ditemukan.' }, 404);
   const result = await scoreReport(report as RobotReport, supabase);
-  await applyVerdict(report.id, result, supabase, report.status);  // <- pass existing status
+  await applyVerdict(report as RobotReport, result, supabase, report.status);
   return c.json({ success: true, data: result });
 });
-
-// -- POST /api/robot/evaluate-number/:number -----------------------------------
 
 robot.post('/evaluate-number/:number', async (c) => {
   if (!isInternal(c)) return c.json({ success: false, message: 'Akses ditolak.' }, 403);
@@ -39,15 +31,11 @@ robot.post('/evaluate-number/:number', async (c) => {
   return c.json({ success: true, message: `Re-evaluasi selesai untuk nomor ${c.req.param('number')}.` });
 });
 
-// -- GET /api/robot/blacklist/:number -----------------------------------------
-
 robot.get('/blacklist/:number', async (c) => {
   if (!isInternal(c)) return c.json({ success: false, message: 'Akses ditolak.' }, 403);
   const result = await checkBlacklist(c.req.param('number'), getSupabaseAdmin(c.env));
   return c.json({ success: true, data: result });
 });
-
-// -- GET /api/robot/blacklist-list -- semua entri blacklist (untuk admin) -------
 
 robot.get('/blacklist-list', async (c) => {
   if (!isInternal(c)) return c.json({ success: false, message: 'Akses ditolak.' }, 403);
@@ -59,23 +47,17 @@ robot.get('/blacklist-list', async (c) => {
   return c.json({ success: true, data: data ?? [] });
 });
 
-// -- GET /api/robot/health -----------------------------------------------------
-
 robot.get('/health', async (c) => {
   if (!isInternal(c)) return c.json({ success: false, message: 'Akses ditolak.' }, 403);
   const latest = await getLatestHealth(getSupabaseAdmin(c.env));
   return c.json({ success: true, data: latest });
 });
 
-// -- GET /api/robot/viral ------------------------------------------------------
-
 robot.get('/viral', async (c) => {
   if (!isInternal(c)) return c.json({ success: false, message: 'Akses ditolak.' }, 403);
   const data = await getViralNumbers(getSupabaseAdmin(c.env));
   return c.json({ success: true, data });
 });
-
-// -- GET /api/robot/logs -- audit logs terbaru ----------------------------------
 
 robot.get('/logs', async (c) => {
   if (!isInternal(c)) return c.json({ success: false, message: 'Akses ditolak.' }, 403);
@@ -87,15 +69,11 @@ robot.get('/logs', async (c) => {
   return c.json({ success: true, data: data ?? [] });
 });
 
-// -- POST /api/robot/run-scheduler --------------------------------------------
-
 robot.post('/run-scheduler', async (c) => {
   if (!isInternal(c)) return c.json({ success: false, message: 'Akses ditolak.' }, 403);
   const result = await runScheduler(getSupabaseAdmin(c.env));
   return c.json({ success: true, data: result });
 });
-
-// -- POST /api/robot/run-decay -------------------------------------------------
 
 robot.post('/run-decay', async (c) => {
   if (!isInternal(c)) return c.json({ success: false, message: 'Akses ditolak.' }, 403);
@@ -105,15 +83,11 @@ robot.post('/run-decay', async (c) => {
   return c.json({ success: true, data: result });
 });
 
-// -- POST /api/robot/run-trends ------------------------------------------------
-
 robot.post('/run-trends', async (c) => {
   if (!isInternal(c)) return c.json({ success: false, message: 'Akses ditolak.' }, 403);
   const result = await detectTrends(getSupabaseAdmin(c.env));
   return c.json({ success: true, data: result });
 });
-
-// -- POST /api/robot/backfill --------------------------------------------------
 
 robot.post('/backfill', async (c) => {
   if (!isInternal(c)) return c.json({ success: false, message: 'Akses ditolak.' }, 403);
@@ -128,18 +102,17 @@ robot.post('/backfill', async (c) => {
     .eq('robot_status', 'pending')
     .order('created_at', { ascending: true });
 
-  if (!reports?.length) {
+  if (!reports?.length)
     return c.json({ success: true, message: 'Tidak ada laporan yang perlu diproses.', data: stats });
-  }
 
   for (const report of reports) {
     try {
       const result = await scoreReport(report as RobotReport, supabase);
-      await applyVerdict(report.id, result, supabase, report.status);  // <- pass existing status
+      await applyVerdict(report as RobotReport, result, supabase, report.status);
       stats.processed++;
       if (result.verdict === 'verified') stats.verified++;
       if (result.verdict === 'rejected') stats.rejected++;
-      if (result.verdict === 'pending')  stats.skipped++;  // <- robot belum confident, status tetap
+      if (result.verdict === 'pending')  stats.skipped++;
     } catch (err) {
       console.error(`[BACKFILL] Error evaluasi ${report.id}:`, err);
       stats.errors++;
@@ -149,11 +122,8 @@ robot.post('/backfill', async (c) => {
 
   await writeLog({ action: 'scheduler', reasons: [{ ...stats, source: 'backfill' }] }, supabase).catch(() => {});
   console.log('[BACKFILL] Selesai:', stats);
-
   return c.json({ success: true, data: stats });
 });
-
-// -- Scheduler ----------------------------------------------------------------
 
 export async function runScheduler(
   supabase: ReturnType<typeof getSupabaseAdmin>
@@ -175,7 +145,7 @@ export async function runScheduler(
       const start = Date.now();
       try {
         const result = await scoreReport(report as RobotReport, supabase);
-        await applyVerdict(report.id, result, supabase, report.status);  // <- pass existing status
+        await applyVerdict(report as RobotReport, result, supabase, report.status);
         stats.processed++;
         if (result.verdict === 'verified') stats.verified++;
         if (result.verdict === 'rejected') stats.rejected++;

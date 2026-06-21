@@ -1,5 +1,6 @@
 import { Hono } from 'hono';
 import { createClient } from '@supabase/supabase-js';
+import { groqChat } from '../../core/groq';
 import type { Env } from '../../types';
 
 const app = new Hono<{ Bindings: Env }>();
@@ -10,10 +11,6 @@ const ARTICLE_DETAIL_FIELDS = 'id, title, slug, summary, content, status, cover_
 function getSupabase(env: Env) {
   return createClient(env.SUPABASE_URL, env.SUPABASE_SERVICE_ROLE_KEY);
 }
-
-// ---------------------------------------------------------------------------
-// GET /api/articles
-// ---------------------------------------------------------------------------
 
 app.get('/', async (c) => {
   const { data, error } = await getSupabase(c.env)
@@ -31,10 +28,6 @@ app.get('/', async (c) => {
   return c.json({ success: true, data });
 });
 
-// ---------------------------------------------------------------------------
-// GET /api/articles/:slug
-// ---------------------------------------------------------------------------
-
 app.get('/:slug', async (c) => {
   const slug = c.req.param('slug');
 
@@ -45,9 +38,8 @@ app.get('/:slug', async (c) => {
     .eq('status', 'published')
     .single();
 
-  if (error || !data) {
+  if (error || !data)
     return c.json({ success: false, message: 'Artikel tidak ditemukan.' }, 404);
-  }
 
   return c.json({ success: true, data });
 });
@@ -67,12 +59,7 @@ function fixArticleFormat(raw: string): string {
     .trim();
 }
 
-interface ReportRow    { category: string | null; platform: string | null; bank_name: string | null; loss_amount: number | string | null; }
-interface GroqResponse { choices?: { message?: { content?: string } }[]; }
-
-// ---------------------------------------------------------------------------
-// generateWeeklyArticle — dipanggil oleh cron job
-// ---------------------------------------------------------------------------
+interface ReportRow { category: string | null; platform: string | null; bank_name: string | null; loss_amount: number | string | null; }
 
 export async function generateWeeklyArticle(env: Env): Promise<void> {
   const supabase    = getSupabase(env);
@@ -87,7 +74,7 @@ export async function generateWeeklyArticle(env: Env): Promise<void> {
     .lte('created_at', periodEnd.toISOString())
     .in('status', ['verified', 'pending']);
 
-  if (!reports || reports.length === 0) {
+  if (!reports?.length) {
     console.log('[cron] tidak ada laporan minggu ini, skip.');
     return;
   }
@@ -121,35 +108,7 @@ export async function generateWeeklyArticle(env: Env): Promise<void> {
 
   const weekStr = `${periodStart.toLocaleDateString('id-ID', { day: 'numeric', month: 'long' })} - ${periodEnd.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`;
 
-  const groqHeaders = {
-    'Content-Type': 'application/json',
-    Authorization: `Bearer ${env.GROQ_API_KEY}`,
-  };
-
-  const groqFetch = async (prompt: string, temperature: number): Promise<string> => {
-    const res = await fetch('https://api.groq.com/openai/v1/chat/completions', {
-      method: 'POST',
-      headers: groqHeaders,
-      body: JSON.stringify({
-        model: 'llama-3.3-70b-versatile',
-        messages: [{ role: 'user', content: prompt }],
-        max_tokens: 1500,
-        temperature,
-      }),
-    });
-
-    if (!res.ok) {
-      console.error('[groq] request failed:', res.status, await res.text());
-      return '';
-    }
-
-    const data = await res.json() as GroqResponse;
-    return data.choices?.[0]?.message?.content ?? '';
-  };
-
-  // -- Artikel laporan mingguan ----------------------------------------------
-
-  const rawLaporan = await groqFetch(`Kamu adalah analis keamanan digital dari KawalTransaksi, platform komunitas anti-penipuan Indonesia.
+  const content = await groqChat(`Kamu adalah analis keamanan digital dari KawalTransaksi, platform komunitas anti-penipuan Indonesia.
 
 Data laporan penipuan minggu ${weekStr}:
 - Total laporan: ${totalReports}
@@ -179,34 +138,39 @@ Gunakan format Markdown berikut, dengan baris kosong di antara setiap section:
 
 ## Penutup
 
-Panjang: 400-600 kata. Jangan gunakan asterisk bold (**teks**). Pisahkan setiap section dengan baris kosong.`, 0.7);
+Panjang: 400-600 kata. Jangan gunakan asterisk bold (**teks**). Pisahkan setiap section dengan baris kosong.`, env.GROQ_API_KEY, { temperature: 0.7 });
 
-  if (rawLaporan) {
-    const content      = fixArticleFormat(rawLaporan);
-    const summary      = content.replace(/^##.*$/gm, '').trim().split('\n').filter(Boolean)[0] ?? '';
-    const startDay     = periodStart.getDate();
-    const endDay       = periodEnd.getDate();
-    const isSameMonth  = periodStart.getMonth() === periodEnd.getMonth();
-    const startLabel   = isSameMonth ? `${startDay}` : `${startDay} ${periodStart.toLocaleDateString('id-ID', { month: 'long' })}`;
-    const endMonthYear = periodEnd.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
-    const title        = `Laporan Penipuan ${startLabel}-${endDay} ${endMonthYear}`;
-    const slug         = `laporan-${startDay}-${endDay}-${periodEnd.toLocaleDateString('id-ID', { month: 'long' }).toLowerCase().replace(/ /g, '-')}-${periodEnd.getFullYear()}`;
-
-    const { error } = await supabase.from('articles').upsert({
-      title, slug, content, summary,
-      period_start:   periodStart.toISOString(),
-      period_end:     periodEnd.toISOString(),
-      total_reports:  totalReports,
-      total_loss:     totalLoss,
-      top_category:   topCategory?.[0] ?? null,
-      top_platform:   topPlatform?.[0] ?? null,
-      top_bank:       topBank?.[0]     ?? null,
-      published_at:   new Date().toISOString(),
-      status:         'draft',
-      cover_image:    null,
-    }, { onConflict: 'slug' });
-
-    if (error) console.error('[cron] gagal simpan artikel laporan:', error.message);
-    else console.log('[cron] artikel laporan berhasil:', title);
+  if (!content) {
+    console.error('[cron] groq tidak return content, skip.');
+    return;
   }
+
+  const formatted   = fixArticleFormat(content);
+  const summary     = formatted.replace(/^##.*$/gm, '').trim().split('\n').filter(Boolean)[0] ?? '';
+  const startDay    = periodStart.getDate();
+  const endDay      = periodEnd.getDate();
+  const isSameMonth = periodStart.getMonth() === periodEnd.getMonth();
+  const startLabel  = isSameMonth ? `${startDay}` : `${startDay} ${periodStart.toLocaleDateString('id-ID', { month: 'long' })}`;
+  const endLabel    = periodEnd.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
+  const title       = `Laporan Penipuan ${startLabel}-${endDay} ${endLabel}`;
+  const slug        = `laporan-${startDay}-${endDay}-${periodEnd.toLocaleDateString('id-ID', { month: 'long' }).toLowerCase().replace(/ /g, '-')}-${periodEnd.getFullYear()}`;
+
+  const { error } = await supabase.from('articles').upsert({
+    title, slug,
+    content:      formatted,
+    summary,
+    period_start: periodStart.toISOString(),
+    period_end:   periodEnd.toISOString(),
+    total_reports: totalReports,
+    total_loss:   totalLoss,
+    top_category: topCategory?.[0] ?? null,
+    top_platform: topPlatform?.[0] ?? null,
+    top_bank:     topBank?.[0]     ?? null,
+    published_at: new Date().toISOString(),
+    status:       'draft',
+    cover_image:  null,
+  }, { onConflict: 'slug' });
+
+  if (error) console.error('[cron] gagal simpan artikel:', error.message);
+  else console.log('[cron] artikel berhasil:', title);
 }

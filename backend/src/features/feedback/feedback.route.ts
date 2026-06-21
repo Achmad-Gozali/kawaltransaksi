@@ -4,9 +4,7 @@ import { getSupabaseAdmin } from '../../core/supabase';
 import { sendFeedbackReplyEmail } from '../../core/resend';
 import type { Env } from '../../types';
 
-const feedback = new Hono<{ Bindings: Env; Variables: { userId: string; userEmail: string } }>();
-
-// -- Konstanta -----------------------------------------------------------------
+const feedback = new Hono<{ Bindings: Env; Variables: { userId: string; userEmail: string; userRole: string } }>();
 
 const VALID_CATEGORIES = ['bug', 'feature', 'ui_ux', 'other'] as const;
 const VALID_URGENCIES  = ['low', 'medium', 'high', 'critical'] as const;
@@ -27,8 +25,6 @@ const ALLOWED_SCREENSHOT_HOSTNAMES = [
 ];
 
 const FEEDBACK_FIELDS = 'id, user_id, user_email, category, title, description, page_url, urgency, screenshot_urls, status, admin_reply, replied_at, created_at';
-
-// -- Helpers -------------------------------------------------------------------
 
 function sanitizeText(input: string): string {
   return input
@@ -52,14 +48,12 @@ function isValidPageUrl(url: unknown): string | null {
   } catch { return null; }
 }
 
-async function requireAdminRole(c: { get: (k: string) => string; env: Env; json: (d: unknown, s?: number) => Response }, next: () => Promise<void>) {
-  const { data: profile } = await getSupabaseAdmin(c.env)
-    .from('profiles').select('role').eq('id', c.get('userId')).single();
-  if (profile?.role !== 'admin') return c.json({ success: false, message: 'Akses ditolak.' }, 403);
+// FIX: pakai userRole dari context, tidak query DB lagi
+async function requireAdminRole(c: { get: (k: string) => string }, next: () => Promise<void>) {
+  if (c.get('userRole') !== 'admin')
+    return Response.json({ success: false, message: 'Akses ditolak.' }, { status: 403 });
   await next();
 }
-
-// -- POST /api/feedback --------------------------------------------------------
 
 feedback.post('/', authMiddleware, async (c) => {
   try {
@@ -68,22 +62,19 @@ feedback.post('/', authMiddleware, async (c) => {
     const body      = await c.req.json();
     const supabase  = getSupabaseAdmin(c.env);
 
-    if (!body.category || !VALID_CATEGORIES.includes(body.category)) {
+    if (!body.category || !VALID_CATEGORIES.includes(body.category))
       return c.json({ success: false, message: 'Kategori tidak valid.' }, 400);
-    }
-    if (body.urgency && !VALID_URGENCIES.includes(body.urgency)) {
+    if (body.urgency && !VALID_URGENCIES.includes(body.urgency))
       return c.json({ success: false, message: 'Tingkat urgensi tidak valid.' }, 400);
-    }
 
     const title       = String(body.title ?? '').trim();
     const description = String(body.description ?? '').trim();
 
-    if (!title || title.length < 5)                       return c.json({ success: false, message: 'Judul minimal 5 karakter.' }, 400);
-    if (title.length > LIMITS.TITLE_MAX)                  return c.json({ success: false, message: `Judul maks ${LIMITS.TITLE_MAX} karakter.` }, 400);
-    if (!description || description.length < 10)          return c.json({ success: false, message: 'Deskripsi minimal 10 karakter.' }, 400);
-    if (description.length > LIMITS.DESCRIPTION_MAX)      return c.json({ success: false, message: `Deskripsi maks ${LIMITS.DESCRIPTION_MAX} karakter.` }, 400);
+    if (!title || title.length < 5)                  return c.json({ success: false, message: 'Judul minimal 5 karakter.' }, 400);
+    if (title.length > LIMITS.TITLE_MAX)             return c.json({ success: false, message: `Judul maks ${LIMITS.TITLE_MAX} karakter.` }, 400);
+    if (!description || description.length < 10)     return c.json({ success: false, message: 'Deskripsi minimal 10 karakter.' }, 400);
+    if (description.length > LIMITS.DESCRIPTION_MAX) return c.json({ success: false, message: `Deskripsi maks ${LIMITS.DESCRIPTION_MAX} karakter.` }, 400);
 
-    // Rate limit: maks 10 per hari
     const oneDayAgo = new Date(Date.now() - 86400000).toISOString();
     const { count: todayCount } = await supabase
       .from('feedback')
@@ -91,9 +82,8 @@ feedback.post('/', authMiddleware, async (c) => {
       .eq('user_id', userId)
       .gte('created_at', oneDayAgo);
 
-    if ((todayCount ?? 0) >= LIMITS.PER_DAY) {
+    if ((todayCount ?? 0) >= LIMITS.PER_DAY)
       return c.json({ success: false, message: 'Batas pengiriman feedback harian tercapai.' }, 429);
-    }
 
     const screenshotUrls = Array.isArray(body.screenshot_urls)
       ? (body.screenshot_urls as unknown[]).filter(isValidScreenshotUrl).slice(0, LIMITS.SCREENSHOTS_MAX) as string[]
@@ -122,8 +112,6 @@ feedback.post('/', authMiddleware, async (c) => {
   }
 });
 
-// -- GET /api/feedback (admin) -------------------------------------------------
-
 feedback.get('/', authMiddleware, requireAdminRole, async (c) => {
   try {
     const { data, error } = await getSupabaseAdmin(c.env)
@@ -137,8 +125,6 @@ feedback.get('/', authMiddleware, requireAdminRole, async (c) => {
     return c.json({ success: false, message: 'Terjadi kesalahan server.' }, 500);
   }
 });
-
-// -- PATCH /api/feedback/:id/status (admin) ------------------------------------
 
 feedback.patch('/:id/status', authMiddleware, requireAdminRole, async (c) => {
   try {
@@ -157,16 +143,14 @@ feedback.patch('/:id/status', authMiddleware, requireAdminRole, async (c) => {
   }
 });
 
-// -- PATCH /api/feedback/:id/reply (admin) -------------------------------------
-
 feedback.patch('/:id/reply', authMiddleware, requireAdminRole, async (c) => {
   try {
     const feedbackId = c.req.param('id');
     if (!UUID_REGEX.test(feedbackId)) return c.json({ success: false, message: 'ID feedback tidak valid.' }, 400);
 
     const cleanReply = String((await c.req.json()).reply ?? '').trim();
-    if (!cleanReply)                             return c.json({ success: false, message: 'Balasan tidak boleh kosong.' }, 400);
-    if (cleanReply.length > LIMITS.REPLY_MAX)    return c.json({ success: false, message: `Balasan maks ${LIMITS.REPLY_MAX} karakter.` }, 400);
+    if (!cleanReply)                          return c.json({ success: false, message: 'Balasan tidak boleh kosong.' }, 400);
+    if (cleanReply.length > LIMITS.REPLY_MAX) return c.json({ success: false, message: `Balasan maks ${LIMITS.REPLY_MAX} karakter.` }, 400);
 
     const supabase = getSupabaseAdmin(c.env);
     const { data: fb, error: fetchError } = await supabase

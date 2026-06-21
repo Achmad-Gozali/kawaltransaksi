@@ -23,9 +23,8 @@ async function kvSet(limiter: KVNamespace, key: string, value: unknown, ttl: num
 }
 
 async function checkIpRateLimit(limiter: KVNamespace, ip: string): Promise<boolean> {
-  const key = `rl_api_v1_${ip}`;
-  const raw = await limiter.get(key);
-  const count = parseInt(raw ?? '0');
+  const key   = `rl_api_v1_${ip}`;
+  const count = parseInt(await limiter.get(key) ?? '0');
   if (count >= 60) return false;
   await limiter.put(key, (count + 1).toString(), { expirationTtl: 60 });
   return true;
@@ -33,14 +32,14 @@ async function checkIpRateLimit(limiter: KVNamespace, ip: string): Promise<boole
 
 async function logFailedAttempt(limiter: KVNamespace, ip: string, reason: string): Promise<void> {
   try {
-    const key = `api_fail_${ip}`;
+    const key      = `api_fail_${ip}`;
     const newCount = parseInt(await limiter.get(key) ?? '0') + 1;
     await limiter.put(key, newCount.toString(), { expirationTtl: 300 });
     if (newCount >= 10 && !await limiter.get(`blacklist_${ip}`)) {
       await limiter.put(`blacklist_${ip}`, JSON.stringify({
         ip,
-        reason: `Auto-blacklist: ${newCount}x failed API auth (${reason})`,
-        auto: true,
+        reason:     `Auto-blacklist: ${newCount}x failed API auth (${reason})`,
+        auto:       true,
         created_at: new Date().toISOString(),
       }), { expirationTtl: 86400 });
     }
@@ -63,8 +62,7 @@ async function validateApiKey(
   const keyHash = await hashKey(key.trim());
 
   if (env.LIMITER) {
-    const negCacheKey = `neg_cache_${keyHash}`;
-    const negCached = await env.LIMITER.get(negCacheKey);
+    const negCached = await env.LIMITER.get(`neg_cache_${keyHash}`);
     if (negCached) {
       await logFailedAttempt(env.LIMITER, ip, `neg_cached:${negCached}`);
       return { valid: false, message: 'API key tidak valid.', statusCode: 401 };
@@ -98,8 +96,9 @@ async function validateApiKey(
     return { valid: false, message: 'API key tidak aktif.', statusCode: 401 };
   }
 
+  // FIX: was 429, expired key = 401 bukan rate limit
   if (data.expires_at && new Date(data.expires_at) < new Date())
-    return { valid: false, message: 'API key sudah kadaluarsa.', statusCode: 429 };
+    return { valid: false, message: 'API key sudah kadaluarsa.', statusCode: 401 };
 
   const today = new Date().toISOString().slice(0, 10);
   if (String(data.last_reset_at).slice(0, 10) !== today) {
@@ -111,10 +110,7 @@ async function validateApiKey(
     return { valid: false, message: `Batas harian tercapai (${data.daily_limit} request/hari). Reset besok.`, statusCode: 429 };
 
   const { data: profile } = await supabase
-    .from('profiles')
-    .select('email')
-    .eq('id', data.user_id)
-    .single();
+    .from('profiles').select('email').eq('id', data.user_id).single();
 
   return { valid: true, keyData: { ...data, userEmail: profile?.email ?? null } };
 }
@@ -126,7 +122,7 @@ async function checkAnomaly(
   userEmail: string | null
 ): Promise<void> {
   try {
-    const now = new Date();
+    const now      = new Date();
     const hourSlot = now.toISOString().slice(0, 13);
     const countKey = `anomaly_count_${keyId}_${hourSlot}`;
     const newCount = parseInt(await limiter.get(countKey) ?? '0') + 1;
@@ -137,12 +133,12 @@ async function checkAnomaly(
     const slots: number[] = [];
     for (let i = 1; i <= 168; i++) {
       const slot = new Date(now.getTime() - i * 3600000).toISOString().slice(0, 13);
-      const val = await limiter.get(`anomaly_count_${keyId}_${slot}`);
+      const val  = await limiter.get(`anomaly_count_${keyId}_${slot}`);
       if (val) slots.push(parseInt(val));
     }
     if (slots.length < 24) return;
 
-    const avg = slots.reduce((a, b) => a + b, 0) / slots.length;
+    const avg     = slots.reduce((a, b) => a + b, 0) / slots.length;
     const trigger = avg * 3;
     if (newCount < trigger || trigger <= 0) return;
 
@@ -151,22 +147,22 @@ async function checkAnomaly(
 
     await limiter.put(alertKey, '1', { expirationTtl: 3600 });
     await kvSet(limiter, `anomaly_flag_${keyId}`, {
-      key_id: keyId,
-      hour: hourSlot,
-      count: newCount,
+      key_id:       keyId,
+      hour:         hourSlot,
+      count:        newCount,
       avg_per_hour: Math.round(avg),
-      multiplier: Math.round(newCount / avg),
-      flagged_at: now.toISOString(),
+      multiplier:   Math.round(newCount / avg),
+      flagged_at:   now.toISOString(),
     }, 86400);
 
     if (userEmail && env.RESEND_API_KEY) {
       sendApiAnomalyEmail({
-        to: userEmail,
+        to:               userEmail,
         keyId,
         requestsThisHour: newCount,
-        avgPerHour: Math.round(avg),
-        multiplier: Math.round(newCount / avg),
-        apiKey: env.RESEND_API_KEY,
+        avgPerHour:       Math.round(avg),
+        multiplier:       Math.round(newCount / avg),
+        apiKey:           env.RESEND_API_KEY,
       }).catch(err => console.error('[ANOMALY EMAIL]:', err));
     }
   } catch (err) { console.error('[ANOMALY]:', err); }
@@ -174,8 +170,8 @@ async function checkAnomaly(
 
 apiPublic.get('/check', async (c) => {
   try {
-    const ip = c.req.header('CF-Connecting-IP') || 'anonymous';
-    const apiKey = (c.req.header('X-API-Key') || '').trim();
+    const ip             = c.req.header('CF-Connecting-IP') || 'anonymous';
+    const apiKey         = (c.req.header('X-API-Key') || '').trim();
     const idempotencyKey = c.req.header('Idempotency-Key') || null;
 
     if (c.env.LIMITER && ip !== 'anonymous') {
@@ -192,8 +188,8 @@ apiPublic.get('/check', async (c) => {
     }
 
     const number = c.req.query('number')?.replace(/\D/g, '') || '';
-    const type = c.req.query('type') || 'phone';
-    const bank = c.req.query('bank') || null;
+    const type   = c.req.query('type') || 'phone';
+    const bank   = c.req.query('bank') || null;
 
     if (!number || number.length < 5 || number.length > 32)
       return c.json({ success: false, message: 'Parameter number tidak valid.' }, 400);
@@ -201,7 +197,7 @@ apiPublic.get('/check', async (c) => {
       return c.json({ success: false, message: 'Parameter type tidak valid. Gunakan: phone, bank_account, ewallet.' }, 400);
 
     const cacheKey = `check_cache_${type}_${number}`;
-    let checkData = c.env.LIMITER ? await kvGet<Record<string, unknown>>(c.env.LIMITER, cacheKey) : null;
+    let checkData  = c.env.LIMITER ? await kvGet<Record<string, unknown>>(c.env.LIMITER, cacheKey) : null;
 
     if (!checkData) {
       const { data: reportsData } = await getSupabaseAdmin(c.env)
@@ -211,20 +207,20 @@ apiPublic.get('/check', async (c) => {
         .neq('status', 'withdrawn')
         .order('created_at', { ascending: false });
 
-      const all = reportsData ?? [];
+      const all      = reportsData ?? [];
       const verified = all.filter((r: { status: string }) => r.status === 'verified');
-      const pending = all.filter((r: { status: string }) => r.status === 'pending');
+      const pending  = all.filter((r: { status: string }) => r.status === 'pending');
 
       checkData = {
         number, type, bank,
-        status: verified.length > 0 ? 'danger' : pending.length > 0 ? 'warning' : 'safe',
+        status:           verified.length > 0 ? 'danger' : pending.length > 0 ? 'warning' : 'safe',
         verified_reports: verified.length,
-        pending_reports: pending.length,
-        total_reports: all.length,
-        total_loss: all.reduce((sum: number, r: { loss_amount?: string | number | null }) =>
+        pending_reports:  pending.length,
+        total_reports:    all.length,
+        total_loss:       all.reduce((sum: number, r: { loss_amount?: string | number | null }) =>
           sum + (Number(r.loss_amount) || 0), 0),
-        last_reported: all[0]?.created_at ?? null,
-        check_url: `https://kawaltransaksi.com/check/${number}`,
+        last_reported:    all[0]?.created_at ?? null,
+        check_url:        `https://kawaltransaksi.com/check/${number}`,
       };
 
       if (c.env.LIMITER)
@@ -234,13 +230,13 @@ apiPublic.get('/check', async (c) => {
     const kd = keyData!;
     const responseBody = {
       success: true,
-      data: checkData,
+      data:    checkData,
       meta: {
-        environment: kd.environment ?? 'live',
-        requests_today: (kd.requests_today as number) + 1,
-        daily_limit: kd.daily_limit,
+        environment:        kd.environment ?? 'live',
+        requests_today:     (kd.requests_today as number) + 1,
+        daily_limit:        kd.daily_limit,
         requests_remaining: (kd.daily_limit as number) - (kd.requests_today as number) - 1,
-        expires_at: kd.expires_at ?? null,
+        expires_at:         kd.expires_at ?? null,
       },
     };
 
