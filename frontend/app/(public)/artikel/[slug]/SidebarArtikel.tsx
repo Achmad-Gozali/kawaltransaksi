@@ -27,10 +27,13 @@ export default function SidebarArtikel({ articles }: { articles: Article[] }) {
             <Link key={article.slug} href={`/artikel/${article.slug}`}
               className="flex gap-3 group p-2.5 rounded-xl hover:bg-white hover:shadow-sm transition-all duration-200">
               {article.cover_image ? (
-                <div className="relative w-14 h-14 rounded-lg overflow-hidden shrink-0 bg-slate-100">
-                  <Image src={article.cover_image} alt="" fill aria-hidden="true" className="object-cover scale-110 blur-md opacity-50" />
-                  <Image src={article.cover_image} alt={article.title} fill className="object-contain group-hover:scale-105 transition-transform duration-200" />
-                </div>
+                <Image
+                  src={article.cover_image}
+                  alt={article.title}
+                  width={56}
+                  height={56}
+                  className="w-14 h-auto rounded-lg shrink-0 group-hover:scale-105 transition-transform duration-200"
+                />
               ) : (
                 <div className="w-14 h-14 rounded-lg bg-slate-200 shrink-0 flex items-center justify-center">
                   <span className="text-slate-400 text-xs font-bold">KT</span>

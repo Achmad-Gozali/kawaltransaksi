@@ -288,23 +288,15 @@ export default async function ArtikelDetailPage({ params }: Props) {
             </h1>
 
             {article.cover_image && (
-              <div className="relative w-full aspect-[16/9] rounded-2xl overflow-hidden mb-8 bg-slate-100">
-                <Image
-                  src={article.cover_image}
-                  alt=""
-                  fill
-                  aria-hidden="true"
-                  className="object-cover scale-110 blur-2xl opacity-50"
-                />
-                <Image
-                  src={article.cover_image}
-                  alt={article.title}
-                  fill
-                  sizes="(max-width: 768px) 100vw, 768px"
-                  className="object-contain"
-                  priority
-                />
-              </div>
+              <Image
+                src={article.cover_image}
+                alt={article.title}
+                width={1200}
+                height={675}
+                sizes="(max-width: 768px) 100vw, 768px"
+                className="w-full h-auto rounded-2xl mb-8"
+                priority
+              />
             )}
 
             <div className="h-px bg-slate-100 mb-8" />
@@ -356,22 +348,14 @@ export default async function ArtikelDetailPage({ params }: Props) {
                       className="group flex flex-col bg-white border border-slate-200 rounded-2xl overflow-hidden hover:shadow-xl hover:border-slate-300 hover:-translate-y-1 transition-all duration-200 shadow-sm"
                     >
                       {a.cover_image ? (
-                        <div className="relative w-full aspect-[4/3] overflow-hidden bg-slate-100">
-                          <Image
-                            src={a.cover_image}
-                            alt=""
-                            fill
-                            aria-hidden="true"
-                            className="object-cover scale-110 blur-2xl opacity-50"
-                          />
-                          <Image
-                            src={a.cover_image}
-                            alt={a.title}
-                            fill
-                            sizes="(max-width: 768px) 100vw, 33vw"
-                            className="object-contain group-hover:scale-105 transition-transform duration-300"
-                          />
-                        </div>
+                        <Image
+                          src={a.cover_image}
+                          alt={a.title}
+                          width={800}
+                          height={600}
+                          sizes="(max-width: 768px) 100vw, 33vw"
+                          className="w-full h-auto group-hover:scale-105 transition-transform duration-300"
+                        />
                       ) : (
                         <div className="w-full aspect-[4/3] bg-slate-100 flex items-center justify-center">
                           <span className="text-slate-300 text-xl font-black">
