@@ -288,14 +288,13 @@ export default async function ArtikelDetailPage({ params }: Props) {
             </h1>
 
             {article.cover_image && (
-              <div className="relative w-full rounded-2xl overflow-hidden mb-8 bg-slate-100">
+              <div className="relative w-full aspect-[16/9] rounded-2xl overflow-hidden mb-8 bg-slate-100">
                 <Image
                   src={article.cover_image}
                   alt={article.title}
-                  width={1200}
-                  height={675}
+                  fill
                   sizes="(max-width: 768px) 100vw, 768px"
-                  className="w-full h-auto object-contain"
+                  className="object-cover"
                   priority
                 />
               </div>
@@ -350,16 +349,17 @@ export default async function ArtikelDetailPage({ params }: Props) {
                       className="group flex flex-col bg-white border border-slate-200 rounded-2xl overflow-hidden hover:shadow-xl hover:border-slate-300 hover:-translate-y-1 transition-all duration-200 shadow-sm"
                     >
                       {a.cover_image ? (
-                        <div className="relative w-full h-40 overflow-hidden bg-slate-100">
+                        <div className="relative w-full aspect-[4/3] overflow-hidden bg-slate-100">
                           <Image
                             src={a.cover_image}
                             alt={a.title}
                             fill
-                            className="object-contain group-hover:scale-105 transition-transform duration-300"
+                            sizes="(max-width: 768px) 100vw, 33vw"
+                            className="object-cover group-hover:scale-105 transition-transform duration-300"
                           />
                         </div>
                       ) : (
-                        <div className="w-full h-40 bg-slate-100 flex items-center justify-center">
+                        <div className="w-full aspect-[4/3] bg-slate-100 flex items-center justify-center">
                           <span className="text-slate-300 text-xl font-black">
                             KT
                           </span>

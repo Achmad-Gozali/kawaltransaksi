@@ -163,18 +163,17 @@ export default async function ArtikelPage() {
                   className="group flex flex-col bg-white border border-slate-200 rounded-2xl overflow-hidden hover:shadow-xl hover:border-slate-300 hover:-translate-y-1 transition-all duration-200 shadow-sm"
                 >
                   {article.cover_image ? (
-                    <div className="relative w-full overflow-hidden bg-slate-100">
+                    <div className="relative w-full aspect-[4/3] overflow-hidden bg-slate-100">
                       <Image
                         src={article.cover_image}
                         alt={article.title}
-                        width={1000}
-                        height={1250}
+                        fill
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                        className="w-full h-auto object-contain group-hover:scale-105 transition-transform duration-300"
+                        className="object-cover group-hover:scale-105 transition-transform duration-300"
                       />
                     </div>
                   ) : (
-                    <div className="w-full h-48 bg-slate-100 flex items-center justify-center">
+                    <div className="w-full aspect-[4/3] bg-slate-100 flex items-center justify-center">
                       <span className="text-slate-300 text-2xl font-black">
                         KT
                       </span>
