@@ -31,9 +31,10 @@ function normalizeEmail(email: string): string {
 }
 
 function validateEmail(email: string): { valid: boolean; message: string } {
-  if (!email.includes('@')) return { valid: false, message: 'Format email tidak valid.' };
   const parts = email.toLowerCase().trim().split('@');
-  if (parts.length !== 2) return { valid: false, message: 'Format email tidak valid.' };
+  if (parts.length !== 2 || !parts[0] || !parts[1]) {
+    return { valid: false, message: 'Format email tidak valid.' };
+  }
   const domain = parts[1];
   if (!domain.endsWith('.com') && domain !== 'yahoo.co.id') {
     return { valid: false, message: 'Gunakan email dengan domain yang valid (contoh: @gmail.com, @yahoo.com).' };
@@ -68,23 +69,24 @@ function getPasswordStrength(password: string): { label: string; color: string; 
   return { label: 'Kuat', color: 'bg-emerald-500', width: '100%' };
 }
 
+const ERROR_MAP: Record<string, string> = {
+  'Invalid login credentials': 'Email atau kata sandi salah.',
+  'User already registered': 'Email ini sudah terdaftar. Silakan masuk atau gunakan email lain.',
+  'Email not confirmed': 'Email belum dikonfirmasi. Cek kotak masuk email kamu.',
+  'Password should be at least 6 characters': 'Kata sandi tidak memenuhi persyaratan keamanan.',
+  'Unable to validate email address: invalid format': 'Format email tidak valid.',
+  'Failed to fetch': 'Gagal terhubung ke server. Periksa koneksi internet kamu.',
+  'signup is disabled': 'Pendaftaran akun sementara dinonaktifkan.',
+  'Email rate limit exceeded': 'Terlalu banyak percobaan. Tunggu beberapa menit lalu coba lagi.',
+  'over_email_send_rate_limit': 'Batas pengiriman email tercapai. Coba lagi dalam beberapa menit.',
+  'For security purposes, you can only request this after': 'Tunggu beberapa detik sebelum mencoba lagi.',
+};
+
 function translateError(message: string): string {
-  const errorMap: Record<string, string> = {
-    'Invalid login credentials': 'Email atau kata sandi salah.',
-    'User already registered': 'Email ini sudah terdaftar. Silakan masuk atau gunakan email lain.',
-    'Email not confirmed': 'Email belum dikonfirmasi. Cek kotak masuk email kamu.',
-    'Password should be at least 6 characters': 'Kata sandi tidak memenuhi persyaratan keamanan.',
-    'Unable to validate email address: invalid format': 'Format email tidak valid.',
-    'Failed to fetch': 'Gagal terhubung ke server. Periksa koneksi internet kamu.',
-    'signup is disabled': 'Pendaftaran akun sementara dinonaktifkan.',
-    'Email rate limit exceeded': 'Terlalu banyak percobaan. Tunggu beberapa menit lalu coba lagi.',
-    'over_email_send_rate_limit': 'Batas pengiriman email tercapai. Coba lagi dalam beberapa menit.',
-    'For security purposes, you can only request this after': 'Tunggu beberapa detik sebelum mencoba lagi.',
-  };
-  for (const [key, value] of Object.entries(errorMap)) {
-    if (message.toLowerCase().includes(key.toLowerCase())) return value;
-  }
-  return message;
+  const found = Object.entries(ERROR_MAP).find(([key]) =>
+    message.toLowerCase().includes(key.toLowerCase())
+  );
+  return found?.[1] ?? message;
 }
 
 function useCountdown(targetMs: number | null) {
@@ -126,6 +128,8 @@ function AuthFormInner({ type }: AuthFormProps) {
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [fullName, setFullName] = useState('');
+  const [agreed, setAgreed] = useState(false);
+  const [consentError, setConsentError] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -142,6 +146,7 @@ function AuthFormInner({ type }: AuthFormProps) {
   const [resendCooldown, setResendCooldown] = useState(0);
 
   const turnstileRef = useRef<TurnstileInstance>(null);
+  const consentRef = useRef<HTMLDivElement>(null);
 
   const { minutes, seconds, isExpired } = useCountdown(lockedUntilMs);
   const isLocked = lockedUntilMs !== null && !isExpired;
@@ -170,26 +175,24 @@ function AuthFormInner({ type }: AuthFormProps) {
   );
   const isSubmitDisabled = isLoading || !!oauthLoading || turnstileStatus !== 'ready' || !turnstileToken || isRegisterInvalid || isLocked;
 
-  // [OK] PERUBAHAN ADA DI SINI
   const handleOAuthLogin = async (provider: OAuthProvider) => {
-  setOauthLoading(provider);
-  setError(null);
-  setIsWarning(false);
-  
-  const siteUrl = window.location.origin;
-  
-  const params = new URLSearchParams({
-    client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
-    redirect_uri: `${siteUrl}/auth/callback`,
-    response_type: 'code',
-    scope: 'openid email profile',
-    access_type: 'offline',
-    prompt: 'select_account',
-    state: redirectTo,
-  });
+    setOauthLoading(provider);
+    setError(null);
+    setIsWarning(false);
 
-  window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
-};
+    const siteUrl = window.location.origin;
+    const params = new URLSearchParams({
+      client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
+      redirect_uri: `${siteUrl}/auth/callback`,
+      response_type: 'code',
+      scope: 'openid email profile',
+      access_type: 'offline',
+      prompt: 'select_account',
+      state: redirectTo,
+    });
+
+    window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+  };
 
   const handleResend = async () => {
     setIsLoading(true);
@@ -197,15 +200,15 @@ function AuthFormInner({ type }: AuthFormProps) {
     setIsLoading(false);
     if (error) {
       setError(translateError(error.message));
-    } else {
-      setResendCooldown(60);
-      const interval = setInterval(() => {
-        setResendCooldown(prev => {
-          if (prev <= 1) { clearInterval(interval); return 0; }
-          return prev - 1;
-        });
-      }, 1000);
+      return;
     }
+    setResendCooldown(60);
+    const interval = setInterval(() => {
+      setResendCooldown(prev => {
+        if (prev <= 1) { clearInterval(interval); return 0; }
+        return prev - 1;
+      });
+    }, 1000);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -215,6 +218,13 @@ function AuthFormInner({ type }: AuthFormProps) {
     setSuccess(null);
     setIsWarning(false);
     setCaptchaError(null);
+    setConsentError(false);
+
+    if (type === 'register' && !agreed) {
+      setConsentError(true);
+      consentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      return;
+    }
 
     if (!turnstileToken) {
       setCaptchaError('Selesaikan verifikasi keamanan terlebih dahulu.');
@@ -497,6 +507,37 @@ function AuthFormInner({ type }: AuthFormProps) {
             {passwordMismatch && (
               <p className="text-[10px] font-semibold text-red-500 flex items-center gap-1">
                 <AlertCircle className="w-3 h-3" /> Kata sandi tidak cocok
+              </p>
+            )}
+          </div>
+        )}
+
+        {type === 'register' && (
+          <div ref={consentRef}>
+            <label className="flex items-start gap-2.5 cursor-pointer group">
+              <input
+                type="checkbox"
+                checked={agreed}
+                onChange={(e) => { setAgreed(e.target.checked); if (e.target.checked) setConsentError(false); }}
+                className={`mt-0.5 w-4 h-4 shrink-0 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 focus:ring-2 focus:ring-offset-0 cursor-pointer ${consentError ? 'border-red-400 ring-2 ring-red-200' : ''}`}
+              />
+              <span className="text-xs text-gray-500 leading-relaxed">
+                Saya menyetujui{' '}
+                <Link href="/syarat-ketentuan" target="_blank" onClick={(e) => e.stopPropagation()}
+                  className="text-gray-700 hover:text-emerald-600 font-medium transition-colors underline underline-offset-2">
+                  Syarat & Ketentuan
+                </Link>
+                {' '}dan{' '}
+                <Link href="/kebijakan-privasi" target="_blank" onClick={(e) => e.stopPropagation()}
+                  className="text-gray-700 hover:text-emerald-600 font-medium transition-colors underline underline-offset-2">
+                  Kebijakan Privasi
+                </Link>
+                {' '}KawalTransaksi.
+              </span>
+            </label>
+            {consentError && (
+              <p className="mt-1.5 text-[11px] font-semibold text-red-500 flex items-center gap-1">
+                <AlertCircle className="w-3 h-3" /> Centang persetujuan untuk melanjutkan.
               </p>
             )}
           </div>

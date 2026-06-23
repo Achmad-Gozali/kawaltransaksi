@@ -4,11 +4,8 @@ import AuthForm from '@/features/auth/AuthForm';
 import Link from 'next/link';
 import Image from 'next/image';
 import { ArrowLeft, ArrowRight } from 'lucide-react';
-import { useState } from 'react';
 
 export default function RegisterPage() {
-  const [agreed, setAgreed] = useState(false);
-
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center px-4 py-12 relative overflow-hidden">
 
@@ -40,58 +37,7 @@ export default function RegisterPage() {
             <p className="text-sm text-gray-500">Daftar gratis dan mulai berkontribusi.</p>
           </div>
 
-          {/* Form dinonaktifkan visual + interaksi sampai checkbox di bawah dicentang */}
-          <div
-            className={`relative transition-opacity ${!agreed ? 'opacity-50' : ''}`}
-            aria-disabled={!agreed}
-          >
-            <div className={!agreed ? 'pointer-events-none select-none' : ''}>
-              <AuthForm type="register" />
-            </div>
-            {!agreed && (
-              <div
-                className="absolute inset-0 z-10 cursor-not-allowed"
-                title="Setujui Syarat & Ketentuan dan Kebijakan Privasi terlebih dahulu"
-              />
-            )}
-          </div>
-
-          {/* Checkbox consent - di bawah form, dekat submit, sesuai konvensi standar */}
-          <label className="flex items-start gap-2.5 mt-5 cursor-pointer group">
-            <input
-              type="checkbox"
-              checked={agreed}
-              onChange={(e) => setAgreed(e.target.checked)}
-              className="mt-0.5 w-4 h-4 shrink-0 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 focus:ring-2 focus:ring-offset-0 cursor-pointer"
-            />
-            <span className="text-xs text-gray-500 leading-relaxed">
-              Saya menyetujui{' '}
-              <Link
-                href="/syarat-ketentuan"
-                target="_blank"
-                onClick={(e) => e.stopPropagation()}
-                className="text-gray-700 hover:text-emerald-600 font-medium transition-colors underline underline-offset-2"
-              >
-                Syarat & Ketentuan
-              </Link>
-              {' '}dan{' '}
-              <Link
-                href="/kebijakan-privasi"
-                target="_blank"
-                onClick={(e) => e.stopPropagation()}
-                className="text-gray-700 hover:text-emerald-600 font-medium transition-colors underline underline-offset-2"
-              >
-                Kebijakan Privasi
-              </Link>
-              {' '}KawalTransaksi.
-            </span>
-          </label>
-
-          {!agreed && (
-            <p className="mt-2 text-xs text-amber-600 text-center">
-              Centang persetujuan di atas untuk melanjutkan.
-            </p>
-          )}
+          <AuthForm type="register" />
         </div>
 
         {/* Login link */}
