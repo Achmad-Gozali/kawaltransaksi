@@ -166,10 +166,18 @@ export default async function ArtikelPage() {
                     <div className="relative w-full aspect-[4/3] overflow-hidden bg-slate-100">
                       <Image
                         src={article.cover_image}
+                        alt=""
+                        fill
+                        aria-hidden="true"
+                        sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
+                        className="object-cover scale-110 blur-2xl opacity-50"
+                      />
+                      <Image
+                        src={article.cover_image}
                         alt={article.title}
                         fill
                         sizes="(max-width: 640px) 100vw, (max-width: 1024px) 50vw, 33vw"
-                        className="object-cover group-hover:scale-105 transition-transform duration-300"
+                        className="object-contain group-hover:scale-105 transition-transform duration-300"
                       />
                     </div>
                   ) : (

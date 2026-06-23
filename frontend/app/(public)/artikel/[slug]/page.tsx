@@ -291,10 +291,17 @@ export default async function ArtikelDetailPage({ params }: Props) {
               <div className="relative w-full aspect-[16/9] rounded-2xl overflow-hidden mb-8 bg-slate-100">
                 <Image
                   src={article.cover_image}
+                  alt=""
+                  fill
+                  aria-hidden="true"
+                  className="object-cover scale-110 blur-2xl opacity-50"
+                />
+                <Image
+                  src={article.cover_image}
                   alt={article.title}
                   fill
                   sizes="(max-width: 768px) 100vw, 768px"
-                  className="object-cover"
+                  className="object-contain"
                   priority
                 />
               </div>
@@ -352,10 +359,17 @@ export default async function ArtikelDetailPage({ params }: Props) {
                         <div className="relative w-full aspect-[4/3] overflow-hidden bg-slate-100">
                           <Image
                             src={a.cover_image}
+                            alt=""
+                            fill
+                            aria-hidden="true"
+                            className="object-cover scale-110 blur-2xl opacity-50"
+                          />
+                          <Image
+                            src={a.cover_image}
                             alt={a.title}
                             fill
                             sizes="(max-width: 768px) 100vw, 33vw"
-                            className="object-cover group-hover:scale-105 transition-transform duration-300"
+                            className="object-contain group-hover:scale-105 transition-transform duration-300"
                           />
                         </div>
                       ) : (
