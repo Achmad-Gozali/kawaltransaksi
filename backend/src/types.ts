@@ -11,6 +11,7 @@ export interface Env {
   RESEND_API_KEY: string;
   ADMIN_EMAIL: string;
   R2_PUBLIC_URL: string;
+  ADMIN_IP_WHITELIST?: string;
   INTERNAL_API_KEY: string;
   FRONTEND_URL_CLONE?: string;
   HEALTH_SECRET: string;

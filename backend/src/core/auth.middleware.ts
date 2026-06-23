@@ -6,13 +6,11 @@ const TOKEN_CACHE_TTL      = 120;
 const SUSPICIOUS_THRESHOLD = 5;
 const SUSPICIOUS_TTL       = 600;
 
-// FIX #2: hash full token dengan SHA-256 untuk menghindari cache collision
 async function hashToken(token: string): Promise<string> {
   const buf = await crypto.subtle.digest('SHA-256', new TextEncoder().encode(token));
   return Array.from(new Uint8Array(buf))
     .map(b => b.toString(16).padStart(2, '0'))
-    .join('')
-    .slice(0, 32);
+    .join(''); // full 64 char — hapus slice
 }
 
 export const authMiddleware = createMiddleware<{
@@ -25,15 +23,15 @@ export const authMiddleware = createMiddleware<{
 
   const token = authHeader.split(' ')[1];
 
-  if (!token || token.length < 100 || token.length > 2048)
+  if (!token || token.length < 20 || token.length > 2048)
     return c.json({ success: false, message: 'Token tidak valid.' }, 401);
 
-  const ip = c.req.header('CF-Connecting-IP') || 'anonymous';
+  const ip        = c.req.header('CF-Connecting-IP') || 'anonymous';
+  const tokenHash = await hashToken(token); // hitung sekali
+  const cacheKey  = `auth_token_${tokenHash}`;
 
   if (c.env.LIMITER) {
-    const cacheKey = `auth_token_${await hashToken(token)}`;
-    const cached   = await c.env.LIMITER.get(cacheKey);
-
+    const cached = await c.env.LIMITER.get(cacheKey);
     if (cached) {
       try {
         const { userId, userEmail, userRole, isBanned } = JSON.parse(cached);
@@ -60,11 +58,12 @@ export const authMiddleware = createMiddleware<{
         const failCount = parseInt(await c.env.LIMITER.get(failKey) ?? '0') + 1;
         await c.env.LIMITER.put(failKey, failCount.toString(), { expirationTtl: SUSPICIOUS_TTL });
         if (failCount >= SUSPICIOUS_THRESHOLD) {
-          await c.env.LIMITER.put(`suspicious_${ip}`, JSON.stringify({
+          await c.env.LIMITER.put(`blacklist_${ip}`, JSON.stringify({
             ip,
             reason:     `${failCount}x token invalid dalam 10 menit`,
+            auto:       true,
             created_at: new Date().toISOString(),
-          }), { expirationTtl: SUSPICIOUS_TTL });
+          }), { expirationTtl: 86400 }); // langsung blacklist, bukan suspicious saja
         }
       } catch (err) {
         console.error('[AUTH] Error logging fail:', err);
@@ -85,7 +84,6 @@ export const authMiddleware = createMiddleware<{
 
   if (c.env.LIMITER) {
     try {
-      const cacheKey = `auth_token_${await hashToken(token)}`;
       await c.env.LIMITER.put(cacheKey, JSON.stringify({
         userId, userEmail, userRole, isBanned: false,
       }), { expirationTtl: TOKEN_CACHE_TTL });

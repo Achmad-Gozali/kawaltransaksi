@@ -49,7 +49,7 @@ async function logFailedAttempt(limiter: KVNamespace, ip: string, reason: string
 async function validateApiKey(
   key: string,
   ip: string,
-  env: Env
+  env: Env,
 ): Promise<{ valid: boolean; keyData?: Record<string, unknown>; message?: string; statusCode?: number }> {
   if (!key?.trim())
     return { valid: false, message: 'API key tidak ditemukan.', statusCode: 401 };
@@ -96,7 +96,6 @@ async function validateApiKey(
     return { valid: false, message: 'API key tidak aktif.', statusCode: 401 };
   }
 
-  // FIX: was 429, expired key = 401 bukan rate limit
   if (data.expires_at && new Date(data.expires_at) < new Date())
     return { valid: false, message: 'API key sudah kadaluarsa.', statusCode: 401 };
 
@@ -115,11 +114,12 @@ async function validateApiKey(
   return { valid: true, keyData: { ...data, userEmail: profile?.email ?? null } };
 }
 
+// Optimasi: ganti 168x sequential KV read → aggregate harian (max 7 read)
 async function checkAnomaly(
   limiter: KVNamespace,
   keyId: string,
   env: Env,
-  userEmail: string | null
+  userEmail: string | null,
 ): Promise<void> {
   try {
     const now      = new Date();
@@ -130,41 +130,51 @@ async function checkAnomaly(
 
     if (newCount % 10 !== 0) return;
 
-    const slots: number[] = [];
-    for (let i = 1; i <= 168; i++) {
-      const slot = new Date(now.getTime() - i * 3600000).toISOString().slice(0, 13);
-      const val  = await limiter.get(`anomaly_count_${keyId}_${slot}`);
-      if (val) slots.push(parseInt(val));
+    // Baca aggregate harian (7 hari) — max 7 KV read vs 168 sebelumnya
+    const dailySums: number[] = [];
+    for (let i = 1; i <= 7; i++) {
+      const day    = new Date(now.getTime() - i * 86400000).toISOString().slice(0, 10);
+      const aggKey = `anomaly_daily_${keyId}_${day}`;
+      const val    = await limiter.get(aggKey);
+      if (val) dailySums.push(parseInt(val));
     }
-    if (slots.length < 24) return;
+    if (dailySums.length < 3) return; // butuh minimal 3 hari data
 
-    const avg     = slots.reduce((a, b) => a + b, 0) / slots.length;
-    const trigger = avg * 3;
+    const avgDaily   = dailySums.reduce((a, b) => a + b, 0) / dailySums.length;
+    const avgHourly  = avgDaily / 24;
+    const trigger    = avgHourly * 3;
     if (newCount < trigger || trigger <= 0) return;
 
     const alertKey = `anomaly_alerted_${keyId}_${hourSlot}`;
     if (await limiter.get(alertKey)) return;
 
-    await limiter.put(alertKey, '1', { expirationTtl: 3600 });
-    await kvSet(limiter, `anomaly_flag_${keyId}`, {
-      key_id:       keyId,
-      hour:         hourSlot,
-      count:        newCount,
-      avg_per_hour: Math.round(avg),
-      multiplier:   Math.round(newCount / avg),
-      flagged_at:   now.toISOString(),
-    }, 86400);
+    await Promise.all([
+      limiter.put(alertKey, '1', { expirationTtl: 3600 }),
+      kvSet(limiter, `anomaly_flag_${keyId}`, {
+        key_id:        keyId,
+        hour:          hourSlot,
+        count:         newCount,
+        avg_per_hour:  Math.round(avgHourly),
+        multiplier:    Math.round(newCount / avgHourly),
+        flagged_at:    now.toISOString(),
+      }, 86400),
+    ]);
 
     if (userEmail && env.RESEND_API_KEY) {
       sendApiAnomalyEmail({
         to:               userEmail,
         keyId,
         requestsThisHour: newCount,
-        avgPerHour:       Math.round(avg),
-        multiplier:       Math.round(newCount / avg),
+        avgPerHour:       Math.round(avgHourly),
+        multiplier:       Math.round(newCount / avgHourly),
         apiKey:           env.RESEND_API_KEY,
       }).catch(err => console.error('[ANOMALY EMAIL]:', err));
     }
+
+    // Update aggregate harian untuk hari ini
+    const todayKey = `anomaly_daily_${keyId}_${now.toISOString().slice(0, 10)}`;
+    const todayVal = parseInt(await limiter.get(todayKey) ?? '0') + newCount;
+    await limiter.put(todayKey, todayVal.toString(), { expirationTtl: 86400 * 8 });
   } catch (err) { console.error('[ANOMALY]:', err); }
 }
 

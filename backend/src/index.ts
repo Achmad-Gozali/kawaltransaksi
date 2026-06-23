@@ -39,7 +39,7 @@ app.use('*', cors({
     return allowed.includes(origin) ? origin : null;
   },
   allowMethods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
-  allowHeaders: ['Content-Type', 'Authorization', 'X-Internal-Key', 'X-API-Key', 'Idempotency-Key'],
+  allowHeaders: ['Content-Type', 'Authorization', 'X-Internal-Key', 'X-API-Key', 'Idempotency-Key', 'X-Request-Timestamp'],
   credentials: true,
 }));
 
@@ -103,6 +103,34 @@ app.use('/api/*', async (c, next) => {
   return next();
 });
 
+// CF-Threat-Score — block IP reputasi buruk
+app.use('/api/*', async (c, next) => {
+  const score = parseInt(c.req.header('CF-Threat-Score') ?? '0');
+  const ip    = c.req.header('CF-Connecting-IP') ?? 'anonymous';
+  const path  = new URL(c.req.url).pathname;
+  if (score > 30 && ip !== 'anonymous') {
+    if (c.env.LIMITER) await logSuspiciousIp(c.env.LIMITER, ip, `CF threat score tinggi: ${score}`, path);
+    return c.json({ success: false, message: 'Akses ditolak.' }, 403);
+  }
+  return next();
+});
+
+// User-Agent check — block scanner/bot tanpa UA
+app.use('/api/*', async (c, next) => {
+  const ua   = c.req.header('User-Agent') ?? '';
+  const ip   = c.req.header('CF-Connecting-IP') ?? 'anonymous';
+  const path = new URL(c.req.url).pathname;
+  if (!ua.trim() && ip !== 'anonymous') {
+    if (c.env.LIMITER) {
+      await logSuspiciousIp(c.env.LIMITER, ip, 'Request tanpa User-Agent', path);
+      await autoBlacklistIfAbuse(c.env.LIMITER, ip, 'Request tanpa User-Agent');
+    }
+    return c.json({ success: false, message: 'Akses ditolak.' }, 403);
+  }
+  return next();
+});
+
+// Blacklist check
 app.use('/api/*', async (c, next) => {
   if (!c.env.LIMITER) return next();
   const ip   = c.req.header('CF-Connecting-IP') || 'anonymous';
@@ -113,6 +141,25 @@ app.use('/api/*', async (c, next) => {
     if (await c.env.LIMITER.get(`blacklist_${ip}`))
       return c.json({ success: false, message: 'Akses Anda telah diblokir sementara.' }, 403);
   } catch (err) { console.error('[BLACKLIST] Error:', err); }
+  return next();
+});
+
+// Admin IP whitelist
+app.use('/api/admin/*', async (c, next) => {
+  const internalKey = c.req.header('X-Internal-Key');
+  if (internalKey && internalKey === c.env.INTERNAL_API_KEY) return next();
+  const ip        = c.req.header('CF-Connecting-IP') ?? '';
+  const whitelist = (c.env.ADMIN_IP_WHITELIST ?? '').split(',').map(s => s.trim()).filter(Boolean);
+  if (whitelist.length && !whitelist.includes(ip))
+    return c.json({ success: false, message: 'Akses ditolak.' }, 403);
+  return next();
+});
+
+// Replay attack prevention — tolak request dengan timestamp > 5 menit
+app.use('/api/reports/*', async (c, next) => {
+  const ts = c.req.header('X-Request-Timestamp');
+  if (ts && Math.abs(Date.now() - parseInt(ts)) > 5 * 60 * 1000)
+    return c.json({ success: false, message: 'Request kedaluwarsa.' }, 400);
   return next();
 });
 
@@ -198,12 +245,7 @@ app.get('/health', async (c) => {
   return c.json({ status: 'ok', timestamp: new Date().toISOString() });
 });
 
-app.get('/robots.txt', (c) => c.text([
-  'User-agent: *', 'Allow: /', '',
-  'Disallow: /api/v1/accounts', 'Disallow: /api/v1/reports', 'Disallow: /api/v1/keys',
-  'Disallow: /api/v1/token',    'Disallow: /api/v1/users',   'Disallow: /api/v1/admin',
-  'Disallow: /api/internal',    'Disallow: /api/robot', '',
-].join('\n')));
+app.get('/robots.txt', (c) => c.text('User-agent: *\nAllow: /\n'));
 
 ['/api/v1/accounts', '/api/v1/reports', '/api/v1/keys', '/api/v1/token',
  '/api/v1/users',    '/api/v1/admin',   '/api/internal'].forEach(p => app.all(p, honeypotHandler));
@@ -264,18 +306,16 @@ export default {
     } else if (cron === '0 19 * * *') {
       const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString();
       const oneDayAgo     = new Date(Date.now() - 86400000).toISOString();
-
       ctx.waitUntil(
         Promise.all([
           (async () => {
-          await supabase.from('robot_logs').delete().lt('created_at', thirtyDaysAgo);
+            await supabase.from('robot_logs').delete().lt('created_at', thirtyDaysAgo);
             console.log('[CRON] Robot logs cleanup selesai');
-            })().catch(err => console.error('[CRON] Robot logs cleanup error:', err)),
-
+          })().catch(err => console.error('[CRON] Robot logs cleanup error:', err)),
           (async () => {
-          await supabase.from('reports').delete().eq('status', 'rejected').lt('created_at', oneDayAgo);
+            await supabase.from('reports').delete().eq('status', 'rejected').lt('created_at', oneDayAgo);
             console.log('[CRON] Rejected reports cleanup selesai');
-            })().catch(err => console.error('[CRON] Rejected reports cleanup error:', err)),
+          })().catch(err => console.error('[CRON] Rejected reports cleanup error:', err)),
         ])
       );
     }

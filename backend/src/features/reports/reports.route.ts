@@ -5,7 +5,6 @@ import { verifyTurnstile } from '../../core/turnstile';
 import {
   sendReportCreatedEmail,
   sendNewReportAdminEmail,
-  sendReportStatusChangedEmail,
 } from '../../core/resend';
 import { scoreReport, applyVerdict, reEvaluateByNumber } from '../robot/scoring-engine';
 import { isBlocked, recordRejection } from '../robot/auto-blocker';
@@ -40,7 +39,6 @@ const ALLOWED_STORAGE_HOSTNAMES = [
 const MAX_EVIDENCE_FILES = 10;
 const UUID_REGEX         = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const VALID_TARGET_TYPES = ['phone', 'bank_account', 'ewallet'] as const;
-const DASHBOARD_LAPORAN_URL = 'https://kawaltransaksi.com/dashboard/laporan';
 
 const VALID_PROVINCES = [
   'Aceh', 'Sumatera Utara', 'Sumatera Barat', 'Riau', 'Kepulauan Riau',
@@ -92,24 +90,24 @@ function isValidHttpUrl(url: unknown): string | null {
   } catch { return null; }
 }
 
+// Optimasi: 2 count query paralel vs baca semua row lalu filter di JS
 async function checkReportRateLimit(
   supabase: ReturnType<typeof getSupabaseAdmin>,
-  userId: string
+  userId: string,
 ): Promise<{ blocked: boolean; reason?: string }> {
-  const oneDayAgo = new Date(Date.now() - 86400000).toISOString();
-  const { data, error } = await supabase
-    .from('reports').select('created_at')
-    .eq('reporter_id', userId).gte('created_at', oneDayAgo)
-    .order('created_at', { ascending: false });
+  const now        = new Date();
+  const oneHourAgo = new Date(now.getTime() - 3600000).toISOString();
+  const oneDayAgo  = new Date(now.getTime() - 86400000).toISOString();
 
-  if (error) return { blocked: false };
+  const [{ count: hourCount }, { count: dayCount }] = await Promise.all([
+    supabase.from('reports').select('id', { count: 'exact', head: true })
+      .eq('reporter_id', userId).gte('created_at', oneHourAgo),
+    supabase.from('reports').select('id', { count: 'exact', head: true })
+      .eq('reporter_id', userId).gte('created_at', oneDayAgo),
+  ]);
 
-  const now       = Date.now();
-  const hourCount = (data ?? []).filter(r => new Date(r.created_at).getTime() >= now - 3600000).length;
-  const dayCount  = (data ?? []).length;
-
-  if (hourCount >= 3)  return { blocked: true, reason: 'Terlalu banyak laporan dalam 1 jam. Coba lagi nanti.' };
-  if (dayCount  >= 10) return { blocked: true, reason: 'Batas laporan harian tercapai.' };
+  if ((hourCount ?? 0) >= 3) return { blocked: true, reason: 'Terlalu banyak laporan dalam 1 jam. Coba lagi nanti.' };
+  if ((dayCount  ?? 0) >= 10) return { blocked: true, reason: 'Batas laporan harian tercapai.' };
   return { blocked: false };
 }
 
@@ -148,6 +146,34 @@ function validateReportBody(body: Record<string, unknown>): string | null {
   }
 
   return null;
+}
+
+function buildTargetNumbers(body: Record<string, unknown>, cleanNumber: string): TargetNumberItem[] {
+  const items: TargetNumberItem[] = (Array.isArray(body.target_numbers) ? body.target_numbers : [])
+    .map((item: unknown): TargetNumberItem | null => {
+      if (typeof item === 'object' && item !== null && 'number' in item) {
+        const obj = item as { number: string; type?: string; bank?: string; name?: string };
+        const num = String(obj.number).replace(/[^0-9]/g, '');
+        if (!num || num.length > LIMITS.TARGET_NUMBER) return null;
+        return { number: num, type: obj.type ?? 'phone', bank: obj.bank ?? null, name: obj.name ?? null };
+      }
+      const num = String(item).replace(/[^0-9]/g, '');
+      if (!num || num.length > LIMITS.TARGET_NUMBER) return null;
+      return { number: num, type: 'phone', bank: null, name: null };
+    })
+    .filter((item: TargetNumberItem | null): item is TargetNumberItem => item !== null)
+    .slice(0, 5);
+
+  if (!items.some(t => t.number === cleanNumber)) {
+    items.unshift({
+      number: cleanNumber,
+      type:   body.target_type as string ?? 'phone',
+      bank:   body.bank_name as string ?? null,
+      name:   body.target_name ? sanitizeText(String(body.target_name)) : null,
+    });
+  }
+
+  return items;
 }
 
 // -- POST /api/reports --------------------------------------------------------
@@ -191,35 +217,10 @@ reports.post('/', authMiddleware, async (c) => {
     if ((dupCount ?? 0) > 0)
       return c.json({ success: false, message: 'Kamu sudah pernah melaporkan nomor ini sebelumnya.' }, 409);
 
-    const chronologyRaw = String(body.chronology ?? '');
     const categoryClean = sanitizeText(String(body.category ?? '').trim());
     const evidenceUrls  = sanitizeEvidenceUrls(
       body.evidence_urls?.length > 0 ? body.evidence_urls : body.evidence_url ? [body.evidence_url] : []
     );
-
-    const cleanTargetNumbers: TargetNumberItem[] = (Array.isArray(body.target_numbers) ? body.target_numbers : [])
-      .map((item: unknown): TargetNumberItem | null => {
-        if (typeof item === 'object' && item !== null && 'number' in item) {
-          const obj = item as { number: string; type?: string; bank?: string; name?: string };
-          const num = String(obj.number).replace(/[^0-9]/g, '');
-          if (!num || num.length > LIMITS.TARGET_NUMBER) return null;
-          return { number: num, type: obj.type ?? 'phone', bank: obj.bank ?? null, name: obj.name ?? null };
-        }
-        const num = String(item).replace(/[^0-9]/g, '');
-        if (!num || num.length > LIMITS.TARGET_NUMBER) return null;
-        return { number: num, type: 'phone', bank: null, name: null };
-      })
-      .filter((item: TargetNumberItem | null): item is TargetNumberItem => item !== null)
-      .slice(0, 5);
-
-    if (!cleanTargetNumbers.some((t: TargetNumberItem) => t.number === cleanNumber)) {
-      cleanTargetNumbers.unshift({
-        number: cleanNumber,
-        type:   body.target_type ?? 'phone',
-        bank:   body.bank_name ?? null,
-        name:   body.target_name ? sanitizeText(String(body.target_name)) : null,
-      });
-    }
 
     const { data: inserted, error } = await supabase
       .from('reports')
@@ -229,7 +230,7 @@ reports.post('/', authMiddleware, async (c) => {
         target_name:           body.target_name ? sanitizeText(String(body.target_name)) : null,
         target_type:           body.target_type,
         category:              categoryClean,
-        chronology:            sanitizeChronology(chronologyRaw),
+        chronology:            sanitizeChronology(String(body.chronology ?? '')),
         evidence_url:          evidenceUrls[0] || null,
         evidence_urls:         evidenceUrls,
         status:                'pending',
@@ -242,7 +243,7 @@ reports.post('/', authMiddleware, async (c) => {
         has_other_victims:     body.has_other_victims || null,
         reported_to:           body.reported_to ?? [],
         suspect_photo_url:     isValidEvidenceUrl(body.suspect_photo_url) ? body.suspect_photo_url : null,
-        target_numbers:        cleanTargetNumbers,
+        target_numbers:        buildTargetNumbers(body, cleanNumber),
         store_name:            body.store_name ? sanitizeText(String(body.store_name)) : null,
         suspect_city:          body.suspect_city ? sanitizeText(String(body.suspect_city)) : null,
       })
@@ -258,38 +259,45 @@ reports.post('/', authMiddleware, async (c) => {
 
     c.executionCtx.waitUntil((async () => {
       try {
-        const { data: profile } = await supabase
-          .from('profiles').select('full_name, email').eq('id', userId).single();
-        const { data: freshReport } = await supabase
-          .from('reports').select('*').eq('id', reportId).single();
+        const [{ data: profile }, { data: freshReport }] = await Promise.all([
+          supabase.from('profiles').select('full_name, email').eq('id', userId).single(),
+          supabase.from('reports').select('*').eq('id', reportId).single(),
+        ]);
 
         if (freshReport) {
           const result = await scoreReport(freshReport as RobotReport, supabase);
-          await applyVerdict(freshReport as RobotReport, result, supabase);
+
+          // applyVerdict + reEvaluateByNumber paralel — tidak saling depend
+          await Promise.all([
+            applyVerdict(freshReport as RobotReport, result, supabase),
+            reEvaluateByNumber(cleanNumber, supabase),
+          ]);
 
           if (result.verdict === 'rejected' && c.env.LIMITER)
             await recordRejection(userId, ip, c.env.LIMITER);
-
-          await reEvaluateByNumber(cleanNumber, supabase);
         }
 
         await Promise.all([
-          profile?.email && sendReportCreatedEmail({
-            to:           profile.email,
-            fullName:     profile.full_name ?? 'Pengguna',
-            targetNumber: cleanNumber,
-            category:     categoryClean,
-            apiKey:       c.env.RESEND_API_KEY,
-          }).catch(err => console.error('[EMAIL] User:', err)),
-          c.env.ADMIN_EMAIL && sendNewReportAdminEmail({
-            adminEmail:   c.env.ADMIN_EMAIL,
-            reporterName: profile?.full_name ?? 'Pengguna',
-            targetNumber: cleanNumber,
-            category:     categoryClean,
-            status:       'pending',
-            reportUrl:    'https://kawaltransaksi.com/admin',
-            apiKey:       c.env.RESEND_API_KEY,
-          }).catch(err => console.error('[EMAIL] Admin:', err)),
+          profile?.email
+            ? sendReportCreatedEmail({
+                to:           profile.email,
+                fullName:     profile.full_name ?? 'Pengguna',
+                targetNumber: cleanNumber,
+                category:     categoryClean,
+                apiKey:       c.env.RESEND_API_KEY,
+              }).catch(err => console.error('[EMAIL] User:', err))
+            : Promise.resolve(),
+          c.env.ADMIN_EMAIL
+            ? sendNewReportAdminEmail({
+                adminEmail:   c.env.ADMIN_EMAIL,
+                reporterName: profile?.full_name ?? 'Pengguna',
+                targetNumber: cleanNumber,
+                category:     categoryClean,
+                status:       'pending',
+                reportUrl:    'https://kawaltransaksi.com/admin',
+                apiKey:       c.env.RESEND_API_KEY,
+              }).catch(err => console.error('[EMAIL] Admin:', err))
+            : Promise.resolve(),
         ]);
       } catch (err) {
         console.error('[REPORTS] Background error:', err);
