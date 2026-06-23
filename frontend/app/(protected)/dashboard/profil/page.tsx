@@ -1,7 +1,7 @@
 import { createClient } from '@/core/supabase/server';
 import { redirect } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, Mail, Calendar, Shield, FileText, Plus } from 'lucide-react';
+import { Mail, Calendar, Shield, FileText, Plus } from 'lucide-react';
 import type { Metadata } from 'next';
 import ProfileActions from './ProfileActions';
 
@@ -45,15 +45,6 @@ export default async function ProfilPage() {
   return (
     <div className="min-h-screen bg-zinc-50">
       <div className="max-w-xl mx-auto px-4 py-10 space-y-6">
-
-        {/* Back */}
-        <Link
-          href="/"
-          className="inline-flex items-center gap-1.5 text-sm text-zinc-400 hover:text-zinc-700 transition-colors group"
-        >
-          <ArrowLeft className="w-4 h-4 group-hover:-translate-x-0.5 transition-transform" />
-          Kembali
-        </Link>
 
         {/* Header */}
         <div>
