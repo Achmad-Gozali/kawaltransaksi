@@ -40,8 +40,24 @@ export default function RegisterPage() {
             <p className="text-sm text-gray-500">Daftar gratis dan mulai berkontribusi.</p>
           </div>
 
-          {/* Checkbox consent - wajib dicentang sebelum form aktif */}
-          <label className="flex items-start gap-2.5 mb-5 cursor-pointer group">
+          {/* Form dinonaktifkan visual + interaksi sampai checkbox di bawah dicentang */}
+          <div
+            className={`relative transition-opacity ${!agreed ? 'opacity-50' : ''}`}
+            aria-disabled={!agreed}
+          >
+            <div className={!agreed ? 'pointer-events-none select-none' : ''}>
+              <AuthForm type="register" />
+            </div>
+            {!agreed && (
+              <div
+                className="absolute inset-0 z-10 cursor-not-allowed"
+                title="Setujui Syarat & Ketentuan dan Kebijakan Privasi terlebih dahulu"
+              />
+            )}
+          </div>
+
+          {/* Checkbox consent - di bawah form, dekat submit, sesuai konvensi standar */}
+          <label className="flex items-start gap-2.5 mt-5 cursor-pointer group">
             <input
               type="checkbox"
               checked={agreed}
@@ -71,24 +87,8 @@ export default function RegisterPage() {
             </span>
           </label>
 
-          {/* AuthForm dinonaktifkan visual + interaksi sampai checkbox dicentang */}
-          <div
-            className={`relative transition-opacity ${!agreed ? 'opacity-50' : ''}`}
-            aria-disabled={!agreed}
-          >
-            <div className={!agreed ? 'pointer-events-none select-none' : ''}>
-              <AuthForm type="register" />
-            </div>
-            {!agreed && (
-              <div
-                className="absolute inset-0 z-10 cursor-not-allowed"
-                title="Setujui Syarat & Ketentuan dan Kebijakan Privasi terlebih dahulu"
-              />
-            )}
-          </div>
-
           {!agreed && (
-            <p className="mt-3 text-xs text-amber-600 text-center">
+            <p className="mt-2 text-xs text-amber-600 text-center">
               Centang persetujuan di atas untuk melanjutkan.
             </p>
           )}
