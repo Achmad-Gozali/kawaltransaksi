@@ -41,6 +41,13 @@ const STAT_CARDS = [
   { key: "rejected", label: "Ditolak",       color: "text-red-500",     sub: "Tidak lolos" },
 ] as const;
 
+const APPEAL_WINDOW_MS = 7 * 86400000;
+
+function canStillAppeal(robotVerdictAt: string | null): boolean {
+  if (!robotVerdictAt) return false;
+  return Date.now() - new Date(robotVerdictAt).getTime() < APPEAL_WINDOW_MS;
+}
+
 export default async function LaporanPage() {
   const supabase = await createClient();
 
@@ -67,8 +74,6 @@ export default async function LaporanPage() {
     verified: allReports.filter(r => r.status === "verified").length,
     rejected: allReports.filter(r => r.status === "rejected").length,
   };
-
-  const now = Date.now();
 
   return (
     <div className="min-h-screen bg-zinc-50">
@@ -137,8 +142,7 @@ export default async function LaporanPage() {
 
             const canAppeal = report.status === "rejected"
               && !appealStatus
-              && report.robot_verdict_at
-              && (now - new Date(report.robot_verdict_at).getTime()) < 7 * 86400000;
+              && canStillAppeal(report.robot_verdict_at);
 
             return (
               <div key={report.id} className="bg-white border border-zinc-200 rounded-2xl p-5 hover:border-zinc-300 hover:shadow-sm transition-all">
