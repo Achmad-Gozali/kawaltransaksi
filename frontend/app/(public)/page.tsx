@@ -393,14 +393,7 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
-
-      <section className="bg-white py-6 border-t border-slate-200">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 flex items-center justify-center gap-6">
-          <Link href="/kebijakan-privasi" className="text-xs text-slate-400 hover:text-slate-600 transition-colors">Kebijakan Privasi</Link>
-          <Link href="/syarat-ketentuan" className="text-xs text-slate-400 hover:text-slate-600 transition-colors">Syarat & Ketentuan</Link>
-        </div>
-      </section>
-
+      
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteSchema) }} />
     </main>
   );
