@@ -7,14 +7,14 @@ const ALLOWED_OTP_TYPES = ['recovery', 'signup', 'magiclink', 'email'] as const;
 type AllowedOtpType = typeof ALLOWED_OTP_TYPES[number];
 
 function getSafeNext(next: string | null): string {
-  if (!next) return '/dashboard';
+  if (!next) return '/';
   try {
     // Tolak absolute URL / protocol-relative
-    if (next.startsWith('http') || next.startsWith('//')) return '/dashboard';
+    if (next.startsWith('http') || next.startsWith('//')) return '/';
     // Hanya izinkan path yang dimulai /
-    if (!next.startsWith('/')) return '/dashboard';
+    if (!next.startsWith('/')) return '/';
     return next;
-  } catch { return '/dashboard'; }
+  } catch { return '/'; }
 }
 
 export async function GET(request: NextRequest) {
