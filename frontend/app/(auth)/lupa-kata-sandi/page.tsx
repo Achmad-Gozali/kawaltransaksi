@@ -3,7 +3,7 @@
 import { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { useSearchParams } from 'next/navigation';
-import { Loader2, Mail, ArrowLeft, AlertCircle } from 'lucide-react';
+import { Loader2, Mail, AlertCircle } from 'lucide-react';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8787';
 
@@ -57,17 +57,6 @@ function LupaKataSandiContent() {
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center px-4 py-12">
       <div className="w-full max-w-md">
-
-        {/* Tombol back -- hidden di desktop, tampil di mobile */}
-        <div className="mb-6 md:hidden">
-          <Link
-            href="/login"
-            className="inline-flex items-center gap-2 text-sm font-medium text-slate-500 hover:text-slate-800 transition-colors"
-          >
-            <ArrowLeft className="w-4 h-4" />
-            Kembali ke Login
-          </Link>
-        </div>
 
         <div className="bg-white border border-gray-200 rounded-2xl shadow-sm overflow-hidden">
 

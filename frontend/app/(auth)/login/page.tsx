@@ -1,7 +1,7 @@
 import AuthForm from '@/features/auth/AuthForm';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowLeft, ArrowRight, ShieldX } from 'lucide-react';
+import { ArrowRight, ShieldX } from 'lucide-react';
 
 export default async function LoginPage({
   searchParams,
@@ -20,14 +20,6 @@ export default async function LoginPage({
       <div className="pointer-events-none select-none absolute -top-32 -left-32 w-96 h-96 bg-emerald-200 rounded-full opacity-20 blur-3xl" />
       <div className="pointer-events-none select-none absolute -bottom-32 -right-32 w-96 h-96 bg-emerald-300 rounded-full opacity-15 blur-3xl" />
       <div className="pointer-events-none select-none absolute top-1/2 left-1/4 w-64 h-64 bg-teal-200 rounded-full opacity-10 blur-3xl" />
-
-      {/* Mobile only back button */}
-      <div className="w-full max-w-sm mb-4 lg:hidden">
-        <Link href="/" className="inline-flex items-center gap-2 text-sm text-slate-400 hover:text-slate-700 font-medium transition-colors group">
-          <ArrowLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-          Kembali
-        </Link>
-      </div>
 
       <div className="w-full max-w-sm relative z-10">
 
