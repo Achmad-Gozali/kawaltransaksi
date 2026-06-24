@@ -50,7 +50,6 @@ function canStillAppeal(robotVerdictAt: string | null): boolean {
 
 export default async function LaporanPage() {
   const supabase = await createClient();
-
   const { data: { user } } = await supabase.auth.getUser();
   if (!user) redirect("/login");
 
@@ -77,201 +76,181 @@ export default async function LaporanPage() {
 
   return (
     <div className="min-h-screen bg-zinc-50">
-      <div className="max-w-6xl mx-auto px-4 py-8 lg:py-10">
-        <div className="lg:grid lg:grid-cols-[280px_1fr] lg:gap-8">
+      <div className="max-w-5xl mx-auto px-4 py-8">
 
-          {/* ===== Sidebar (desktop) / Header block (mobile) ===== */}
-          <aside className="lg:sticky lg:top-8 lg:self-start space-y-6 mb-8 lg:mb-0">
-            <div className="flex items-center justify-between lg:block lg:space-y-1">
-              <div>
-                <h1 className="text-2xl font-bold text-zinc-900 tracking-tight">Laporan Saya</h1>
-                <p className="text-sm text-zinc-400 mt-0.5 truncate">{user.email}</p>
-              </div>
-              <Link
-                href="/report"
-                className="lg:hidden inline-flex items-center gap-2 px-4 py-2.5 bg-zinc-900 text-white text-sm font-semibold rounded-xl hover:bg-black transition-colors shrink-0"
-              >
-                <PlusCircle className="w-4 h-4" />
-                Buat Laporan
-              </Link>
+        {/* Page header */}
+        <div className="flex items-start justify-between gap-4 mb-6">
+          <div>
+            <h1 className="text-xl font-bold text-zinc-900 tracking-tight">Laporan Saya</h1>
+            <p className="text-sm text-zinc-400 mt-0.5 truncate max-w-[200px] sm:max-w-none">{user.email}</p>
+          </div>
+          <Link
+            href="/report"
+            className="inline-flex items-center gap-2 px-4 py-2.5 bg-zinc-900 text-white text-sm font-semibold rounded-xl hover:bg-black transition-colors shrink-0"
+          >
+            <PlusCircle className="w-4 h-4" />
+            <span className="hidden sm:inline">Buat Laporan</span>
+            <span className="sm:hidden">Buat</span>
+          </Link>
+        </div>
+
+        {/* Stat row — 4 kolom, selalu horizontal */}
+        <div className="grid grid-cols-4 gap-2 sm:gap-3 mb-6">
+          {STAT_CARDS.map((item) => (
+            <div key={item.key} className="bg-white border border-zinc-200 rounded-2xl p-3 sm:p-4">
+              <p className="text-[11px] sm:text-xs text-zinc-400 mb-1">{item.label}</p>
+              <p className={`text-xl sm:text-2xl font-bold ${item.color}`}>{stats[item.key]}</p>
+              <p className="text-[10px] text-zinc-300 mt-0.5 hidden sm:block">{item.sub}</p>
             </div>
+          ))}
+        </div>
 
+        {/* Riwayat */}
+        <p className="text-xs font-semibold text-zinc-400 uppercase tracking-widest mb-3">Riwayat</p>
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600 mb-4">
+            Gagal memuat laporan. Silakan refresh halaman.
+          </div>
+        )}
+
+        {!error && allReports.length === 0 && (
+          <div className="bg-white border border-zinc-200 rounded-2xl p-12 text-center">
+            <div className="w-11 h-11 bg-zinc-100 rounded-xl flex items-center justify-center mx-auto mb-4">
+              <FileText className="w-5 h-5 text-zinc-300" />
+            </div>
+            <h3 className="text-sm font-semibold text-zinc-900 mb-1">Belum ada laporan</h3>
+            <p className="text-sm text-zinc-400 mb-5 max-w-xs mx-auto">
+              Bantu komunitas dengan melaporkan nomor atau rekening penipu.
+            </p>
             <Link
               href="/report"
-              className="hidden lg:flex w-full items-center justify-center gap-2 px-4 py-2.5 bg-zinc-900 text-white text-sm font-semibold rounded-xl hover:bg-black transition-colors"
+              className="inline-flex items-center gap-2 px-4 py-2.5 bg-zinc-900 text-white text-sm font-semibold rounded-xl hover:bg-black transition-colors"
             >
               <PlusCircle className="w-4 h-4" />
-              Buat Laporan
+              Buat Laporan Pertama
             </Link>
+          </div>
+        )}
 
-            {/* Stats: grid 2 kolom di mobile, list vertikal 1 kolom di desktop */}
-            <div className="grid grid-cols-2 lg:grid-cols-1 gap-3">
-              {STAT_CARDS.map((item) => (
-                <div key={item.key} className="bg-white border border-zinc-200 rounded-2xl p-4 lg:flex lg:items-center lg:justify-between">
-                  <div>
-                    <p className="text-xs text-zinc-400 mb-1 lg:mb-0">{item.label}</p>
-                    <p className="text-xs text-zinc-400 mt-0.5 lg:hidden">{item.sub}</p>
+        <div className="space-y-3">
+          {allReports.map((report) => {
+            const status      = STATUS_CONFIG[report.status as keyof typeof STATUS_CONFIG] ?? STATUS_CONFIG.pending;
+            const StatusIcon  = status.icon;
+            const isPhone     = report.target_type === "phone";
+            const appealStatus = appealMap.get(report.id) ?? null;
+            const canAppeal = report.status === "rejected"
+              && !appealStatus
+              && canStillAppeal(report.robot_verdict_at);
+
+            return (
+              <div key={report.id} className="bg-white border border-zinc-200 rounded-2xl p-4 sm:p-5 hover:border-zinc-300 transition-colors">
+                <div className="flex items-start justify-between gap-3">
+                  <div className="flex items-start gap-3 min-w-0">
+                    <div className="w-8 h-8 sm:w-9 sm:h-9 bg-zinc-100 rounded-xl flex items-center justify-center shrink-0 mt-0.5">
+                      {isPhone
+                        ? <Phone className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-zinc-500" />
+                        : <Building2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-zinc-500" />}
+                    </div>
+                    <div className="min-w-0">
+                      <div className="flex items-center gap-2 flex-wrap">
+                        <span className="font-semibold text-zinc-900 text-sm sm:text-base">{maskNumber(report.target_number)}</span>
+                        {report.target_name && (
+                          <span className="text-xs sm:text-sm text-zinc-400">· {report.target_name}</span>
+                        )}
+                      </div>
+                      <div className="flex items-center gap-2 mt-0.5">
+                        <span className="text-xs text-zinc-400">{report.category}</span>
+                        <span className="text-zinc-200">·</span>
+                        <span className="text-xs text-zinc-400">{formatDateID(report.created_at)}</span>
+                      </div>
+                    </div>
                   </div>
-                  <p className={`text-2xl font-bold ${item.color}`}>{stats[item.key]}</p>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <div className={`inline-flex items-center gap-1 sm:gap-1.5 px-2 sm:px-2.5 py-1 rounded-full border text-[10px] sm:text-xs font-semibold ${status.className}`}>
+                      <StatusIcon className="w-3 h-3 shrink-0" />
+                      <span className="hidden xs:inline">{status.label}</span>
+                    </div>
+                    {report.status === "verified" && (
+                      <Link
+                        href={`/check/${report.target_number}`}
+                        className="w-7 h-7 bg-zinc-100 rounded-lg flex items-center justify-center hover:bg-zinc-900 transition-colors group"
+                        title="Lihat halaman publik"
+                      >
+                        <ArrowRight className="w-3.5 h-3.5 text-zinc-500 group-hover:text-white transition-colors" />
+                      </Link>
+                    )}
+                  </div>
                 </div>
-              ))}
-            </div>
-          </aside>
 
-          {/* ===== Main content ===== */}
-          <div className="space-y-4 min-w-0">
-            <h2 className="text-xs font-semibold text-zinc-400 uppercase tracking-widest">Riwayat</h2>
-
-            {error && (
-              <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-600">
-                Gagal memuat laporan. Silakan refresh halaman.
-              </div>
-            )}
-
-            {!error && allReports.length === 0 && (
-              <div className="bg-white border border-zinc-200 rounded-2xl p-14 text-center">
-                <div className="w-12 h-12 bg-zinc-100 rounded-xl flex items-center justify-center mx-auto mb-4">
-                  <FileText className="w-5 h-5 text-zinc-300" />
-                </div>
-                <h3 className="text-sm font-semibold text-zinc-900 mb-1">Belum ada laporan</h3>
-                <p className="text-sm text-zinc-400 mb-5 max-w-xs mx-auto">
-                  Bantu komunitas dengan melaporkan nomor atau rekening penipu.
+                <p className="text-sm text-zinc-400 leading-relaxed line-clamp-2 mt-3 pl-11 sm:pl-12">
+                  {report.chronology}
                 </p>
-                <Link
-                  href="/report"
-                  className="inline-flex items-center gap-2 px-4 py-2.5 bg-zinc-900 text-white text-sm font-semibold rounded-xl hover:bg-black transition-colors"
-                >
-                  <PlusCircle className="w-4 h-4" />
-                  Buat Laporan Pertama
-                </Link>
-              </div>
-            )}
 
-            {allReports.map((report) => {
-              const status      = STATUS_CONFIG[report.status as keyof typeof STATUS_CONFIG] ?? STATUS_CONFIG.pending;
-              const StatusIcon  = status.icon;
-              const isPhone     = report.target_type === "phone";
-              const appealStatus = appealMap.get(report.id) ?? null;
-
-              const canAppeal = report.status === "rejected"
-                && !appealStatus
-                && canStillAppeal(report.robot_verdict_at);
-
-              return (
-                <div key={report.id} className="bg-white border border-zinc-200 rounded-2xl p-5 lg:p-6 hover:border-zinc-300 hover:shadow-sm transition-all">
-
-                  {/* Top */}
-                  <div className="flex items-start justify-between gap-4">
-                    <div className="flex items-start gap-3 min-w-0">
-                      <div className="w-9 h-9 bg-zinc-100 rounded-xl flex items-center justify-center shrink-0 mt-0.5">
-                        {isPhone
-                          ? <Phone className="w-4 h-4 text-zinc-500" />
-                          : <Building2 className="w-4 h-4 text-zinc-500" />}
-                      </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-2 flex-wrap">
-                          <span className="font-semibold text-zinc-900">{maskNumber(report.target_number)}</span>
-                          {report.target_name && (
-                            <span className="text-sm text-zinc-400">· {report.target_name}</span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2 mt-0.5">
-                          <span className="text-xs text-zinc-400">{report.category}</span>
-                          <span className="text-zinc-200">·</span>
-                          <span className="text-xs text-zinc-400">{formatDateID(report.created_at)}</span>
-                        </div>
-                      </div>
+                {report.robot_score != null && (
+                  <div className="mt-3 pl-11 sm:pl-12 flex items-center gap-2.5 max-w-sm">
+                    <Bot className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
+                    <div className="flex-1 h-1 bg-zinc-100 rounded-full overflow-hidden">
+                      <div
+                        className={`h-full rounded-full ${
+                          report.robot_score >= 60 ? "bg-emerald-500" :
+                          report.robot_score >= 30 ? "bg-amber-400" : "bg-red-400"
+                        }`}
+                        style={{ width: `${report.robot_score}%` }}
+                      />
                     </div>
-
-                    <div className="flex items-center gap-2 shrink-0">
-                      <div className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full border text-xs font-semibold ${status.className}`}>
-                        <StatusIcon className="w-3 h-3" />
-                        {status.label}
-                      </div>
-                      {report.status === "verified" && (
-                        <Link
-                          href={`/check/${report.target_number}`}
-                          className="w-7 h-7 bg-zinc-100 rounded-lg flex items-center justify-center hover:bg-zinc-900 transition-colors group"
-                          title="Lihat halaman publik"
-                        >
-                          <ArrowRight className="w-3.5 h-3.5 text-zinc-500 group-hover:text-white transition-colors" />
-                        </Link>
-                      )}
-                    </div>
+                    <span className={`text-xs font-semibold tabular-nums ${
+                      report.robot_score >= 60 ? "text-emerald-600" :
+                      report.robot_score >= 30 ? "text-amber-600" : "text-red-500"
+                    }`}>
+                      {report.robot_score}/100
+                    </span>
                   </div>
+                )}
 
-                  {/* Chronology */}
-                  <p className="text-sm text-zinc-400 leading-relaxed line-clamp-2 mt-3 pl-12 lg:max-w-2xl">
-                    {report.chronology}
+                {report.status === "pending" && (
+                  <p className="mt-3 pl-11 sm:pl-12 text-xs text-amber-600 flex items-center gap-1.5">
+                    <Clock className="w-3.5 h-3.5 shrink-0" />
+                    Sedang ditinjau — maks. 1×24 jam.
                   </p>
+                )}
 
-                  {/* Robot score */}
-                  {report.robot_score != null && (
-                    <div className="mt-3 pl-12 flex items-center gap-2.5 lg:max-w-md">
-                      <Bot className="w-3.5 h-3.5 text-zinc-400 shrink-0" />
-                      <div className="flex-1 h-1 bg-zinc-100 rounded-full overflow-hidden">
-                        <div
-                          className={`h-full rounded-full ${
-                            report.robot_score >= 60 ? "bg-emerald-500" :
-                            report.robot_score >= 30 ? "bg-amber-400" : "bg-red-400"
-                          }`}
-                          style={{ width: `${report.robot_score}%` }}
-                        />
-                      </div>
-                      <span className={`text-xs font-semibold tabular-nums ${
-                        report.robot_score >= 60 ? "text-emerald-600" :
-                        report.robot_score >= 30 ? "text-amber-600" : "text-red-500"
-                      }`}>
-                        {report.robot_score}/100
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Status messages */}
-                  {report.status === "pending" && (
-                    <p className="mt-3 pl-12 text-xs text-amber-600 flex items-center gap-1.5">
-                      <Clock className="w-3.5 h-3.5 shrink-0" />
-                      Sedang ditinjau — maks. 1×24 jam.
+                {report.status === "rejected" && (
+                  <div className="mt-3 pl-11 sm:pl-12 space-y-1">
+                    <p className="text-xs text-red-500 flex items-center gap-1.5">
+                      <XCircle className="w-3.5 h-3.5 shrink-0" />
+                      Tidak memenuhi syarat verifikasi otomatis.
                     </p>
-                  )}
-
-                  {report.status === "rejected" && (
-                    <div className="mt-3 pl-12 space-y-1">
+                    {canAppeal && (
+                      <p className="text-xs text-zinc-400 flex items-center gap-1.5">
+                        <AlertCircle className="w-3.5 h-3.5 shrink-0" />
+                        Kamu bisa mengajukan banding dalam 7 hari sejak ditolak.
+                      </p>
+                    )}
+                    {appealStatus === "pending" && (
+                      <p className="text-xs text-amber-600 flex items-center gap-1.5">
+                        <Clock className="w-3.5 h-3.5 shrink-0" />
+                        Banding sedang ditinjau ulang.
+                      </p>
+                    )}
+                    {appealStatus === "rejected" && (
                       <p className="text-xs text-red-500 flex items-center gap-1.5">
                         <XCircle className="w-3.5 h-3.5 shrink-0" />
-                        Tidak memenuhi syarat verifikasi otomatis.
+                        Banding ditolak. Laporan tidak dapat diproses lebih lanjut.
                       </p>
-                      {canAppeal && (
-                        <p className="text-xs text-zinc-400 flex items-center gap-1.5">
-                          <AlertCircle className="w-3.5 h-3.5 shrink-0" />
-                          Kamu bisa mengajukan banding dalam 7 hari sejak ditolak.
-                        </p>
-                      )}
-                      {appealStatus === "pending" && (
-                        <p className="text-xs text-amber-600 flex items-center gap-1.5">
-                          <Clock className="w-3.5 h-3.5 shrink-0" />
-                          Banding sedang ditinjau ulang.
-                        </p>
-                      )}
-                      {appealStatus === "rejected" && (
-                        <p className="text-xs text-red-500 flex items-center gap-1.5">
-                          <XCircle className="w-3.5 h-3.5 shrink-0" />
-                          Banding ditolak. Laporan tidak dapat diproses lebih lanjut.
-                        </p>
-                      )}
-                    </div>
-                  )}
+                    )}
+                  </div>
+                )}
 
-                  {canAppeal && (
-                    <div className="mt-4 pl-12">
-                      <AppealButton reportId={report.id} />
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
-
+                {canAppeal && (
+                  <div className="mt-4 pl-11 sm:pl-12">
+                    <AppealButton reportId={report.id} />
+                  </div>
+                )}
+              </div>
+            );
+          })}
         </div>
       </div>
     </div>
