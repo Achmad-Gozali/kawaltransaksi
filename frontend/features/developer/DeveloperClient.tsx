@@ -1,9 +1,10 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, RefreshCw, AlertTriangle, ChevronDown, Zap, Lock } from 'lucide-react';
+import { Plus, RefreshCw, AlertTriangle, ChevronDown, Zap, Lock, Play, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
 import { KeyCard, type ApiKey } from '@/features/developer/components/KeyCard';
 import { KeyRevealModal } from '@/features/developer/components/KeyRevealModal';
+import { CodeBlock } from '@/features/developer/components/CodeBlock';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL!;
 
@@ -45,6 +46,135 @@ const PRICING = [
     ],
   },
 ];
+
+// -- Playground ----------------------------------------------------------------
+
+interface PlaygroundResult {
+  success: boolean;
+  data?: {
+    number: string; type: string; status: 'safe' | 'warning' | 'danger';
+    verified_reports: number; pending_reports: number; total_reports: number;
+    total_loss: number; last_reported: string | null; check_url: string;
+  };
+  meta?: { playground: boolean; authenticated: boolean };
+  message?: string;
+}
+
+const STATUS_CONFIG = {
+  safe:    { label: 'Aman',      icon: CheckCircle,  color: 'text-emerald-600', bg: 'bg-emerald-50 border-emerald-200' },
+  warning: { label: 'Waspada',   icon: AlertCircle,  color: 'text-amber-600',   bg: 'bg-amber-50 border-amber-200' },
+  danger:  { label: 'Berbahaya', icon: XCircle,      color: 'text-red-600',     bg: 'bg-red-50 border-red-200' },
+};
+
+function Playground({ token, isLoggedIn }: { token: string; isLoggedIn: boolean }) {
+  const [number, setNumber]   = useState('');
+  const [type, setType]       = useState('phone');
+  const [bank, setBank]       = useState('');
+  const [loading, setLoading] = useState(false);
+  const [result, setResult]   = useState<PlaygroundResult | null>(null);
+
+  const run = async () => {
+    if (!number.trim()) return;
+    setLoading(true);
+    setResult(null);
+    try {
+      const res  = await fetch(`${BACKEND_URL}/api/developer/playground`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(isLoggedIn ? { Authorization: `Bearer ${token}` } : {}),
+        },
+        body: JSON.stringify({ number: number.trim(), type, bank: bank || null }),
+      });
+      setResult(await res.json());
+    } catch {
+      setResult({ success: false, message: 'Gagal terhubung ke server.' });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const status = result?.data?.status;
+  const cfg    = status ? STATUS_CONFIG[status] : null;
+
+  return (
+    <div className="space-y-4">
+      {/* Input */}
+      <div className="bg-slate-50 rounded-xl border border-slate-200 p-4 space-y-3">
+        <div className="flex gap-2 flex-wrap">
+          {(['phone', 'bank_account', 'ewallet'] as const).map(t => (
+            <button key={t} onClick={() => { setType(t); setBank(''); }}
+              className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors ${
+                type === t ? 'bg-slate-900 text-white' : 'bg-white border border-slate-200 text-slate-500 hover:border-slate-400'
+              }`}>
+              {t === 'phone' ? 'Nomor HP' : t === 'bank_account' ? 'Rekening' : 'E-Wallet'}
+            </button>
+          ))}
+        </div>
+
+        <div className="flex gap-2">
+          <input
+            type="text"
+            placeholder={type === 'phone' ? '08123456789' : type === 'bank_account' ? '1234567890' : '08123456789'}
+            value={number}
+            onChange={e => setNumber(e.target.value.replace(/\D/g, ''))}
+            onKeyDown={e => e.key === 'Enter' && run()}
+            maxLength={32}
+            className="flex-1 px-3 py-2.5 border border-slate-200 bg-white rounded-xl text-sm focus:outline-none focus:border-emerald-400 transition-all font-mono"
+          />
+          {type === 'bank_account' && (
+            <input
+              type="text" placeholder="bca / bri / bni..."
+              value={bank} onChange={e => setBank(e.target.value.toLowerCase())}
+              className="w-28 px-3 py-2.5 border border-slate-200 bg-white rounded-xl text-sm focus:outline-none focus:border-emerald-400 transition-all"
+            />
+          )}
+          <button onClick={run} disabled={loading || !number.trim()}
+            className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-sm font-bold rounded-xl transition-colors shrink-0">
+            {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
+            Coba
+          </button>
+        </div>
+
+        {!isLoggedIn && (
+          <p className="text-xs text-slate-400">
+            Guest: 20x/jam · <a href="/login?redirectTo=/developer" className="text-emerald-600 font-semibold hover:underline">Login</a> untuk 50x/jam
+          </p>
+        )}
+      </div>
+
+      {/* Result */}
+      {result && (
+        <div className="space-y-3">
+          {result.success && result.data && cfg ? (
+            <>
+              <div className={`rounded-xl border px-4 py-4 flex items-center gap-3 ${cfg.bg}`}>
+                <cfg.icon className={`w-5 h-5 shrink-0 ${cfg.color}`} />
+                <div>
+                  <p className={`text-sm font-black uppercase tracking-wide ${cfg.color}`}>{cfg.label}</p>
+                  <p className="text-xs text-slate-500 mt-0.5">
+                    {result.data.verified_reports} laporan terverifikasi · {result.data.pending_reports} pending · total kerugian Rp {result.data.total_loss.toLocaleString('id-ID')}
+                  </p>
+                </div>
+                <a href={result.data.check_url} target="_blank" rel="noopener noreferrer"
+                  className="ml-auto text-xs font-bold text-slate-500 hover:text-slate-800 shrink-0 underline">
+                  Detail →
+                </a>
+              </div>
+              <CodeBlock language="json" code={JSON.stringify(result, null, 2)} />
+            </>
+          ) : (
+            <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+              <p className="text-sm font-bold text-red-700">{result.message ?? 'Terjadi kesalahan.'}</p>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// -- Pricing -------------------------------------------------------------------
 
 function FeatureIcon({ available, comingSoon }: { available: boolean; comingSoon: boolean }) {
   if (available) {
@@ -119,6 +249,8 @@ function PricingSection({ isLoggedIn }: { isLoggedIn: boolean }) {
   );
 }
 
+// -- Main ----------------------------------------------------------------------
+
 export default function DeveloperClient({ token, isLoggedIn }: Props) {
   const [keys, setKeys]               = useState<ApiKey[]>([]);
   const [loading, setLoading]         = useState(true);
@@ -175,21 +307,48 @@ export default function DeveloperClient({ token, isLoggedIn }: Props) {
 
       {/* Hero */}
       <section className="bg-slate-100 pt-14 pb-0 sm:pt-20 overflow-hidden px-4">
-        <div className="max-w-4xl mx-auto text-center pb-16 sm:pb-24">
-          <h1 className="text-2xl sm:text-4xl font-black tracking-tighter text-slate-900 uppercase mb-4 leading-tight">
-            Integrasikan KawalTransaksi<br />
-            <span className="text-emerald-600">ke Aplikasi Anda</span>
-          </h1>
-          <p className="text-slate-500 text-sm sm:text-base max-w-xl mx-auto leading-relaxed mb-8">
-            REST API untuk verifikasi nomor HP, rekening bank, dan e-wallet. Gratis 300 request/hari, tanpa kartu kredit.
-          </p>
-          <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <a href="#api-keys" className="w-full sm:w-auto px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-xl transition-colors uppercase tracking-wider">
-              {isLoggedIn ? 'Kelola API Key' : 'Generate API Key'}
-            </a>
-            <a href="/developer/docs/overview" className="w-full sm:w-auto px-6 py-3 border border-slate-300 text-slate-600 hover:bg-slate-200 text-sm font-bold rounded-xl transition-colors uppercase tracking-wider">
-              Lihat Dokumentasi
-            </a>
+        <div className="max-w-4xl mx-auto pb-16 sm:pb-24">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
+            <div>
+              <h1 className="text-2xl sm:text-4xl font-black tracking-tighter text-slate-900 uppercase mb-4 leading-tight">
+                Integrasikan<br />
+                KawalTransaksi<br />
+                <span className="text-emerald-600">ke Aplikasi Anda</span>
+              </h1>
+              <p className="text-slate-500 text-sm sm:text-base leading-relaxed mb-6">
+                REST API untuk verifikasi nomor HP, rekening bank, dan e-wallet. Gratis 300 request/hari, tanpa kartu kredit.
+              </p>
+              <div className="flex flex-wrap gap-3 mb-6">
+                {['Free 300 req/hari', 'No credit card', 'HTTPS only', 'JSON response'].map(s => (
+                  <span key={s} className="text-xs font-bold px-3 py-1.5 bg-white border border-slate-200 rounded-full text-slate-600">{s}</span>
+                ))}
+              </div>
+              <div className="flex flex-col sm:flex-row gap-3">
+                <a href={isLoggedIn ? '#api-keys' : '/register'} className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-xl transition-colors uppercase tracking-wider text-center">
+                  {isLoggedIn ? 'Kelola API Key' : 'Mulai Gratis'}
+                </a>
+                <a href="/developer/docs/overview" className="px-6 py-3 border border-slate-300 text-slate-600 hover:bg-slate-200 text-sm font-bold rounded-xl transition-colors uppercase tracking-wider text-center">
+                  Dokumentasi
+                </a>
+              </div>
+            </div>
+
+            {/* Code snippet */}
+            <div className="hidden lg:block">
+              <CodeBlock language="curl" code={`curl "https://api.kawaltransaksi.com/api/v1/check\\
+  ?number=08123456789&type=phone" \\
+  -H "X-API-Key: kt_live_your_key"
+
+# Response
+{
+  "success": true,
+  "data": {
+    "status": "danger",
+    "verified_reports": 3,
+    "total_loss": 5000000
+  }
+}`} />
+            </div>
           </div>
         </div>
         <svg viewBox="0 0 1440 80" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" className="w-full h-10 sm:h-20 block">
@@ -197,137 +356,141 @@ export default function DeveloperClient({ token, isLoggedIn }: Props) {
         </svg>
       </section>
 
+      {/* Playground */}
+      <section className="bg-white pt-10 pb-12 px-4">
+        <div className="max-w-4xl mx-auto">
+          <div className="mb-6">
+            <h2 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 uppercase">Coba API Langsung</h2>
+            <p className="text-sm text-slate-500 mt-1">Masukkan nomor dan lihat hasilnya secara real-time. Tanpa setup, tanpa API key.</p>
+          </div>
+          <Playground token={token} isLoggedIn={isLoggedIn} />
+        </div>
+      </section>
+
+      <svg viewBox="0 0 1440 80" preserveAspectRatio="none" className="w-full block bg-white -mb-1" xmlns="http://www.w3.org/2000/svg">
+        <path d="M0,0 C240,60 480,20 720,45 C960,70 1200,30 1440,50 L1440,80 L0,80 Z" fill="#f8fafc" />
+      </svg>
+
       {/* Pricing */}
       <PricingSection isLoggedIn={isLoggedIn} />
 
-      {/* API Keys */}
-      <section id="api-keys" className="bg-white pt-10 pb-12 sm:pt-14 sm:pb-16 px-4">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex items-end justify-between mb-6">
-            <div>
-              <h2 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 uppercase">API Keys Saya</h2>
-              <p className="text-sm text-slate-500 mt-1">Kelola API key untuk integrasi aplikasi Anda.</p>
+      {/* API Keys — hanya tampil kalau login */}
+      {isLoggedIn && (
+        <section id="api-keys" className="bg-white pt-10 pb-12 sm:pt-14 sm:pb-16 px-4">
+          <div className="max-w-4xl mx-auto">
+            <div className="flex items-end justify-between mb-6">
+              <div>
+                <h2 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 uppercase">API Keys Saya</h2>
+                <p className="text-sm text-slate-500 mt-1">Kelola API key untuk integrasi aplikasi Anda.</p>
+              </div>
+              <span className="text-sm font-bold text-slate-400">{keys.length}/5</span>
             </div>
-            {isLoggedIn && <span className="text-sm font-bold text-slate-400">{keys.length}/5</span>}
-          </div>
 
-          <div className="space-y-4">
-            {isBlocked && (
-              <div className="bg-red-50 border border-red-200 rounded-xl p-5">
-                <div className="flex items-start gap-3">
+            <div className="space-y-4">
+              {isBlocked && (
+                <div className="bg-red-50 border border-red-200 rounded-xl p-5 flex items-start gap-3">
                   <div className="w-9 h-9 bg-red-100 rounded-xl flex items-center justify-center shrink-0 mt-0.5">
                     <AlertTriangle className="w-5 h-5 text-red-600" />
                   </div>
                   <div>
                     <p className="text-sm font-bold text-red-800 mb-1">IP Anda Diblokir Sementara</p>
-                    <p className="text-sm text-red-700 leading-relaxed mb-3">
-                      Akses API Anda diblokir selama 24 jam karena terdeteksi aktivitas mencurigakan dari IP Anda.
-                    </p>
-                    <p className="text-sm text-red-700">
-                      Jika ini kesalahan, hubungi{' '}
-                      <a href="mailto:kawaltransaksi@gmail.com" className="font-bold underline hover:text-red-900">kawaltransaksi@gmail.com</a>
-                    </p>
+                    <p className="text-sm text-red-700 leading-relaxed mb-1">Akses API Anda diblokir selama 24 jam karena terdeteksi aktivitas mencurigakan.</p>
+                    <p className="text-sm text-red-700">Hubungi <a href="mailto:kawaltransaksi@gmail.com" className="font-bold underline hover:text-red-900">kawaltransaksi@gmail.com</a></p>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
 
-            {!isLoggedIn ? (
-              <div className="bg-slate-50 rounded-xl border border-slate-200 p-8 sm:p-10 text-center">
-                <p className="text-base font-bold text-slate-700 mb-1">Login untuk generate API key</p>
-                <p className="text-sm text-slate-400 mb-6">API key terhubung ke akun Anda. Gratis, tanpa batas waktu.</p>
-                <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                  <a href="/login?redirectTo=/developer" className="w-full sm:w-auto px-6 py-3 bg-emerald-600 hover:bg-emerald-500 text-white text-sm font-bold rounded-xl transition-colors uppercase tracking-wider">Login Sekarang</a>
-                  <a href="/register" className="w-full sm:w-auto px-6 py-3 border-2 border-slate-200 text-slate-700 hover:border-slate-400 text-sm font-bold rounded-xl transition-colors uppercase tracking-wider">Daftar Gratis</a>
+              <div className="bg-slate-50 rounded-xl border border-slate-200 p-4 sm:p-5">
+                <p className="text-sm font-bold text-slate-700 mb-3">Generate API Key Baru</p>
+                <div className="flex flex-col sm:flex-row gap-2 mb-3">
+                  <input
+                    type="text" placeholder="Nama project (contoh: MyApp Production)"
+                    value={newKeyName} onChange={e => setNewKeyName(e.target.value)}
+                    onKeyDown={e => e.key === 'Enter' && createKey()} maxLength={50}
+                    className="flex-1 px-3 py-2.5 border border-slate-200 bg-white rounded-xl text-sm focus:outline-none focus:border-emerald-400 transition-all"
+                  />
+                  <button onClick={createKey} disabled={creating || !newKeyName.trim() || keys.length >= 5}
+                    className="flex items-center justify-center gap-2 px-5 py-2.5 bg-slate-900 text-white text-sm font-bold rounded-xl hover:bg-slate-700 disabled:opacity-50 transition-colors shrink-0">
+                    {creating ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                    Generate
+                  </button>
                 </div>
-              </div>
-            ) : (
-              <div className="space-y-4">
-                <div className="bg-slate-50 rounded-xl border border-slate-200 p-4 sm:p-5">
-                  <p className="text-sm font-bold text-slate-700 mb-3">Generate API Key Baru</p>
-                  <div className="flex flex-col sm:flex-row gap-2 mb-3">
-                    <input
-                      type="text" placeholder="Nama project (contoh: MyApp Production)"
-                      value={newKeyName} onChange={e => setNewKeyName(e.target.value)}
-                      onKeyDown={e => e.key === 'Enter' && createKey()} maxLength={50}
-                      className="flex-1 px-3 py-2.5 border border-slate-200 bg-white rounded-xl text-sm focus:outline-none focus:border-emerald-400 transition-all"
-                    />
-                    <button onClick={createKey} disabled={creating || !newKeyName.trim() || keys.length >= 5}
-                      className="flex items-center justify-center gap-2 px-5 py-2.5 bg-slate-900 text-white text-sm font-bold rounded-xl hover:bg-slate-700 disabled:opacity-50 transition-colors shrink-0">
-                      {creating ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                      Generate
-                    </button>
-                  </div>
-                  <div className="flex items-center gap-4 flex-wrap">
-                    <div className="flex items-center gap-2.5">
-                      <span className="text-sm text-slate-500 shrink-0">Masa berlaku:</span>
-                      <div className="relative">
-                        <select value={expiresIn} onChange={e => setExpiresIn(e.target.value)}
-                          className="appearance-none pl-3 pr-8 py-1.5 text-sm border border-slate-200 bg-white rounded-lg focus:outline-none focus:border-emerald-400 transition-all cursor-pointer">
-                          {EXPIRY_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                        </select>
-                        <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2.5">
-                      <span className="text-sm text-slate-500 shrink-0">Environment:</span>
-                      <div className="flex gap-1.5">
-                        {(['live', 'test'] as const).map(env => (
-                          <button key={env} onClick={() => setEnvironment(env)}
-                            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors capitalize ${
-                              environment === env
-                                ? env === 'live' ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-white'
-                                : 'bg-white border border-slate-200 text-slate-500 hover:border-slate-400'
-                            }`}>
-                            {env}
-                          </button>
-                        ))}
-                      </div>
+                <div className="flex items-center gap-4 flex-wrap">
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-sm text-slate-500 shrink-0">Masa berlaku:</span>
+                    <div className="relative">
+                      <select value={expiresIn} onChange={e => setExpiresIn(e.target.value)}
+                        className="appearance-none pl-3 pr-8 py-1.5 text-sm border border-slate-200 bg-white rounded-lg focus:outline-none focus:border-emerald-400 transition-all cursor-pointer">
+                        {EXPIRY_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                      </select>
+                      <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
                     </div>
                   </div>
-                  {keys.length >= 5 && <p className="text-sm text-amber-600 mt-2">Maksimal 5 API key per akun.</p>}
+                  <div className="flex items-center gap-2.5">
+                    <span className="text-sm text-slate-500 shrink-0">Environment:</span>
+                    <div className="flex gap-1.5">
+                      {(['live', 'test'] as const).map(env => (
+                        <button key={env} onClick={() => setEnvironment(env)}
+                          className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors capitalize ${
+                            environment === env
+                              ? env === 'live' ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-white'
+                              : 'bg-white border border-slate-200 text-slate-500 hover:border-slate-400'
+                          }`}>
+                          {env}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
                 </div>
-
-                <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
-                  <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                  <p className="text-sm text-amber-700 leading-relaxed">
-                    API key hanya ditampilkan <strong>sekali</strong> saat generate. Simpan di tempat aman. Kalau hilang, gunakan tombol <strong>Regenerate</strong>.
-                  </p>
-                </div>
-
-                {loading ? (
-                  <div className="bg-slate-50 rounded-xl border border-slate-200 p-10 text-center">
-                    <RefreshCw className="w-6 h-6 text-slate-300 animate-spin mx-auto" />
-                  </div>
-                ) : keys.length === 0 ? (
-                  <div className="bg-slate-50 rounded-xl border border-slate-200 p-10 text-center">
-                    <p className="text-sm font-semibold text-slate-400 mb-1">Belum ada API key</p>
-                    <p className="text-sm text-slate-400">Generate key pertama Anda di atas untuk mulai.</p>
-                  </div>
-                ) : (
-                  <div className="space-y-3">
-                    {keys.map(k => (
-                      <KeyCard key={k.id} k={k} token={token}
-                        onDelete={handleDelete} onRename={handleRename} onRegenerate={handleRegenerate} />
-                    ))}
-                  </div>
-                )}
+                {keys.length >= 5 && <p className="text-sm text-amber-600 mt-2">Maksimal 5 API key per akun.</p>}
               </div>
-            )}
+
+              <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                <p className="text-sm text-amber-700 leading-relaxed">
+                  API key hanya ditampilkan <strong>sekali</strong> saat generate. Simpan di tempat aman. Kalau hilang, gunakan tombol <strong>Regenerate</strong>.
+                </p>
+              </div>
+
+              {loading ? (
+                <div className="bg-slate-50 rounded-xl border border-slate-200 p-10 text-center">
+                  <RefreshCw className="w-6 h-6 text-slate-300 animate-spin mx-auto" />
+                </div>
+              ) : keys.length === 0 ? (
+                <div className="bg-slate-50 rounded-xl border border-slate-200 p-10 text-center">
+                  <p className="text-sm font-semibold text-slate-400 mb-1">Belum ada API key</p>
+                  <p className="text-sm text-slate-400">Generate key pertama Anda di atas untuk mulai.</p>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  {keys.map(k => (
+                    <KeyCard key={k.id} k={k} token={token}
+                      onDelete={handleDelete} onRename={handleRename} onRegenerate={handleRegenerate} />
+                  ))}
+                </div>
+              )}
+            </div>
           </div>
-        </div>
-      </section>
+        </section>
+      )}
 
-      {/* CTA Docs */}
-      <section className="bg-slate-50 py-12 px-4 text-center">
-        <div className="max-w-xl mx-auto">
-          <p className="text-lg font-black text-slate-900 uppercase tracking-tight mb-2">Siap integrasi?</p>
-          <p className="text-sm text-slate-500 mb-6">Baca dokumentasi lengkap untuk panduan step-by-step.</p>
-          <a href="/developer/docs/overview" className="inline-block px-6 py-3 bg-slate-900 hover:bg-slate-700 text-white text-sm font-bold rounded-xl transition-colors uppercase tracking-wider">
-            Baca Dokumentasi
-          </a>
-        </div>
-      </section>
+      {/* CTA bottom — hanya kalau belum login */}
+      {!isLoggedIn && (
+        <section className="bg-slate-50 py-12 px-4 text-center">
+          <div className="max-w-xl mx-auto">
+            <p className="text-lg font-black text-slate-900 uppercase tracking-tight mb-2">Siap integrasi?</p>
+            <p className="text-sm text-slate-500 mb-6">Daftar gratis dan generate API key dalam 30 detik.</p>
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+              <a href="/register" className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-xl transition-colors uppercase tracking-wider">
+                Daftar Gratis
+              </a>
+              <a href="/developer/docs/overview" className="px-6 py-3 border border-slate-300 text-slate-600 hover:bg-slate-200 text-sm font-bold rounded-xl transition-colors uppercase tracking-wider">
+                Lihat Dokumentasi
+              </a>
+            </div>
+          </div>
+        </section>
+      )}
     </main>
   );
 }

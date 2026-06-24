@@ -8,8 +8,6 @@ const developer = new Hono<{ Bindings: Env; Variables: { userId: string; userEma
 const UUID_REGEX = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const KEY_SELECT = 'id, name, key_prefix, environment, requests_today, requests_total, daily_limit, last_used_at, is_active, expires_at, created_at';
 
-// FIX: definisikan valid durations secara eksplisit
-// sebelumnya calcExpiresAt menerima string apapun dan silent fail kalau tidak valid
 const VALID_DURATIONS = ['7d', '30d', '90d', '1y', 'never'] as const;
 type ValidDuration = typeof VALID_DURATIONS[number];
 
@@ -28,21 +26,12 @@ async function hashKey(key: string): Promise<string> {
   return Array.from(new Uint8Array(buf)).map(b => b.toString(16).padStart(2, '0')).join('');
 }
 
-// FIX: hanya terima ValidDuration, bukan sembarang string
-// sebelumnya: calcExpiresAt(duration: string | null) — input '9999d' return null tanpa error
-// sekarang:   type-safe, invalid duration di-reject di route handler sebelum sampai sini
 function calcExpiresAt(duration: ValidDuration | null): string | null {
   if (!duration || duration === 'never') return null;
   const now  = new Date();
   const days: Record<string, number> = { '7d': 7, '30d': 30, '90d': 90 };
-  if (days[duration]) {
-    now.setDate(now.getDate() + days[duration]);
-    return now.toISOString();
-  }
-  if (duration === '1y') {
-    now.setFullYear(now.getFullYear() + 1);
-    return now.toISOString();
-  }
+  if (days[duration]) { now.setDate(now.getDate() + days[duration]); return now.toISOString(); }
+  if (duration === '1y') { now.setFullYear(now.getFullYear() + 1); return now.toISOString(); }
   return null;
 }
 
@@ -77,18 +66,10 @@ developer.post('/keys', authMiddleware, async (c) => {
 
     if (!name?.trim() || name.trim().length > 50)
       return c.json({ success: false, message: 'Nama key tidak valid (1-50 karakter).' }, 400);
-
     if (!['live', 'test'].includes(environment))
       return c.json({ success: false, message: 'Environment tidak valid. Gunakan: live atau test.' }, 400);
-
-    // FIX: validasi expires_in secara eksplisit sebelum masuk ke calcExpiresAt
-    // sebelumnya input sembarang string diterima dan silent fail (return null = no expiry)
-    if (expires_in !== undefined && expires_in !== null && !VALID_DURATIONS.includes(expires_in)) {
-      return c.json({
-        success: false,
-        message: `Durasi tidak valid. Gunakan salah satu: ${VALID_DURATIONS.join(', ')}.`,
-      }, 400);
-    }
+    if (expires_in !== undefined && expires_in !== null && !VALID_DURATIONS.includes(expires_in))
+      return c.json({ success: false, message: `Durasi tidak valid. Gunakan salah satu: ${VALID_DURATIONS.join(', ')}.` }, 400);
 
     const supabase = getSupabaseAdmin(c.env);
     const { count } = await supabase.from('api_keys').select('*', { count: 'exact', head: true }).eq('user_id', userId);
@@ -98,22 +79,14 @@ developer.post('/keys', authMiddleware, async (c) => {
     const plainKey = generateApiKey(environment as 'live' | 'test');
     const today    = new Date().toISOString().slice(0, 10);
 
-const { data, error } = await supabase.from('api_keys').insert({
-  user_id:         userId,
-  name:            name.trim(),
-  key_hash:        await hashKey(plainKey),
-  key_prefix:      plainKey.slice(0, 12),
-  environment,
-  requests_today:  0,
-  requests_total:  0,
-  daily_limit:     300,
-  last_reset_at:   today,
-  last_used_at:    null,
-  failed_attempts: 0,
-  is_active:       true,
-  expires_at:      calcExpiresAt((expires_in as ValidDuration) ?? null),
-  created_at:      new Date().toISOString(),
-}).select(KEY_SELECT).single();
+    const { data, error } = await supabase.from('api_keys').insert({
+      user_id: userId, name: name.trim(),
+      key_hash: await hashKey(plainKey), key_prefix: plainKey.slice(0, 12),
+      environment, requests_today: 0, requests_total: 0, daily_limit: 300,
+      last_reset_at: today, last_used_at: null, failed_attempts: 0,
+      is_active: true, expires_at: calcExpiresAt((expires_in as ValidDuration) ?? null),
+      created_at: new Date().toISOString(),
+    }).select(KEY_SELECT).single();
 
     if (error) throw error;
     return c.json({ success: true, data: { ...data, key: plainKey, show_once: true } });
@@ -158,14 +131,10 @@ developer.post('/keys/:id/regenerate', authMiddleware, async (c) => {
 
     const plainKey = generateApiKey((existing.environment ?? 'live') as 'live' | 'test');
 
-const { data, error } = await supabase.from('api_keys').update({
-  key_hash:        await hashKey(plainKey),
-  key_prefix:      plainKey.slice(0, 12),
-  requests_today:  0,
-  requests_total:  0,
-  last_used_at:    null,
-  failed_attempts: 0,
-}).eq('id', id).select(KEY_SELECT).single();
+    const { data, error } = await supabase.from('api_keys').update({
+      key_hash: await hashKey(plainKey), key_prefix: plainKey.slice(0, 12),
+      requests_today: 0, requests_total: 0, last_used_at: null, failed_attempts: 0,
+    }).eq('id', id).select(KEY_SELECT).single();
 
     if (error) throw error;
     return c.json({ success: true, data: { ...data, key: plainKey, show_once: true } });
@@ -190,6 +159,90 @@ developer.delete('/keys/:id', authMiddleware, async (c) => {
     return c.json({ success: true });
   } catch {
     return c.json({ success: false, message: 'Gagal menghapus API key.' }, 500);
+  }
+});
+
+// -- POST /api/developer/playground -------------------------------------------
+// Guest: 20x/jam per IP | Logged-in: 50x/jam per IP
+// Tidak consume daily limit API key user
+
+developer.post('/playground', async (c) => {
+  try {
+    const ip = c.req.header('CF-Connecting-IP') || 'anonymous';
+
+    // Cek apakah user logged in (opsional, tidak wajib)
+    const authHeader = c.req.header('Authorization');
+    let isLoggedIn   = false;
+    if (authHeader?.startsWith('Bearer ')) {
+      try {
+        const { data } = await getSupabaseAdmin(c.env).auth.getUser(authHeader.slice(7));
+        isLoggedIn = !!data.user;
+      } catch { /* biarkan guest */ }
+    }
+
+    // Rate limit: guest 20x/jam, logged-in 50x/jam
+    if (c.env.LIMITER && ip !== 'anonymous') {
+      const rlKey   = `playground_${isLoggedIn ? 'auth' : 'guest'}_${ip}`;
+      const limit   = isLoggedIn ? 50 : 20;
+      const current = parseInt(await c.env.LIMITER.get(rlKey) ?? '0');
+      if (current >= limit)
+        return c.json({ success: false, message: `Batas playground tercapai (${limit}x/jam). Coba lagi nanti.` }, 429);
+      await c.env.LIMITER.put(rlKey, (current + 1).toString(), { expirationTtl: 3600 });
+    }
+
+    const { number: rawNumber, type = 'phone', bank = null } = await c.req.json();
+    const number = String(rawNumber ?? '').replace(/\D/g, '');
+
+    if (!number || number.length < 5 || number.length > 32)
+      return c.json({ success: false, message: 'Nomor tidak valid (min 5, maks 32 digit).' }, 400);
+    if (!['phone', 'bank_account', 'ewallet'].includes(type))
+      return c.json({ success: false, message: 'Tipe tidak valid. Gunakan: phone, bank_account, ewallet.' }, 400);
+
+    // Cache 5 menit (sama dengan /api/v1/check)
+    const cacheKey = `check_cache_${type}_${number}`;
+    let checkData: Record<string, unknown> | null = null;
+    if (c.env.LIMITER) {
+      try {
+        const cached = await c.env.LIMITER.get(cacheKey);
+        if (cached) checkData = JSON.parse(cached);
+      } catch { /* skip cache */ }
+    }
+
+    if (!checkData) {
+      const { data: reportsData } = await getSupabaseAdmin(c.env)
+        .from('reports')
+        .select('status, loss_amount, created_at')
+        .eq('target_number', number)
+        .neq('status', 'withdrawn')
+        .order('created_at', { ascending: false });
+
+      const all      = reportsData ?? [];
+      const verified = all.filter((r: { status: string }) => r.status === 'verified');
+      const pending  = all.filter((r: { status: string }) => r.status === 'pending');
+
+      checkData = {
+        number, type, bank,
+        status:           verified.length > 0 ? 'danger' : pending.length > 0 ? 'warning' : 'safe',
+        verified_reports: verified.length,
+        pending_reports:  pending.length,
+        total_reports:    all.length,
+        total_loss:       all.reduce((sum: number, r: { loss_amount?: string | number | null }) =>
+          sum + (Number(r.loss_amount) || 0), 0),
+        last_reported:    all[0]?.created_at ?? null,
+        check_url:        `https://kawaltransaksi.com/check/${number}`,
+      };
+
+      if (c.env.LIMITER) {
+        c.executionCtx.waitUntil(
+          c.env.LIMITER.put(cacheKey, JSON.stringify(checkData), { expirationTtl: 300 })
+        );
+      }
+    }
+
+    return c.json({ success: true, data: checkData, meta: { playground: true, authenticated: isLoggedIn } });
+  } catch (err) {
+    console.error('[PLAYGROUND]:', err);
+    return c.json({ success: false, message: 'Terjadi kesalahan server.' }, 500);
   }
 });
 
