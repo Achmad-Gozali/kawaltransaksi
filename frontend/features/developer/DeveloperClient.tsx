@@ -138,7 +138,7 @@ function Playground({ token, isLoggedIn }: { token: string; isLoggedIn: boolean 
 
         {!isLoggedIn && (
           <p className="text-xs text-slate-400">
-            Guest: 20x/jam · <a href="/login?redirectTo=/developer" className="text-emerald-600 font-semibold hover:underline">Login</a> untuk 50x/jam
+            Guest: 5x/jam · <a href="/login?redirectTo=/developer" className="text-emerald-600 font-semibold hover:underline">Login</a> untuk 10x/jam
           </p>
         )}
       </div>
@@ -197,7 +197,7 @@ function FeatureIcon({ available, comingSoon }: { available: boolean; comingSoon
 
 function PricingSection({ isLoggedIn }: { isLoggedIn: boolean }) {
   return (
-    <section className="bg-white pt-10 pb-12 px-4">
+    <section className="bg-slate-50 pt-10 pb-12 px-4">
       <div className="max-w-4xl mx-auto">
         <div className="mb-6">
           <h2 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 uppercase">Pilih Plan</h2>
@@ -307,52 +307,30 @@ export default function DeveloperClient({ token, isLoggedIn }: Props) {
 
       {/* Hero */}
       <section className="bg-slate-100 pt-14 pb-0 sm:pt-20 overflow-hidden px-4">
-        <div className="max-w-4xl mx-auto pb-16 sm:pb-24">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 items-center">
-            <div>
-              <h1 className="text-2xl sm:text-4xl font-black tracking-tighter text-slate-900 uppercase mb-4 leading-tight">
-                Integrasikan<br />
-                KawalTransaksi<br />
-                <span className="text-emerald-600">ke Aplikasi Anda</span>
-              </h1>
-              <p className="text-slate-500 text-sm sm:text-base leading-relaxed mb-6">
-                REST API untuk verifikasi nomor HP, rekening bank, dan e-wallet. Gratis 300 request/hari, tanpa kartu kredit.
-              </p>
-              <div className="flex flex-wrap gap-3 mb-6">
-                {['Free 300 req/hari', 'No credit card', 'HTTPS only', 'JSON response'].map(s => (
-                  <span key={s} className="text-xs font-bold px-3 py-1.5 bg-white border border-slate-200 rounded-full text-slate-600">{s}</span>
-                ))}
-              </div>
-              <div className="flex flex-col sm:flex-row gap-3">
-                <a href={isLoggedIn ? '#api-keys' : '/register'} className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-xl transition-colors uppercase tracking-wider text-center">
-                  {isLoggedIn ? 'Kelola API Key' : 'Mulai Gratis'}
-                </a>
-                <a href="/developer/docs/overview" className="px-6 py-3 border border-slate-300 text-slate-600 hover:bg-slate-200 text-sm font-bold rounded-xl transition-colors uppercase tracking-wider text-center">
-                  Dokumentasi
-                </a>
-              </div>
-            </div>
-
-            {/* Code snippet */}
-            <div className="hidden lg:block">
-              <CodeBlock language="curl" code={`curl "https://api.kawaltransaksi.com/api/v1/check\\
-  ?number=08123456789&type=phone" \\
-  -H "X-API-Key: kt_live_your_key"
-
-# Response
-{
-  "success": true,
-  "data": {
-    "status": "danger",
-    "verified_reports": 3,
-    "total_loss": 5000000
-  }
-}`} />
-            </div>
+        <div className="max-w-3xl mx-auto pb-16 sm:pb-24 text-center">
+          <h1 className="text-2xl sm:text-4xl font-black tracking-tighter text-slate-900 uppercase mb-4 leading-tight">
+            Integrasikan KawalTransaksi<br />
+            <span className="text-emerald-600">ke Aplikasi Anda</span>
+          </h1>
+          <p className="text-slate-500 text-sm sm:text-base leading-relaxed mb-6 max-w-xl mx-auto">
+            REST API untuk verifikasi nomor HP, rekening bank, dan e-wallet. Gratis 300 request/hari, tanpa kartu kredit.
+          </p>
+          <div className="flex flex-wrap justify-center gap-3 mb-8">
+            {['Free 300 req/hari', 'No credit card', 'HTTPS only', 'JSON response'].map(s => (
+              <span key={s} className="text-xs font-bold px-3 py-1.5 bg-white border border-slate-200 rounded-full text-slate-600">{s}</span>
+            ))}
+          </div>
+          <div className="flex flex-col sm:flex-row gap-3 justify-center">
+            <a href={isLoggedIn ? '#api-keys' : '/register'} className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-xl transition-colors uppercase tracking-wider text-center">
+              {isLoggedIn ? 'Kelola API Key' : 'Generate API Key'}
+            </a>
+            <a href="/developer/docs/overview" className="px-6 py-3 border border-slate-300 text-slate-600 hover:bg-slate-200 text-sm font-bold rounded-xl transition-colors uppercase tracking-wider text-center">
+              Lihat Dokumentasi
+            </a>
           </div>
         </div>
-        <svg viewBox="0 0 1440 80" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" className="w-full h-10 sm:h-20 block">
-          <path d="M0,20 C360,80 1080,0 1440,60 L1440,80 L0,80 Z" fill="#ffffff" />
+        <svg viewBox="0 0 1440 100" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" className="w-full h-12 sm:h-24 block">
+          <path d="M0,40 C240,90 480,10 720,50 C960,90 1200,10 1440,50 L1440,100 L0,100 Z" fill="#ffffff" />
         </svg>
       </section>
 
@@ -367,12 +345,16 @@ export default function DeveloperClient({ token, isLoggedIn }: Props) {
         </div>
       </section>
 
-      <svg viewBox="0 0 1440 80" preserveAspectRatio="none" className="w-full block bg-white -mb-1" xmlns="http://www.w3.org/2000/svg">
-        <path d="M0,0 C240,60 480,20 720,45 C960,70 1200,30 1440,50 L1440,80 L0,80 Z" fill="#f8fafc" />
+      <svg viewBox="0 0 1440 100" preserveAspectRatio="none" className="w-full block bg-white -mb-1" xmlns="http://www.w3.org/2000/svg">
+        <path d="M0,30 C240,80 480,10 720,55 C960,100 1200,20 1440,60 L1440,100 L0,100 Z" fill="#f8fafc" />
       </svg>
 
       {/* Pricing */}
       <PricingSection isLoggedIn={isLoggedIn} />
+
+      <svg viewBox="0 0 1440 100" preserveAspectRatio="none" className="w-full block bg-slate-50 -mb-1" xmlns="http://www.w3.org/2000/svg">
+        <path d="M0,60 C240,15 480,90 720,45 C960,5 1200,85 1440,35 L1440,100 L0,100 Z" fill="#ffffff" />
+      </svg>
 
       {/* API Keys — hanya tampil kalau login */}
       {isLoggedIn && (
@@ -476,20 +458,25 @@ export default function DeveloperClient({ token, isLoggedIn }: Props) {
 
       {/* CTA bottom — hanya kalau belum login */}
       {!isLoggedIn && (
-        <section className="bg-slate-50 py-12 px-4 text-center">
-          <div className="max-w-xl mx-auto">
-            <p className="text-lg font-black text-slate-900 uppercase tracking-tight mb-2">Siap integrasi?</p>
-            <p className="text-sm text-slate-500 mb-6">Daftar gratis dan generate API key dalam 30 detik.</p>
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-              <a href="/register" className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-xl transition-colors uppercase tracking-wider">
-                Daftar Gratis
-              </a>
-              <a href="/developer/docs/overview" className="px-6 py-3 border border-slate-300 text-slate-600 hover:bg-slate-200 text-sm font-bold rounded-xl transition-colors uppercase tracking-wider">
-                Lihat Dokumentasi
-              </a>
+        <>
+          <svg viewBox="0 0 1440 100" preserveAspectRatio="none" className="w-full block bg-slate-50 -mb-1" xmlns="http://www.w3.org/2000/svg">
+            <path d="M0,55 C240,10 480,85 720,40 C960,0 1200,80 1440,30 L1440,100 L0,100 Z" fill="#ffffff" />
+          </svg>
+          <section className="bg-white py-12 sm:py-16 px-4">
+            <div className="max-w-xl mx-auto bg-slate-50 border border-slate-200 rounded-2xl px-6 py-10 text-center">
+              <p className="text-lg font-black text-slate-900 uppercase tracking-tight mb-2">Siap integrasi?</p>
+              <p className="text-sm text-slate-500 mb-6">Daftar gratis dan generate API key dalam 30 detik.</p>
+              <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
+                <a href="/register" className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-xl transition-colors uppercase tracking-wider">
+                  Daftar Gratis
+                </a>
+                <a href="/developer/docs/overview" className="px-6 py-3 border border-slate-300 text-slate-600 hover:bg-slate-100 text-sm font-bold rounded-xl transition-colors uppercase tracking-wider">
+                  Lihat Dokumentasi
+                </a>
+              </div>
             </div>
-          </div>
-        </section>
+          </section>
+        </>
       )}
     </main>
   );

@@ -180,10 +180,10 @@ developer.post('/playground', async (c) => {
       } catch { /* biarkan guest */ }
     }
 
-    // Rate limit: guest 20x/jam, logged-in 50x/jam
+    // Rate limit: guest 5x/jam, logged-in 10x/jam (test API, dibuat ketat)
     if (c.env.LIMITER && ip !== 'anonymous') {
       const rlKey   = `playground_${isLoggedIn ? 'auth' : 'guest'}_${ip}`;
-      const limit   = isLoggedIn ? 50 : 20;
+      const limit   = isLoggedIn ? 10 : 5;
       const current = parseInt(await c.env.LIMITER.get(rlKey) ?? '0');
       if (current >= limit)
         return c.json({ success: false, message: `Batas playground tercapai (${limit}x/jam). Coba lagi nanti.` }, 429);
