@@ -44,6 +44,12 @@ const nextConfig: NextConfig = {
     return [{ source: '/api/sb/:path*', destination: `${supabaseUrl}/:path*` }];
   },
 
+  async redirects() {
+    return [
+      { source: '/developer/docs', destination: '/developer/docs/overview', permanent: false },
+    ];
+  },
+
   async headers() {
     return [
       {
@@ -68,13 +74,10 @@ const nextConfig: NextConfig = {
             value: [
               "default-src 'self'",
               "worker-src 'self' blob:",
-              // Tambah scripts.clarity.ms untuk Microsoft Clarity
               "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com https://*.challenges.cloudflare.com https://static.cloudflareinsights.com https://www.googletagmanager.com https://www.clarity.ms https://scripts.clarity.ms https://us-assets.i.posthog.com",
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
-              // Tambah https://c.clarity.ms untuk Clarity tracker image
               "img-src 'self' data: blob: https://*.supabase.co https://picsum.photos https://cdn.kawaltransaksi.com https://www.google-analytics.com https://www.clarity.ms https://c.clarity.ms",
-              // Tambah https://c.clarity.ms untuk connect
               "connect-src 'self' https://*.supabase.co wss://*.supabase.co https://*.cloudflare.com https://challenges.cloudflare.com https://*.challenges.cloudflare.com https://api.kawaltransaksi.com https://static.cloudflareinsights.com https://*.sentry.io https://www.google-analytics.com https://analytics.google.com https://region1.google-analytics.com https://*.clarity.ms https://c.clarity.ms https://us.i.posthog.com https://us-assets.i.posthog.com",
               "frame-src https://challenges.cloudflare.com https://*.challenges.cloudflare.com",
               "object-src 'none'",
