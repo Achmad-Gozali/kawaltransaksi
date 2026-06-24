@@ -348,13 +348,13 @@ export default function DeveloperClient({ token, isLoggedIn }: Props) {
       {/* Pricing */}
       <PricingSection isLoggedIn={isLoggedIn} />
 
-      <svg viewBox="0 0 1440 60" preserveAspectRatio="none" className="w-full h-12 sm:h-20 block bg-slate-50 -mb-1" xmlns="http://www.w3.org/2000/svg">
-        <path d="M0,36 C240,9 480,54 720,27 C960,3 1200,51 1440,21 L1440,60 L0,60 Z" fill="#ffffff" />
-      </svg>
-
       {/* API Keys — hanya tampil kalau login */}
       {isLoggedIn && (
-        <section id="api-keys" className="bg-white pt-10 pb-12 sm:pt-14 sm:pb-16 px-4">
+        <>
+          <svg viewBox="0 0 1440 60" preserveAspectRatio="none" className="w-full h-12 sm:h-20 block bg-slate-50 -mb-1" xmlns="http://www.w3.org/2000/svg">
+            <path d="M0,36 C240,9 480,54 720,27 C960,3 1200,51 1440,21 L1440,60 L0,60 Z" fill="#ffffff" />
+          </svg>
+          <section id="api-keys" className="bg-white pt-10 pb-12 sm:pt-14 sm:pb-16 px-4">
           <div className="max-w-4xl mx-auto">
             <div className="flex items-end justify-between mb-6">
               <div>
@@ -449,7 +449,8 @@ export default function DeveloperClient({ token, isLoggedIn }: Props) {
               )}
             </div>
           </div>
-        </section>
+          </section>
+        </>
       )}
 
       {/* CTA bottom — hanya kalau belum login */}
