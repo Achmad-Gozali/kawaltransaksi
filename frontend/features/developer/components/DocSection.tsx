@@ -4,19 +4,22 @@ import { useState } from 'react';
 import { ChevronRight } from 'lucide-react';
 
 export function DocSection({
+  id,
   title,
   children,
   defaultOpen = true,
 }: {
+  id?: string;
   title: string;
   children: React.ReactNode;
   defaultOpen?: boolean;
 }) {
   const [open, setOpen] = useState(defaultOpen);
   return (
-    <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
+    <div id={id} className="bg-white rounded-xl border border-slate-200 overflow-hidden scroll-mt-24">
       <button
         onClick={() => setOpen(!open)}
+        aria-expanded={open}
         className="w-full flex items-center justify-between px-5 py-4 text-left hover:bg-slate-50 transition-colors"
       >
         <p className="text-sm font-bold text-slate-900">{title}</p>
