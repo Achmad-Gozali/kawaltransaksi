@@ -199,32 +199,32 @@ function PricingSection({ isLoggedIn }: { isLoggedIn: boolean }) {
   return (
     <section className="bg-slate-50 pt-10 pb-12 px-4">
       <div className="max-w-4xl mx-auto">
-        <div className="mb-6">
+        <div className="mb-8">
           <h2 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 uppercase">Pilih Plan</h2>
           <p className="text-sm text-slate-500 mt-1">Mulai gratis, upgrade saat butuh lebih.</p>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
           {PRICING.map((plan) => (
-            <div key={plan.tier} className={`rounded-2xl border overflow-hidden relative ${
-              plan.comingSoon ? 'border-slate-200 opacity-80' : 'border-emerald-200 ring-1 ring-emerald-100'
+            <div key={plan.tier} className={`bg-white rounded-[8px] border overflow-hidden relative flex flex-col ${
+              plan.comingSoon ? 'border-slate-200' : 'border-emerald-500 shadow-sm'
             }`}>
-              <div className="absolute top-4 right-4 flex flex-col items-end gap-1.5">
-                {!plan.comingSoon && isLoggedIn && (
-                  <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-emerald-500 text-white uppercase tracking-wider">Plan Anda</span>
-                )}
-                {plan.comingSoon && (
-                  <span className="text-[10px] font-bold px-2.5 py-1 rounded-full bg-slate-900 text-white uppercase tracking-wider">Segera Hadir</span>
-                )}
-              </div>
-              <div className={`px-5 py-5 ${plan.comingSoon ? 'bg-slate-50' : 'bg-emerald-50'}`}>
-                <div className="flex items-center gap-2 mb-1">
+              {!plan.comingSoon && isLoggedIn && (
+                <span className="absolute top-5 right-5 text-[10px] font-bold px-2.5 py-1 rounded-full bg-emerald-500 text-white uppercase tracking-wider">Plan Anda</span>
+              )}
+              {plan.comingSoon && (
+                <span className="absolute top-5 right-5 text-[10px] font-bold px-2.5 py-1 rounded-full bg-slate-900 text-white uppercase tracking-wider">Segera Hadir</span>
+              )}
+
+              <div className="px-6 pt-6 pb-5 border-b border-slate-100">
+                <div className="flex items-center gap-2 mb-3">
                   {plan.comingSoon ? <Lock className="w-4 h-4 text-slate-400" /> : <Zap className="w-4 h-4 text-emerald-500" />}
                   <p className="text-sm font-black text-slate-900 uppercase tracking-wide">{plan.tier}</p>
                 </div>
-                <p className={`text-2xl font-black ${plan.comingSoon ? 'text-slate-400' : 'text-emerald-600'}`}>{plan.price}</p>
-                <p className="text-xs text-slate-500 mt-1">{plan.description}</p>
+                <p className={`text-3xl font-black mb-1 ${plan.comingSoon ? 'text-slate-300' : 'text-slate-900'}`}>{plan.price}</p>
+                <p className="text-xs text-slate-500">{plan.description}</p>
               </div>
-              <div className="bg-white px-5 py-4 space-y-2.5">
+
+              <div className="px-6 py-5 space-y-3 flex-1">
                 {plan.features.map((f) => (
                   <div key={f.label} className="flex items-center gap-2.5">
                     <FeatureIcon available={f.available} comingSoon={plan.comingSoon} />
@@ -232,13 +232,14 @@ function PricingSection({ isLoggedIn }: { isLoggedIn: boolean }) {
                   </div>
                 ))}
               </div>
-              <div className="px-5 pb-5">
+
+              <div className="px-6 pb-6">
                 {plan.comingSoon ? (
-                  <button disabled className="w-full py-2.5 bg-slate-100 text-slate-400 text-sm font-bold rounded-xl cursor-not-allowed">Segera Hadir</button>
+                  <button disabled className="w-full py-3 bg-slate-100 text-slate-400 text-sm font-bold rounded-[8px] cursor-not-allowed">Segera Hadir</button>
                 ) : isLoggedIn ? (
-                  <a href="#api-keys" className="block w-full py-2.5 bg-slate-900 hover:bg-slate-700 text-white text-sm font-bold rounded-xl transition-colors text-center">Kelola API Key</a>
+                  <a href="#api-keys" className="block w-full py-3 bg-slate-900 hover:bg-slate-700 text-white text-sm font-bold rounded-[8px] transition-colors text-center">Kelola API Key</a>
                 ) : (
-                  <a href="#api-keys" className="block w-full py-2.5 bg-emerald-500 hover:bg-emerald-400 text-white text-sm font-bold rounded-xl transition-colors text-center">Mulai Gratis</a>
+                  <a href="#api-keys" className="block w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-[8px] transition-colors text-center">Mulai Gratis</a>
                 )}
               </div>
             </div>
@@ -312,25 +313,20 @@ export default function DeveloperClient({ token, isLoggedIn }: Props) {
             Integrasikan KawalTransaksi<br />
             <span className="text-emerald-600">ke Aplikasi Anda</span>
           </h1>
-          <p className="text-slate-500 text-sm sm:text-base leading-relaxed mb-6 max-w-xl mx-auto">
+          <p className="text-slate-500 text-sm sm:text-base leading-relaxed mb-8 max-w-xl mx-auto">
             REST API untuk verifikasi nomor HP, rekening bank, dan e-wallet. Gratis 300 request/hari, tanpa kartu kredit.
           </p>
-          <div className="flex flex-wrap justify-center gap-3 mb-8">
-            {['Free 300 req/hari', 'No credit card', 'HTTPS only', 'JSON response'].map(s => (
-              <span key={s} className="text-xs font-bold px-3 py-1.5 bg-white border border-slate-200 rounded-full text-slate-600">{s}</span>
-            ))}
-          </div>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <a href={isLoggedIn ? '#api-keys' : '/register'} className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-xl transition-colors uppercase tracking-wider text-center">
+            <a href={isLoggedIn ? '#api-keys' : '/register'} className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-[8px] transition-colors uppercase tracking-wider text-center">
               {isLoggedIn ? 'Kelola API Key' : 'Generate API Key'}
             </a>
-            <a href="/developer/docs/overview" className="px-6 py-3 border border-slate-300 text-slate-600 hover:bg-slate-200 text-sm font-bold rounded-xl transition-colors uppercase tracking-wider text-center">
+            <a href="/developer/docs/overview" className="px-6 py-3 border border-slate-300 text-slate-600 hover:bg-slate-200 text-sm font-bold rounded-[8px] transition-colors uppercase tracking-wider text-center">
               Lihat Dokumentasi
             </a>
           </div>
         </div>
-        <svg viewBox="0 0 1440 100" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" className="w-full h-12 sm:h-24 block">
-          <path d="M0,40 C240,90 480,10 720,50 C960,90 1200,10 1440,50 L1440,100 L0,100 Z" fill="#ffffff" />
+        <svg viewBox="0 0 1440 60" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" className="w-full h-12 sm:h-20 block">
+          <path d="M0,24 C240,54 480,6 720,30 C960,54 1200,6 1440,30 L1440,60 L0,60 Z" fill="#ffffff" />
         </svg>
       </section>
 
@@ -345,15 +341,15 @@ export default function DeveloperClient({ token, isLoggedIn }: Props) {
         </div>
       </section>
 
-      <svg viewBox="0 0 1440 100" preserveAspectRatio="none" className="w-full block bg-white -mb-1" xmlns="http://www.w3.org/2000/svg">
-        <path d="M0,30 C240,80 480,10 720,55 C960,100 1200,20 1440,60 L1440,100 L0,100 Z" fill="#f8fafc" />
+      <svg viewBox="0 0 1440 60" preserveAspectRatio="none" className="w-full h-12 sm:h-20 block bg-white -mb-1" xmlns="http://www.w3.org/2000/svg">
+        <path d="M0,18 C240,48 480,6 720,33 C960,60 1200,12 1440,36 L1440,60 L0,60 Z" fill="#f8fafc" />
       </svg>
 
       {/* Pricing */}
       <PricingSection isLoggedIn={isLoggedIn} />
 
-      <svg viewBox="0 0 1440 100" preserveAspectRatio="none" className="w-full block bg-slate-50 -mb-1" xmlns="http://www.w3.org/2000/svg">
-        <path d="M0,60 C240,15 480,90 720,45 C960,5 1200,85 1440,35 L1440,100 L0,100 Z" fill="#ffffff" />
+      <svg viewBox="0 0 1440 60" preserveAspectRatio="none" className="w-full h-12 sm:h-20 block bg-slate-50 -mb-1" xmlns="http://www.w3.org/2000/svg">
+        <path d="M0,36 C240,9 480,54 720,27 C960,3 1200,51 1440,21 L1440,60 L0,60 Z" fill="#ffffff" />
       </svg>
 
       {/* API Keys — hanya tampil kalau login */}
@@ -459,18 +455,18 @@ export default function DeveloperClient({ token, isLoggedIn }: Props) {
       {/* CTA bottom — hanya kalau belum login */}
       {!isLoggedIn && (
         <>
-          <svg viewBox="0 0 1440 100" preserveAspectRatio="none" className="w-full block bg-slate-50 -mb-1" xmlns="http://www.w3.org/2000/svg">
-            <path d="M0,55 C240,10 480,85 720,40 C960,0 1200,80 1440,30 L1440,100 L0,100 Z" fill="#ffffff" />
+          <svg viewBox="0 0 1440 60" preserveAspectRatio="none" className="w-full h-12 sm:h-20 block bg-slate-50 -mb-1" xmlns="http://www.w3.org/2000/svg">
+            <path d="M0,33 C240,6 480,51 720,24 C960,0 1200,48 1440,18 L1440,60 L0,60 Z" fill="#ffffff" />
           </svg>
-          <section className="bg-white py-12 sm:py-16 px-4">
-            <div className="max-w-xl mx-auto bg-slate-50 border border-slate-200 rounded-2xl px-6 py-10 text-center">
+          <section className="bg-white py-12 sm:py-16 px-4 text-center">
+            <div className="max-w-xl mx-auto">
               <p className="text-lg font-black text-slate-900 uppercase tracking-tight mb-2">Siap integrasi?</p>
               <p className="text-sm text-slate-500 mb-6">Daftar gratis dan generate API key dalam 30 detik.</p>
               <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-                <a href="/register" className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-xl transition-colors uppercase tracking-wider">
+                <a href="/register" className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-[8px] transition-colors uppercase tracking-wider">
                   Daftar Gratis
                 </a>
-                <a href="/developer/docs/overview" className="px-6 py-3 border border-slate-300 text-slate-600 hover:bg-slate-100 text-sm font-bold rounded-xl transition-colors uppercase tracking-wider">
+                <a href="/developer/docs/overview" className="px-6 py-3 border border-slate-300 text-slate-600 hover:bg-slate-100 text-sm font-bold rounded-[8px] transition-colors uppercase tracking-wider">
                   Lihat Dokumentasi
                 </a>
               </div>
