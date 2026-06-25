@@ -1,17 +1,18 @@
 import AuthForm from '@/features/auth/AuthForm';
 import Link from 'next/link';
 import Image from 'next/image';
-import { ArrowRight, ShieldX } from 'lucide-react';
+import { ArrowRight, ShieldX, Clock } from 'lucide-react';
 
 export default async function LoginPage({
   searchParams,
 }: {
-  searchParams: Promise<{ error?: string; redirectTo?: string }>;
+  searchParams: Promise<{ error?: string; redirectTo?: string; reason?: string }>;
 }) {
   const params = await searchParams;
   const isBanned = params.error === 'banned';
   const isOauthFailed = params.error === 'oauth_failed';
   const isFromDatabase = params.redirectTo === '/laporan-publik';
+  const isIdle = params.reason === 'idle';
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center px-4 py-12 relative overflow-hidden">
@@ -54,6 +55,16 @@ export default async function LoginPage({
               <div>
                 <p className="text-sm font-semibold text-amber-800 mb-0.5">Login Gagal</p>
                 <p className="text-xs text-amber-600">Gagal masuk dengan Google. Silakan coba lagi.</p>
+              </div>
+            </div>
+          )}
+
+          {isIdle && (
+            <div className="mb-5 p-3.5 bg-amber-50 border border-amber-200 rounded-xl flex items-start gap-3">
+              <Clock className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+              <div>
+                <p className="text-sm font-semibold text-amber-800 mb-0.5">Sesi Berakhir</p>
+                <p className="text-xs text-amber-600">Sesi Anda berakhir karena tidak aktif. Silakan masuk kembali.</p>
               </div>
             </div>
           )}

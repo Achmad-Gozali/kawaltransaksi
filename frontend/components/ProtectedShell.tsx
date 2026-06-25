@@ -1,20 +1,59 @@
 'use client';
 
-import { useEffect, useRef, useState } from 'react';
-import { usePathname } from 'next/navigation';
+import { useEffect, useRef, useState, useCallback } from 'react';
+import { usePathname, useRouter } from 'next/navigation';
 import { ArrowUp } from 'lucide-react';
 import Navbar from '@/components/Navbar';
 import Footer from '@/components/Footer';
 import FeedbackButton from '@/components/FeedbackButton';
 import NProgress from 'nprogress';
 import 'nprogress/nprogress.css';
+import { createBrowserClient } from '@supabase/ssr';
 
 NProgress.configure({ showSpinner: false, trickleSpeed: 200 });
 
+const IDLE_MS = 30 * 60 * 1000; // 30 menit
+const WARN_MS = 2 * 60 * 1000;  // warning 2 menit sebelum logout
+const IDLE_EVENTS = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll'];
+
 export default function ProtectedShell({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
+  const router = useRouter();
   const [showBackToTop, setShowBackToTop] = useState(false);
+  const [showWarning, setShowWarning] = useState(false);
   const prevPathname = useRef(pathname);
+  const idleTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const warnTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const supabase = createBrowserClient(
+    process.env.NEXT_PUBLIC_SUPABASE_URL!,
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+  );
+
+  const logout = useCallback(async () => {
+    await supabase.auth.signOut();
+    router.push('/login?reason=idle');
+  }, [supabase, router]);
+
+  const resetTimer = useCallback(() => {
+    setShowWarning(false);
+
+    if (idleTimer.current) clearTimeout(idleTimer.current);
+    if (warnTimer.current) clearTimeout(warnTimer.current);
+
+    warnTimer.current = setTimeout(() => setShowWarning(true), IDLE_MS - WARN_MS);
+    idleTimer.current = setTimeout(() => logout(), IDLE_MS);
+  }, [logout]);
+
+  useEffect(() => {
+    resetTimer();
+    IDLE_EVENTS.forEach(e => window.addEventListener(e, resetTimer, { passive: true }));
+    return () => {
+      IDLE_EVENTS.forEach(e => window.removeEventListener(e, resetTimer));
+      if (idleTimer.current) clearTimeout(idleTimer.current);
+      if (warnTimer.current) clearTimeout(warnTimer.current);
+    };
+  }, [resetTimer]);
 
   useEffect(() => {
     if (prevPathname.current !== pathname) {
@@ -59,6 +98,19 @@ export default function ProtectedShell({ children }: { children: React.ReactNode
       <main className="flex-grow">{children}</main>
       <Footer />
       <FeedbackButton />
+
+      {/* Idle warning */}
+      {showWarning && (
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white text-sm font-medium px-5 py-3 rounded-xl shadow-lg flex items-center gap-3">
+          <span>Sesi akan berakhir dalam 2 menit.</span>
+          <button
+            onClick={resetTimer}
+            className="text-emerald-400 font-bold hover:text-emerald-300 transition-colors shrink-0"
+          >
+            Tetap masuk
+          </button>
+        </div>
+      )}
 
       {showBackToTop && (
         <button
