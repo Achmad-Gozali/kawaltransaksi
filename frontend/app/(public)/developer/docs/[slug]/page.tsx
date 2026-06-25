@@ -41,29 +41,31 @@ export default async function DocsPage({ params }: Props) {
         {topic.content}
       </div>
 
-      <div className="grid grid-cols-2 gap-3">
-        {prev ? (
-          <Link href={`/developer/docs/${prev.slug}`}
-            className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-4 py-3 hover:border-slate-300 transition-colors group">
-            <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:text-slate-600 shrink-0" />
-            <div className="min-w-0">
-              <p className="text-[10px] text-slate-400 uppercase tracking-wider">Sebelumnya</p>
-              <p className="text-sm font-bold text-slate-700 truncate">{prev.title}</p>
-            </div>
-          </Link>
-        ) : <div />}
+      {(prev || next) && (
+        <div className="flex items-stretch justify-between gap-3">
+          {prev ? (
+            <Link href={`/developer/docs/${prev.slug}`}
+              className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-4 py-3 hover:border-slate-300 transition-colors group max-w-xs w-full sm:w-auto">
+              <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:text-slate-600 shrink-0" />
+              <div className="min-w-0">
+                <p className="text-[10px] text-slate-400 uppercase tracking-wider">Sebelumnya</p>
+                <p className="text-sm font-bold text-slate-700 truncate">{prev.title}</p>
+              </div>
+            </Link>
+          ) : <div />}
 
-        {next ? (
-          <Link href={`/developer/docs/${next.slug}`}
-            className="flex items-center justify-end gap-2 bg-white border border-slate-200 rounded-xl px-4 py-3 hover:border-slate-300 transition-colors group text-right ml-auto w-full">
-            <div className="min-w-0">
-              <p className="text-[10px] text-slate-400 uppercase tracking-wider">Berikutnya</p>
-              <p className="text-sm font-bold text-slate-700 truncate">{next.title}</p>
-            </div>
-            <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-slate-600 shrink-0" />
-          </Link>
-        ) : <div />}
-      </div>
+          {next ? (
+            <Link href={`/developer/docs/${next.slug}`}
+              className="flex items-center justify-end gap-2 bg-white border border-slate-200 rounded-xl px-4 py-3 hover:border-slate-300 transition-colors group text-right max-w-xs w-full sm:w-auto ml-auto">
+              <div className="min-w-0">
+                <p className="text-[10px] text-slate-400 uppercase tracking-wider">Berikutnya</p>
+                <p className="text-sm font-bold text-slate-700 truncate">{next.title}</p>
+              </div>
+              <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-slate-600 shrink-0" />
+            </Link>
+          ) : <div />}
+        </div>
+      )}
     </div>
   );
 }
