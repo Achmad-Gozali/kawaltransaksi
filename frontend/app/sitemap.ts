@@ -1,6 +1,7 @@
 import { MetadataRoute } from "next";
 import { createClient } from "@/core/supabase/server";
 import { encodeSlug } from "@/core/utils";
+import { DOC_TOPICS } from "@/app/(public)/developer/docs/data";
 
 const BASE_URL = "https://kawaltransaksi.com";
 
@@ -118,7 +119,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     },
     {
       url: `${BASE_URL}/developer`,
-      lastModified: new Date("2025-01-01"),
+      lastModified: new Date("2026-06-25"),
       changeFrequency: "monthly",
       priority: 0.6,
     },
@@ -147,6 +148,13 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       priority: 0.6,
     },
   ];
+
+  const docsPages: MetadataRoute.Sitemap = DOC_TOPICS.map((topic) => ({
+    url: `${BASE_URL}/developer/docs/${topic.slug}`,
+    lastModified: new Date("2026-06-25"),
+    changeFrequency: "monthly" as const,
+    priority: 0.5,
+  }));
 
   try {
     const supabase = await createClient();
@@ -189,8 +197,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
       ...(a.cover_image && { images: [a.cover_image] }),
     }));
 
-    return [...staticPages, ...dynamicPages, ...articlePages];
+    return [...staticPages, ...docsPages, ...dynamicPages, ...articlePages];
   } catch {
-    return staticPages;
+    return [...staticPages, ...docsPages];
   }
 }
