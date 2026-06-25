@@ -46,7 +46,7 @@ const PRICING = [
   },
 ];
 
-// -- Use Case --------------------------------------------------------------
+// -- Use Case (list polos, tanpa card) --------------------------------------
 
 const USE_CASES = [
   {
@@ -79,12 +79,10 @@ function UseCaseSection() {
           <h2 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 uppercase">Dirancang Untuk</h2>
           <p className="text-sm text-slate-500 mt-1">Diadopsi oleh berbagai jenis layanan yang membutuhkan verifikasi transaksi.</p>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-7">
           {USE_CASES.map((uc) => (
-            <div key={uc.title} className="bg-slate-50 rounded-xl border border-slate-200 px-5 py-5 flex items-start gap-4">
-              <div className="w-10 h-10 bg-white border border-slate-200 rounded-xl flex items-center justify-center shrink-0">
-                <uc.icon className="w-5 h-5 text-emerald-600" />
-              </div>
+            <div key={uc.title} className="flex items-start gap-3.5">
+              <uc.icon className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
               <div>
                 <p className="text-sm font-bold text-slate-900 mb-1">{uc.title}</p>
                 <p className="text-sm text-slate-500 leading-relaxed">{uc.desc}</p>
@@ -97,7 +95,7 @@ function UseCaseSection() {
   );
 }
 
-// -- Mengapa KawalTransaksi -----------------------------------------------------
+// -- Mengapa KawalTransaksi (list polos, tanpa card) ------------------------
 
 const ALASAN_PILIH = [
   {
@@ -124,18 +122,16 @@ const ALASAN_PILIH = [
 
 function MengapaSection() {
   return (
-    <section className="bg-slate-50 pt-12 pb-12 px-4">
+    <section className="bg-white pt-12 pb-12 px-4">
       <div className="max-w-4xl mx-auto">
         <div className="mb-8">
           <h2 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 uppercase">Mengapa KawalTransaksi</h2>
           <p className="text-sm text-slate-500 mt-1">Pertimbangan teknis sebelum Anda mengintegrasikan API ini.</p>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-x-8 gap-y-7">
           {ALASAN_PILIH.map((r) => (
-            <div key={r.title} className="bg-white rounded-xl border border-slate-200 px-5 py-5 flex items-start gap-4">
-              <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center shrink-0">
-                <r.icon className="w-5 h-5 text-emerald-600" />
-              </div>
+            <div key={r.title} className="flex items-start gap-3.5">
+              <r.icon className="w-5 h-5 text-emerald-600 shrink-0 mt-0.5" />
               <div>
                 <p className="text-sm font-bold text-slate-900 mb-1">{r.title}</p>
                 <p className="text-sm text-slate-500 leading-relaxed">{r.desc}</p>
@@ -177,13 +173,13 @@ function FaqDevSection() {
   const [openIdx, setOpenIdx] = useState<number | null>(0);
 
   return (
-    <section className="bg-white pt-12 pb-12 px-4">
+    <section className="bg-slate-50 pt-12 pb-12 px-4">
       <div className="max-w-3xl mx-auto">
         <div className="mb-6">
           <h2 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 uppercase">FAQ Developer</h2>
           <p className="text-sm text-slate-500 mt-1">Pertanyaan teknis yang sering diajukan seputar integrasi.</p>
         </div>
-        <div className="rounded-xl border border-slate-200 overflow-hidden">
+        <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
           {DEV_FAQS.map((item, i) => {
             const open = openIdx === i;
             return (
@@ -263,7 +259,7 @@ function Playground({ token, isLoggedIn }: { token: string; isLoggedIn: boolean 
   return (
     <div className="space-y-4">
       {/* Input */}
-      <div className="bg-slate-50 rounded-xl border border-slate-200 p-4 space-y-3">
+      <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-3">
         <div className="flex gap-2 flex-wrap">
           {(['phone', 'bank_account', 'ewallet'] as const).map(t => (
             <button key={t} onClick={() => { setType(t); setBank(''); }}
@@ -469,7 +465,7 @@ export default function DeveloperClient({ token, isLoggedIn }: Props) {
     <main className="bg-white font-sans overflow-x-hidden">
       {revealKey && <KeyRevealModal apiKey={revealKey} onClose={() => setRevealKey(null)} />}
 
-      {/* Hero */}
+      {/* Hero — slate-100 */}
       <section className="bg-slate-100 pt-14 pb-0 sm:pt-20 overflow-hidden px-4">
         <div className="max-w-3xl mx-auto pb-16 sm:pb-24 text-center">
           <h1 className="text-2xl sm:text-4xl font-black tracking-tighter text-slate-900 uppercase mb-4 leading-tight">
@@ -488,19 +484,21 @@ export default function DeveloperClient({ token, isLoggedIn }: Props) {
             </a>
           </div>
         </div>
+        {/* divider: slate-100 -> white (Use Case) */}
         <svg viewBox="0 0 1440 60" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" className="w-full h-12 sm:h-20 block">
           <path d="M0,24 C240,54 480,6 720,30 C960,54 1200,6 1440,30 L1440,60 L0,60 Z" fill="#ffffff" />
         </svg>
       </section>
 
-      {/* Use Case */}
+      {/* Use Case — white */}
       <UseCaseSection />
 
+      {/* divider: white -> slate-50 (Playground) */}
       <svg viewBox="0 0 1440 60" preserveAspectRatio="none" className="w-full h-12 sm:h-20 block bg-white -mb-1" xmlns="http://www.w3.org/2000/svg">
         <path d="M0,18 C240,48 480,6 720,33 C960,60 1200,12 1440,36 L1440,60 L0,60 Z" fill="#f8fafc" />
       </svg>
 
-      {/* Playground */}
+      {/* Playground — slate-50 */}
       <section className="bg-slate-50 pt-10 pb-12 px-4">
         <div className="max-w-4xl mx-auto">
           <div className="mb-6">
@@ -511,23 +509,26 @@ export default function DeveloperClient({ token, isLoggedIn }: Props) {
         </div>
       </section>
 
+      {/* divider: slate-50 -> white (Mengapa) */}
       <svg viewBox="0 0 1440 60" preserveAspectRatio="none" className="w-full h-12 sm:h-20 block bg-slate-50 -mb-1" xmlns="http://www.w3.org/2000/svg">
         <path d="M0,36 C240,9 480,54 720,27 C960,3 1200,51 1440,21 L1440,60 L0,60 Z" fill="#ffffff" />
       </svg>
 
-      {/* Kenapa KawalTransaksi */}
+      {/* Mengapa KawalTransaksi — white */}
       <MengapaSection />
 
-      <svg viewBox="0 0 1440 60" preserveAspectRatio="none" className="w-full h-12 sm:h-20 block bg-slate-50 -mb-1" xmlns="http://www.w3.org/2000/svg">
+      {/* divider: white -> slate-50 (Pricing) */}
+      <svg viewBox="0 0 1440 60" preserveAspectRatio="none" className="w-full h-12 sm:h-20 block bg-white -mb-1" xmlns="http://www.w3.org/2000/svg">
         <path d="M0,33 C240,6 480,51 720,24 C960,0 1200,48 1440,18 L1440,60 L0,60 Z" fill="#f8fafc" />
       </svg>
 
-      {/* Pricing */}
+      {/* Pricing — slate-50 */}
       <PricingSection isLoggedIn={isLoggedIn} />
 
-      {/* API Keys — hanya tampil kalau login */}
+      {/* API Keys — hanya tampil kalau login, white */}
       {isLoggedIn && (
         <>
+          {/* divider: slate-50 -> white (API Keys) */}
           <svg viewBox="0 0 1440 60" preserveAspectRatio="none" className="w-full h-12 sm:h-20 block bg-slate-50 -mb-1" xmlns="http://www.w3.org/2000/svg">
             <path d="M0,36 C240,9 480,54 720,27 C960,3 1200,51 1440,21 L1440,60 L0,60 Z" fill="#ffffff" />
           </svg>
@@ -630,16 +631,18 @@ export default function DeveloperClient({ token, isLoggedIn }: Props) {
         </>
       )}
 
-      <svg viewBox="0 0 1440 60" preserveAspectRatio="none" className="w-full h-12 sm:h-20 block bg-white -mb-1" xmlns="http://www.w3.org/2000/svg">
+      {/* divider: white (or slate-50 if not logged in) -> slate-50 (FAQ) */}
+      <svg viewBox="0 0 1440 60" preserveAspectRatio="none" className={`w-full h-12 sm:h-20 block -mb-1 ${isLoggedIn ? 'bg-white' : 'bg-slate-50'}`} xmlns="http://www.w3.org/2000/svg">
         <path d="M0,24 C240,54 480,6 720,30 C960,54 1200,6 1440,30 L1440,60 L0,60 Z" fill="#f8fafc" />
       </svg>
 
-      {/* FAQ Developer */}
+      {/* FAQ Developer — slate-50 */}
       <FaqDevSection />
 
-      {/* CTA bottom — hanya kalau belum login */}
+      {/* CTA bottom — hanya kalau belum login, white */}
       {!isLoggedIn && (
         <>
+          {/* divider: slate-50 -> white (CTA) */}
           <svg viewBox="0 0 1440 60" preserveAspectRatio="none" className="w-full h-12 sm:h-20 block bg-slate-50 -mb-1" xmlns="http://www.w3.org/2000/svg">
             <path d="M0,33 C240,6 480,51 720,24 C960,0 1200,48 1440,18 L1440,60 L0,60 Z" fill="#ffffff" />
           </svg>
