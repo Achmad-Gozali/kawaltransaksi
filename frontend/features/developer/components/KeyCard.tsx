@@ -162,7 +162,9 @@ export function KeyCard({ k, token, onDelete, onRename, onRegenerate }: {
       <div className="px-4 sm:px-5 py-4">
         <div className="flex items-center gap-2 bg-white border border-slate-200 rounded-lg px-3 py-2.5 mb-3">
           <code className="flex-1 text-xs sm:text-sm font-mono text-slate-500 truncate">
-            kt_-----{'-'.repeat(28)}----
+            {k.key_prefix
+            ? `${k.key_prefix.slice(0, 8)}${'•'.repeat(12)}${k.key_prefix.slice(-4)}`
+            : `kt_${'•'.repeat(12)}xxxx`}
           </code>
           <span className="text-[10px] text-slate-400 shrink-0 font-medium">Tersimpan</span>
         </div>
