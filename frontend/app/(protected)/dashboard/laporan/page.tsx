@@ -154,7 +154,7 @@ export default async function LaporanPage() {
                     </div>
                     <div className="min-w-0">
                       <div className="flex items-center gap-2 flex-wrap">
-                        <span className="font-semibold text-zinc-900 text-sm sm:text-base">{maskNumber(report.target_number)}</span>
+                        <span className="font-semibold text-zinc-900 text-sm sm:text-base">{report.target_number}</span>
                         {report.target_name && (
                           <span className="text-xs sm:text-sm text-zinc-400">· {report.target_name}</span>
                         )}
