@@ -1,13 +1,17 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, RefreshCw, AlertTriangle, ChevronDown, Zap, Lock, Play, CheckCircle, XCircle, AlertCircle, ShoppingCart, Wallet, ShieldCheck, Headset, Database, RadioTower, KeyRound, ChevronRight } from 'lucide-react';
+import {
+  Plus, RefreshCw, AlertTriangle, ChevronDown, Zap, Lock, Play,
+  CheckCircle, XCircle, AlertCircle, ShoppingCart, Wallet,
+  ShieldCheck, Headset, Database, RadioTower, KeyRound, ChevronRight,
+} from 'lucide-react';
 import { KeyCard, KeyRevealModal, type ApiKey } from '@/features/developer/components/KeyCard';
 import { CodeBlock } from '@/features/developer/components/CodeBlock';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL!;
 
-interface Props { token: string; userEmail: string; isLoggedIn: boolean; }
+interface Props { token: string; userEmail: string; isLoggedIn: boolean }
 
 const EXPIRY_OPTIONS = [
   { value: 'never', label: 'Tidak ada kadaluarsa' },
@@ -46,8 +50,6 @@ const PRICING = [
   },
 ];
 
-// -- Use Case (list polos, tanpa card) --------------------------------------
-
 const USE_CASES = [
   {
     icon: ShoppingCart,
@@ -70,6 +72,56 @@ const USE_CASES = [
     desc: 'Berikan peringatan dini secara otomatis kepada pengguna saat nomor yang mereka tuju terindikasi dalam laporan penipuan komunitas.',
   },
 ];
+
+const ALASAN_PILIH = [
+  {
+    icon: Database,
+    title: 'Data dari Laporan Komunitas',
+    desc: 'Basis data dibangun dari laporan pengguna nyata, bukan daftar statis yang jarang diperbarui.',
+  },
+  {
+    icon: ShieldCheck,
+    title: 'Verifikasi Berlapis',
+    desc: 'Setiap laporan melewati proses scoring otomatis sebelum dianggap terverifikasi, mengurangi false positive.',
+  },
+  {
+    icon: RadioTower,
+    title: 'Respons Real-Time',
+    desc: 'Hasil pengecekan dikembalikan secara langsung tanpa antrian, cocok untuk alur transaksi yang membutuhkan kecepatan.',
+  },
+  {
+    icon: KeyRound,
+    title: 'Mulai Tanpa Friksi',
+    desc: '300 request/hari gratis tanpa kartu kredit. Cocok untuk validasi konsep sebelum komit ke skala produksi.',
+  },
+];
+
+const DEV_FAQS = [
+  {
+    q: 'Apakah ada SDK resmi untuk bahasa tertentu?',
+    a: 'Saat ini belum ada SDK resmi. API mengikuti standar REST biasa sehingga dapat dipanggil langsung menggunakan HTTP client di bahasa apa pun. Lihat contoh kode pada halaman Quick Start untuk cURL, Python, dan JavaScript.',
+  },
+  {
+    q: 'Bisakah saya mengecek banyak nomor sekaligus (bulk check)?',
+    a: 'Bulk check belum tersedia di plan Free. Fitur ini direncanakan untuk plan Pro yang sedang dikembangkan, dengan batas maksimal 20 nomor per request.',
+  },
+  {
+    q: 'Apa bedanya API key live dan test?',
+    a: 'Kedua jenis key mengembalikan data yang identik. Key test ditujukan untuk development agar tidak tercampur dengan metrik production, namun tetap dihitung terhadap limit harian key tersebut.',
+  },
+  {
+    q: 'Kenapa IP saya bisa terblokir, dan bagaimana mengatasinya?',
+    a: 'IP diblokir otomatis selama 24 jam setelah terdeteksi terlalu banyak percobaan autentikasi gagal secara berturut-turut. Jika Anda yakin ini kesalahan, hubungi kawaltransaksi@gmail.com.',
+  },
+  {
+    q: 'Apakah API ini bisa dipanggil langsung dari frontend?',
+    a: 'Tidak disarankan. API key harus digunakan di server-side saja. Buat endpoint backend Anda sendiri sebagai proxy agar API key tidak pernah terekspos ke klien.',
+  },
+];
+
+// ---------------------------------------------------------------------------
+// Sub-components
+// ---------------------------------------------------------------------------
 
 function UseCaseSection() {
   return (
@@ -95,31 +147,6 @@ function UseCaseSection() {
   );
 }
 
-// -- Mengapa KawalTransaksi (list polos, tanpa card) ------------------------
-
-const ALASAN_PILIH = [
-  {
-    icon: Database,
-    title: 'Data dari Laporan Komunitas',
-    desc: 'Basis data dibangun dari laporan pengguna nyata, bukan daftar statis yang jarang diperbarui.',
-  },
-  {
-    icon: ShieldCheck,
-    title: 'Verifikasi Berlapis',
-    desc: 'Setiap laporan melewati proses scoring otomatis sebelum dianggap terverifikasi, mengurangi false positive.',
-  },
-  {
-    icon: RadioTower,
-    title: 'Respons Real-Time',
-    desc: 'Hasil pengecekan dikembalikan secara langsung tanpa antrian, cocok untuk alur transaksi yang membutuhkan kecepatan.',
-  },
-  {
-    icon: KeyRound,
-    title: 'Mulai Tanpa Friksi',
-    desc: '300 request/hari gratis tanpa kartu kredit. Cocok untuk validasi konsep sebelum komit ke skala produksi.',
-  },
-];
-
 function MengapaSection() {
   return (
     <section className="bg-white pt-12 pb-12 px-4">
@@ -144,34 +171,8 @@ function MengapaSection() {
   );
 }
 
-// -- FAQ Developer ------------------------------------------------------------
-
-const DEV_FAQS = [
-  {
-    q: 'Apakah ada SDK resmi untuk bahasa tertentu?',
-    a: 'Saat ini belum ada SDK resmi. API mengikuti standar REST biasa sehingga dapat dipanggil langsung menggunakan HTTP client di bahasa apa pun. Lihat contoh kode pada halaman Quick Start untuk cURL, Python, dan JavaScript.',
-  },
-  {
-    q: 'Bisakah saya mengecek banyak nomor sekaligus (bulk check)?',
-    a: 'Bulk check belum tersedia di plan Free. Fitur ini direncanakan untuk plan Pro yang sedang dikembangkan, dengan batas maksimal 20 nomor per request.',
-  },
-  {
-    q: 'Apa bedanya API key live dan test?',
-    a: 'Kedua jenis key mengembalikan data yang identik. Key test ditujukan untuk development agar tidak tercampur dengan metrik production, namun tetap dihitung terhadap limit harian key tersebut.',
-  },
-  {
-    q: 'Kenapa IP saya bisa terblokir, dan bagaimana mengatasinya?',
-    a: 'IP diblokir otomatis selama 24 jam setelah terdeteksi terlalu banyak percobaan autentikasi gagal secara berturut-turut. Jika Anda yakin ini kesalahan, hubungi kawaltransaksi@gmail.com.',
-  },
-  {
-    q: 'Apakah API ini bisa dipanggil langsung dari frontend?',
-    a: 'Tidak disarankan. API key harus digunakan di server-side saja. Buat endpoint backend Anda sendiri sebagai proxy agar API key tidak pernah terekspos ke klien.',
-  },
-];
-
 function FaqDevSection() {
   const [openIdx, setOpenIdx] = useState<number | null>(0);
-
   return (
     <section className="bg-slate-50 pt-12 pb-12 px-4">
       <div className="max-w-3xl mx-auto">
@@ -206,7 +207,9 @@ function FaqDevSection() {
   );
 }
 
-// -- Playground ----------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Playground
+// ---------------------------------------------------------------------------
 
 interface PlaygroundResult {
   success: boolean;
@@ -226,9 +229,8 @@ const STATUS_CONFIG = {
 };
 
 function Playground({ token, isLoggedIn }: { token: string; isLoggedIn: boolean }) {
-  const [number, setNumber]   = useState('');
-  const [type, setType]       = useState('phone');
-  const [bank, setBank]       = useState('');
+  const [number, setNumber] = useState('');
+  const [type, setType]     = useState('phone');
   const [loading, setLoading] = useState(false);
   const [result, setResult]   = useState<PlaygroundResult | null>(null);
 
@@ -237,13 +239,13 @@ function Playground({ token, isLoggedIn }: { token: string; isLoggedIn: boolean 
     setLoading(true);
     setResult(null);
     try {
-      const res  = await fetch(`${BACKEND_URL}/api/developer/playground`, {
+      const res = await fetch(`${BACKEND_URL}/api/developer/playground`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
           ...(isLoggedIn ? { Authorization: `Bearer ${token}` } : {}),
         },
-        body: JSON.stringify({ number: number.trim(), type, bank: bank || null }),
+        body: JSON.stringify({ number: number.trim(), type, bank: null }),
       });
       setResult(await res.json());
     } catch {
@@ -256,38 +258,36 @@ function Playground({ token, isLoggedIn }: { token: string; isLoggedIn: boolean 
   const status = result?.data?.status;
   const cfg    = status ? STATUS_CONFIG[status] : null;
 
+  const placeholder = type === 'phone' ? '08123456789' : type === 'bank_account' ? '1234567890' : '08123456789';
+
   return (
     <div className="space-y-4">
-      {/* Input */}
       <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-3">
+        {/* Type tabs */}
         <div className="flex gap-2 flex-wrap">
           {(['phone', 'bank_account', 'ewallet'] as const).map(t => (
-            <button key={t} onClick={() => { setType(t); setBank(''); }}
+            <button key={t} onClick={() => setType(t)}
               className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors ${
-                type === t ? 'bg-slate-900 text-white' : 'bg-white border border-slate-200 text-slate-500 hover:border-slate-400'
+                type === t
+                  ? 'bg-slate-900 text-white'
+                  : 'bg-white border border-slate-200 text-slate-500 hover:border-slate-400'
               }`}>
               {t === 'phone' ? 'Nomor HP' : t === 'bank_account' ? 'Rekening' : 'E-Wallet'}
             </button>
           ))}
         </div>
 
+        {/* Input row */}
         <div className="flex gap-2">
           <input
             type="text"
-            placeholder={type === 'phone' ? '08123456789' : type === 'bank_account' ? '1234567890' : '08123456789'}
+            placeholder={placeholder}
             value={number}
             onChange={e => setNumber(e.target.value.replace(/\D/g, ''))}
             onKeyDown={e => e.key === 'Enter' && run()}
             maxLength={32}
             className="flex-1 px-3 py-2.5 border border-slate-200 bg-white rounded-xl text-sm focus:outline-none focus:border-emerald-400 transition-all font-mono"
           />
-          {type === 'bank_account' && (
-            <input
-              type="text" placeholder="bca / bri / bni..."
-              value={bank} onChange={e => setBank(e.target.value.toLowerCase())}
-              className="w-28 px-3 py-2.5 border border-slate-200 bg-white rounded-xl text-sm focus:outline-none focus:border-emerald-400 transition-all"
-            />
-          )}
           <button onClick={run} disabled={loading || !number.trim()}
             className="flex items-center gap-2 px-4 py-2.5 bg-emerald-600 hover:bg-emerald-700 disabled:opacity-50 text-white text-sm font-bold rounded-xl transition-colors shrink-0">
             {loading ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Play className="w-4 h-4" />}
@@ -297,7 +297,9 @@ function Playground({ token, isLoggedIn }: { token: string; isLoggedIn: boolean 
 
         {!isLoggedIn && (
           <p className="text-xs text-slate-400">
-            Guest: 5x/jam · <a href="/login?redirectTo=/developer" className="text-emerald-600 font-semibold hover:underline">Login</a> untuk 10x/jam
+            Guest: 5x/jam ·{' '}
+            <a href="/login?redirectTo=/developer" className="text-emerald-600 font-semibold hover:underline">Login</a>
+            {' '}untuk 10x/jam
           </p>
         )}
       </div>
@@ -333,7 +335,9 @@ function Playground({ token, isLoggedIn }: { token: string; isLoggedIn: boolean 
   );
 }
 
-// -- Pricing -------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Pricing
+// ---------------------------------------------------------------------------
 
 function FeatureIcon({ available, comingSoon }: { available: boolean; comingSoon: boolean }) {
   if (available) {
@@ -373,16 +377,16 @@ function PricingSection({ isLoggedIn }: { isLoggedIn: boolean }) {
               {plan.comingSoon && (
                 <span className="absolute top-5 right-5 text-[10px] font-bold px-2.5 py-1 rounded-full bg-slate-900 text-white uppercase tracking-wider">Segera Hadir</span>
               )}
-
               <div className="px-6 pt-6 pb-5 border-b border-slate-100">
                 <div className="flex items-center gap-2 mb-3">
-                  {plan.comingSoon ? <Lock className="w-4 h-4 text-slate-400" /> : <Zap className="w-4 h-4 text-emerald-500" />}
+                  {plan.comingSoon
+                    ? <Lock className="w-4 h-4 text-slate-400" />
+                    : <Zap className="w-4 h-4 text-emerald-500" />}
                   <p className="text-sm font-black text-slate-900 uppercase tracking-wide">{plan.tier}</p>
                 </div>
                 <p className={`text-3xl font-black mb-1 ${plan.comingSoon ? 'text-slate-300' : 'text-slate-900'}`}>{plan.price}</p>
                 <p className="text-xs text-slate-500">{plan.description}</p>
               </div>
-
               <div className="px-6 py-5 space-y-3 flex-1">
                 {plan.features.map((f) => (
                   <div key={f.label} className="flex items-center gap-2.5">
@@ -391,7 +395,6 @@ function PricingSection({ isLoggedIn }: { isLoggedIn: boolean }) {
                   </div>
                 ))}
               </div>
-
               <div className="px-6 pb-6">
                 {plan.comingSoon ? (
                   <button disabled className="w-full py-3 bg-slate-100 text-slate-400 text-sm font-bold rounded-[8px] cursor-not-allowed">Segera Hadir</button>
@@ -409,7 +412,21 @@ function PricingSection({ isLoggedIn }: { isLoggedIn: boolean }) {
   );
 }
 
-// -- Main ----------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Divider wave helper
+// ---------------------------------------------------------------------------
+
+function Wave({ from, to }: { from: string; to: string }) {
+  return (
+    <svg viewBox="0 0 1440 60" preserveAspectRatio="none" className={`w-full h-12 sm:h-20 block -mb-1 ${from}`} xmlns="http://www.w3.org/2000/svg">
+      <path d="M0,24 C240,54 480,6 720,30 C960,54 1200,6 1440,30 L1440,60 L0,60 Z" fill={to} />
+    </svg>
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Main
+// ---------------------------------------------------------------------------
 
 export default function DeveloperClient({ token, isLoggedIn }: Props) {
   const [keys, setKeys]               = useState<ApiKey[]>([]);
@@ -465,7 +482,7 @@ export default function DeveloperClient({ token, isLoggedIn }: Props) {
     <main className="bg-white font-sans overflow-x-hidden">
       {revealKey && <KeyRevealModal apiKey={revealKey} onClose={() => setRevealKey(null)} />}
 
-      {/* Hero — slate-100 */}
+      {/* Hero */}
       <section className="bg-slate-100 pt-14 pb-0 sm:pt-20 overflow-hidden px-4">
         <div className="max-w-3xl mx-auto pb-16 sm:pb-24 text-center">
           <h1 className="text-2xl sm:text-4xl font-black tracking-tighter text-slate-900 uppercase mb-4 leading-tight">
@@ -476,29 +493,28 @@ export default function DeveloperClient({ token, isLoggedIn }: Props) {
             REST API untuk verifikasi nomor HP, rekening bank, dan e-wallet. Gratis 300 request/hari, tanpa kartu kredit.
           </p>
           <div className="flex flex-col sm:flex-row gap-3 justify-center">
-            <a href={isLoggedIn ? '#api-keys' : '/register'} className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-[8px] transition-colors uppercase tracking-wider text-center">
+            <a href={isLoggedIn ? '#api-keys' : '/register'}
+              className="px-6 py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-[8px] transition-colors uppercase tracking-wider text-center">
               {isLoggedIn ? 'Kelola API Key' : 'Generate API Key'}
             </a>
-            <a href="/developer/docs/overview" className="px-6 py-3 border border-slate-300 text-slate-600 hover:bg-slate-200 text-sm font-bold rounded-[8px] transition-colors uppercase tracking-wider text-center">
+            <a href="/developer/docs/overview"
+              className="px-6 py-3 border border-slate-300 text-slate-600 hover:bg-slate-200 text-sm font-bold rounded-[8px] transition-colors uppercase tracking-wider text-center">
               Lihat Dokumentasi
             </a>
           </div>
         </div>
-        {/* divider: slate-100 -> white (Use Case) */}
         <svg viewBox="0 0 1440 60" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" className="w-full h-12 sm:h-20 block">
           <path d="M0,24 C240,54 480,6 720,30 C960,54 1200,6 1440,30 L1440,60 L0,60 Z" fill="#ffffff" />
         </svg>
       </section>
 
-      {/* Use Case — white */}
       <UseCaseSection />
 
-      {/* divider: white -> slate-50 (Playground) */}
       <svg viewBox="0 0 1440 60" preserveAspectRatio="none" className="w-full h-12 sm:h-20 block bg-white -mb-1" xmlns="http://www.w3.org/2000/svg">
         <path d="M0,18 C240,48 480,6 720,33 C960,60 1200,12 1440,36 L1440,60 L0,60 Z" fill="#f8fafc" />
       </svg>
 
-      {/* Playground — slate-50 */}
+      {/* Playground */}
       <section className="bg-slate-50 pt-10 pb-12 px-4">
         <div className="max-w-4xl mx-auto">
           <div className="mb-6">
@@ -509,140 +525,135 @@ export default function DeveloperClient({ token, isLoggedIn }: Props) {
         </div>
       </section>
 
-      {/* divider: slate-50 -> white (Mengapa) */}
       <svg viewBox="0 0 1440 60" preserveAspectRatio="none" className="w-full h-12 sm:h-20 block bg-slate-50 -mb-1" xmlns="http://www.w3.org/2000/svg">
         <path d="M0,36 C240,9 480,54 720,27 C960,3 1200,51 1440,21 L1440,60 L0,60 Z" fill="#ffffff" />
       </svg>
 
-      {/* Mengapa KawalTransaksi — white */}
       <MengapaSection />
 
-      {/* divider: white -> slate-50 (Pricing) */}
       <svg viewBox="0 0 1440 60" preserveAspectRatio="none" className="w-full h-12 sm:h-20 block bg-white -mb-1" xmlns="http://www.w3.org/2000/svg">
         <path d="M0,33 C240,6 480,51 720,24 C960,0 1200,48 1440,18 L1440,60 L0,60 Z" fill="#f8fafc" />
       </svg>
 
-      {/* Pricing — slate-50 */}
       <PricingSection isLoggedIn={isLoggedIn} />
 
-      {/* API Keys — hanya tampil kalau login, white */}
+      {/* API Keys */}
       {isLoggedIn && (
         <>
-          {/* divider: slate-50 -> white (API Keys) */}
           <svg viewBox="0 0 1440 60" preserveAspectRatio="none" className="w-full h-12 sm:h-20 block bg-slate-50 -mb-1" xmlns="http://www.w3.org/2000/svg">
             <path d="M0,36 C240,9 480,54 720,27 C960,3 1200,51 1440,21 L1440,60 L0,60 Z" fill="#ffffff" />
           </svg>
           <section id="api-keys" className="bg-white pt-10 pb-12 sm:pt-14 sm:pb-16 px-4">
-          <div className="max-w-4xl mx-auto">
-            <div className="flex items-end justify-between mb-6">
-              <div>
-                <h2 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 uppercase">API Keys Saya</h2>
-                <p className="text-sm text-slate-500 mt-1">Kelola API key untuk integrasi aplikasi Anda.</p>
+            <div className="max-w-4xl mx-auto">
+              <div className="flex items-end justify-between mb-6">
+                <div>
+                  <h2 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 uppercase">API Keys Saya</h2>
+                  <p className="text-sm text-slate-500 mt-1">Kelola API key untuk integrasi aplikasi Anda.</p>
+                </div>
+                <span className="text-sm font-bold text-slate-400">{keys.length}/5</span>
               </div>
-              <span className="text-sm font-bold text-slate-400">{keys.length}/5</span>
-            </div>
 
-            <div className="space-y-4">
-              {isBlocked && (
-                <div className="bg-red-50 border border-red-200 rounded-xl p-5 flex items-start gap-3">
-                  <div className="w-9 h-9 bg-red-100 rounded-xl flex items-center justify-center shrink-0 mt-0.5">
-                    <AlertTriangle className="w-5 h-5 text-red-600" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold text-red-800 mb-1">IP Anda Diblokir Sementara</p>
-                    <p className="text-sm text-red-700 leading-relaxed mb-1">Akses API Anda diblokir selama 24 jam karena terdeteksi aktivitas mencurigakan.</p>
-                    <p className="text-sm text-red-700">Hubungi <a href="mailto:kawaltransaksi@gmail.com" className="font-bold underline hover:text-red-900">kawaltransaksi@gmail.com</a></p>
-                  </div>
-                </div>
-              )}
-
-              <div className="bg-slate-50 rounded-xl border border-slate-200 p-4 sm:p-5">
-                <p className="text-sm font-bold text-slate-700 mb-3">Generate API Key Baru</p>
-                <div className="flex flex-col sm:flex-row gap-2 mb-3">
-                  <input
-                    type="text" placeholder="Nama project (contoh: MyApp Production)"
-                    value={newKeyName} onChange={e => setNewKeyName(e.target.value)}
-                    onKeyDown={e => e.key === 'Enter' && createKey()} maxLength={50}
-                    className="flex-1 px-3 py-2.5 border border-slate-200 bg-white rounded-xl text-sm focus:outline-none focus:border-emerald-400 transition-all"
-                  />
-                  <button onClick={createKey} disabled={creating || !newKeyName.trim() || keys.length >= 5}
-                    className="flex items-center justify-center gap-2 px-5 py-2.5 bg-slate-900 text-white text-sm font-bold rounded-xl hover:bg-slate-700 disabled:opacity-50 transition-colors shrink-0">
-                    {creating ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
-                    Generate
-                  </button>
-                </div>
-                <div className="flex items-center gap-4 flex-wrap">
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-sm text-slate-500 shrink-0">Masa berlaku:</span>
-                    <div className="relative">
-                      <select value={expiresIn} onChange={e => setExpiresIn(e.target.value)}
-                        className="appearance-none pl-3 pr-8 py-1.5 text-sm border border-slate-200 bg-white rounded-lg focus:outline-none focus:border-emerald-400 transition-all cursor-pointer">
-                        {EXPIRY_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
-                      </select>
-                      <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+              <div className="space-y-4">
+                {isBlocked && (
+                  <div className="bg-red-50 border border-red-200 rounded-xl p-5 flex items-start gap-3">
+                    <div className="w-9 h-9 bg-red-100 rounded-xl flex items-center justify-center shrink-0 mt-0.5">
+                      <AlertTriangle className="w-5 h-5 text-red-600" />
+                    </div>
+                    <div>
+                      <p className="text-sm font-bold text-red-800 mb-1">IP Anda Diblokir Sementara</p>
+                      <p className="text-sm text-red-700 leading-relaxed mb-1">Akses API Anda diblokir selama 24 jam karena terdeteksi aktivitas mencurigakan.</p>
+                      <p className="text-sm text-red-700">
+                        Hubungi <a href="mailto:kawaltransaksi@gmail.com" className="font-bold underline hover:text-red-900">kawaltransaksi@gmail.com</a>
+                      </p>
                     </div>
                   </div>
-                  <div className="flex items-center gap-2.5">
-                    <span className="text-sm text-slate-500 shrink-0">Environment:</span>
-                    <div className="flex gap-1.5">
-                      {(['live', 'test'] as const).map(env => (
-                        <button key={env} onClick={() => setEnvironment(env)}
-                          className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors capitalize ${
-                            environment === env
-                              ? env === 'live' ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-white'
-                              : 'bg-white border border-slate-200 text-slate-500 hover:border-slate-400'
-                          }`}>
-                          {env}
-                        </button>
-                      ))}
+                )}
+
+                <div className="bg-slate-50 rounded-xl border border-slate-200 p-4 sm:p-5">
+                  <p className="text-sm font-bold text-slate-700 mb-3">Generate API Key Baru</p>
+                  <div className="flex flex-col sm:flex-row gap-2 mb-3">
+                    <input
+                      type="text" placeholder="Nama project (contoh: MyApp Production)"
+                      value={newKeyName} onChange={e => setNewKeyName(e.target.value)}
+                      onKeyDown={e => e.key === 'Enter' && createKey()} maxLength={50}
+                      className="flex-1 px-3 py-2.5 border border-slate-200 bg-white rounded-xl text-sm focus:outline-none focus:border-emerald-400 transition-all"
+                    />
+                    <button onClick={createKey} disabled={creating || !newKeyName.trim() || keys.length >= 5}
+                      className="flex items-center justify-center gap-2 px-5 py-2.5 bg-slate-900 text-white text-sm font-bold rounded-xl hover:bg-slate-700 disabled:opacity-50 transition-colors shrink-0">
+                      {creating ? <RefreshCw className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />}
+                      Generate
+                    </button>
+                  </div>
+                  <div className="flex items-center gap-4 flex-wrap">
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-sm text-slate-500 shrink-0">Masa berlaku:</span>
+                      <div className="relative">
+                        <select value={expiresIn} onChange={e => setExpiresIn(e.target.value)}
+                          className="appearance-none pl-3 pr-8 py-1.5 text-sm border border-slate-200 bg-white rounded-lg focus:outline-none focus:border-emerald-400 transition-all cursor-pointer">
+                          {EXPIRY_OPTIONS.map(opt => <option key={opt.value} value={opt.value}>{opt.label}</option>)}
+                        </select>
+                        <ChevronDown className="absolute right-2 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2.5">
+                      <span className="text-sm text-slate-500 shrink-0">Environment:</span>
+                      <div className="flex gap-1.5">
+                        {(['live', 'test'] as const).map(env => (
+                          <button key={env} onClick={() => setEnvironment(env)}
+                            className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors capitalize ${
+                              environment === env
+                                ? env === 'live' ? 'bg-emerald-600 text-white' : 'bg-amber-500 text-white'
+                                : 'bg-white border border-slate-200 text-slate-500 hover:border-slate-400'
+                            }`}>
+                            {env}
+                          </button>
+                        ))}
+                      </div>
                     </div>
                   </div>
+                  {keys.length >= 5 && <p className="text-sm text-amber-600 mt-2">Maksimal 5 API key per akun.</p>}
                 </div>
-                {keys.length >= 5 && <p className="text-sm text-amber-600 mt-2">Maksimal 5 API key per akun.</p>}
-              </div>
 
-              <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
-                <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
-                <p className="text-sm text-amber-700 leading-relaxed">
-                  API key hanya ditampilkan <strong>sekali</strong> saat generate. Simpan di tempat aman. Kalau hilang, gunakan tombol <strong>Regenerate</strong>.
-                </p>
-              </div>
+                <div className="flex items-start gap-2.5 bg-amber-50 border border-amber-200 rounded-xl px-4 py-3">
+                  <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+                  <p className="text-sm text-amber-700 leading-relaxed">
+                    API key hanya ditampilkan <strong>sekali</strong> saat generate. Simpan di tempat aman. Kalau hilang, gunakan tombol <strong>Regenerate</strong>.
+                  </p>
+                </div>
 
-              {loading ? (
-                <div className="bg-slate-50 rounded-xl border border-slate-200 p-10 text-center">
-                  <RefreshCw className="w-6 h-6 text-slate-300 animate-spin mx-auto" />
-                </div>
-              ) : keys.length === 0 ? (
-                <div className="bg-slate-50 rounded-xl border border-slate-200 p-10 text-center">
-                  <p className="text-sm font-semibold text-slate-400 mb-1">Belum ada API key</p>
-                  <p className="text-sm text-slate-400">Generate key pertama Anda di atas untuk mulai.</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {keys.map(k => (
-                    <KeyCard key={k.id} k={k} token={token}
-                      onDelete={handleDelete} onRename={handleRename} onRegenerate={handleRegenerate} />
-                  ))}
-                </div>
-              )}
+                {loading ? (
+                  <div className="bg-slate-50 rounded-xl border border-slate-200 p-10 text-center">
+                    <RefreshCw className="w-6 h-6 text-slate-300 animate-spin mx-auto" />
+                  </div>
+                ) : keys.length === 0 ? (
+                  <div className="bg-slate-50 rounded-xl border border-slate-200 p-10 text-center">
+                    <p className="text-sm font-semibold text-slate-400 mb-1">Belum ada API key</p>
+                    <p className="text-sm text-slate-400">Generate key pertama Anda di atas untuk mulai.</p>
+                  </div>
+                ) : (
+                  <div className="space-y-3">
+                    {keys.map(k => (
+                      <KeyCard key={k.id} k={k} token={token}
+                        onDelete={handleDelete} onRename={handleRename} onRegenerate={handleRegenerate} />
+                    ))}
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
           </section>
         </>
       )}
 
-      {/* divider: white (or slate-50 if not logged in) -> slate-50 (FAQ) */}
-      <svg viewBox="0 0 1440 60" preserveAspectRatio="none" className={`w-full h-12 sm:h-20 block -mb-1 ${isLoggedIn ? 'bg-white' : 'bg-slate-50'}`} xmlns="http://www.w3.org/2000/svg">
+      <svg viewBox="0 0 1440 60" preserveAspectRatio="none"
+        className={`w-full h-12 sm:h-20 block -mb-1 ${isLoggedIn ? 'bg-white' : 'bg-slate-50'}`}
+        xmlns="http://www.w3.org/2000/svg">
         <path d="M0,24 C240,54 480,6 720,30 C960,54 1200,6 1440,30 L1440,60 L0,60 Z" fill="#f8fafc" />
       </svg>
 
-      {/* FAQ Developer — slate-50 */}
       <FaqDevSection />
 
-      {/* CTA bottom — hanya kalau belum login, white */}
       {!isLoggedIn && (
         <>
-          {/* divider: slate-50 -> white (CTA) */}
           <svg viewBox="0 0 1440 60" preserveAspectRatio="none" className="w-full h-12 sm:h-20 block bg-slate-50 -mb-1" xmlns="http://www.w3.org/2000/svg">
             <path d="M0,33 C240,6 480,51 720,24 C960,0 1200,48 1440,18 L1440,60 L0,60 Z" fill="#ffffff" />
           </svg>
