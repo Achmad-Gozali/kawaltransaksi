@@ -42,10 +42,12 @@ export default async function DocsPage({ params }: Props) {
       </div>
 
       {(prev || next) && (
-        <div className="flex items-stretch justify-between gap-3">
+        <div className="flex flex-col sm:flex-row items-center sm:items-stretch justify-between gap-3">
           {prev ? (
-            <Link href={`/developer/docs/${prev.slug}`}
-              className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-4 py-3 hover:border-slate-300 transition-colors group max-w-xs w-full sm:w-auto">
+            <Link
+              href={`/developer/docs/${prev.slug}`}
+              className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-4 py-3 hover:border-slate-300 transition-colors group w-auto min-w-[140px] sm:min-w-0 sm:max-w-[220px] flex-1 sm:flex-none"
+            >
               <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:text-slate-600 shrink-0" />
               <div className="min-w-0">
                 <p className="text-[10px] text-slate-400 uppercase tracking-wider">Sebelumnya</p>
@@ -55,8 +57,10 @@ export default async function DocsPage({ params }: Props) {
           ) : <div />}
 
           {next ? (
-            <Link href={`/developer/docs/${next.slug}`}
-              className="flex items-center justify-end gap-2 bg-white border border-slate-200 rounded-xl px-4 py-3 hover:border-slate-300 transition-colors group text-right max-w-xs w-full sm:w-auto ml-auto">
+            <Link
+              href={`/developer/docs/${next.slug}`}
+              className="flex items-center justify-end gap-2 bg-white border border-slate-200 rounded-xl px-4 py-3 hover:border-slate-300 transition-colors group w-auto min-w-[140px] sm:min-w-0 sm:max-w-[220px] flex-1 sm:flex-none text-right"
+            >
               <div className="min-w-0">
                 <p className="text-[10px] text-slate-400 uppercase tracking-wider">Berikutnya</p>
                 <p className="text-sm font-bold text-slate-700 truncate">{next.title}</p>
