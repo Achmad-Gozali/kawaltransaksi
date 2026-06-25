@@ -2,8 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import { List, PanelLeftOpen } from 'lucide-react';
-import { DocsSidebar } from '@/app/(public)/developer/components/DocsSidebar';
-import { DocsMobileNav } from '@/app/(public)/developer/components/DocsMobileNav';
+import { DocsSidebar, DocsMobileNav } from '@/app/(public)/developer/components/DocsSidebar';
 
 export default function DocsLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen]     = useState(true);

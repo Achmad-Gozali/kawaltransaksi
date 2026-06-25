@@ -1,9 +1,8 @@
 'use client';
 
 import { useState, useEffect, useCallback } from 'react';
-import { Plus, RefreshCw, AlertTriangle, ChevronDown, Zap, Lock, Play, CheckCircle, XCircle, AlertCircle } from 'lucide-react';
-import { KeyCard, type ApiKey } from '@/features/developer/components/KeyCard';
-import { KeyRevealModal } from '@/features/developer/components/KeyRevealModal';
+import { Plus, RefreshCw, AlertTriangle, ChevronDown, Zap, Lock, Play, CheckCircle, XCircle, AlertCircle, ShoppingCart, Wallet, ShieldCheck, Headset, Database, RadioTower, KeyRound, ChevronRight } from 'lucide-react';
+import { KeyCard, KeyRevealModal, type ApiKey } from '@/features/developer/components/KeyCard';
 import { CodeBlock } from '@/features/developer/components/CodeBlock';
 
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL!;
@@ -46,6 +45,170 @@ const PRICING = [
     ],
   },
 ];
+
+// -- Use Case --------------------------------------------------------------
+
+const USE_CASES = [
+  {
+    icon: ShoppingCart,
+    title: 'Marketplace & E-commerce',
+    desc: 'Validasi rekening dan nomor penjual sebelum transaksi disetujui, mengurangi risiko penipuan pada platform jual-beli daring.',
+  },
+  {
+    icon: Wallet,
+    title: 'Dompet Digital & Pembayaran',
+    desc: 'Periksa nomor e-wallet tujuan transfer secara real-time sebelum pengguna menyelesaikan pembayaran, mencegah dana terkirim ke pihak yang salah.',
+  },
+  {
+    icon: ShieldCheck,
+    title: 'Fintech & Layanan Keuangan',
+    desc: 'Tambahkan lapisan verifikasi tambahan pada proses KYC dan onboarding nasabah, melengkapi prosedur kepatuhan internal yang sudah berjalan.',
+  },
+  {
+    icon: Headset,
+    title: 'Customer Service & Chatbot',
+    desc: 'Berikan peringatan dini secara otomatis kepada pengguna saat nomor yang mereka tuju terindikasi dalam laporan penipuan komunitas.',
+  },
+];
+
+function UseCaseSection() {
+  return (
+    <section className="bg-white pt-12 pb-12 px-4">
+      <div className="max-w-4xl mx-auto">
+        <div className="mb-8">
+          <h2 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 uppercase">Dirancang Untuk</h2>
+          <p className="text-sm text-slate-500 mt-1">Diadopsi oleh berbagai jenis layanan yang membutuhkan verifikasi transaksi.</p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {USE_CASES.map((uc) => (
+            <div key={uc.title} className="bg-slate-50 rounded-xl border border-slate-200 px-5 py-5 flex items-start gap-4">
+              <div className="w-10 h-10 bg-white border border-slate-200 rounded-xl flex items-center justify-center shrink-0">
+                <uc.icon className="w-5 h-5 text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-slate-900 mb-1">{uc.title}</p>
+                <p className="text-sm text-slate-500 leading-relaxed">{uc.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// -- Mengapa KawalTransaksi -----------------------------------------------------
+
+const ALASAN_PILIH = [
+  {
+    icon: Database,
+    title: 'Data dari Laporan Komunitas',
+    desc: 'Basis data dibangun dari laporan pengguna nyata, bukan daftar statis yang jarang diperbarui.',
+  },
+  {
+    icon: ShieldCheck,
+    title: 'Verifikasi Berlapis',
+    desc: 'Setiap laporan melewati proses scoring otomatis sebelum dianggap terverifikasi, mengurangi false positive.',
+  },
+  {
+    icon: RadioTower,
+    title: 'Respons Real-Time',
+    desc: 'Hasil pengecekan dikembalikan secara langsung tanpa antrian, cocok untuk alur transaksi yang membutuhkan kecepatan.',
+  },
+  {
+    icon: KeyRound,
+    title: 'Mulai Tanpa Friksi',
+    desc: '300 request/hari gratis tanpa kartu kredit. Cocok untuk validasi konsep sebelum komit ke skala produksi.',
+  },
+];
+
+function MengapaSection() {
+  return (
+    <section className="bg-slate-50 pt-12 pb-12 px-4">
+      <div className="max-w-4xl mx-auto">
+        <div className="mb-8">
+          <h2 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 uppercase">Mengapa KawalTransaksi</h2>
+          <p className="text-sm text-slate-500 mt-1">Pertimbangan teknis sebelum Anda mengintegrasikan API ini.</p>
+        </div>
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+          {ALASAN_PILIH.map((r) => (
+            <div key={r.title} className="bg-white rounded-xl border border-slate-200 px-5 py-5 flex items-start gap-4">
+              <div className="w-10 h-10 bg-emerald-50 rounded-xl flex items-center justify-center shrink-0">
+                <r.icon className="w-5 h-5 text-emerald-600" />
+              </div>
+              <div>
+                <p className="text-sm font-bold text-slate-900 mb-1">{r.title}</p>
+                <p className="text-sm text-slate-500 leading-relaxed">{r.desc}</p>
+              </div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+// -- FAQ Developer ------------------------------------------------------------
+
+const DEV_FAQS = [
+  {
+    q: 'Apakah ada SDK resmi untuk bahasa tertentu?',
+    a: 'Saat ini belum ada SDK resmi. API mengikuti standar REST biasa sehingga dapat dipanggil langsung menggunakan HTTP client di bahasa apa pun. Lihat contoh kode pada halaman Quick Start untuk cURL, Python, dan JavaScript.',
+  },
+  {
+    q: 'Bisakah saya mengecek banyak nomor sekaligus (bulk check)?',
+    a: 'Bulk check belum tersedia di plan Free. Fitur ini direncanakan untuk plan Pro yang sedang dikembangkan, dengan batas maksimal 20 nomor per request.',
+  },
+  {
+    q: 'Apa bedanya API key live dan test?',
+    a: 'Kedua jenis key mengembalikan data yang identik. Key test ditujukan untuk development agar tidak tercampur dengan metrik production, namun tetap dihitung terhadap limit harian key tersebut.',
+  },
+  {
+    q: 'Kenapa IP saya bisa terblokir, dan bagaimana mengatasinya?',
+    a: 'IP diblokir otomatis selama 24 jam setelah terdeteksi terlalu banyak percobaan autentikasi gagal secara berturut-turut. Jika Anda yakin ini kesalahan, hubungi kawaltransaksi@gmail.com.',
+  },
+  {
+    q: 'Apakah API ini bisa dipanggil langsung dari frontend?',
+    a: 'Tidak disarankan. API key harus digunakan di server-side saja. Buat endpoint backend Anda sendiri sebagai proxy agar API key tidak pernah terekspos ke klien.',
+  },
+];
+
+function FaqDevSection() {
+  const [openIdx, setOpenIdx] = useState<number | null>(0);
+
+  return (
+    <section className="bg-white pt-12 pb-12 px-4">
+      <div className="max-w-3xl mx-auto">
+        <div className="mb-6">
+          <h2 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 uppercase">FAQ Developer</h2>
+          <p className="text-sm text-slate-500 mt-1">Pertanyaan teknis yang sering diajukan seputar integrasi.</p>
+        </div>
+        <div className="rounded-xl border border-slate-200 overflow-hidden">
+          {DEV_FAQS.map((item, i) => {
+            const open = openIdx === i;
+            return (
+              <div key={item.q} className={i > 0 ? 'border-t border-slate-100' : ''}>
+                <button
+                  onClick={() => setOpenIdx(open ? null : i)}
+                  aria-expanded={open}
+                  className="w-full flex items-center justify-between gap-3 px-5 py-4 text-left bg-white hover:bg-slate-50 transition-colors"
+                >
+                  <span className="text-sm font-bold text-slate-800">{item.q}</span>
+                  <ChevronRight className={`w-4 h-4 text-slate-400 shrink-0 transition-transform ${open ? 'rotate-90' : ''}`} />
+                </button>
+                {open && (
+                  <div className="px-5 pb-4">
+                    <p className="text-sm text-slate-500 leading-relaxed">{item.a}</p>
+                  </div>
+                )}
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    </section>
+  );
+}
 
 // -- Playground ----------------------------------------------------------------
 
@@ -330,8 +493,15 @@ export default function DeveloperClient({ token, isLoggedIn }: Props) {
         </svg>
       </section>
 
+      {/* Use Case */}
+      <UseCaseSection />
+
+      <svg viewBox="0 0 1440 60" preserveAspectRatio="none" className="w-full h-12 sm:h-20 block bg-white -mb-1" xmlns="http://www.w3.org/2000/svg">
+        <path d="M0,18 C240,48 480,6 720,33 C960,60 1200,12 1440,36 L1440,60 L0,60 Z" fill="#f8fafc" />
+      </svg>
+
       {/* Playground */}
-      <section className="bg-white pt-10 pb-12 px-4">
+      <section className="bg-slate-50 pt-10 pb-12 px-4">
         <div className="max-w-4xl mx-auto">
           <div className="mb-6">
             <h2 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 uppercase">Coba API Langsung</h2>
@@ -341,8 +511,15 @@ export default function DeveloperClient({ token, isLoggedIn }: Props) {
         </div>
       </section>
 
-      <svg viewBox="0 0 1440 60" preserveAspectRatio="none" className="w-full h-12 sm:h-20 block bg-white -mb-1" xmlns="http://www.w3.org/2000/svg">
-        <path d="M0,18 C240,48 480,6 720,33 C960,60 1200,12 1440,36 L1440,60 L0,60 Z" fill="#f8fafc" />
+      <svg viewBox="0 0 1440 60" preserveAspectRatio="none" className="w-full h-12 sm:h-20 block bg-slate-50 -mb-1" xmlns="http://www.w3.org/2000/svg">
+        <path d="M0,36 C240,9 480,54 720,27 C960,3 1200,51 1440,21 L1440,60 L0,60 Z" fill="#ffffff" />
+      </svg>
+
+      {/* Kenapa KawalTransaksi */}
+      <MengapaSection />
+
+      <svg viewBox="0 0 1440 60" preserveAspectRatio="none" className="w-full h-12 sm:h-20 block bg-slate-50 -mb-1" xmlns="http://www.w3.org/2000/svg">
+        <path d="M0,33 C240,6 480,51 720,24 C960,0 1200,48 1440,18 L1440,60 L0,60 Z" fill="#f8fafc" />
       </svg>
 
       {/* Pricing */}
@@ -452,6 +629,13 @@ export default function DeveloperClient({ token, isLoggedIn }: Props) {
           </section>
         </>
       )}
+
+      <svg viewBox="0 0 1440 60" preserveAspectRatio="none" className="w-full h-12 sm:h-20 block bg-white -mb-1" xmlns="http://www.w3.org/2000/svg">
+        <path d="M0,24 C240,54 480,6 720,30 C960,54 1200,6 1440,30 L1440,60 L0,60 Z" fill="#f8fafc" />
+      </svg>
+
+      {/* FAQ Developer */}
+      <FaqDevSection />
 
       {/* CTA bottom — hanya kalau belum login */}
       {!isLoggedIn && (
