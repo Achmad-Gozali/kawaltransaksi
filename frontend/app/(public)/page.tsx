@@ -450,62 +450,44 @@ export default async function HomePage() {
         </svg>
       </div>
 
-      {/* ── DEVELOPER API ── */}
-      <section className="bg-white py-14 sm:py-20 px-4 sm:px-6">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-10 sm:mb-12">
-            <div>
-              <p className="text-xs font-bold text-emerald-600 uppercase tracking-widest mb-3">Untuk Developer</p>
-              <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 leading-tight">
-                Integrasikan Data<br />Anti-Penipuan ke Aplikasi Anda
-              </h2>
-              <p className="text-slate-500 text-sm sm:text-base mt-4 max-w-lg leading-relaxed">
-                KawalTransaksi menyediakan REST API yang sederhana dan handal untuk memverifikasi nomor HP, rekening bank, dan e-wallet secara real-time. Gratis hingga 300 request per hari, tanpa kartu kredit.
-              </p>
-            </div>
-            <Link
-              href="/developer"
-              className="shrink-0 w-full sm:w-auto text-center px-6 py-3 bg-slate-900 hover:bg-emerald-700 text-white text-sm font-bold tracking-wide rounded-xl transition-colors"
-            >
-              Lihat Developer API
-            </Link>
-          </div>
+{/* ── DEVELOPER API ── */}
+<section className="bg-white py-14 sm:py-20 px-4 sm:px-6">
+  <div className="max-w-4xl mx-auto">
+    <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-10 sm:mb-12">
+      <div>
+        <p className="text-xs font-bold text-emerald-600 uppercase tracking-widest mb-3">Untuk Developer</p>
+        <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 leading-tight">
+          Bangun Produk yang Lebih Aman<br />dengan Data Anti-Penipuan
+        </h2>
+        <p className="text-slate-500 text-sm sm:text-base mt-4 max-w-lg leading-relaxed">
+          KawalTransaksi membuka akses database laporan penipuan komunitas melalui REST API yang sederhana dan andal. 
+          Cocok untuk marketplace, fintech, dompet digital, atau platform apa pun yang membutuhkan lapisan verifikasi tambahan sebelum transaksi diproses. 
+          Tersedia gratis hingga 300 request per hari — tanpa kartu kredit, tanpa setup yang rumit.
+        </p>
+      </div>
+      <Link
+        href="/developer"
+        className="shrink-0 w-full sm:w-auto text-center px-6 py-3 bg-slate-900 hover:bg-emerald-700 text-white text-sm font-bold tracking-wide rounded-xl transition-colors"
+      >
+        Pelajari Developer API
+      </Link>
+    </div>
 
-          <div className="grid grid-cols-3 gap-px bg-slate-200 rounded-2xl overflow-hidden mb-10">
-            {[
-              { label: "Gratis", value: "300 req/hari", sub: "Tanpa kartu kredit" },
-              { label: "Endpoint", value: "REST API", sub: "HTTPS, format JSON" },
-              { label: "Data", value: "Terverifikasi", sub: "Dari laporan komunitas" },
-            ].map((item, i) => (
-              <div key={i} className="bg-white px-3 sm:px-6 py-4 sm:py-5 text-center">
-                <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">{item.label}</p>
-                <p className="text-sm sm:text-base font-black text-slate-900 mb-0.5">{item.value}</p>
-                <p className="text-[10px] sm:text-xs text-slate-400 hidden sm:block">{item.sub}</p>
-              </div>
-            ))}
-          </div>
-
-          <div className="bg-slate-900 rounded-2xl overflow-hidden">
-            <div className="flex items-center justify-between px-4 sm:px-5 py-3 border-b border-slate-700">
-              <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Contoh Penggunaan</p>
-              <div className="flex items-center gap-1.5">
-                <span className="w-2.5 h-2.5 rounded-full bg-red-400" />
-                <span className="w-2.5 h-2.5 rounded-full bg-amber-400" />
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-400" />
-              </div>
-            </div>
-            <div className="px-4 sm:px-6 py-5 overflow-x-auto flex items-center justify-between gap-4">
-              <pre className="text-xs sm:text-sm text-emerald-300 leading-relaxed font-mono whitespace-pre">{`curl "https://api.kawaltransaksi.com/api/v1/check?number=08123456789"`}</pre>
-              <Link
-                href="/developer"
-                className="shrink-0 text-xs font-bold text-slate-400 hover:text-white uppercase tracking-widest whitespace-nowrap transition-colors"
-              >
-                Coba langsung →
-              </Link>
-            </div>
-          </div>
+    <div className="grid grid-cols-3 gap-px bg-slate-200 rounded-2xl overflow-hidden">
+      {[
+        { label: 'Gratis', value: '300 req/hari', sub: 'Tanpa kartu kredit' },
+        { label: 'Endpoint', value: 'REST API', sub: 'HTTPS, format JSON' },
+        { label: 'Data', value: 'Terverifikasi', sub: 'Dari laporan komunitas' },
+      ].map((item, i) => (
+        <div key={i} className="bg-white px-3 sm:px-6 py-4 sm:py-5 text-center">
+          <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">{item.label}</p>
+          <p className="text-sm sm:text-base font-black text-slate-900 mb-0.5">{item.value}</p>
+          <p className="text-[10px] sm:text-xs text-slate-400 hidden sm:block">{item.sub}</p>
         </div>
-      </section>
+      ))}
+    </div>
+  </div>
+</section>
     </main>
   );
 }

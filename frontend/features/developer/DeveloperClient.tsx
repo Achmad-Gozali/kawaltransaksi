@@ -21,35 +21,6 @@ const EXPIRY_OPTIONS = [
   { value: '1y',    label: '1 tahun' },
 ];
 
-const PRICING = [
-  {
-    tier: 'Free', price: 'Gratis', comingSoon: false,
-    description: 'Untuk developer individu & eksperimen',
-    features: [
-      { label: '300 request/hari',           available: true },
-      { label: '5 API key per akun',         available: true },
-      { label: 'Endpoint /check',            available: true },
-      { label: 'Idempotency-Key support',    available: true },
-      { label: 'Bulk check (maks 20 nomor)', available: false },
-      { label: 'Usage history 30 hari',      available: false },
-      { label: 'Priority support',           available: false },
-    ],
-  },
-  {
-    tier: 'Pro', price: 'Segera Hadir', comingSoon: true,
-    description: 'Untuk aplikasi production & bisnis',
-    features: [
-      { label: '5.000 request/hari',         available: true },
-      { label: '20 API key per akun',        available: true },
-      { label: 'Endpoint /check',            available: true },
-      { label: 'Idempotency-Key support',    available: true },
-      { label: 'Bulk check (maks 20 nomor)', available: true },
-      { label: 'Usage history 30 hari',      available: true },
-      { label: 'Priority support',           available: true },
-    ],
-  },
-];
-
 const USE_CASES = [
   {
     icon: ShoppingCart,
@@ -111,7 +82,7 @@ const DEV_FAQS = [
   },
   {
     q: 'Kenapa IP saya bisa terblokir, dan bagaimana mengatasinya?',
-    a: 'IP diblokir otomatis selama 24 jam setelah terdeteksi terlalu banyak percobaan autentikasi gagal secara berturut-turut. Jika Anda yakin ini kesalahan, hubungi kawaltransaksi@gmail.com.',
+    a: 'IP diblokir otomatis selama 24 jam setelah terdeteksi terlalu banyak percobaan autentikasi gagal dalam window 5 menit. Jika Anda yakin ini kesalahan, hubungi kawaltransaksi@gmail.com.',
   },
   {
     q: 'Apakah API ini bisa dipanggil langsung dari frontend?',
@@ -229,8 +200,8 @@ const STATUS_CONFIG = {
 };
 
 function Playground({ token, isLoggedIn }: { token: string; isLoggedIn: boolean }) {
-  const [number, setNumber] = useState('');
-  const [type, setType]     = useState('phone');
+  const [number, setNumber]   = useState('');
+  const [type, setType]       = useState('phone');
   const [loading, setLoading] = useState(false);
   const [result, setResult]   = useState<PlaygroundResult | null>(null);
 
@@ -257,35 +228,26 @@ function Playground({ token, isLoggedIn }: { token: string; isLoggedIn: boolean 
 
   const status = result?.data?.status;
   const cfg    = status ? STATUS_CONFIG[status] : null;
-
   const placeholder = type === 'phone' ? '08123456789' : type === 'bank_account' ? '1234567890' : '08123456789';
 
   return (
     <div className="space-y-4">
       <div className="bg-white rounded-xl border border-slate-200 p-4 space-y-3">
-        {/* Type tabs */}
         <div className="flex gap-2 flex-wrap">
           {(['phone', 'bank_account', 'ewallet'] as const).map(t => (
             <button key={t} onClick={() => setType(t)}
               className={`px-3 py-1.5 text-xs font-bold rounded-lg transition-colors ${
-                type === t
-                  ? 'bg-slate-900 text-white'
-                  : 'bg-white border border-slate-200 text-slate-500 hover:border-slate-400'
+                type === t ? 'bg-slate-900 text-white' : 'bg-white border border-slate-200 text-slate-500 hover:border-slate-400'
               }`}>
               {t === 'phone' ? 'Nomor HP' : t === 'bank_account' ? 'Rekening' : 'E-Wallet'}
             </button>
           ))}
         </div>
-
-        {/* Input row */}
         <div className="flex gap-2">
           <input
-            type="text"
-            placeholder={placeholder}
-            value={number}
+            type="text" placeholder={placeholder} value={number}
             onChange={e => setNumber(e.target.value.replace(/\D/g, ''))}
-            onKeyDown={e => e.key === 'Enter' && run()}
-            maxLength={32}
+            onKeyDown={e => e.key === 'Enter' && run()} maxLength={32}
             className="flex-1 px-3 py-2.5 border border-slate-200 bg-white rounded-xl text-sm focus:outline-none focus:border-emerald-400 transition-all font-mono"
           />
           <button onClick={run} disabled={loading || !number.trim()}
@@ -294,7 +256,6 @@ function Playground({ token, isLoggedIn }: { token: string; isLoggedIn: boolean 
             Coba
           </button>
         </div>
-
         {!isLoggedIn && (
           <p className="text-xs text-slate-400">
             Guest: 5x/jam ·{' '}
@@ -304,7 +265,6 @@ function Playground({ token, isLoggedIn }: { token: string; isLoggedIn: boolean 
         )}
       </div>
 
-      {/* Result */}
       {result && (
         <div className="space-y-3">
           {result.success && result.data && cfg ? (
@@ -325,8 +285,13 @@ function Playground({ token, isLoggedIn }: { token: string; isLoggedIn: boolean 
               <CodeBlock language="json" code={JSON.stringify(result, null, 2)} />
             </>
           ) : (
-            <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3">
-              <p className="text-sm font-bold text-red-700">{result.message ?? 'Terjadi kesalahan.'}</p>
+            <div className={`rounded-xl border px-4 py-3 ${result.message?.includes('429') || result.message?.includes('Batas') ? 'bg-amber-50 border-amber-200' : 'bg-red-50 border-red-200'}`}>
+              <p className={`text-sm font-bold ${result.message?.includes('429') || result.message?.includes('Batas') ? 'text-amber-700' : 'text-red-700'}`}>
+                {result.message ?? 'Terjadi kesalahan.'}
+              </p>
+              {(result.message?.includes('Batas') || result.message?.includes('429')) && (
+                <p className="text-xs text-amber-600 mt-1">Coba lagi dalam 1 jam, atau <a href="/login" className="underline font-semibold">login</a> untuk limit lebih tinggi.</p>
+              )}
             </div>
           )}
         </div>
@@ -339,26 +304,34 @@ function Playground({ token, isLoggedIn }: { token: string; isLoggedIn: boolean 
 // Pricing
 // ---------------------------------------------------------------------------
 
-function FeatureIcon({ available, comingSoon }: { available: boolean; comingSoon: boolean }) {
-  if (available) {
-    return (
-      <div className={`w-4 h-4 rounded-full flex items-center justify-center shrink-0 ${comingSoon ? 'bg-slate-300' : 'bg-emerald-500'}`}>
-        <svg className="w-2.5 h-2.5 text-white" fill="none" viewBox="0 0 10 8" stroke="currentColor" strokeWidth={2.5}>
-          <path strokeLinecap="round" strokeLinejoin="round" d="M1 4l2.5 2.5L9 1" />
-        </svg>
-      </div>
-    );
-  }
-  return (
-    <div className="w-4 h-4 rounded-full flex items-center justify-center shrink-0 bg-red-100">
-      <svg className="w-2.5 h-2.5 text-red-500" fill="none" viewBox="0 0 10 10" stroke="currentColor" strokeWidth={2.5}>
-        <path strokeLinecap="round" strokeLinejoin="round" d="M2 2l6 6M8 2l-6 6" />
-      </svg>
-    </div>
-  );
-}
-
 function PricingSection({ isLoggedIn }: { isLoggedIn: boolean }) {
+  const freeFeatures = [
+    '300 request/hari',
+    'Maks 5 API key',
+    'Endpoint /check',
+    'Cek HP, rekening, e-wallet',
+    'Environment live & test',
+    'Idempotency-Key support',
+    'Playground tanpa API key',
+  ];
+
+  const freeDisabled = [
+    'Bulk check',
+    'Webhook notifikasi',
+    'Usage history 30 hari',
+    'Priority support',
+  ];
+
+  const proFeatures = [
+    '5.000 request/hari',
+    'Maks 20 API key',
+    'Semua fitur Free',
+    'Bulk check (maks 20 nomor)',
+    'Usage history 30 hari',
+    'Webhook notifikasi',
+    'Priority support',
+  ];
+
   return (
     <section className="bg-slate-50 pt-10 pb-12 px-4">
       <div className="max-w-4xl mx-auto">
@@ -366,61 +339,96 @@ function PricingSection({ isLoggedIn }: { isLoggedIn: boolean }) {
           <h2 className="text-xl sm:text-2xl font-black tracking-tight text-slate-900 uppercase">Pilih Plan</h2>
           <p className="text-sm text-slate-500 mt-1">Mulai gratis, upgrade saat butuh lebih.</p>
         </div>
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">
-          {PRICING.map((plan) => (
-            <div key={plan.tier} className={`bg-white rounded-[8px] border overflow-hidden relative flex flex-col ${
-              plan.comingSoon ? 'border-slate-200' : 'border-emerald-500 shadow-sm'
-            }`}>
-              {!plan.comingSoon && isLoggedIn && (
-                <span className="absolute top-5 right-5 text-[10px] font-bold px-2.5 py-1 rounded-full bg-emerald-500 text-white uppercase tracking-wider">Plan Anda</span>
-              )}
-              {plan.comingSoon && (
-                <span className="absolute top-5 right-5 text-[10px] font-bold px-2.5 py-1 rounded-full bg-slate-900 text-white uppercase tracking-wider">Segera Hadir</span>
-              )}
-              <div className="px-6 pt-6 pb-5 border-b border-slate-100">
-                <div className="flex items-center gap-2 mb-3">
-                  {plan.comingSoon
-                    ? <Lock className="w-4 h-4 text-slate-400" />
-                    : <Zap className="w-4 h-4 text-emerald-500" />}
-                  <p className="text-sm font-black text-slate-900 uppercase tracking-wide">{plan.tier}</p>
-                </div>
-                <p className={`text-3xl font-black mb-1 ${plan.comingSoon ? 'text-slate-300' : 'text-slate-900'}`}>{plan.price}</p>
-                <p className="text-xs text-slate-500">{plan.description}</p>
-              </div>
-              <div className="px-6 py-5 space-y-3 flex-1">
-                {plan.features.map((f) => (
-                  <div key={f.label} className="flex items-center gap-2.5">
-                    <FeatureIcon available={f.available} comingSoon={plan.comingSoon} />
-                    <span className={`text-sm ${f.available ? 'text-slate-700' : 'text-slate-400 line-through'}`}>{f.label}</span>
-                  </div>
-                ))}
-              </div>
-              <div className="px-6 pb-6">
-                {plan.comingSoon ? (
-                  <button disabled className="w-full py-3 bg-slate-100 text-slate-400 text-sm font-bold rounded-[8px] cursor-not-allowed">Segera Hadir</button>
-                ) : isLoggedIn ? (
-                  <a href="#api-keys" className="block w-full py-3 bg-slate-900 hover:bg-slate-700 text-white text-sm font-bold rounded-[8px] transition-colors text-center">Kelola API Key</a>
-                ) : (
-                  <a href="#api-keys" className="block w-full py-3 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-[8px] transition-colors text-center">Mulai Gratis</a>
-                )}
-              </div>
+
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-5">
+          {/* Free Card */}
+          <div className="bg-white rounded-xl border border-slate-200 p-6 flex flex-col">
+            <div className="flex items-center gap-2 mb-1">
+              <Zap className="w-4 h-4 text-emerald-500" />
+              <span className="text-xs font-black uppercase tracking-widest text-slate-900">Free</span>
             </div>
-          ))}
+            <p className="text-3xl font-black text-slate-900 mt-2 mb-0.5">Rp 0</p>
+            <p className="text-sm text-slate-400 mb-5">Selamanya gratis</p>
+
+            {isLoggedIn ? (
+              <a
+                href="#api-keys"
+                className="w-full text-center py-2.5 bg-slate-900 hover:bg-slate-700 text-white text-sm font-bold rounded-lg transition-colors mb-6"
+              >
+                Kelola API Key
+              </a>
+            ) : (
+              <a
+                href="/register"
+                className="w-full text-center py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-bold rounded-lg transition-colors mb-6"
+              >
+                Mulai Gratis
+              </a>
+            )}
+
+            <ul className="space-y-2.5 flex-1">
+              {freeFeatures.map((f) => (
+                <li key={f} className="flex items-center gap-2.5 text-sm text-slate-600">
+                  <CheckCircle className="w-4 h-4 text-emerald-500 shrink-0" />
+                  {f}
+                </li>
+              ))}
+              {freeDisabled.map((f) => (
+                <li key={f} className="flex items-center gap-2.5 text-sm text-slate-400">
+                  <XCircle className="w-4 h-4 text-slate-300 shrink-0" />
+                  {f}
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Pro Card */}
+          <div className="bg-white rounded-xl border-2 border-blue-200 p-6 flex flex-col relative">
+            <div className="absolute -top-3 left-1/2 -translate-x-1/2 bg-blue-50 border border-blue-200 rounded-full px-3 py-0.5 text-xs font-bold text-blue-600 whitespace-nowrap">
+              Segera hadir
+            </div>
+            <div className="flex items-center gap-2 mb-1">
+              <Lock className="w-4 h-4 text-slate-400" />
+              <span className="text-xs font-black uppercase tracking-widest text-slate-400">Pro</span>
+            </div>
+            <p className="text-3xl font-black text-slate-400 mt-2 mb-0.5">Rp ? ? ?/bln</p>
+            <p className="text-sm text-slate-400 mb-5">Harga diumumkan saat launch</p>
+
+            <button
+              disabled
+              className="w-full py-2.5 bg-slate-100 text-slate-400 text-sm font-bold rounded-lg cursor-not-allowed mb-6"
+            >
+              Segera Hadir
+            </button>
+
+            <ul className="space-y-2.5 flex-1">
+              {proFeatures.map((f) => (
+                <li key={f} className="flex items-center gap-2.5 text-sm text-slate-400">
+                  <CheckCircle className="w-4 h-4 text-slate-300 shrink-0" />
+                  {f}
+                </li>
+              ))}
+            </ul>
+          </div>
+        </div>
+
+        {/* Coming soon notice */}
+        <div className="bg-amber-50 border border-amber-200 rounded-xl px-4 py-3 flex items-start gap-3">
+          <AlertTriangle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
+          <div>
+            <p className="text-sm font-bold text-amber-800 mb-0.5">Plan Pro sedang dalam pengembangan</p>
+            <p className="text-sm text-amber-700 leading-relaxed">
+              Semua fitur di plan Free sudah bisa digunakan sekarang. Fitur eksklusif Pro (bulk check, webhook, usage history) akan tersedia saat Pro diluncurkan.
+              Daftar minat ke{' '}
+              <a href="mailto:kawaltransaksi@gmail.com" className="font-bold underline hover:text-amber-900">
+                kawaltransaksi@gmail.com
+              </a>
+              {' '}untuk mendapat notifikasi pertama.
+            </p>
+          </div>
         </div>
       </div>
     </section>
-  );
-}
-
-// ---------------------------------------------------------------------------
-// Divider wave helper
-// ---------------------------------------------------------------------------
-
-function Wave({ from, to }: { from: string; to: string }) {
-  return (
-    <svg viewBox="0 0 1440 60" preserveAspectRatio="none" className={`w-full h-12 sm:h-20 block -mb-1 ${from}`} xmlns="http://www.w3.org/2000/svg">
-      <path d="M0,24 C240,54 480,6 720,30 C960,54 1200,6 1440,30 L1440,60 L0,60 Z" fill={to} />
-    </svg>
   );
 }
 

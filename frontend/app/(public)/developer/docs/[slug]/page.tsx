@@ -42,32 +42,40 @@ export default async function DocsPage({ params }: Props) {
       </div>
 
       {(prev || next) && (
-        <div className="flex flex-col sm:flex-row items-center sm:items-stretch justify-between gap-3">
+        <div className="flex items-center justify-between gap-3 pt-4 border-t border-slate-200">
           {prev ? (
             <Link
               href={`/developer/docs/${prev.slug}`}
-              className="flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-4 py-3 hover:border-slate-300 transition-colors group w-auto min-w-[140px] sm:min-w-0 sm:max-w-[220px] flex-1 sm:flex-none"
+              className="group flex items-center gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2.5 sm:px-4 sm:py-3 hover:border-emerald-300 hover:shadow-sm transition-all duration-200 flex-1 sm:flex-none sm:min-w-[140px] lg:min-w-[200px]"
             >
-              <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:text-slate-600 shrink-0" />
-              <div className="min-w-0">
-                <p className="text-[10px] text-slate-400 uppercase tracking-wider">Sebelumnya</p>
-                <p className="text-sm font-bold text-slate-700 truncate">{prev.title}</p>
+              <ChevronLeft className="w-4 h-4 text-slate-400 group-hover:text-emerald-600 transition-colors shrink-0" />
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Sebelumnya</p>
+                <p className="text-xs sm:text-sm font-bold text-slate-700 group-hover:text-emerald-700 transition-colors truncate">
+                  {prev.title}
+                </p>
               </div>
             </Link>
-          ) : <div />}
+          ) : (
+            <div className="flex-1" />
+          )}
 
           {next ? (
             <Link
               href={`/developer/docs/${next.slug}`}
-              className="flex items-center justify-end gap-2 bg-white border border-slate-200 rounded-xl px-4 py-3 hover:border-slate-300 transition-colors group w-auto min-w-[140px] sm:min-w-0 sm:max-w-[220px] flex-1 sm:flex-none text-right"
+              className="group flex items-center justify-end gap-2 bg-white border border-slate-200 rounded-xl px-3 py-2.5 sm:px-4 sm:py-3 hover:border-emerald-300 hover:shadow-sm transition-all duration-200 flex-1 sm:flex-none sm:min-w-[140px] lg:min-w-[200px] text-right"
             >
-              <div className="min-w-0">
-                <p className="text-[10px] text-slate-400 uppercase tracking-wider">Berikutnya</p>
-                <p className="text-sm font-bold text-slate-700 truncate">{next.title}</p>
+              <div className="min-w-0 flex-1">
+                <p className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Berikutnya</p>
+                <p className="text-xs sm:text-sm font-bold text-slate-700 group-hover:text-emerald-700 transition-colors truncate">
+                  {next.title}
+                </p>
               </div>
-              <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-slate-600 shrink-0" />
+              <ChevronRight className="w-4 h-4 text-slate-400 group-hover:text-emerald-600 transition-colors shrink-0" />
             </Link>
-          ) : <div />}
+          ) : (
+            <div className="flex-1" />
+          )}
         </div>
       )}
     </div>

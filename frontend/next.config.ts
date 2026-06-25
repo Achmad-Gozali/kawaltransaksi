@@ -1,3 +1,4 @@
+import path from 'path';
 import type { NextConfig } from 'next';
 import withSerwist from '@serwist/next';
 import { withSentryConfig } from '@sentry/nextjs';
@@ -6,10 +7,14 @@ if (typeof globalThis.self === 'undefined') {
   (globalThis as unknown as { self: typeof globalThis }).self = globalThis;
 }
 
+const isDev = process.env.NODE_ENV === 'development';
+
 const nextConfig: NextConfig = {
   reactStrictMode: true,
   compress: true,
   poweredByHeader: false,
+
+  outputFileTracingRoot: path.join(__dirname, '../'),
 
   serverExternalPackages: ['@sentry/nextjs', '@sentry/core', '@sentry/node'],
 
@@ -33,7 +38,6 @@ const nextConfig: NextConfig = {
   },
 
   experimental: {
-    optimisticClientCache:  true,
     optimizePackageImports: ['lucide-react', 'motion'],
     optimizeCss: true,
   },
@@ -74,7 +78,7 @@ const nextConfig: NextConfig = {
             value: [
               "default-src 'self'",
               "worker-src 'self' blob:",
-              "script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com https://*.challenges.cloudflare.com https://static.cloudflareinsights.com https://www.googletagmanager.com https://www.clarity.ms https://scripts.clarity.ms https://us-assets.i.posthog.com",
+              `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ''} https://challenges.cloudflare.com https://*.challenges.cloudflare.com https://static.cloudflareinsights.com https://www.googletagmanager.com https://www.clarity.ms https://scripts.clarity.ms https://us-assets.i.posthog.com`,
               "style-src 'self' 'unsafe-inline' https://fonts.googleapis.com",
               "font-src 'self' https://fonts.gstatic.com",
               "img-src 'self' data: blob: https://*.supabase.co https://picsum.photos https://cdn.kawaltransaksi.com https://www.google-analytics.com https://www.clarity.ms https://c.clarity.ms",
