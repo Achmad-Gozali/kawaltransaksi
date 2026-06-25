@@ -12,8 +12,8 @@ import { createBrowserClient } from '@supabase/ssr';
 
 NProgress.configure({ showSpinner: false, trickleSpeed: 200 });
 
-const IDLE_MS = 30 * 60 * 1000; // 30 menit
-const WARN_MS = 2 * 60 * 1000;  // warning 2 menit sebelum logout
+const IDLE_MS = 30 * 60 * 1000;
+const WARN_MS = 2 * 60 * 1000;
 const IDLE_EVENTS = ['mousemove', 'mousedown', 'keydown', 'touchstart', 'scroll'];
 
 export default function ProtectedShell({ children }: { children: React.ReactNode }) {
@@ -35,25 +35,31 @@ export default function ProtectedShell({ children }: { children: React.ReactNode
     router.push('/login?reason=idle');
   }, [supabase, router]);
 
-  const resetTimer = useCallback(() => {
-    setShowWarning(false);
-
+  const clearTimers = useCallback(() => {
     if (idleTimer.current) clearTimeout(idleTimer.current);
     if (warnTimer.current) clearTimeout(warnTimer.current);
+  }, []);
 
+  const startTimers = useCallback(() => {
+    clearTimers();
     warnTimer.current = setTimeout(() => setShowWarning(true), IDLE_MS - WARN_MS);
     idleTimer.current = setTimeout(() => logout(), IDLE_MS);
-  }, [logout]);
+  }, [clearTimers, logout]);
 
+  const resetTimer = useCallback(() => {
+    setShowWarning(false);
+    startTimers();
+  }, [startTimers]);
+
+  // Setup idle detection
   useEffect(() => {
-    resetTimer();
+    startTimers(); // panggil startTimers, bukan resetTimer — tidak ada setState di sini
     IDLE_EVENTS.forEach(e => window.addEventListener(e, resetTimer, { passive: true }));
     return () => {
       IDLE_EVENTS.forEach(e => window.removeEventListener(e, resetTimer));
-      if (idleTimer.current) clearTimeout(idleTimer.current);
-      if (warnTimer.current) clearTimeout(warnTimer.current);
+      clearTimers();
     };
-  }, [resetTimer]);
+  }, [startTimers, resetTimer, clearTimers]);
 
   useEffect(() => {
     if (prevPathname.current !== pathname) {
@@ -99,9 +105,8 @@ export default function ProtectedShell({ children }: { children: React.ReactNode
       <Footer />
       <FeedbackButton />
 
-      {/* Idle warning */}
       {showWarning && (
-        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white text-sm font-medium px-5 py-3 rounded-xl shadow-lg flex items-center gap-3">
+        <div className="fixed bottom-20 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white text-sm font-medium px-5 py-3 rounded-xl shadow-lg flex items-center gap-3 whitespace-nowrap">
           <span>Sesi akan berakhir dalam 2 menit.</span>
           <button
             onClick={resetTimer}
