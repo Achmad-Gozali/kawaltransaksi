@@ -11,8 +11,11 @@ export const DOC_NAV = [
   { slug: 'environment',     label: 'Environment' },
   { slug: 'endpoint-check',  label: 'Endpoint /check' },
   { slug: 'format-response', label: 'Format Response' },
+  { slug: 'playground',      label: 'Playground' },
   { slug: 'idempotency',     label: 'Idempotency' },
   { slug: 'rate-limiting',   label: 'Rate Limiting' },
+  { slug: 'error-handling',  label: 'Error Handling' },
+  { slug: 'limits',          label: 'Limits & Quota' },
   { slug: 'keamanan',        label: 'Keamanan API Key' },
   { slug: 'best-practices',  label: 'Best Practices' },
   { slug: 'changelog',       label: 'Changelog' },
@@ -74,8 +77,8 @@ export function DocsMobileNav({
   return (
     <div className="fixed inset-0 z-50 lg:hidden">
       <div className="absolute inset-0 bg-black/50" onClick={onClose} />
-      <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl max-h-[70vh] overflow-y-auto p-4 pb-6">
-        <div className="flex items-center justify-between mb-3">
+      <div className="absolute bottom-0 left-0 right-0 bg-white rounded-t-2xl max-h-[75vh] overflow-y-auto p-4 pb-6">
+        <div className="flex items-center justify-between mb-3 sticky top-0 bg-white pb-2 -mt-1 pt-1">
           <p className="text-sm font-bold text-slate-900">Dokumentasi</p>
           <button
             onClick={onClose}
