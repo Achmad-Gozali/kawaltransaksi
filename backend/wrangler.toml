@@ -10,7 +10,6 @@ routes = [
 [vars]
 NODE_ENV = "production"
 FRONTEND_URL = "https://kawaltransaksi.com"
-FRONTEND_URL_CLONE = "https://kawaltransaksi-605520424162.asia-southeast1.run.app"
 ADMIN_EMAIL = "kawaltransaksi@gmail.com"
 R2_PUBLIC_URL = "https://cdn.kawaltransaksi.com"
 

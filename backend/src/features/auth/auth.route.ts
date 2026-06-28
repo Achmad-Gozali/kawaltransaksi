@@ -4,7 +4,6 @@ import { verifyTurnstile } from '../../core/turnstile';
 import { sendVerificationEmail, sendPasswordResetEmail } from '../../core/resend';
 import { autoBlacklistIfAbuse } from '../../core/abuse';
 import { kv } from '../../core/redis';
-import type { Env } from '../../types';
 
 const auth = new Hono();
 
@@ -92,7 +91,6 @@ async function checkRateLimit(key: string, maxCount: number, ttlSeconds: number)
 
 auth.post('/register', async (c) => {
   try {
-    const env: Env = c.get('env');
     const { email, password, fullName, turnstileToken } = await c.req.json();
 
     if (!email || !password || !fullName)
@@ -117,17 +115,17 @@ auth.post('/register', async (c) => {
     const ip = getIp(c);
     const rl = await checkRateLimit(`rl_register_${ip}`, 3, 600);
     if (rl.blocked) {
-      await autoBlacklistIfAbuse(kv, ip, 'Abuse pada endpoint register');
+      await autoBlacklistIfAbuse(ip, 'Abuse pada endpoint register');
       return c.json({ success: false, message: 'Terlalu banyak percobaan pendaftaran.', retry_after: 600 }, 429);
     }
 
     const tsCheck = await checkTurnstileBlacklist(turnstileToken);
     if (tsCheck.blocked) return c.json({ success: false, message: tsCheck.message }, 400);
 
-    if (!await verifyTurnstile(turnstileToken, env.TURNSTILE_SECRET_KEY))
+    if (!await verifyTurnstile(turnstileToken, process.env.TURNSTILE_SECRET_KEY!))
       return c.json({ success: false, message: 'Verifikasi keamanan gagal.' }, 400);
 
-    const supabase = getSupabaseAdmin(env);
+    const supabase = getSupabaseAdmin();
 
     const { data: signUpData, error: signUpError } = await supabase.auth.admin.createUser({
       email: normalizedEmail,
@@ -148,7 +146,7 @@ auth.post('/register', async (c) => {
     const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
       type: 'magiclink',
       email: normalizedEmail,
-      options: { redirectTo: `${env.FRONTEND_URL}/auth/confirm` },
+      options: { redirectTo: `${process.env.FRONTEND_URL}/auth/confirm` },
     });
 
     if (linkError || !linkData)
@@ -158,7 +156,7 @@ auth.post('/register', async (c) => {
       to: normalizedEmail,
       fullName: sanitizedFullName,
       verificationLink: linkData.properties.action_link,
-      apiKey: env.RESEND_API_KEY,
+      apiKey: process.env.RESEND_API_KEY!,
     }).catch(console.error);
 
     return c.json({
@@ -174,7 +172,6 @@ auth.post('/register', async (c) => {
 
 auth.post('/login', async (c) => {
   try {
-    const env: Env = c.get('env');
     const { email, password, turnstileToken } = await c.req.json();
 
     if (!email || !password)
@@ -185,7 +182,7 @@ auth.post('/login', async (c) => {
     const tsCheck = await checkTurnstileBlacklist(turnstileToken);
     if (tsCheck.blocked) return c.json({ success: false, message: tsCheck.message }, 400);
 
-    if (!await verifyTurnstile(turnstileToken, env.TURNSTILE_SECRET_KEY))
+    if (!await verifyTurnstile(turnstileToken, process.env.TURNSTILE_SECRET_KEY!))
       return c.json({ success: false, message: 'Verifikasi keamanan gagal.' }, 400);
 
     const normalizedEmail = email.trim().toLowerCase();
@@ -194,15 +191,15 @@ auth.post('/login', async (c) => {
 
     const comboCheck = await checkRateLimit(`rl_login_${ip}_${emailSlug}`, 5, 300);
     if (comboCheck.blocked) {
-      await autoBlacklistIfAbuse(kv, ip, 'Abuse pada endpoint login');
+      await autoBlacklistIfAbuse(ip, 'Abuse pada endpoint login');
       return c.json({ success: false, message: 'Terlalu banyak percobaan login.', retry_after: 300 }, 429);
     }
     const emailCheck = await checkRateLimit(`rl_email_${emailSlug}`, 10, 300);
     if (emailCheck.blocked)
       return c.json({ success: false, message: 'Terlalu banyak percobaan login.', retry_after: 300 }, 429);
 
-    const supabase       = getSupabaseAdmin(env);
-    const supabaseClient = getSupabaseClient(env);
+    const supabase       = getSupabaseAdmin();
+    const supabaseClient = getSupabaseClient();
 
     const { data: profile } = await supabase
       .from('profiles').select('id, failed_attempts, locked_until, is_banned')
@@ -231,7 +228,7 @@ auth.post('/login', async (c) => {
       if (currentAttempts >= MAX_ATTEMPTS) {
         const lockedUntil = new Date(Date.now() + LOCK_DURATION_MINUTES * 60 * 1000);
         await supabase.from('profiles').update({ failed_attempts: currentAttempts, locked_until: lockedUntil.toISOString() }).eq('id', profile.id);
-        await autoBlacklistIfAbuse(kv, ip, 'Berulang kali gagal login');
+        await autoBlacklistIfAbuse(ip, 'Berulang kali gagal login');
         return c.json({ success: false, message: 'Akun dikunci sementara.', locked: true, locked_until: lockedUntil.toISOString() }, 429);
       }
       await supabase.from('profiles').update({ failed_attempts: currentAttempts }).eq('id', profile.id);
@@ -264,7 +261,6 @@ auth.post('/login', async (c) => {
 
 auth.post('/forgot-password', async (c) => {
   try {
-    const env: Env = c.get('env');
     const { email } = await c.req.json();
 
     if (!email || typeof email !== 'string' || !email.includes('@'))
@@ -277,7 +273,7 @@ auth.post('/forgot-password', async (c) => {
     if (check.blocked)
       return c.json({ success: false, message: 'Terlalu banyak percobaan.' }, 429);
 
-    const supabase = getSupabaseAdmin(env);
+    const supabase = getSupabaseAdmin();
     const { data: profile } = await supabase
       .from('profiles').select('id, full_name, is_banned')
       .eq('email', normalizedEmail).single();
@@ -288,7 +284,7 @@ auth.post('/forgot-password', async (c) => {
     const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
       type: 'recovery',
       email: normalizedEmail,
-      options: { redirectTo: `${env.FRONTEND_URL}/reset-kata-sandi` },
+      options: { redirectTo: `${process.env.FRONTEND_URL}/reset-kata-sandi` },
     });
 
     if (linkError || !linkData)
@@ -298,7 +294,7 @@ auth.post('/forgot-password', async (c) => {
       to: normalizedEmail,
       fullName: profile.full_name || 'Pengguna',
       resetLink: linkData.properties.action_link,
-      apiKey: env.RESEND_API_KEY,
+      apiKey: process.env.RESEND_API_KEY!,
     }).catch(console.error);
 
     return c.json({ success: true, message: 'Jika email terdaftar, link reset akan dikirim.' });

@@ -4,13 +4,10 @@ import { getSupabaseAdmin } from '../../core/supabase';
 import { scoreReport, applyVerdict } from './scoring-engine';
 import { sendReportStatusChangedEmail } from '../../core/resend';
 import { writeLog } from './audit-logger';
+import { getEnv } from '../../types';
 import type { RobotReport } from './types';
-import type { Env } from '../../types';
 
-const appeal = new Hono<{
-  Bindings: Env;
-  Variables: { userId: string; userEmail: string };
-}>();
+const appeal = new Hono();
 
 const UUID_REGEX          = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const APPEAL_WINDOW_HOURS = 23;
@@ -46,12 +43,11 @@ appeal.post('/', authMiddleware, async (c) => {
       return c.json({ success: false, message: `Alasan banding minimal ${MIN_REASON_LENGTH} karakter.` }, 400);
 
     const newEvidenceUrls = sanitizeEvidenceUrls(evidence_urls);
-
-    const newLossAmount = loss_amount ? Number(loss_amount) : null;
+    const newLossAmount   = loss_amount ? Number(loss_amount) : null;
     if (newLossAmount !== null && (isNaN(newLossAmount) || newLossAmount < 1000 || newLossAmount > 999_999_999_999))
       return c.json({ success: false, message: 'Nominal kerugian tidak valid.' }, 400);
 
-    const supabase = getSupabaseAdmin(c.env);
+    const supabase = getSupabaseAdmin();
 
     const { data: report, error: fetchError } = await supabase
       .from('reports')
@@ -127,7 +123,12 @@ appeal.post('/', authMiddleware, async (c) => {
 
     Promise.resolve().then(() => (async () => {
       try {
-        const result = await scoreReport(freshReport, supabase).catch(console.error);
+        const result = await scoreReport(freshReport, supabase).catch((err) => {
+          console.error(err);
+          return null;
+        });
+        if (!result) return;
+
         const appealVerdict = result.score >= 45 ? 'verified' : result.verdict;
 
         if (appealVerdict === 'verified') {
@@ -142,13 +143,14 @@ appeal.post('/', authMiddleware, async (c) => {
           const { data: profile } = await supabase
             .from('profiles').select('full_name, email').eq('id', userId).single();
           if (profile?.email) {
+            const env = getEnv();
             await sendReportStatusChangedEmail({
               to:           profile.email,
               fullName:     profile.full_name ?? 'Pengguna',
               targetNumber: report.target_number,
               newStatus:    'verified',
               reportUrl:    `https://kawaltransaksi.com/dashboard/laporan/${reportId}`,
-              apiKey:       (c.get('env') as any).RESEND_API_KEY,
+              apiKey:       env.RESEND_API_KEY,
             }).catch(() => {});
           }
         } else {
@@ -179,7 +181,7 @@ appeal.get('/:reportId', authMiddleware, async (c) => {
     if (!UUID_REGEX.test(reportId))
       return c.json({ success: false, message: 'ID laporan tidak valid.' }, 400);
 
-    const supabase = getSupabaseAdmin(c.env);
+    const supabase = getSupabaseAdmin();
     const { data, error } = await supabase
       .from('report_appeals')
       .select('id, status, reason, evidence_urls, loss_amount, reviewed_at, created_at')

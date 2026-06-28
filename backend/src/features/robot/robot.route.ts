@@ -5,18 +5,19 @@ import { checkBlacklist, runConfidenceDecay } from './blacklist-engine';
 import { saveHealthSnapshot, buildSnapshot, detectAnomalies, getLatestHealth } from './health-monitor';
 import { detectTrends, getViralNumbers } from './trend-detector';
 import { writeLog } from './audit-logger';
+import { getEnv } from '../../types';
 import type { RobotReport } from './types';
-import type { Env } from '../../types';
 
-const robot = new Hono<{ Bindings: Env }>();
+const robot = new Hono();
 
-function isInternal(c: { req: { header: (k: string) => string | undefined }; env: Env }): boolean {
-  return c.req.header('X-Internal-Key') === (c.get('env') as any).INTERNAL_API_KEY;
+function isInternal(c: any): boolean {
+  const env = getEnv();
+  return c.req.header('X-Internal-Key') === env.INTERNAL_API_KEY;
 }
 
 robot.post('/evaluate/:reportId', async (c) => {
   if (!isInternal(c)) return c.json({ success: false, message: 'Akses ditolak.' }, 403);
-  const supabase = getSupabaseAdmin(c.env);
+  const supabase = getSupabaseAdmin();
   const { data: report, error } = await supabase
     .from('reports').select('*').eq('id', c.req.param('reportId')).single();
   if (error || !report) return c.json({ success: false, message: 'Laporan tidak ditemukan.' }, 404);
@@ -27,57 +28,49 @@ robot.post('/evaluate/:reportId', async (c) => {
 
 robot.post('/evaluate-number/:number', async (c) => {
   if (!isInternal(c)) return c.json({ success: false, message: 'Akses ditolak.' }, 403);
-  await reEvaluateByNumber(c.req.param('number'), getSupabaseAdmin(c.env));
+  await reEvaluateByNumber(c.req.param('number'), getSupabaseAdmin());
   return c.json({ success: true, message: `Re-evaluasi selesai untuk nomor ${c.req.param('number')}.` });
 });
 
 robot.get('/blacklist/:number', async (c) => {
   if (!isInternal(c)) return c.json({ success: false, message: 'Akses ditolak.' }, 403);
-  const result = await checkBlacklist(c.req.param('number'), getSupabaseAdmin(c.env));
+  const result = await checkBlacklist(c.req.param('number'), getSupabaseAdmin());
   return c.json({ success: true, data: result });
 });
 
 robot.get('/blacklist-list', async (c) => {
   if (!isInternal(c)) return c.json({ success: false, message: 'Akses ditolak.' }, 403);
-  const { data } = await getSupabaseAdmin(c.env)
-    .from('blacklist')
-    .select('*')
-    .order('unique_reporters', { ascending: false })
-    .limit(50);
+  const { data } = await getSupabaseAdmin().from('blacklist').select('*').order('unique_reporters', { ascending: false }).limit(50);
   return c.json({ success: true, data: data ?? [] });
 });
 
 robot.get('/health', async (c) => {
   if (!isInternal(c)) return c.json({ success: false, message: 'Akses ditolak.' }, 403);
-  const latest = await getLatestHealth(getSupabaseAdmin(c.env));
+  const latest = await getLatestHealth(getSupabaseAdmin());
   return c.json({ success: true, data: latest });
 });
 
 robot.get('/viral', async (c) => {
   if (!isInternal(c)) return c.json({ success: false, message: 'Akses ditolak.' }, 403);
-  const data = await getViralNumbers(getSupabaseAdmin(c.env));
+  const data = await getViralNumbers(getSupabaseAdmin());
   return c.json({ success: true, data });
 });
 
 robot.get('/logs', async (c) => {
   if (!isInternal(c)) return c.json({ success: false, message: 'Akses ditolak.' }, 403);
-  const { data } = await getSupabaseAdmin(c.env)
-    .from('robot_logs')
-    .select('*')
-    .order('created_at', { ascending: false })
-    .limit(50);
+  const { data } = await getSupabaseAdmin().from('robot_logs').select('*').order('created_at', { ascending: false }).limit(50);
   return c.json({ success: true, data: data ?? [] });
 });
 
 robot.post('/run-scheduler', async (c) => {
   if (!isInternal(c)) return c.json({ success: false, message: 'Akses ditolak.' }, 403);
-  const result = await runScheduler(getSupabaseAdmin(c.env));
+  const result = await runScheduler(getSupabaseAdmin());
   return c.json({ success: true, data: result });
 });
 
 robot.post('/run-decay', async (c) => {
   if (!isInternal(c)) return c.json({ success: false, message: 'Akses ditolak.' }, 403);
-  const supabase = getSupabaseAdmin(c.env);
+  const supabase = getSupabaseAdmin();
   const result   = await runConfidenceDecay(supabase);
   await writeLog({ action: 'decay', reasons: [result] }, supabase).catch(() => {});
   return c.json({ success: true, data: result });
@@ -85,21 +78,19 @@ robot.post('/run-decay', async (c) => {
 
 robot.post('/run-trends', async (c) => {
   if (!isInternal(c)) return c.json({ success: false, message: 'Akses ditolak.' }, 403);
-  const result = await detectTrends(getSupabaseAdmin(c.env));
+  const result = await detectTrends(getSupabaseAdmin());
   return c.json({ success: true, data: result });
 });
 
 robot.post('/backfill', async (c) => {
   if (!isInternal(c)) return c.json({ success: false, message: 'Akses ditolak.' }, 403);
 
-  const supabase = getSupabaseAdmin(c.env);
-  const stats = { processed: 0, verified: 0, rejected: 0, skipped: 0, errors: 0 };
+  const supabase = getSupabaseAdmin();
+  const stats    = { processed: 0, verified: 0, rejected: 0, skipped: 0, errors: 0 };
 
   const { data: reports } = await supabase
-    .from('reports')
-    .select('*')
-    .eq('status', 'verified')
-    .eq('robot_status', 'pending')
+    .from('reports').select('*')
+    .eq('status', 'verified').eq('robot_status', 'pending')
     .order('created_at', { ascending: true });
 
   if (!reports?.length)

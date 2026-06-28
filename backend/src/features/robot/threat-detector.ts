@@ -1,12 +1,12 @@
-import type { KVNamespace } from '../../types';
 import { getSupabaseAdmin } from '../../core/supabase';
 import { writeLog } from './audit-logger';
+import { kv } from '../../core/redis';
 
-const WINDOW_MS        = 30 * 60 * 1000;
-const BASELINE_KEY     = 'threat_baseline';
-const SIGMA_THRESHOLD  = 3;
-const BLOCK_THRESHOLD  = 5;
-const MIN_SAMPLES      = 5;
+const WINDOW_MS         = 30 * 60 * 1000;
+const BASELINE_KEY      = 'threat_baseline';
+const SIGMA_THRESHOLD   = 3;
+const BLOCK_THRESHOLD   = 5;
+const MIN_SAMPLES       = 5;
 const MIN_HITS_TO_BLOCK = 10;
 
 interface Baseline {
@@ -30,7 +30,7 @@ function calcStats(samples: number[]): { mean: number; stddev: number } {
   return { mean, stddev: Math.sqrt(variance) };
 }
 
-async function getBaselines(kv: KVNamespace): Promise<Record<string, Baseline>> {
+async function getBaselines(): Promise<Record<string, Baseline>> {
   try {
     const raw = await kv.get(BASELINE_KEY);
     return raw ? JSON.parse(raw) : {};
@@ -39,22 +39,22 @@ async function getBaselines(kv: KVNamespace): Promise<Record<string, Baseline>> 
   }
 }
 
-async function saveBaselines(kv: KVNamespace, data: Record<string, Baseline>): Promise<void> {
+async function saveBaselines(data: Record<string, Baseline>): Promise<void> {
   await kv.put(BASELINE_KEY, JSON.stringify(data), { expirationTtl: 60 * 60 * 24 * 7 });
 }
 
-async function collectTraffic(kv: KVNamespace): Promise<{
+async function collectTraffic(): Promise<{
   samples: { endpoint: string; count: number }[];
   logs: { ip: string; endpoint: string; created_at: string }[];
 }> {
   const cutoff = Date.now() - WINDOW_MS;
-  const { keys } = await kv.list({ prefix: 'iplog_', limit: 500 });
+  const { keys: ipKeys } = await kv.list({ prefix: 'iplog_' });
 
   const endpointCount: Record<string, number> = {};
   const logs: { ip: string; endpoint: string; created_at: string }[] = [];
 
   await Promise.all(
-    keys.map(async ({ name }) => {
+    ipKeys.map(async ({ name }) => {
       try {
         const raw = await kv.get(name);
         if (!raw) return;
@@ -75,7 +75,6 @@ async function collectTraffic(kv: KVNamespace): Promise<{
 async function blockThreatenedIps(
   threats: ThreatReport[],
   logs: { ip: string; endpoint: string }[],
-  kv: KVNamespace,
 ): Promise<number> {
   const threatenedEndpoints = new Set(
     threats.filter(t => t.z_score >= BLOCK_THRESHOLD).map(t => t.endpoint)
@@ -108,19 +107,18 @@ async function blockThreatenedIps(
 }
 
 export async function detectThreats(
-  kv: KVNamespace,
   supabase: ReturnType<typeof getSupabaseAdmin>,
 ): Promise<{ threats: ThreatReport[]; updated: number; blocked: number }> {
   const [{ samples, logs }, baselines] = await Promise.all([
-    collectTraffic(kv),
-    getBaselines(kv),
+    collectTraffic(),
+    getBaselines(),
   ]);
 
   const threats: ThreatReport[] = [];
   const now = Date.now();
 
   for (const { endpoint, count } of samples) {
-    const baseline = baselines[endpoint];
+    const baseline    = baselines[endpoint];
     const prevSamples = baseline?.samples ?? [];
 
     if (!baseline || prevSamples.length < MIN_SAMPLES) {
@@ -143,8 +141,8 @@ export async function detectThreats(
   }
 
   const [, blocked] = await Promise.all([
-    saveBaselines(kv, baselines),
-    blockThreatenedIps(threats, logs, kv),
+    saveBaselines(baselines),
+    blockThreatenedIps(threats, logs),
   ]);
 
   if (threats.length > 0) {

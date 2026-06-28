@@ -2,17 +2,12 @@ import { Hono } from 'hono';
 import { authMiddleware } from '../../core/auth.middleware';
 import { getSupabaseAdmin } from '../../core/supabase';
 import { verifyTurnstile } from '../../core/turnstile';
-import {
-  sendReportCreatedEmail,
-  sendNewReportAdminEmail,
-} from '../../core/resend';
+import { sendReportCreatedEmail, sendNewReportAdminEmail } from '../../core/resend';
 import { scoreReport, applyVerdict, reEvaluateByNumber } from '../robot/scoring-engine';
 import { isBlocked, recordRejection } from '../robot/auto-blocker';
 import type { RobotReport } from '../robot/types';
-import type { Env } from '../../types';
 
 const reports = new Hono<{
-  Bindings: Env;
   Variables: { userId: string; userEmail: string; userRole: string };
 }>();
 
@@ -37,7 +32,6 @@ const ALLOWED_STORAGE_HOSTNAMES = [
 ];
 
 const MAX_EVIDENCE_FILES = 10;
-const UUID_REGEX         = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 const VALID_TARGET_TYPES = ['phone', 'bank_account', 'ewallet'] as const;
 
 const VALID_PROVINCES = [
@@ -90,7 +84,6 @@ function isValidHttpUrl(url: unknown): string | null {
   } catch { return null; }
 }
 
-// Optimasi: 2 count query paralel vs baca semua row lalu filter di JS
 async function checkReportRateLimit(
   supabase: ReturnType<typeof getSupabaseAdmin>,
   userId: string,
@@ -176,27 +169,23 @@ function buildTargetNumbers(body: Record<string, unknown>, cleanNumber: string):
   return items;
 }
 
-// -- POST /api/reports --------------------------------------------------------
-
 reports.post('/', authMiddleware, async (c) => {
   try {
     const userId   = c.get('userId');
-    const ip       = c.req.header('CF-Connecting-IP') || 'anonymous';
+    const ip       = c.req.header('X-Forwarded-For')?.split(',')[0]?.trim() ?? 'anonymous';
     const body     = await c.req.json();
-    const supabase = getSupabaseAdmin(c.env);
+    const supabase = getSupabaseAdmin();
 
-    if ((c.get('env') as any).LIMITER) {
-      const [userBlock, ipBlock] = await Promise.all([
-        isBlocked(userId, (c.get('env') as any).LIMITER),
-        isBlocked(ip, (c.get('env') as any).LIMITER),
-      ]);
-      if (userBlock.blocked || ipBlock.blocked)
-        return c.json({ success: false, message: 'Akun Anda telah diblokir sementara karena aktivitas mencurigakan.' }, 403);
-    }
+    const [userBlock, ipBlock] = await Promise.all([
+      isBlocked(userId),
+      isBlocked(ip),
+    ]);
+    if (userBlock.blocked || ipBlock.blocked)
+      return c.json({ success: false, message: 'Akun Anda telah diblokir sementara karena aktivitas mencurigakan.' }, 403);
 
     if (!body.turnstile_token)
       return c.json({ success: false, message: 'Verifikasi CAPTCHA diperlukan.' }, 400);
-    if (!await verifyTurnstile(body.turnstile_token, (c.get('env') as any).TURNSTILE_SECRET_KEY))
+    if (!await verifyTurnstile(body.turnstile_token, process.env.TURNSTILE_SECRET_KEY!))
       return c.json({ success: false, message: 'Verifikasi CAPTCHA gagal.' }, 400);
 
     const validationError = validateReportBody(body);
@@ -262,19 +251,16 @@ reports.post('/', authMiddleware, async (c) => {
         const [{ data: profile }, { data: freshReport }] = await Promise.all([
           supabase.from('profiles').select('full_name, email').eq('id', userId).single(),
           supabase.from('reports').select('*').eq('id', reportId).single(),
-        ]).catch(console.error);
+        ]);
 
         if (freshReport) {
           const result = await scoreReport(freshReport as RobotReport, supabase);
-
-          // applyVerdict + reEvaluateByNumber paralel — tidak saling depend
           await Promise.all([
             applyVerdict(freshReport as RobotReport, result, supabase),
             reEvaluateByNumber(cleanNumber, supabase),
           ]);
-
-          if (result.verdict === 'rejected' && (c.get('env') as any).LIMITER)
-            await recordRejection(userId, ip, (c.get('env') as any).LIMITER);
+          if (result.verdict === 'rejected')
+            await recordRejection(userId, ip);
         }
 
         await Promise.all([
@@ -284,18 +270,18 @@ reports.post('/', authMiddleware, async (c) => {
                 fullName:     profile.full_name ?? 'Pengguna',
                 targetNumber: cleanNumber,
                 category:     categoryClean,
-                apiKey:       (c.get('env') as any).RESEND_API_KEY,
+                apiKey:       process.env.RESEND_API_KEY!,
               }).catch(err => console.error('[EMAIL] User:', err))
             : Promise.resolve(),
-          (c.get('env') as any).ADMIN_EMAIL
+          process.env.ADMIN_EMAIL
             ? sendNewReportAdminEmail({
-                adminEmail:   (c.get('env') as any).ADMIN_EMAIL,
+                adminEmail:   process.env.ADMIN_EMAIL,
                 reporterName: profile?.full_name ?? 'Pengguna',
                 targetNumber: cleanNumber,
                 category:     categoryClean,
                 status:       'pending',
                 reportUrl:    'https://kawaltransaksi.com/admin',
-                apiKey:       (c.get('env') as any).RESEND_API_KEY,
+                apiKey:       process.env.RESEND_API_KEY!,
               }).catch(err => console.error('[EMAIL] Admin:', err))
             : Promise.resolve(),
         ]);
@@ -310,15 +296,13 @@ reports.post('/', authMiddleware, async (c) => {
   }
 });
 
-// -- GET /api/reports/check-number/:number ------------------------------------
-
 reports.get('/check-number/:number', async (c) => {
   try {
     const number = c.req.param('number').replace(/[^0-9]/g, '');
     if (!number || number.length < 6)
       return c.json({ success: false, message: 'Nomor tidak valid.' }, 400);
 
-    const supabase = getSupabaseAdmin(c.env);
+    const supabase = getSupabaseAdmin();
     const { count: totalReports } = await supabase
       .from('reports').select('id', { count: 'exact', head: true })
       .eq('target_number', number).neq('status', 'withdrawn');

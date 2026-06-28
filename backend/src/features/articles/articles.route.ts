@@ -1,41 +1,43 @@
 import { Hono } from 'hono';
-import sql from '../../core/db';
+import { getSupabaseAdmin } from '../../core/supabase';
 import { groqChat } from '../../core/groq';
-import type { Env } from '../../types';
+import { getEnv } from '../../types';
 
-const app = new Hono<{ Bindings: Env }>();
+const app = new Hono();
+
+const ARTICLE_LIST_FIELDS   = 'id, title, slug, summary, total_reports, total_loss, top_category, published_at, cover_image, status';
+const ARTICLE_DETAIL_FIELDS = 'id, title, slug, summary, content, status, cover_image, published_at, total_reports, total_loss, top_category, top_platform, top_bank, period_start, period_end, created_at';
 
 app.get('/', async (c) => {
-  try {
-    const data = await sql`
-      SELECT id, title, slug, summary, total_reports, total_loss, top_category, published_at, cover_image, status
-      FROM articles
-      WHERE status = 'published'
-      ORDER BY published_at DESC
-      LIMIT 20
-    `;
-    return c.json({ success: true, data });
-  } catch (err) {
-    console.error('[articles] fetch list error:', err);
+  const { data, error } = await getSupabaseAdmin()
+    .from('articles')
+    .select(ARTICLE_LIST_FIELDS)
+    .eq('status', 'published')
+    .order('published_at', { ascending: false })
+    .limit(20);
+
+  if (error) {
+    console.error('[articles] fetch list error:', error.message);
     return c.json({ success: false, message: 'Gagal mengambil artikel.' }, 500);
   }
+
+  return c.json({ success: true, data });
 });
 
 app.get('/:slug', async (c) => {
-  try {
-    const slug = c.req.param('slug');
-    const [data] = await sql`
-      SELECT id, title, slug, summary, content, status, cover_image, published_at, total_reports, total_loss, top_category, top_platform, top_bank, period_start, period_end, created_at
-      FROM articles
-      WHERE slug = ${slug} AND status = 'published'
-      LIMIT 1
-    `;
-    if (!data) return c.json({ success: false, message: 'Artikel tidak ditemukan.' }, 404);
-    return c.json({ success: true, data });
-  } catch (err) {
-    console.error('[articles] fetch detail error:', err);
-    return c.json({ success: false, message: 'Gagal mengambil artikel.' }, 500);
-  }
+  const slug = c.req.param('slug');
+
+  const { data, error } = await getSupabaseAdmin()
+    .from('articles')
+    .select(ARTICLE_DETAIL_FIELDS)
+    .eq('slug', slug)
+    .eq('status', 'published')
+    .single();
+
+  if (error || !data)
+    return c.json({ success: false, message: 'Artikel tidak ditemukan.' }, 404);
+
+  return c.json({ success: true, data });
 });
 
 export default app;
@@ -51,18 +53,20 @@ function fixArticleFormat(raw: string): string {
 
 interface ReportRow { category: string | null; platform: string | null; bank_name: string | null; loss_amount: number | string | null; }
 
-export async function generateWeeklyArticle(env: Env): Promise<void> {
+export async function generateWeeklyArticle(): Promise<void> {
+  const env      = getEnv();
+  const supabase = getSupabaseAdmin();
+
   const periodEnd   = new Date();
   const periodStart = new Date();
   periodStart.setDate(periodStart.getDate() - 7);
 
-  const reports = await sql<ReportRow[]>`
-    SELECT category, platform, bank_name, loss_amount
-    FROM reports
-    WHERE created_at >= ${periodStart.toISOString()}
-      AND created_at <= ${periodEnd.toISOString()}
-      AND status IN ('verified', 'pending')
-  `;
+  const { data: reports } = await supabase
+    .from('reports')
+    .select('category, platform, bank_name, loss_amount, status, created_at')
+    .gte('created_at', periodStart.toISOString())
+    .lte('created_at', periodEnd.toISOString())
+    .in('status', ['verified', 'pending']);
 
   if (!reports?.length) {
     console.log('[cron] tidak ada laporan minggu ini, skip.');
@@ -70,13 +74,13 @@ export async function generateWeeklyArticle(env: Env): Promise<void> {
   }
 
   const totalReports = reports.length;
-  const totalLoss    = reports.reduce((sum, r) => sum + (Number(r.loss_amount) || 0), 0);
+  const totalLoss    = reports.reduce((sum, r: ReportRow) => sum + (Number(r.loss_amount) || 0), 0);
 
   const categoryCount: Record<string, number> = {};
   const platformCount: Record<string, number> = {};
   const bankCount:     Record<string, number> = {};
 
-  for (const r of reports) {
+  for (const r of reports as ReportRow[]) {
     if (r.category) categoryCount[r.category] = (categoryCount[r.category] ?? 0) + 1;
     if (r.platform) platformCount[r.platform] = (platformCount[r.platform] ?? 0) + 1;
     if (r.bank_name) bankCount[r.bank_name]   = (bankCount[r.bank_name]   ?? 0) + 1;
@@ -84,6 +88,7 @@ export async function generateWeeklyArticle(env: Env): Promise<void> {
 
   const sorted = (obj: Record<string, number>) =>
     Object.entries(obj).sort((a, b) => b[1] - a[1]);
+
   const toList = (entries: [string, number][], suffix: string) =>
     entries.map(([name, count]) => `- ${name}: ${count} ${suffix}`).join('\n') || '- Tidak ada data';
 
@@ -97,30 +102,69 @@ export async function generateWeeklyArticle(env: Env): Promise<void> {
 
   const weekStr = `${periodStart.toLocaleDateString('id-ID', { day: 'numeric', month: 'long' })} - ${periodEnd.toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' })}`;
 
-  const content = await groqChat(`Kamu adalah analis keamanan digital dari KawalTransaksi.
+  const content = await groqChat(`Kamu adalah analis keamanan digital dari KawalTransaksi, platform komunitas anti-penipuan Indonesia.
+
 Data laporan penipuan minggu ${weekStr}:
 - Total laporan: ${totalReports}
 - Total kerugian: ${totalLossFormatted}
-Kategori: ${toList(sorted(categoryCount), 'laporan')}
-Platform: ${toList(sorted(platformCount), 'laporan')}
-Bank/e-wallet: ${toList(sorted(bankCount), 'rekening')}
-Tulis artikel analisis dalam bahasa Indonesia, format Markdown, 400-600 kata.`, env.GROQ_API_KEY, { temperature: 0.7 });
 
-  if (!content) return;
+Kategori penipuan:
+${toList(sorted(categoryCount), 'laporan')}
+
+Platform yang digunakan penipu:
+${toList(sorted(platformCount), 'laporan')}
+
+Bank/e-wallet yang digunakan penipu:
+${toList(sorted(bankCount), 'rekening')}
+
+Tulis artikel analisis pola penipuan minggu ini dalam bahasa Indonesia yang mudah dipahami.
+
+Gunakan format Markdown berikut, dengan baris kosong di antara setiap section:
+
+## Ringkasan Minggu Ini
+
+## Modus yang Paling Marak
+
+## Platform yang Digunakan Penipu
+
+## Tips Waspada
+(gunakan format list dengan -)
+
+## Penutup
+
+Panjang: 400-600 kata. Jangan gunakan asterisk bold (**teks**). Pisahkan setiap section dengan baris kosong.`, env.GROQ_API_KEY, { temperature: 0.7 });
+
+  if (!content) {
+    console.error('[cron] groq tidak return content, skip.');
+    return;
+  }
 
   const formatted   = fixArticleFormat(content);
   const summary     = formatted.replace(/^##.*$/gm, '').trim().split('\n').filter(Boolean)[0] ?? '';
   const startDay    = periodStart.getDate();
   const endDay      = periodEnd.getDate();
+  const isSameMonth = periodStart.getMonth() === periodEnd.getMonth();
+  const startLabel  = isSameMonth ? `${startDay}` : `${startDay} ${periodStart.toLocaleDateString('id-ID', { month: 'long' })}`;
   const endLabel    = periodEnd.toLocaleDateString('id-ID', { month: 'long', year: 'numeric' });
-  const title       = `Laporan Penipuan ${startDay}-${endDay} ${endLabel}`;
+  const title       = `Laporan Penipuan ${startLabel}-${endDay} ${endLabel}`;
   const slug        = `laporan-${startDay}-${endDay}-${periodEnd.toLocaleDateString('id-ID', { month: 'long' }).toLowerCase().replace(/ /g, '-')}-${periodEnd.getFullYear()}`;
 
-  await sql`
-    INSERT INTO articles (title, slug, content, summary, period_start, period_end, total_reports, total_loss, top_category, top_platform, top_bank, published_at, status, cover_image)
-    VALUES (${title}, ${slug}, ${formatted}, ${summary}, ${periodStart.toISOString()}, ${periodEnd.toISOString()}, ${totalReports}, ${totalLoss}, ${topCategory?.[0] ?? null}, ${topPlatform?.[0] ?? null}, ${topBank?.[0] ?? null}, ${new Date().toISOString()}, 'draft', null)
-    ON CONFLICT (slug) DO UPDATE SET content = EXCLUDED.content, summary = EXCLUDED.summary, total_reports = EXCLUDED.total_reports, total_loss = EXCLUDED.total_loss, updated_at = NOW()
-  `;
+  const { error } = await supabase.from('articles').upsert({
+    title, slug,
+    content:       formatted,
+    summary,
+    period_start:  periodStart.toISOString(),
+    period_end:    periodEnd.toISOString(),
+    total_reports: totalReports,
+    total_loss:    totalLoss,
+    top_category:  topCategory?.[0] ?? null,
+    top_platform:  topPlatform?.[0] ?? null,
+    top_bank:      topBank?.[0]     ?? null,
+    published_at:  new Date().toISOString(),
+    status:        'draft',
+    cover_image:   null,
+  }, { onConflict: 'slug' });
 
-  console.log('[cron] artikel berhasil:', title);
+  if (error) console.error('[cron] gagal simpan artikel:', error.message);
+  else console.log('[cron] artikel berhasil:', title);
 }

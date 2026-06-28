@@ -1,7 +1,3 @@
-import type { kv } from "./core/redis";
-
-export type KVNamespace = typeof kv;
-
 export interface Env {
   DATABASE_URL: string;
   SUPABASE_URL: string;
@@ -15,14 +11,24 @@ export interface Env {
   RESEND_API_KEY: string;
   ADMIN_EMAIL: string;
   R2_PUBLIC_URL: string;
-  ADMIN_IP_WHITELIST?: string;
-  INTERNAL_API_KEY: string;
-  FRONTEND_URL_CLONE?: string;
-  HEALTH_SECRET: string;
-  R2_ACCOUNT_ID: string;
+  R2_ENDPOINT: string;
   R2_ACCESS_KEY_ID: string;
   R2_SECRET_ACCESS_KEY: string;
   R2_BUCKET_NAME: string;
-  ABSTRACT_API_KEY: string;
-  LIMITER: typeof kv;
+  R2_ACCOUNT_ID: string;
+  ADMIN_IP_WHITELIST?: string;
+  FRONTEND_URL_CLONE?: string;
+  INTERNAL_API_KEY: string;
+  HEALTH_SECRET: string;
+}
+
+export function getEnv(): Env {
+  const required = [
+    'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_ANON_KEY',
+    'INTERNAL_API_KEY', 'HEALTH_SECRET',
+  ];
+  for (const key of required) {
+    if (!process.env[key]) throw new Error(`Missing env: ${key}`);
+  }
+  return process.env as unknown as Env;
 }

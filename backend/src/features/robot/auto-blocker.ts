@@ -1,7 +1,4 @@
-import type { KVNamespace } from '../../types';
-// ============================================
-//  LOKASI: backend/src/features/robot/auto-blocker.ts
-// ============================================
+import { kv } from '../../core/redis';
 
 const BLOCK_DURATION = {
   TEMP_24H:  60 * 60 * 24,
@@ -24,11 +21,8 @@ const keys = {
   blockCount7:  (id: string) => `block7d_count_${id}`,
 };
 
-// -- Cek apakah user/IP diblokir ----------------------------------------------
-
 export async function isBlocked(
   identifier: string,
-  kv: typeof import("../../core/redis").kv
 ): Promise<{ blocked: boolean; reason?: string; until?: string }> {
   try {
     const raw = await kv.get(keys.block(identifier));
@@ -40,25 +34,20 @@ export async function isBlocked(
   }
 }
 
-// -- Catat laporan reject untuk user/IP ---------------------------------------
-// Dipanggil dari applyVerdict di scoring-engine ketika robot reject laporan
-
 export async function recordRejection(
   userId: string | null,
   ip: string,
-  kv: typeof import("../../core/redis").kv
 ): Promise<void> {
   const targets = [userId, ip].filter((t): t is string => !!t && t !== 'unknown');
-  await Promise.all(targets.map(t => incrementRejectCount(t, kv)));
+  await Promise.all(targets.map(t => incrementRejectCount(t)));
 }
 
-async function incrementRejectCount(identifier: string, kv: typeof import("../../core/redis").kv): Promise<void> {
+async function incrementRejectCount(identifier: string): Promise<void> {
   try {
     const key1h = keys.rejectCount(identifier, '1h');
     const key1d = keys.rejectCount(identifier, '1d');
     const key7d = keys.rejectCount(identifier, '7d');
 
-    // Baca semua counter sekaligus
     const [raw1h, raw1d, raw7d] = await Promise.all([
       kv.get(key1h),
       kv.get(key1d),
@@ -69,14 +58,13 @@ async function incrementRejectCount(identifier: string, kv: typeof import("../..
     const count1d = parseInt(raw1d ?? '0') + 1;
     const count7d = parseInt(raw7d ?? '0') + 1;
 
-    // Tulis semua counter sekaligus
     await Promise.all([
       kv.put(key1h, count1h.toString(), { expirationTtl: 3600   }),
       kv.put(key1d, count1d.toString(), { expirationTtl: 86400  }),
       kv.put(key7d, count7d.toString(), { expirationTtl: 604800 }),
     ]);
 
-    await evaluateBlock(identifier, count1h, count1d, count7d, kv);
+    await evaluateBlock(identifier, count1h, count1d, count7d);
   } catch (err) {
     console.error('[AUTO-BLOCKER] incrementRejectCount error:', err);
   }
@@ -87,7 +75,6 @@ async function evaluateBlock(
   count1h: number,
   count1d: number,
   count7d: number,
-  kv: typeof import("../../core/redis").kv
 ): Promise<void> {
   const [raw24, raw7d] = await Promise.all([
     kv.get(keys.blockCount24(identifier)),
@@ -98,14 +85,14 @@ async function evaluateBlock(
   const prev7d  = parseInt(raw7d  ?? '0');
 
   if (count7d >= THRESHOLD.REJECT_7D || prev7d >= THRESHOLD.TEMP_7D_COUNT) {
-    await applyBlock(identifier, 'permanent', BLOCK_DURATION.PERMANENT, kv,
+    await applyBlock(identifier, 'permanent', BLOCK_DURATION.PERMANENT,
       `${count7d}x reject dalam 7 hari atau ${prev7d}x temp block 7 hari`);
     return;
   }
 
   if (count1d >= THRESHOLD.REJECT_1D || prev24h >= THRESHOLD.TEMP_24H_COUNT) {
     await Promise.all([
-      applyBlock(identifier, '7d', BLOCK_DURATION.TEMP_7D, kv,
+      applyBlock(identifier, '7d', BLOCK_DURATION.TEMP_7D,
         `${count1d}x reject dalam 1 hari atau ${prev24h}x temp block 24 jam`),
       kv.put(keys.blockCount7(identifier), (prev7d + 1).toString(), { expirationTtl: BLOCK_DURATION.PERMANENT }),
     ]);
@@ -114,7 +101,7 @@ async function evaluateBlock(
 
   if (count1h >= THRESHOLD.REJECT_1H) {
     await Promise.all([
-      applyBlock(identifier, '24h', BLOCK_DURATION.TEMP_24H, kv,
+      applyBlock(identifier, '24h', BLOCK_DURATION.TEMP_24H,
         `${count1h}x reject dalam 1 jam`),
       kv.put(keys.blockCount24(identifier), (prev24h + 1).toString(), { expirationTtl: BLOCK_DURATION.PERMANENT }),
     ]);
@@ -125,8 +112,7 @@ async function applyBlock(
   identifier: string,
   type: '24h' | '7d' | 'permanent',
   ttl: number,
-  kv: typeof import("../../core/redis").kv,
-  reason: string
+  reason: string,
 ): Promise<void> {
   const until = type === 'permanent'
     ? 'Permanent'
@@ -139,9 +125,7 @@ async function applyBlock(
   console.log(`[AUTO-BLOCKER] Block ${type} → ${identifier}: ${reason}`);
 }
 
-// -- Manual unblock (untuk admin) ----------------------------------------------
-
-export async function unblock(identifier: string, kv: typeof import("../../core/redis").kv): Promise<void> {
+export async function unblock(identifier: string): Promise<void> {
   await kv.delete(keys.block(identifier));
   console.log(`[AUTO-BLOCKER] Unblock: ${identifier}`);
 }

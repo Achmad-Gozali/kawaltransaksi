@@ -1,7 +1,6 @@
 import { createMiddleware } from 'hono/factory';
 import { getSupabaseAdmin } from './supabase';
 import { kv } from './redis';
-import type { Env } from '../types';
 
 const TOKEN_CACHE_TTL      = 120;
 const SUSPICIOUS_THRESHOLD = 5;
@@ -15,9 +14,8 @@ async function hashToken(token: string): Promise<string> {
 }
 
 export const authMiddleware = createMiddleware<{
-  Variables: { userId: string; userEmail: string; userRole: string; env: Env };
+  Variables: { userId: string; userEmail: string; userRole: string };
 }>(async (c, next) => {
-  const env: Env = c.get('env');
   const authHeader = c.req.header('Authorization');
   if (!authHeader?.startsWith('Bearer '))
     return c.json({ success: false, message: 'Token tidak ditemukan.' }, 401);
@@ -44,7 +42,7 @@ export const authMiddleware = createMiddleware<{
     } catch {}
   }
 
-  const supabase = getSupabaseAdmin(env);
+  const supabase = getSupabaseAdmin();
   const { data: { user }, error } = await supabase.auth.getUser(token);
 
   if (error || !user) {
