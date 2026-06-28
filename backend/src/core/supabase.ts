@@ -7,7 +7,7 @@ function getSupabaseAdmin() {
     process.env.SUPABASE_SERVICE_ROLE_KEY!,
     {
       auth: { autoRefreshToken: false, persistSession: false },
-      realtime: { transport: ws },
+      realtime: { transport: ws as any },
     },
   );
 }
@@ -18,7 +18,7 @@ function getSupabaseClient() {
     process.env.SUPABASE_ANON_KEY!,
     {
       auth: { autoRefreshToken: false, persistSession: false },
-      realtime: { transport: ws },
+      realtime: { transport: ws as any },
     },
   );
 }
