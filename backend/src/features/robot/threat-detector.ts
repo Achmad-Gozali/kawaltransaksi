@@ -1,3 +1,4 @@
+import type { KVNamespace } from '../../types';
 import { getSupabaseAdmin } from '../../core/supabase';
 import { writeLog } from './audit-logger';
 

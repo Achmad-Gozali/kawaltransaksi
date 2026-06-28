@@ -13,7 +13,7 @@ function getSupabase(env: Env) {
 }
 
 app.get('/', async (c) => {
-  const { data, error } = await getSupabase(c.env)
+  const { data, error } = await getSupabase((c.get('env') as any))
     .from('articles')
     .select(ARTICLE_LIST_FIELDS)
     .eq('status', 'published')
@@ -31,7 +31,7 @@ app.get('/', async (c) => {
 app.get('/:slug', async (c) => {
   const slug = c.req.param('slug');
 
-  const { data, error } = await getSupabase(c.env)
+  const { data, error } = await getSupabase((c.get('env') as any))
     .from('articles')
     .select(ARTICLE_DETAIL_FIELDS)
     .eq('slug', slug)

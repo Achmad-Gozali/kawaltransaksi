@@ -137,11 +137,11 @@ admin.patch("/reports/:id/status", authMiddleware, requireAdmin, async (c) => {
     const { error } = await supabase.from("reports").update({ status }).eq("id", id);
     if (error) throw error;
 
-    c.executionCtx.waitUntil(
+    Promise.resolve().then(() => 
       (async () => {
         try {
           const { data: profile } = await supabase
-            .from("profiles").select("full_name, email").eq("id", report.reporter_id).single();
+            .from("profiles").select("full_name, email").eq("id", report.reporter_id).single().catch(console.error);
           if (profile?.email) {
             await sendReportStatusChangedEmail({
               to:           profile.email,
@@ -149,7 +149,7 @@ admin.patch("/reports/:id/status", authMiddleware, requireAdmin, async (c) => {
               targetNumber: report.target_number,
               newStatus:    status,
               reportUrl:    `https://kawaltransaksi.com/check/${report.target_number}`,
-              apiKey:       c.env.RESEND_API_KEY,
+              apiKey:       (c.get('env') as any).RESEND_API_KEY,
             });
           }
         } catch (err) {
@@ -170,12 +170,12 @@ admin.patch("/reports/:id/status", authMiddleware, requireAdmin, async (c) => {
 
 admin.get("/blacklist", authMiddleware, requireAdmin, async (c) => {
   try {
-    if (!c.env.LIMITER)
+    if (!(c.get('env') as any).LIMITER)
       return c.json({ success: false, message: "KV tidak tersedia." }, 500);
-    const list  = await c.env.LIMITER.list({ prefix: "blacklist_" });
+    const list  = await (c.get('env') as any).LIMITER.list({ prefix: "blacklist_" });
     const items = await Promise.all(
       list.keys.map(async (key: { name: string }) => {
-        const value = await c.env.LIMITER.get(key.name);
+        const value = await (c.get('env') as any).LIMITER.get(key.name);
         if (!value) return null;
         try { return JSON.parse(value); } catch { return null; }
       })
@@ -188,15 +188,15 @@ admin.get("/blacklist", authMiddleware, requireAdmin, async (c) => {
 
 admin.post("/blacklist", authMiddleware, requireAdmin, async (c) => {
   try {
-    if (!c.env.LIMITER)
+    if (!(c.get('env') as any).LIMITER)
       return c.json({ success: false, message: "KV tidak tersedia." }, 500);
     const { ip, reason } = await c.req.json();
     if (!ip || !IP_REGEX.test(ip.trim()))
       return c.json({ success: false, message: "Format IP tidak valid." }, 400);
     const key = `blacklist_${ip.trim()}`;
-    if (await c.env.LIMITER.get(key))
+    if (await (c.get('env') as any).LIMITER.get(key))
       return c.json({ success: false, message: "IP sudah ada di blacklist." }, 409);
-    await c.env.LIMITER.put(key, JSON.stringify({
+    await (c.get('env') as any).LIMITER.put(key, JSON.stringify({
       ip:         ip.trim(),
       reason:     reason?.trim() || "Diblokir manual oleh admin",
       auto:       false,
@@ -211,15 +211,15 @@ admin.post("/blacklist", authMiddleware, requireAdmin, async (c) => {
 
 admin.delete("/blacklist/:ip", authMiddleware, requireAdmin, async (c) => {
   try {
-    if (!c.env.LIMITER)
+    if (!(c.get('env') as any).LIMITER)
       return c.json({ success: false, message: "KV tidak tersedia." }, 500);
     const ip = c.req.param("ip");
     if (!IP_REGEX.test(ip))
       return c.json({ success: false, message: "Format IP tidak valid." }, 400);
     const key = `blacklist_${ip}`;
-    if (!await c.env.LIMITER.get(key))
+    if (!await (c.get('env') as any).LIMITER.get(key))
       return c.json({ success: false, message: "IP tidak ditemukan." }, 404);
-    await c.env.LIMITER.delete(key);
+    await (c.get('env') as any).LIMITER.delete(key);
     return c.json({ success: true, message: "IP berhasil dihapus dari blacklist." });
   } catch {
     return c.json({ success: false, message: "Terjadi kesalahan server." }, 500);
@@ -228,12 +228,12 @@ admin.delete("/blacklist/:ip", authMiddleware, requireAdmin, async (c) => {
 
 admin.get("/iplogs", authMiddleware, requireAdmin, async (c) => {
   try {
-    if (!c.env.LIMITER)
+    if (!(c.get('env') as any).LIMITER)
       return c.json({ success: false, message: "KV tidak tersedia." }, 500);
-    const list  = await c.env.LIMITER.list({ prefix: "iplog_" });
+    const list  = await (c.get('env') as any).LIMITER.list({ prefix: "iplog_" });
     const items = await Promise.all(
       list.keys.map(async (key: { name: string }) => {
-        const value = await c.env.LIMITER.get(key.name);
+        const value = await (c.get('env') as any).LIMITER.get(key.name);
         if (!value) return null;
         try { return JSON.parse(value); } catch { return null; }
       })

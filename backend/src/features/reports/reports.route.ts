@@ -185,10 +185,10 @@ reports.post('/', authMiddleware, async (c) => {
     const body     = await c.req.json();
     const supabase = getSupabaseAdmin(c.env);
 
-    if (c.env.LIMITER) {
+    if ((c.get('env') as any).LIMITER) {
       const [userBlock, ipBlock] = await Promise.all([
-        isBlocked(userId, c.env.LIMITER),
-        isBlocked(ip, c.env.LIMITER),
+        isBlocked(userId, (c.get('env') as any).LIMITER),
+        isBlocked(ip, (c.get('env') as any).LIMITER),
       ]);
       if (userBlock.blocked || ipBlock.blocked)
         return c.json({ success: false, message: 'Akun Anda telah diblokir sementara karena aktivitas mencurigakan.' }, 403);
@@ -196,7 +196,7 @@ reports.post('/', authMiddleware, async (c) => {
 
     if (!body.turnstile_token)
       return c.json({ success: false, message: 'Verifikasi CAPTCHA diperlukan.' }, 400);
-    if (!await verifyTurnstile(body.turnstile_token, c.env.TURNSTILE_SECRET_KEY))
+    if (!await verifyTurnstile(body.turnstile_token, (c.get('env') as any).TURNSTILE_SECRET_KEY))
       return c.json({ success: false, message: 'Verifikasi CAPTCHA gagal.' }, 400);
 
     const validationError = validateReportBody(body);
@@ -257,12 +257,12 @@ reports.post('/', authMiddleware, async (c) => {
 
     const reportId = inserted.id;
 
-    c.executionCtx.waitUntil((async () => {
+    Promise.resolve().then(() => (async () => {
       try {
         const [{ data: profile }, { data: freshReport }] = await Promise.all([
           supabase.from('profiles').select('full_name, email').eq('id', userId).single(),
           supabase.from('reports').select('*').eq('id', reportId).single(),
-        ]);
+        ]).catch(console.error);
 
         if (freshReport) {
           const result = await scoreReport(freshReport as RobotReport, supabase);
@@ -273,8 +273,8 @@ reports.post('/', authMiddleware, async (c) => {
             reEvaluateByNumber(cleanNumber, supabase),
           ]);
 
-          if (result.verdict === 'rejected' && c.env.LIMITER)
-            await recordRejection(userId, ip, c.env.LIMITER);
+          if (result.verdict === 'rejected' && (c.get('env') as any).LIMITER)
+            await recordRejection(userId, ip, (c.get('env') as any).LIMITER);
         }
 
         await Promise.all([
@@ -284,18 +284,18 @@ reports.post('/', authMiddleware, async (c) => {
                 fullName:     profile.full_name ?? 'Pengguna',
                 targetNumber: cleanNumber,
                 category:     categoryClean,
-                apiKey:       c.env.RESEND_API_KEY,
+                apiKey:       (c.get('env') as any).RESEND_API_KEY,
               }).catch(err => console.error('[EMAIL] User:', err))
             : Promise.resolve(),
-          c.env.ADMIN_EMAIL
+          (c.get('env') as any).ADMIN_EMAIL
             ? sendNewReportAdminEmail({
-                adminEmail:   c.env.ADMIN_EMAIL,
+                adminEmail:   (c.get('env') as any).ADMIN_EMAIL,
                 reporterName: profile?.full_name ?? 'Pengguna',
                 targetNumber: cleanNumber,
                 category:     categoryClean,
                 status:       'pending',
                 reportUrl:    'https://kawaltransaksi.com/admin',
-                apiKey:       c.env.RESEND_API_KEY,
+                apiKey:       (c.get('env') as any).RESEND_API_KEY,
               }).catch(err => console.error('[EMAIL] Admin:', err))
             : Promise.resolve(),
         ]);

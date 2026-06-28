@@ -181,13 +181,13 @@ developer.post('/playground', async (c) => {
     }
 
     // Rate limit: guest 5x/jam, logged-in 10x/jam (test API, dibuat ketat)
-    if (c.env.LIMITER && ip !== 'anonymous') {
+    if ((c.get('env') as any).LIMITER && ip !== 'anonymous') {
       const rlKey   = `playground_${isLoggedIn ? 'auth' : 'guest'}_${ip}`;
       const limit   = isLoggedIn ? 10 : 5;
-      const current = parseInt(await c.env.LIMITER.get(rlKey) ?? '0');
+      const current = parseInt(await (c.get('env') as any).LIMITER.get(rlKey) ?? '0');
       if (current >= limit)
         return c.json({ success: false, message: `Batas playground tercapai (${limit}x/jam). Coba lagi nanti.` }, 429);
-      await c.env.LIMITER.put(rlKey, (current + 1).toString(), { expirationTtl: 3600 });
+      await (c.get('env') as any).LIMITER.put(rlKey, (current + 1).toString(), { expirationTtl: 3600 });
     }
 
     const { number: rawNumber, type = 'phone', bank = null } = await c.req.json();
@@ -201,9 +201,9 @@ developer.post('/playground', async (c) => {
     // Cache 5 menit (sama dengan /api/v1/check)
     const cacheKey = `check_cache_${type}_${number}`;
     let checkData: Record<string, unknown> | null = null;
-    if (c.env.LIMITER) {
+    if ((c.get('env') as any).LIMITER) {
       try {
-        const cached = await c.env.LIMITER.get(cacheKey);
+        const cached = await (c.get('env') as any).LIMITER.get(cacheKey);
         if (cached) checkData = JSON.parse(cached);
       } catch { /* skip cache */ }
     }
@@ -232,10 +232,10 @@ developer.post('/playground', async (c) => {
         check_url:        `https://kawaltransaksi.com/check/${number}`,
       };
 
-      if (c.env.LIMITER) {
-        c.executionCtx.waitUntil(
-          c.env.LIMITER.put(cacheKey, JSON.stringify(checkData), { expirationTtl: 300 })
-        );
+      if ((c.get('env') as any).LIMITER) {
+        Promise.resolve().then(() => 
+          (c.get('env') as any).LIMITER.put(cacheKey, JSON.stringify(checkData), { expirationTtl: 300 })
+        ).catch(console.error);
       }
     }
 

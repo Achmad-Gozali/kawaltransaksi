@@ -125,9 +125,9 @@ appeal.post('/', authMiddleware, async (c) => {
       chronology:        updatedChronology,
     };
 
-    c.executionCtx.waitUntil((async () => {
+    Promise.resolve().then(() => (async () => {
       try {
-        const result = await scoreReport(freshReport, supabase);
+        const result = await scoreReport(freshReport, supabase).catch(console.error);
         const appealVerdict = result.score >= 45 ? 'verified' : result.verdict;
 
         if (appealVerdict === 'verified') {
@@ -148,7 +148,7 @@ appeal.post('/', authMiddleware, async (c) => {
               targetNumber: report.target_number,
               newStatus:    'verified',
               reportUrl:    `https://kawaltransaksi.com/dashboard/laporan/${reportId}`,
-              apiKey:       c.env.RESEND_API_KEY,
+              apiKey:       (c.get('env') as any).RESEND_API_KEY,
             }).catch(() => {});
           }
         } else {

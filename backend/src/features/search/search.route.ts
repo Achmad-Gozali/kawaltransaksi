@@ -23,7 +23,7 @@ async function getOptionalUserId(authHeader: string | undefined, env: Env): Prom
 
 // KV tidak atomic — lihat komentar di bawah untuk trade-off
 search.use('*', async (c, next) => {
-  if (!c.env.LIMITER) {
+  if (!(c.get('env') as any).LIMITER) {
     console.warn('[SEARCH RATE LIMIT] KV LIMITER tidak tersedia.');
     return next();
   }
@@ -37,8 +37,8 @@ search.use('*', async (c, next) => {
     if (isAuth) {
       // Promise.all — dari 2 sequential read jadi paralel
       const [userHits, ipHits] = await Promise.all([
-        c.env.LIMITER.get(`search_user_${userId}`).then(v => parseInt(v ?? '0')),
-        c.env.LIMITER.get(`search_auth_ip_${ip}`).then(v => parseInt(v ?? '0')),
+        (c.get('env') as any).LIMITER.get(`search_user_${userId}`).then(v => parseInt(v ?? '0')),
+        (c.get('env') as any).LIMITER.get(`search_auth_ip_${ip}`).then(v => parseInt(v ?? '0')),
       ]);
 
       if (userHits >= max)
@@ -47,14 +47,14 @@ search.use('*', async (c, next) => {
         return c.json({ success: false, message: 'Terlalu banyak permintaan dari perangkat ini. Tunggu sebentar lalu coba lagi.' }, 429);
 
       await Promise.all([
-        c.env.LIMITER.put(`search_user_${userId}`, (userHits + 1).toString(), { expirationTtl: 60 }),
-        c.env.LIMITER.put(`search_auth_ip_${ip}`,  (ipHits  + 1).toString(), { expirationTtl: 60 }),
+        (c.get('env') as any).LIMITER.put(`search_user_${userId}`, (userHits + 1).toString(), { expirationTtl: 60 }),
+        (c.get('env') as any).LIMITER.put(`search_auth_ip_${ip}`,  (ipHits  + 1).toString(), { expirationTtl: 60 }),
       ]);
     } else {
-      const ipHits = parseInt(await c.env.LIMITER.get(`search_anon_ip_${ip}`) ?? '0');
+      const ipHits = parseInt(await (c.get('env') as any).LIMITER.get(`search_anon_ip_${ip}`) ?? '0');
       if (ipHits >= max)
         return c.json({ success: false, message: 'Batas pencarian tercapai (5/menit). Login untuk kuota lebih banyak.' }, 429);
-      await c.env.LIMITER.put(`search_anon_ip_${ip}`, (ipHits + 1).toString(), { expirationTtl: 60 });
+      await (c.get('env') as any).LIMITER.put(`search_anon_ip_${ip}`, (ipHits + 1).toString(), { expirationTtl: 60 });
     }
   } catch (err) {
     console.error('[SEARCH RATE LIMIT] Error:', err);
@@ -69,20 +69,20 @@ search.post('/verify-turnstile', async (c) => {
     if (!token || typeof token !== 'string' || !token.trim())
       return c.json({ success: false, message: 'Token tidak ditemukan.' }, 400);
 
-    if (c.env.LIMITER) {
+    if ((c.get('env') as any).LIMITER) {
       try {
         const blacklistKey = `turnstile_used_${await hashToken(token)}`;
-        if (await c.env.LIMITER.get(blacklistKey))
+        if (await (c.get('env') as any).LIMITER.get(blacklistKey))
           return c.json({ success: false, message: 'Token verifikasi sudah digunakan. Muat ulang halaman.' }, 400);
       } catch (err) { console.error('[TURNSTILE] Error cek KV:', err); }
     }
 
-    if (!await verifyTurnstile(token, c.env.TURNSTILE_SECRET_KEY))
+    if (!await verifyTurnstile(token, (c.get('env') as any).TURNSTILE_SECRET_KEY))
       return c.json({ success: false, message: 'Verifikasi keamanan gagal.' }, 400);
 
-    if (c.env.LIMITER) {
+    if ((c.get('env') as any).LIMITER) {
       try {
-        await c.env.LIMITER.put(`turnstile_used_${await hashToken(token)}`, '1', { expirationTtl: 300 });
+        await (c.get('env') as any).LIMITER.put(`turnstile_used_${await hashToken(token)}`, '1', { expirationTtl: 300 });
       } catch (err) { console.error('[TURNSTILE] Error set KV:', err); }
     }
 

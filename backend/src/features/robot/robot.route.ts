@@ -11,7 +11,7 @@ import type { Env } from '../../types';
 const robot = new Hono<{ Bindings: Env }>();
 
 function isInternal(c: { req: { header: (k: string) => string | undefined }; env: Env }): boolean {
-  return c.req.header('X-Internal-Key') === c.env.INTERNAL_API_KEY;
+  return c.req.header('X-Internal-Key') === (c.get('env') as any).INTERNAL_API_KEY;
 }
 
 robot.post('/evaluate/:reportId', async (c) => {

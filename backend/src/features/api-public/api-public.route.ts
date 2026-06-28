@@ -1,3 +1,4 @@
+import type { KVNamespace } from '../../types';
 import { Hono } from 'hono';
 import { getSupabaseAdmin } from '../../core/supabase';
 import { sendApiAnomalyEmail } from '../../core/resend';
@@ -184,16 +185,16 @@ apiPublic.get('/check', async (c) => {
     const apiKey         = (c.req.header('X-API-Key') || '').trim();
     const idempotencyKey = c.req.header('Idempotency-Key') || null;
 
-    if (c.env.LIMITER && ip !== 'anonymous') {
-      if (!await checkIpRateLimit(c.env.LIMITER, ip))
+    if ((c.get('env') as any).LIMITER && ip !== 'anonymous') {
+      if (!await checkIpRateLimit((c.get('env') as any).LIMITER, ip))
         return c.json({ success: false, message: 'Terlalu banyak request dari IP Anda. Coba lagi dalam 1 menit.' }, 429);
     }
 
     const { valid, keyData, message, statusCode } = await validateApiKey(apiKey, ip, c.env);
     if (!valid) return c.json({ success: false, message }, (statusCode ?? 401) as 401 | 429);
 
-    if (idempotencyKey && c.env.LIMITER) {
-      const cached = await kvGet<Record<string, unknown>>(c.env.LIMITER, `idem_${keyData!.id}_${idempotencyKey}`);
+    if (idempotencyKey && (c.get('env') as any).LIMITER) {
+      const cached = await kvGet<Record<string, unknown>>((c.get('env') as any).LIMITER, `idem_${keyData!.id}_${idempotencyKey}`);
       if (cached) return c.json({ ...cached, meta: { ...(cached.meta as Record<string, unknown>), idempotent: true } });
     }
 
@@ -207,7 +208,7 @@ apiPublic.get('/check', async (c) => {
       return c.json({ success: false, message: 'Parameter type tidak valid. Gunakan: phone, bank_account, ewallet.' }, 400);
 
     const cacheKey = `check_cache_${type}_${number}`;
-    let checkData  = c.env.LIMITER ? await kvGet<Record<string, unknown>>(c.env.LIMITER, cacheKey) : null;
+    let checkData  = (c.get('env') as any).LIMITER ? await kvGet<Record<string, unknown>>((c.get('env') as any).LIMITER, cacheKey) : null;
 
     if (!checkData) {
       const { data: reportsData } = await getSupabaseAdmin(c.env)
@@ -233,8 +234,8 @@ apiPublic.get('/check', async (c) => {
         check_url:        `https://kawaltransaksi.com/check/${number}`,
       };
 
-      if (c.env.LIMITER)
-        c.executionCtx.waitUntil(kvSet(c.env.LIMITER, cacheKey, checkData, 300));
+      if ((c.get('env') as any).LIMITER)
+        Promise.resolve().then(() => kvSet((c.get('env') as any).LIMITER, cacheKey, checkData, 300)).catch(console.error);
     }
 
     const kd = keyData!;
@@ -250,15 +251,15 @@ apiPublic.get('/check', async (c) => {
       },
     };
 
-    c.executionCtx.waitUntil(Promise.all([
+    Promise.resolve().then(() => Promise.all([
       getSupabaseAdmin(c.env).rpc('increment_api_usage', { key_id: kd.id }),
-      c.env.LIMITER
-        ? checkAnomaly(c.env.LIMITER, kd.id as string, c.env, kd.userEmail as string | null)
+      (c.get('env') as any).LIMITER
+        ? checkAnomaly((c.get('env') as any).LIMITER, kd.id as string, c.env, kd.userEmail as string | null)
         : Promise.resolve(),
-      idempotencyKey && c.env.LIMITER
-        ? kvSet(c.env.LIMITER, `idem_${kd.id}_${idempotencyKey}`, responseBody, 300)
+      idempotencyKey && (c.get('env') as any).LIMITER
+        ? kvSet((c.get('env') as any).LIMITER, `idem_${kd.id}_${idempotencyKey}`, responseBody, 300)
         : Promise.resolve(),
-    ]));
+    ])).catch(console.error);
 
     return c.json(responseBody);
   } catch (err) {

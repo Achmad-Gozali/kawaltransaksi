@@ -1,3 +1,7 @@
+import type { kv } from "./core/redis";
+
+export type KVNamespace = typeof kv;
+
 export interface Env {
   DATABASE_URL: string;
   SUPABASE_URL: string;
@@ -15,13 +19,10 @@ export interface Env {
   INTERNAL_API_KEY: string;
   FRONTEND_URL_CLONE?: string;
   HEALTH_SECRET: string;
-
-  // Cloudflare R2
-  BUCKET: R2Bucket;
-
-  // Cloudflare KV
-  LIMITER: KVNamespace;
-
-  // Cloudflare native rate limiter (binding di wrangler.toml)
-  AUTH_RATE_LIMITER: RateLimit;
+  R2_ACCOUNT_ID: string;
+  R2_ACCESS_KEY_ID: string;
+  R2_SECRET_ACCESS_KEY: string;
+  R2_BUCKET_NAME: string;
+  ABSTRACT_API_KEY: string;
+  LIMITER: typeof kv;
 }

@@ -164,13 +164,13 @@ feedback.patch('/:id/reply', authMiddleware, requireAdminRole, async (c) => {
     }).eq('id', feedbackId);
     if (error) throw error;
 
-    if (fb.user_email && c.env.RESEND_API_KEY) {
-      c.executionCtx.waitUntil(
+    if (fb.user_email && (c.get('env') as any).RESEND_API_KEY) {
+      Promise.resolve().then(() => 
         sendFeedbackReplyEmail({
           to: fb.user_email, title: fb.title,
-          adminReply: cleanReply, apiKey: c.env.RESEND_API_KEY,
+          adminReply: cleanReply, apiKey: (c.get('env') as any).RESEND_API_KEY,
         }).catch(err => console.error('[EMAIL] Feedback reply:', err))
-      );
+      ).catch(console.error);
     }
     return c.json({ success: true, message: 'Balasan berhasil dikirim.' });
   } catch (err) {

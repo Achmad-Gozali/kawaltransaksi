@@ -1,3 +1,4 @@
+import type { KVNamespace } from '../../types';
 // ============================================
 //  LOKASI: backend/src/features/robot/auto-blocker.ts
 // ============================================
@@ -27,7 +28,7 @@ const keys = {
 
 export async function isBlocked(
   identifier: string,
-  kv: KVNamespace
+  kv: typeof import("../../core/redis").kv
 ): Promise<{ blocked: boolean; reason?: string; until?: string }> {
   try {
     const raw = await kv.get(keys.block(identifier));
@@ -45,13 +46,13 @@ export async function isBlocked(
 export async function recordRejection(
   userId: string | null,
   ip: string,
-  kv: KVNamespace
+  kv: typeof import("../../core/redis").kv
 ): Promise<void> {
   const targets = [userId, ip].filter((t): t is string => !!t && t !== 'unknown');
   await Promise.all(targets.map(t => incrementRejectCount(t, kv)));
 }
 
-async function incrementRejectCount(identifier: string, kv: KVNamespace): Promise<void> {
+async function incrementRejectCount(identifier: string, kv: typeof import("../../core/redis").kv): Promise<void> {
   try {
     const key1h = keys.rejectCount(identifier, '1h');
     const key1d = keys.rejectCount(identifier, '1d');
@@ -86,7 +87,7 @@ async function evaluateBlock(
   count1h: number,
   count1d: number,
   count7d: number,
-  kv: KVNamespace
+  kv: typeof import("../../core/redis").kv
 ): Promise<void> {
   const [raw24, raw7d] = await Promise.all([
     kv.get(keys.blockCount24(identifier)),
@@ -124,7 +125,7 @@ async function applyBlock(
   identifier: string,
   type: '24h' | '7d' | 'permanent',
   ttl: number,
-  kv: KVNamespace,
+  kv: typeof import("../../core/redis").kv,
   reason: string
 ): Promise<void> {
   const until = type === 'permanent'
@@ -140,7 +141,7 @@ async function applyBlock(
 
 // -- Manual unblock (untuk admin) ----------------------------------------------
 
-export async function unblock(identifier: string, kv: KVNamespace): Promise<void> {
+export async function unblock(identifier: string, kv: typeof import("../../core/redis").kv): Promise<void> {
   await kv.delete(keys.block(identifier));
   console.log(`[AUTO-BLOCKER] Unblock: ${identifier}`);
 }

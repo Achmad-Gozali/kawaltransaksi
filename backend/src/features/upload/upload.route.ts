@@ -1,3 +1,4 @@
+import type { KVNamespace } from '../../types';
 import { Hono } from 'hono';
 import { authMiddleware } from '../../core/auth.middleware';
 import type { Env } from '../../types';
@@ -47,8 +48,8 @@ upload.post('/', authMiddleware, async (c) => {
     const userId = c.get('userId');
     const ip     = c.req.header('CF-Connecting-IP') || 'anonymous';
 
-    if (c.env.LIMITER && ip !== 'anonymous') {
-      const { blocked, reason } = await checkUploadRateLimit(c.env.LIMITER, userId, ip);
+    if ((c.get('env') as any).LIMITER && ip !== 'anonymous') {
+      const { blocked, reason } = await checkUploadRateLimit((c.get('env') as any).LIMITER, userId, ip);
       if (blocked) return c.json({ success: false, message: reason }, 429);
     }
 
@@ -70,11 +71,11 @@ upload.post('/', authMiddleware, async (c) => {
     const safeUserId = userId.replace(/[^a-zA-Z0-9-]/g, '');
     const fileName   = `${safeUserId}/${Date.now()}-${crypto.randomUUID().slice(0, 8)}.${ext}`;
 
-    await c.env.BUCKET.put(fileName, buffer, {
+    await (c.get('env') as any).BUCKET.put(fileName, buffer, {
       httpMetadata: { contentType: file.type, cacheControl: 'public, max-age=31536000' },
     });
 
-    return c.json({ success: true, url: `${c.env.R2_PUBLIC_URL}/${fileName}` }, 201);
+    return c.json({ success: true, url: `${(c.get('env') as any).R2_PUBLIC_URL}/${fileName}` }, 201);
   } catch (err) {
     console.error('[UPLOAD] Error:', err);
     return c.json({ success: false, message: 'Gagal mengupload file.' }, 500);
@@ -89,14 +90,14 @@ upload.delete('/', authMiddleware, async (c) => {
     const { url } = await c.req.json();
 
     if (!url || typeof url !== 'string')        return c.json({ success: false, message: 'URL tidak valid.' }, 400);
-    if (!url.startsWith(c.env.R2_PUBLIC_URL))   return c.json({ success: false, message: 'URL tidak diizinkan.' }, 400);
+    if (!url.startsWith((c.get('env') as any).R2_PUBLIC_URL))   return c.json({ success: false, message: 'URL tidak diizinkan.' }, 400);
 
-    const fileName = url.replace(`${c.env.R2_PUBLIC_URL}/`, '');
+    const fileName = url.replace(`${(c.get('env') as any).R2_PUBLIC_URL}/`, '');
     const safeUserId = userId.replace(/[^a-zA-Z0-9-]/g, '');
 
     if (!fileName.startsWith(`${safeUserId}/`)) return c.json({ success: false, message: 'Akses ditolak.' }, 403);
 
-    await c.env.BUCKET.delete(fileName);
+    await (c.get('env') as any).BUCKET.delete(fileName);
     return c.json({ success: true });
   } catch (err) {
     console.error('[UPLOAD DELETE] Error:', err);
