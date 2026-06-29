@@ -319,4 +319,184 @@ reports.get('/check-number/:number', async (c) => {
   }
 });
 
+reports.get('/public/stats', async (c) => {
+  try {
+    const [[totRow], [verRow], [lossRow]] = await Promise.all([
+      sql`SELECT COUNT(*) AS count FROM reports WHERE status != 'rejected'`,
+      sql`SELECT COUNT(*) AS count FROM reports WHERE status = 'verified'`,
+      sql`SELECT COALESCE(SUM(loss_amount), 0) AS total FROM reports WHERE status != 'rejected'`,
+    ]);
+
+    return c.json({
+      success: true,
+      data: {
+        total:     parseInt(totRow.count),
+        verified:  parseInt(verRow.count),
+        totalLoss: parseInt(lossRow.total),
+      },
+    });
+  } catch {
+    return c.json({ success: false, message: 'Gagal mengambil statistik.' }, 500);
+  }
+});
+
+reports.get('/public/recent', async (c) => {
+  try {
+    const rows = await sql`
+      SELECT id, target_number, target_name, target_type, bank_name, category, created_at, status
+      FROM reports
+      WHERE status != 'rejected'
+      ORDER BY created_at DESC
+      LIMIT 6
+    `;
+
+    return c.json({ success: true, data: rows });
+  } catch {
+    return c.json({ success: false, message: 'Gagal mengambil laporan terkini.' }, 500);
+  }
+});
+
+reports.get('/public/stats-nomor', async (c) => {
+  try {
+    const [data] = await sql`SELECT * FROM get_stats_nomor()`;
+    return c.json({
+      success: true,
+      data: {
+        totalLaporan:  parseInt(data?.total_laporan  ?? 0),
+        totalNomor:    parseInt(data?.total_nomor    ?? 0),
+        totalKerugian: parseInt(data?.total_kerugian ?? 0),
+      },
+    });
+  } catch {
+    return c.json({ success: false, message: 'Gagal mengambil statistik.' }, 500);
+  }
+});
+
+reports.get('/public/stats-rekening', async (c) => {
+  try {
+    const [data] = await sql`SELECT * FROM get_stats_rekening()`;
+    return c.json({
+      success: true,
+      data: {
+        totalLaporan:  parseInt(data?.total_laporan  ?? 0),
+        totalRekening: parseInt(data?.total_rekening ?? 0),
+        totalKerugian: parseInt(data?.total_kerugian ?? 0),
+      },
+    });
+  } catch {
+    return c.json({ success: false, message: 'Gagal mengambil statistik.' }, 500);
+  }
+});
+
+reports.get('/public/leaderboard-nomor', async (c) => {
+  try {
+    const rows = await sql`SELECT * FROM get_leaderboard_nomor()`;
+    return c.json({ success: true, data: rows });
+  } catch {
+    return c.json({ success: false, message: 'Gagal mengambil leaderboard.' }, 500);
+  }
+});
+
+reports.get('/public/leaderboard-rekening', async (c) => {
+  try {
+    const rows = await sql`SELECT * FROM get_leaderboard_rekening()`;
+    return c.json({ success: true, data: rows });
+  } catch {
+    return c.json({ success: false, message: 'Gagal mengambil leaderboard.' }, 500);
+  }
+});
+
+reports.get('/public/check/:number', async (c) => {
+  try {
+    const number = c.req.param('number').replace(/[^0-9]/g, '');
+    if (!number || number.length < 5)
+      return c.json({ success: false, message: 'Nomor tidak valid.' }, 400);
+
+    const [data] = await sql`SELECT get_check_page_data(${number}) AS result`;
+    return c.json({ success: true, data: data.result });
+  } catch {
+    return c.json({ success: false, message: 'Gagal mengambil data.' }, 500);
+  }
+});
+
+reports.get('/public/blacklist/:number', async (c) => {
+  try {
+    const number = c.req.param('number').replace(/[^0-9]/g, '');
+    if (!number) return c.json({ success: false, message: 'Nomor tidak valid.' }, 400);
+
+    const [blacklist] = await sql`
+      SELECT level, total_reports, unique_reporters
+      FROM blacklist WHERE target_number = ${number} LIMIT 1
+    `;
+    const [trend] = await sql`
+      SELECT is_viral, report_count
+      FROM robot_trends WHERE target_number = ${number} LIMIT 1
+    `;
+
+    return c.json({
+      success: true,
+      data: {
+        blacklist: blacklist ?? null,
+        trend:     trend     ?? null,
+      },
+    });
+  } catch {
+    return c.json({ success: false, message: 'Gagal mengambil data.' }, 500);
+  }
+});
+
+reports.get('/public/ewallet/:wallet', async (c) => {
+  try {
+    const wallet = c.req.param('wallet');
+    if (!wallet) return c.json({ success: false, message: 'Wallet tidak valid.' }, 400);
+
+    const primary = await sql`
+      SELECT target_number, target_name, status, created_at
+      FROM reports
+      WHERE bank_name ILIKE ${'%' + wallet + '%'}
+      AND status NOT IN ('rejected', 'withdrawn')
+      ORDER BY created_at DESC
+    `;
+
+    const linked = await sql`
+      SELECT target_numbers, status, created_at
+      FROM reports
+      WHERE target_numbers @> ${JSON.stringify([{ type: 'ewallet', bank: wallet }])}::jsonb
+      AND status NOT IN ('rejected', 'withdrawn')
+      ORDER BY created_at DESC
+    `;
+
+    return c.json({ success: true, data: { primary, linked } });
+  } catch {
+    return c.json({ success: false, message: 'Gagal mengambil data.' }, 500);
+  }
+});
+
+reports.get('/public/bank/:bank', async (c) => {
+  try {
+    const bank = c.req.param('bank');
+    if (!bank) return c.json({ success: false, message: 'Bank tidak valid.' }, 400);
+
+    const primary = await sql`
+      SELECT target_number, target_name, status, created_at
+      FROM reports
+      WHERE bank_name ILIKE ${'%' + bank + '%'}
+      AND status NOT IN ('rejected', 'withdrawn')
+      ORDER BY created_at DESC
+    `;
+
+    const linked = await sql`
+      SELECT target_numbers, status, created_at
+      FROM reports
+      WHERE target_numbers @> ${JSON.stringify([{ type: 'bank_account', bank: bank }])}::jsonb
+      AND status NOT IN ('rejected', 'withdrawn')
+      ORDER BY created_at DESC
+    `;
+
+    return c.json({ success: true, data: { primary, linked } });
+  } catch {
+    return c.json({ success: false, message: 'Gagal mengambil data.' }, 500);
+  }
+});
+
 export default reports;

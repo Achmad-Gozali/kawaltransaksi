@@ -3,30 +3,13 @@ import Image from "next/image";
 import { Phone, Landmark, Wallet, ArrowRight } from "lucide-react";
 import * as motion from "motion/react-client";
 import { createClient } from "@/core/supabase/server";
-import { cookies } from "next/headers";
 
 // ========== REVALIDATE ==========
 export const revalidate = 60;
 
-// ========== UTILITY FUNCTIONS (fallback jika @/core/utils belum ada) ==========
-function formatDateID(dateString: string): string {
-  try {
-    const d = new Date(dateString);
-    return d.toLocaleDateString("id-ID", {
-      day: "numeric",
-      month: "short",
-      year: "numeric",
-    });
-  } catch {
-    return dateString;
-  }
-}
-
-function encodeSlug(str: string): string {
-  return encodeURIComponent(str.trim());
-}
-
 // ========== CONSTANTS ==========
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://api.kawaltransaksi.com';
+
 const ewalletNames = ["gopay", "dana", "ovo", "shopeepay", "linkaja"];
 
 const bankLogoMap: Record<string, string> = {
@@ -53,6 +36,29 @@ const HOW_IT_WORKS = [
   { number: "#4", title: "Hasil Tersedia Real-time", desc: "Data terverifikasi langsung bisa dicek seluruh pengguna secara gratis dan real-time." },
 ];
 
+// ========== UTILITY ==========
+function formatDateID(dateString: string): string {
+  try {
+    return new Date(dateString).toLocaleDateString("id-ID", {
+      day: "numeric", month: "short", year: "numeric",
+    });
+  } catch {
+    return dateString;
+  }
+}
+
+function encodeSlug(str: string): string {
+  return encodeURIComponent(str.trim());
+}
+
+function formatLoss(amount: number): string {
+  if (amount === 0) return "Rp0";
+  if (amount >= 1_000_000_000) return `Rp${(amount / 1_000_000_000).toFixed(1)} M+`;
+  if (amount >= 1_000_000) return `Rp${(amount / 1_000_000).toFixed(1)} Jt+`;
+  if (amount >= 1_000) return `Rp${(amount / 1_000).toFixed(0)} Rb+`;
+  return `Rp${amount.toLocaleString("id-ID")}`;
+}
+
 // ========== HELPERS ==========
 function getPlatformLogo(type: string, bankName: string | null): string | null {
   if (!bankName) return null;
@@ -65,41 +71,15 @@ function getPlatformLogo(type: string, bankName: string | null): string | null {
 function getTargetMeta(type: string, bankName: string | null) {
   const key = bankName?.toLowerCase() || "";
   if (type === "ewallet" || (type === "phone" && ewalletNames.includes(key))) {
-    return {
-      icon: Wallet,
-      label: bankName ?? "E-Wallet",
-      color: "text-violet-600",
-      bg: "bg-violet-50",
-      border: "border-violet-200",
-    };
+    return { icon: Wallet, label: bankName ?? "E-Wallet", color: "text-violet-600", bg: "bg-violet-50", border: "border-violet-200" };
   }
   if (type === "bank_account") {
-    return {
-      icon: Landmark,
-      label: bankName ?? "Rekening Bank",
-      color: "text-blue-600",
-      bg: "bg-blue-50",
-      border: "border-blue-200",
-    };
+    return { icon: Landmark, label: bankName ?? "Rekening Bank", color: "text-blue-600", bg: "bg-blue-50", border: "border-blue-200" };
   }
-  return {
-    icon: Phone,
-    label: "Nomor HP",
-    color: "text-slate-600",
-    bg: "bg-slate-50",
-    border: "border-slate-200",
-  };
+  return { icon: Phone, label: "Nomor HP", color: "text-slate-600", bg: "bg-slate-50", border: "border-slate-200" };
 }
 
-function formatLoss(amount: number): string {
-  if (amount === 0) return "Rp0";
-  if (amount >= 1_000_000_000) return `Rp${(amount / 1_000_000_000).toFixed(1)} M+`;
-  if (amount >= 1_000_000) return `Rp${(amount / 1_000_000).toFixed(1)} Jt+`;
-  if (amount >= 1_000) return `Rp${(amount / 1_000).toFixed(0)} Rb+`;
-  return `Rp${amount.toLocaleString("id-ID")}`;
-}
-
-// ========== DATA FETCHING ==========
+// ========== TYPES ==========
 interface ReportItem {
   id: string;
   target_number: string;
@@ -117,66 +97,35 @@ interface Stats {
   totalLoss: number;
 }
 
+// ========== DATA FETCHING ==========
 async function getRecentReports(): Promise<ReportItem[]> {
   try {
-    const supabase = await createClient();
-    const { data, error } = await supabase
-      .from("reports")
-      .select("id,target_number,target_name,target_type,bank_name,category,created_at,status")
-      .neq("status", "rejected")
-      .order("created_at", { ascending: false })
-      .limit(6);
-
-    if (error) throw error;
-    return data || [];
-  } catch (err) {
-    console.error("Failed to fetch recent reports:", err);
+    const res = await fetch(`${BACKEND_URL}/api/reports/public/recent`, {
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) return [];
+    const json = await res.json();
+    return json.data ?? [];
+  } catch {
     return [];
   }
 }
 
 async function getStats(): Promise<Stats> {
   try {
-    const supabase = await createClient();
-
-    // Total laporan (tidak termasuk rejected)
-    const { count: total, error: countErr } = await supabase
-      .from("reports")
-      .select("*", { count: "exact", head: true })
-      .neq("status", "rejected");
-
-    if (countErr) throw countErr;
-
-    // Total verified
-    const { count: verified, error: verErr } = await supabase
-      .from("reports")
-      .select("*", { count: "exact", head: true })
-      .eq("status", "verified");
-
-    if (verErr) throw verErr;
-
-    // Total loss (sum of loss_amount)
-    const { data: lossData, error: lossErr } = await supabase
-      .from("reports")
-      .select("loss_amount")
-      .neq("status", "rejected");
-
-    if (lossErr) throw lossErr;
-
-    const totalLoss = lossData?.reduce((sum, row) => sum + (row.loss_amount || 0), 0) ?? 0;
-
-    return {
-      total: total ?? 0,
-      verified: verified ?? 0,
-      totalLoss,
-    };
-  } catch (err) {
-    console.error("Failed to fetch stats:", err);
+    const res = await fetch(`${BACKEND_URL}/api/reports/public/stats`, {
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) return { total: 0, verified: 0, totalLoss: 0 };
+    const json = await res.json();
+    return json.data ?? { total: 0, verified: 0, totalLoss: 0 };
+  } catch {
     return { total: 0, verified: 0, totalLoss: 0 };
   }
 }
 
 async function getIsLoggedIn(): Promise<boolean> {
+  // Tetap Supabase sampai Phase 9B
   try {
     const supabase = await createClient();
     const { data: { user } } = await supabase.auth.getUser();
@@ -252,29 +201,17 @@ export default async function HomePage() {
                 Verifikasi nomor HP, rekening bank, dan e-wallet dalam hitungan detik. Bersama komunitas, kami berkomitmen untuk mewujudkan ekosistem transaksi digital yang lebih aman di Indonesia.
               </p>
               <div className="flex flex-col sm:flex-row gap-3">
-                <Link
-                  href="/cek-nomor"
-                  className="px-6 py-3 bg-slate-900 text-white font-bold text-sm tracking-wide rounded-xl flex items-center justify-center gap-2 hover:bg-emerald-700 transition-colors"
-                >
+                <Link href="/cek-nomor" className="px-6 py-3 bg-slate-900 text-white font-bold text-sm tracking-wide rounded-xl flex items-center justify-center gap-2 hover:bg-emerald-700 transition-colors">
                   <Phone className="w-4 h-4" /> Cek Nomor HP
                 </Link>
-                <Link
-                  href="/cek-rekening"
-                  className="px-6 py-3 border-2 border-slate-300 text-slate-900 font-bold text-sm tracking-wide rounded-xl flex items-center justify-center gap-2 hover:border-slate-900 transition-colors bg-white"
-                >
+                <Link href="/cek-rekening" className="px-6 py-3 border-2 border-slate-300 text-slate-900 font-bold text-sm tracking-wide rounded-xl flex items-center justify-center gap-2 hover:border-slate-900 transition-colors bg-white">
                   <Landmark className="w-4 h-4" /> Cek Rekening
                 </Link>
               </div>
             </div>
             <div className="hidden md:flex flex-shrink-0 items-end justify-start -ml-6 lg:-ml-10">
               <div className="relative w-[420px] h-[310px] lg:w-[500px] lg:h-[370px]">
-                <Image
-                  src="/ilustrasi-hero.png"
-                  alt="Ilustrasi keamanan transaksi digital"
-                  fill
-                  priority
-                  className="object-contain"
-                />
+                <Image src="/ilustrasi-hero.png" alt="Ilustrasi keamanan transaksi digital" fill priority className="object-contain" />
               </div>
             </div>
           </div>
@@ -331,10 +268,7 @@ export default async function HomePage() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="flex items-end justify-between mb-6 sm:mb-8">
             <h2 className="text-lg sm:text-2xl font-bold text-slate-900">Laporan Masuk Terkini</h2>
-            <Link
-              href={lihatSemuaHref}
-              className="text-xs font-bold text-slate-500 uppercase tracking-widest hover:text-emerald-700 transition-colors whitespace-nowrap"
-            >
+            <Link href={lihatSemuaHref} className="text-xs font-bold text-slate-500 uppercase tracking-widest hover:text-emerald-700 transition-colors whitespace-nowrap">
               Lihat semua →
             </Link>
           </div>
@@ -355,20 +289,12 @@ export default async function HomePage() {
                     className="block bg-white border border-slate-200 p-4 sm:p-5 rounded-xl hover:border-slate-300 hover:shadow-md transition-all group h-full"
                   >
                     <div className="flex justify-between items-start mb-4">
-                      <span
-                        className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest rounded-full border ${
-                          report.status === "verified"
-                            ? "bg-emerald-50 text-emerald-700 border-emerald-200"
-                            : report.status === "withdrawn"
-                            ? "bg-slate-100 text-slate-500 border-slate-200"
-                            : "bg-amber-50 text-amber-700 border-amber-200"
-                        }`}
-                      >
-                        {report.status === "verified"
-                          ? "Terverifikasi"
-                          : report.status === "withdrawn"
-                          ? "Sedang Direvisi"
-                          : "Menunggu"}
+                      <span className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest rounded-full border ${
+                        report.status === "verified" ? "bg-emerald-50 text-emerald-700 border-emerald-200"
+                        : report.status === "withdrawn" ? "bg-slate-100 text-slate-500 border-slate-200"
+                        : "bg-amber-50 text-amber-700 border-amber-200"
+                      }`}>
+                        {report.status === "verified" ? "Terverifikasi" : report.status === "withdrawn" ? "Sedang Direvisi" : "Menunggu"}
                       </span>
                       <span className="text-xs text-slate-500 font-medium">{formatDateID(report.created_at)}</span>
                     </div>
@@ -377,32 +303,20 @@ export default async function HomePage() {
                         {report.target_number}
                       </p>
                       <p className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">
-                        {report.status === "verified"
-                          ? `a.n. ${report.target_name || "anonymous"}`
-                          : "Identitas belum terverifikasi"}
+                        {report.status === "verified" ? `a.n. ${report.target_name || "anonymous"}` : "Identitas belum terverifikasi"}
                       </p>
                     </div>
                     <div className="flex items-center justify-between pt-3 border-t border-slate-100">
                       <div className="flex items-center gap-2 overflow-hidden">
-                        <span
-                          className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-bold border ${meta.bg} ${meta.color} ${meta.border}`}
-                        >
+                        <span className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-bold border ${meta.bg} ${meta.color} ${meta.border}`}>
                           {logoSrc ? (
-                            <Image
-                              src={logoSrc}
-                              alt={meta.label}
-                              width={14}
-                              height={14}
-                              className="object-contain rounded-sm"
-                            />
+                            <Image src={logoSrc} alt={meta.label} width={14} height={14} className="object-contain rounded-sm" />
                           ) : (
                             <meta.icon className="w-3 h-3" />
                           )}
                           <span className="truncate max-w-[70px] sm:max-w-[80px]">{meta.label}</span>
                         </span>
-                        <span className="text-xs font-bold text-slate-500 uppercase tracking-widest truncate">
-                          {report.category}
-                        </span>
+                        <span className="text-xs font-bold text-slate-500 uppercase tracking-widest truncate">{report.category}</span>
                       </div>
                       <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 transition-colors shrink-0" />
                     </div>
@@ -428,16 +342,10 @@ export default async function HomePage() {
             Bantu lindungi pengguna lain dengan melaporkan nomor yang mencurigakan. Setiap laporan berkontribusi pada ekosistem digital yang lebih aman.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
-            <Link
-              href="/report"
-              className="w-full sm:w-auto px-7 py-3 bg-emerald-600 text-white font-bold text-sm tracking-wide rounded-xl hover:bg-emerald-700 transition-colors"
-            >
+            <Link href="/report" className="w-full sm:w-auto px-7 py-3 bg-emerald-600 text-white font-bold text-sm tracking-wide rounded-xl hover:bg-emerald-700 transition-colors">
               Buat Laporan Baru
             </Link>
-            <Link
-              href="/register"
-              className="w-full sm:w-auto px-7 py-3 border-2 border-slate-300 bg-white text-slate-900 font-bold text-sm tracking-wide rounded-xl hover:border-slate-900 transition-colors"
-            >
+            <Link href="/register" className="w-full sm:w-auto px-7 py-3 border-2 border-slate-300 bg-white text-slate-900 font-bold text-sm tracking-wide rounded-xl hover:border-slate-900 transition-colors">
               Gabung Komunitas
             </Link>
           </div>
@@ -450,44 +358,40 @@ export default async function HomePage() {
         </svg>
       </div>
 
-{/* ── DEVELOPER API ── */}
-<section className="bg-white py-14 sm:py-20 px-4 sm:px-6">
-  <div className="max-w-4xl mx-auto">
-    <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-10 sm:mb-12">
-      <div>
-        <p className="text-xs font-bold text-emerald-600 uppercase tracking-widest mb-3">Untuk Developer</p>
-        <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 leading-tight">
-          Bangun Produk yang Lebih Aman<br />dengan Data Anti-Penipuan
-        </h2>
-        <p className="text-slate-500 text-sm sm:text-base mt-4 max-w-lg leading-relaxed">
-          KawalTransaksi membuka akses database laporan penipuan komunitas melalui REST API yang sederhana dan andal. 
-          Cocok untuk marketplace, fintech, dompet digital, atau platform apa pun yang membutuhkan lapisan verifikasi tambahan sebelum transaksi diproses. 
-          Tersedia gratis hingga 300 request per hari — tanpa kartu kredit, tanpa setup yang rumit.
-        </p>
-      </div>
-      <Link
-        href="/developer"
-        className="shrink-0 w-full sm:w-auto text-center px-6 py-3 bg-slate-900 hover:bg-emerald-700 text-white text-sm font-bold tracking-wide rounded-xl transition-colors"
-      >
-        Pelajari Developer API
-      </Link>
-    </div>
-
-    <div className="grid grid-cols-3 gap-px bg-slate-200 rounded-2xl overflow-hidden">
-      {[
-        { label: 'Gratis', value: '300 req/hari', sub: 'Tanpa kartu kredit' },
-        { label: 'Endpoint', value: 'REST API', sub: 'HTTPS, format JSON' },
-        { label: 'Data', value: 'Terverifikasi', sub: 'Dari laporan komunitas' },
-      ].map((item, i) => (
-        <div key={i} className="bg-white px-3 sm:px-6 py-4 sm:py-5 text-center">
-          <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">{item.label}</p>
-          <p className="text-sm sm:text-base font-black text-slate-900 mb-0.5">{item.value}</p>
-          <p className="text-[10px] sm:text-xs text-slate-400 hidden sm:block">{item.sub}</p>
+      {/* ── DEVELOPER API ── */}
+      <section className="bg-white py-14 sm:py-20 px-4 sm:px-6">
+        <div className="max-w-4xl mx-auto">
+          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-10 sm:mb-12">
+            <div>
+              <p className="text-xs font-bold text-emerald-600 uppercase tracking-widest mb-3">Untuk Developer</p>
+              <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 leading-tight">
+                Bangun Produk yang Lebih Aman<br />dengan Data Anti-Penipuan
+              </h2>
+              <p className="text-slate-500 text-sm sm:text-base mt-4 max-w-lg leading-relaxed">
+                KawalTransaksi membuka akses database laporan penipuan komunitas melalui REST API yang sederhana dan andal.
+                Cocok untuk marketplace, fintech, dompet digital, atau platform apa pun yang membutuhkan lapisan verifikasi tambahan sebelum transaksi diproses.
+                Tersedia gratis hingga 300 request per hari — tanpa kartu kredit, tanpa setup yang rumit.
+              </p>
+            </div>
+            <Link href="/developer" className="shrink-0 w-full sm:w-auto text-center px-6 py-3 bg-slate-900 hover:bg-emerald-700 text-white text-sm font-bold tracking-wide rounded-xl transition-colors">
+              Pelajari Developer API
+            </Link>
+          </div>
+          <div className="grid grid-cols-3 gap-px bg-slate-200 rounded-2xl overflow-hidden">
+            {[
+              { label: 'Gratis', value: '300 req/hari', sub: 'Tanpa kartu kredit' },
+              { label: 'Endpoint', value: 'REST API', sub: 'HTTPS, format JSON' },
+              { label: 'Data', value: 'Terverifikasi', sub: 'Dari laporan komunitas' },
+            ].map((item, i) => (
+              <div key={i} className="bg-white px-3 sm:px-6 py-4 sm:py-5 text-center">
+                <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">{item.label}</p>
+                <p className="text-sm sm:text-base font-black text-slate-900 mb-0.5">{item.value}</p>
+                <p className="text-[10px] sm:text-xs text-slate-400 hidden sm:block">{item.sub}</p>
+              </div>
+            ))}
+          </div>
         </div>
-      ))}
-    </div>
-  </div>
-</section>
+      </section>
     </main>
   );
 }
