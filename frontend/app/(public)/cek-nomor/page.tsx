@@ -3,7 +3,6 @@ import Image from "next/image";
 import { ArrowRight, TrendingUp } from "lucide-react";
 import type { Metadata } from "next";
 import NomorSearchForm from "@/features/check/NomorSearchForm";
-import { createClient } from "@/core/supabase/server";
 import { formatRupiah, encodeSlug } from "@/core/utils";
 
 export const metadata: Metadata = {
@@ -13,12 +12,14 @@ export const metadata: Metadata = {
 
 export const revalidate = 60;
 
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://api.kawaltransaksi.com';
+
 const ewallets = [
-  { id: "gopay",  name: "GoPay",     logo: "/ewallets/gopay.png",     description: "Verifikasi akun GoPay dan identifikasi potensi penipuan sebelum transfer." },
-  { id: "dana",   name: "DANA",      logo: "/ewallets/dana.png",      description: "Verifikasi akun DANA dan identifikasi potensi penipuan sebelum transfer." },
-  { id: "ovo",    name: "OVO",       logo: "/ewallets/ovo.png",       description: "Verifikasi akun OVO dan identifikasi potensi penipuan sebelum transfer." },
-  { id: "shopee", name: "ShopeePay", logo: "/ewallets/shopeepay.png", description: "Verifikasi akun ShopeePay dan identifikasi potensi penipuan sebelum transfer." },
-  { id: "linkaja",name: "LinkAja",   logo: "/ewallets/linkaja.png",   description: "Verifikasi akun LinkAja dan identifikasi potensi penipuan sebelum transfer." },
+  { id: "gopay",   name: "GoPay",     logo: "/ewallets/gopay.png",     description: "Verifikasi akun GoPay dan identifikasi potensi penipuan sebelum transfer." },
+  { id: "dana",    name: "DANA",      logo: "/ewallets/dana.png",      description: "Verifikasi akun DANA dan identifikasi potensi penipuan sebelum transfer." },
+  { id: "ovo",     name: "OVO",       logo: "/ewallets/ovo.png",       description: "Verifikasi akun OVO dan identifikasi potensi penipuan sebelum transfer." },
+  { id: "shopee",  name: "ShopeePay", logo: "/ewallets/shopeepay.png", description: "Verifikasi akun ShopeePay dan identifikasi potensi penipuan sebelum transfer." },
+  { id: "linkaja", name: "LinkAja",   logo: "/ewallets/linkaja.png",   description: "Verifikasi akun LinkAja dan identifikasi potensi penipuan sebelum transfer." },
 ];
 
 const articles = [
@@ -43,9 +44,9 @@ const schema = {
     {
       "@type": "FAQPage",
       "mainEntity": [
-        { "@type": "Question", "name": "Bagaimana cara cek nomor HP penipu?",       "acceptedAnswer": { "@type": "Answer", "text": "Masukkan nomor HP pada kolom pencarian di KawalTransaksi. Hasil pengecekan akan muncul secara instan." } },
+        { "@type": "Question", "name": "Bagaimana cara cek nomor HP penipu?",           "acceptedAnswer": { "@type": "Answer", "text": "Masukkan nomor HP pada kolom pencarian di KawalTransaksi. Hasil pengecekan akan muncul secara instan." } },
         { "@type": "Question", "name": "Apakah cek nomor HP di KawalTransaksi gratis?", "acceptedAnswer": { "@type": "Answer", "text": "Ya, pengecekan nomor HP di KawalTransaksi sepenuhnya gratis tanpa perlu mendaftar." } },
-        { "@type": "Question", "name": "Nomor HP apa saja yang bisa dicek?",        "acceptedAnswer": { "@type": "Answer", "text": "KawalTransaksi mendukung pengecekan semua nomor HP Indonesia termasuk WhatsApp, GoPay, DANA, OVO, ShopeePay, dan LinkAja." } },
+        { "@type": "Question", "name": "Nomor HP apa saja yang bisa dicek?",            "acceptedAnswer": { "@type": "Answer", "text": "KawalTransaksi mendukung pengecekan semua nomor HP Indonesia termasuk WhatsApp, GoPay, DANA, OVO, ShopeePay, dan LinkAja." } },
       ],
     },
   ],
@@ -59,14 +60,12 @@ const RANK_STYLE: Record<number, string> = {
 
 async function getStats() {
   try {
-    const supabase = await createClient();
-    const { data } = await supabase.rpc("get_stats_nomor");
-    if (!data) return { totalLaporan: 0, totalNomor: 0, totalKerugian: 0 };
-    return {
-      totalLaporan:  data.total_laporan  ?? 0,
-      totalNomor:    data.total_nomor    ?? 0,
-      totalKerugian: Number(data.total_kerugian) ?? 0,
-    };
+    const res = await fetch(`${BACKEND_URL}/api/reports/public/stats-nomor`, {
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) return { totalLaporan: 0, totalNomor: 0, totalKerugian: 0 };
+    const json = await res.json();
+    return json.data ?? { totalLaporan: 0, totalNomor: 0, totalKerugian: 0 };
   } catch {
     return { totalLaporan: 0, totalNomor: 0, totalKerugian: 0 };
   }
@@ -74,10 +73,12 @@ async function getStats() {
 
 async function getLeaderboard() {
   try {
-    const supabase = await createClient();
-    const { data, error } = await supabase.rpc("get_leaderboard_nomor");
-    if (error || !data) return [];
-    return data as { target_number: string; report_count: number }[];
+    const res = await fetch(`${BACKEND_URL}/api/reports/public/leaderboard-nomor`, {
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) return [];
+    const json = await res.json();
+    return (json.data ?? []) as { target_number: string; report_count: number }[];
   } catch {
     return [];
   }
@@ -141,7 +142,6 @@ export default async function CekNomorPage() {
       {/* STATS */}
       <section className="bg-white pb-10 sm:pb-16">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 -mt-6 sm:-mt-14 relative z-10">
-          {/* mobile */}
           <div className="grid grid-cols-3 sm:hidden bg-white border border-slate-200 rounded-xl shadow-md overflow-hidden divide-x divide-slate-100">
             {stats.map((s, i) => (
               <div key={i} className="flex flex-col items-center py-4 px-2 text-center">
@@ -151,7 +151,6 @@ export default async function CekNomorPage() {
               </div>
             ))}
           </div>
-          {/* desktop */}
           <div className="hidden sm:grid grid-cols-3 bg-white border border-slate-200 rounded-xl shadow-md overflow-hidden divide-x divide-slate-100">
             {stats.map((s, i) => (
               <div key={i} className="flex items-start gap-4 px-8 py-8">
@@ -166,7 +165,6 @@ export default async function CekNomorPage() {
         </div>
       </section>
 
-      {/* LEADERBOARD */}
       {/* APA ITU CEK NOMOR */}
       <section className="bg-white py-8 sm:py-14">
         <div className="max-w-5xl mx-auto px-4 sm:px-6">

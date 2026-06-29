@@ -3,7 +3,6 @@ import Image from "next/image";
 import { ArrowRight, TrendingUp } from "lucide-react";
 import type { Metadata } from "next";
 import RekeningSearchForm from "@/features/check/RekeningSearchForm";
-import { createClient } from "@/core/supabase/server";
 import { formatRupiah, encodeSlug } from "@/core/utils";
 
 export const metadata: Metadata = {
@@ -12,6 +11,8 @@ export const metadata: Metadata = {
 };
 
 export const revalidate = 60;
+
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://api.kawaltransaksi.com';
 
 const banks = [
   { id: "bca",     name: "Bank Central Asia",    logo: "/banks/bca.png",     description: "Verifikasi rekening BCA dan identifikasi potensi penipuan sebelum transfer." },
@@ -23,11 +24,11 @@ const banks = [
 ];
 
 const articles = [
-  { title: "Cek Rekening Penjual Online",       desc: "Jadilah smart shopper dengan melakukan pengecekan apakah seorang penjual berpotensi melakukan penipuan atau tidak sebelum berbelanja online." },
-  { title: "Rekening Bank Mencurigakan",         desc: "Temukan riwayat laporan dari rekening bank yang mencurigakan. Kunjungi halaman database kami untuk mengetahui kredibilitas sebuah rekening." },
-  { title: "Cek Rekening Bank Terlengkap",       desc: "KawalTransaksi merupakan platform pengecekan rekening penipu terlengkap. Cek nomor rekening BCA, BRI, BNI, Mandiri, CIMB Niaga, BSI, dan lainnya." },
-  { title: "Cara Cek Nomor Rekening",            desc: "Masukkan nomor rekening yang ingin dicek pada kolom pencarian di atas untuk mendapatkan hasil pengecekan." },
-  { title: "Laporkan Rekening Penipu",           desc: "Semua laporan yang masuk akan kami tinjau dari kronologis kejadian hingga bukti transfer sebelum dipublikasikan." },
+  { title: "Cek Rekening Penjual Online",        desc: "Jadilah smart shopper dengan melakukan pengecekan apakah seorang penjual berpotensi melakukan penipuan atau tidak sebelum berbelanja online." },
+  { title: "Rekening Bank Mencurigakan",          desc: "Temukan riwayat laporan dari rekening bank yang mencurigakan. Kunjungi halaman database kami untuk mengetahui kredibilitas sebuah rekening." },
+  { title: "Cek Rekening Bank Terlengkap",        desc: "KawalTransaksi merupakan platform pengecekan rekening penipu terlengkap. Cek nomor rekening BCA, BRI, BNI, Mandiri, CIMB Niaga, BSI, dan lainnya." },
+  { title: "Cara Cek Nomor Rekening",             desc: "Masukkan nomor rekening yang ingin dicek pada kolom pencarian di atas untuk mendapatkan hasil pengecekan." },
+  { title: "Laporkan Rekening Penipu",            desc: "Semua laporan yang masuk akan kami tinjau dari kronologis kejadian hingga bukti transfer sebelum dipublikasikan." },
   { title: "Sudah Terlanjur Transfer ke Penipu?", desc: "Segera hubungi bank Anda untuk memblokir transaksi dan laporkan nomor rekening tersebut ke KawalTransaksi." },
 ];
 
@@ -44,8 +45,8 @@ const schema = {
     {
       "@type": "FAQPage",
       "mainEntity": [
-        { "@type": "Question", "name": "Bagaimana cara cek rekening penipu?",       "acceptedAnswer": { "@type": "Answer", "text": "Masukkan nomor rekening bank pada kolom pencarian di KawalTransaksi untuk mendapatkan hasil pengecekan secara instan." } },
-        { "@type": "Question", "name": "Bank apa saja yang didukung?",              "acceptedAnswer": { "@type": "Answer", "text": "KawalTransaksi mendukung pengecekan rekening BCA, BRI, BNI, Mandiri, CIMB Niaga, BSI, dan bank lainnya." } },
+        { "@type": "Question", "name": "Bagaimana cara cek rekening penipu?",           "acceptedAnswer": { "@type": "Answer", "text": "Masukkan nomor rekening bank pada kolom pencarian di KawalTransaksi untuk mendapatkan hasil pengecekan secara instan." } },
+        { "@type": "Question", "name": "Bank apa saja yang didukung?",                  "acceptedAnswer": { "@type": "Answer", "text": "KawalTransaksi mendukung pengecekan rekening BCA, BRI, BNI, Mandiri, CIMB Niaga, BSI, dan bank lainnya." } },
         { "@type": "Question", "name": "Apakah cek rekening di KawalTransaksi gratis?", "acceptedAnswer": { "@type": "Answer", "text": "Ya, pengecekan rekening bank di KawalTransaksi sepenuhnya gratis." } },
       ],
     },
@@ -76,14 +77,12 @@ function getBankLogo(bankName: string | null): string | null {
 
 async function getStats() {
   try {
-    const supabase = await createClient();
-    const { data } = await supabase.rpc("get_stats_rekening");
-    if (!data) return { totalLaporan: 0, totalRekening: 0, totalKerugian: 0 };
-    return {
-      totalLaporan:  data.total_laporan  ?? 0,
-      totalRekening: data.total_rekening ?? 0,
-      totalKerugian: Number(data.total_kerugian) ?? 0,
-    };
+    const res = await fetch(`${BACKEND_URL}/api/reports/public/stats-rekening`, {
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) return { totalLaporan: 0, totalRekening: 0, totalKerugian: 0 };
+    const json = await res.json();
+    return json.data ?? { totalLaporan: 0, totalRekening: 0, totalKerugian: 0 };
   } catch {
     return { totalLaporan: 0, totalRekening: 0, totalKerugian: 0 };
   }
@@ -91,10 +90,12 @@ async function getStats() {
 
 async function getLeaderboard() {
   try {
-    const supabase = await createClient();
-    const { data, error } = await supabase.rpc("get_leaderboard_rekening");
-    if (error || !data) return [];
-    return data as { target_number: string; bank_name: string | null; report_count: number }[];
+    const res = await fetch(`${BACKEND_URL}/api/reports/public/leaderboard-rekening`, {
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) return [];
+    const json = await res.json();
+    return (json.data ?? []) as { target_number: string; bank_name: string | null; report_count: number }[];
   } catch {
     return [];
   }
@@ -158,7 +159,6 @@ export default async function CekRekeningPage() {
       {/* STATS */}
       <section className="bg-white pb-10 sm:pb-16">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 -mt-6 sm:-mt-14 relative z-10">
-          {/* mobile */}
           <div className="grid grid-cols-3 sm:hidden bg-white border border-slate-200 rounded-xl shadow-md overflow-hidden divide-x divide-slate-100">
             {stats.map((s, i) => (
               <div key={i} className="flex flex-col items-center py-4 px-2 text-center">
@@ -168,7 +168,6 @@ export default async function CekRekeningPage() {
               </div>
             ))}
           </div>
-          {/* desktop */}
           <div className="hidden sm:grid grid-cols-3 bg-white border border-slate-200 rounded-xl shadow-md overflow-hidden divide-x divide-slate-100">
             {stats.map((s, i) => (
               <div key={i} className="flex items-start gap-4 px-8 py-8">
@@ -234,6 +233,11 @@ export default async function CekRekeningPage() {
                     </p>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
+                    {entry.bank_name && getBankLogo(entry.bank_name) && (
+                      <div className="relative w-12 h-6 hidden sm:block">
+                        <Image src={getBankLogo(entry.bank_name)!} alt={entry.bank_name} fill className="object-contain" />
+                      </div>
+                    )}
                     <span className="hidden sm:inline-flex items-center px-2.5 py-1 rounded-full bg-red-50 border border-red-100 text-xs font-bold text-red-600">
                       {entry.report_count} laporan
                     </span>
