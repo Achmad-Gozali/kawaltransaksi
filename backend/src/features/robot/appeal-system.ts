@@ -5,6 +5,7 @@ import { scoreReport, applyVerdict } from './scoring-engine';
 import { sendReportStatusChangedEmail } from '../../core/resend';
 import { writeLog } from './audit-logger';
 import { getEnv } from '../../types';
+import sql from '../../core/db';
 import type { RobotReport } from './types';
 
 const appeal = new Hono();
@@ -47,16 +48,16 @@ appeal.post('/', authMiddleware, async (c) => {
     if (newLossAmount !== null && (isNaN(newLossAmount) || newLossAmount < 1000 || newLossAmount > 999_999_999_999))
       return c.json({ success: false, message: 'Nominal kerugian tidak valid.' }, 400);
 
-    const supabase = getSupabaseAdmin();
+    const [report] = await sql`
+      SELECT id, status, reporter_id, target_number, robot_verdict_at,
+             evidence_urls, evidence_url, loss_amount, chronology,
+             created_at, incident_date, has_other_victims
+      FROM reports
+      WHERE id = ${reportId} AND reporter_id = ${userId}
+      LIMIT 1
+    `;
 
-    const { data: report, error: fetchError } = await supabase
-      .from('reports')
-      .select('id, status, reporter_id, target_number, robot_verdict_at, evidence_urls, evidence_url, loss_amount, chronology, created_at, incident_date, has_other_victims')
-      .eq('id', reportId)
-      .eq('reporter_id', userId)
-      .single();
-
-    if (fetchError || !report)
+    if (!report)
       return c.json({ success: false, message: 'Laporan tidak ditemukan.' }, 404);
     if (report.status !== 'rejected')
       return c.json({ success: false, message: 'Hanya laporan yang ditolak yang dapat diajukan banding.' }, 400);
@@ -67,11 +68,9 @@ appeal.post('/', authMiddleware, async (c) => {
         return c.json({ success: false, message: `Batas waktu banding ${APPEAL_WINDOW_HOURS} jam sudah lewat.` }, 400);
     }
 
-    const { data: existing } = await supabase
-      .from('report_appeals')
-      .select('id, status')
-      .eq('report_id', reportId)
-      .single();
+    const [existing] = await sql`
+      SELECT id, status FROM report_appeals WHERE report_id = ${reportId} LIMIT 1
+    `;
 
     if (existing)
       return c.json({ success: false, message: 'Kamu sudah pernah mengajukan banding untuk laporan ini.' }, 409);
@@ -80,32 +79,32 @@ appeal.post('/', authMiddleware, async (c) => {
     const mergedEvidence    = [...new Set([...existingEvidence, ...newEvidenceUrls])].slice(0, 10);
     const updatedChronology = `${report.chronology}\n\n[BANDING] ${reason.trim()}`;
 
-    const updateData: Record<string, unknown> = {
-      status:       'pending',
-      robot_status: 'pending',
-      chronology:   updatedChronology,
-    };
-
     if (mergedEvidence.length > 0) {
-      updateData.evidence_urls = mergedEvidence;
-      updateData.evidence_url  = mergedEvidence[0];
+      await sql`
+        UPDATE reports SET
+          status        = 'pending',
+          robot_status  = 'pending',
+          chronology    = ${updatedChronology},
+          evidence_urls = ${mergedEvidence},
+          evidence_url  = ${mergedEvidence[0]}
+          ${newLossAmount !== null ? sql`, loss_amount = ${newLossAmount}` : sql``}
+        WHERE id = ${reportId}
+      `;
+    } else {
+      await sql`
+        UPDATE reports SET
+          status       = 'pending',
+          robot_status = 'pending',
+          chronology   = ${updatedChronology}
+          ${newLossAmount !== null ? sql`, loss_amount = ${newLossAmount}` : sql``}
+        WHERE id = ${reportId}
+      `;
     }
-    if (newLossAmount !== null) {
-      updateData.loss_amount = newLossAmount;
-    }
 
-    await supabase.from('reports').update(updateData).eq('id', reportId);
-
-    const { error } = await supabase.from('report_appeals').insert({
-      report_id:     reportId,
-      user_id:       userId,
-      reason:        reason.trim(),
-      evidence_urls: newEvidenceUrls,
-      loss_amount:   newLossAmount,
-      status:        'pending',
-    });
-
-    if (error) throw error;
+    await sql`
+      INSERT INTO report_appeals (report_id, user_id, reason, evidence_urls, loss_amount, status)
+      VALUES (${reportId}, ${userId}, ${reason.trim()}, ${newEvidenceUrls}, ${newLossAmount}, 'pending')
+    `;
 
     const freshReport: RobotReport = {
       id:                report.id,
@@ -123,7 +122,7 @@ appeal.post('/', authMiddleware, async (c) => {
 
     Promise.resolve().then(() => (async () => {
       try {
-        const result = await scoreReport(freshReport, supabase).catch((err) => {
+        const result = await scoreReport(freshReport).catch((err) => {
           console.error(err);
           return null;
         });
@@ -132,16 +131,15 @@ appeal.post('/', authMiddleware, async (c) => {
         const appealVerdict = result.score >= 45 ? 'verified' : result.verdict;
 
         if (appealVerdict === 'verified') {
-          await supabase.from('reports').update({ status: 'verified' }).eq('id', reportId);
-          await supabase.from('report_appeals').update({
-            status:      'approved',
-            reviewed_at: new Date().toISOString(),
-          }).eq('report_id', reportId);
+          await sql`UPDATE reports SET status = 'verified' WHERE id = ${reportId}`;
+          await sql`
+            UPDATE report_appeals SET status = 'approved', reviewed_at = ${new Date().toISOString()}
+            WHERE report_id = ${reportId}
+          `;
 
-          await writeLog({ action: 'verdict', report_id: reportId, verdict: 'verified (appeal)', score: result.score }, supabase).catch(() => {});
+          await writeLog({ action: 'verdict', report_id: reportId, verdict: 'verified (appeal)', score: result.score }).catch(() => {});
 
-          const { data: profile } = await supabase
-            .from('profiles').select('full_name, email').eq('id', userId).single();
+          const [profile] = await sql`SELECT full_name, email FROM profiles WHERE id = ${userId} LIMIT 1`;
           if (profile?.email) {
             const env = getEnv();
             await sendReportStatusChangedEmail({
@@ -154,13 +152,12 @@ appeal.post('/', authMiddleware, async (c) => {
             }).catch(() => {});
           }
         } else {
-          await supabase.from('reports').update({ status: 'rejected' }).eq('id', reportId);
-          await supabase.from('report_appeals').update({
-            status:      'rejected',
-            reviewed_at: new Date().toISOString(),
-          }).eq('report_id', reportId);
-
-          await writeLog({ action: 'verdict', report_id: reportId, verdict: 'appeal rejected', score: result.score }, supabase).catch(() => {});
+          await sql`UPDATE reports SET status = 'rejected' WHERE id = ${reportId}`;
+          await sql`
+            UPDATE report_appeals SET status = 'rejected', reviewed_at = ${new Date().toISOString()}
+            WHERE report_id = ${reportId}
+          `;
+          await writeLog({ action: 'verdict', report_id: reportId, verdict: 'appeal rejected', score: result.score }).catch(() => {});
         }
       } catch (err) {
         console.error('[APPEAL] Background error:', err);
@@ -181,15 +178,14 @@ appeal.get('/:reportId', authMiddleware, async (c) => {
     if (!UUID_REGEX.test(reportId))
       return c.json({ success: false, message: 'ID laporan tidak valid.' }, 400);
 
-    const supabase = getSupabaseAdmin();
-    const { data, error } = await supabase
-      .from('report_appeals')
-      .select('id, status, reason, evidence_urls, loss_amount, reviewed_at, created_at')
-      .eq('report_id', reportId)
-      .eq('user_id', userId)
-      .single();
+    const [data] = await sql`
+      SELECT id, status, reason, evidence_urls, loss_amount, reviewed_at, created_at
+      FROM report_appeals
+      WHERE report_id = ${reportId} AND user_id = ${userId}
+      LIMIT 1
+    `;
 
-    if (error || !data)
+    if (!data)
       return c.json({ success: false, message: 'Banding tidak ditemukan.' }, 404);
 
     return c.json({ success: true, data });

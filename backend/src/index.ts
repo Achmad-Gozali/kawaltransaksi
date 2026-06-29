@@ -18,8 +18,8 @@ import { runConfidenceDecay } from './features/robot/blacklist-engine';
 import { detectTrends }       from './features/robot/trend-detector';
 import { detectThreats }      from './features/robot/threat-detector';
 import { logSuspiciousIp, autoBlacklistIfAbuse } from './core/abuse';
-import { getSupabaseAdmin } from './core/supabase';
 import { kv } from './core/redis';
+import sql from './core/db';
 
 export { logSuspiciousIp, autoBlacklistIfAbuse };
 
@@ -105,7 +105,6 @@ app.use('/api/*', async (c, next) => {
   return next();
 });
 
-// User-Agent check
 app.use('/api/*', async (c, next) => {
   const ua   = c.req.header('User-Agent') ?? '';
   const ip   = getIp(c);
@@ -118,7 +117,6 @@ app.use('/api/*', async (c, next) => {
   return next();
 });
 
-// Blacklist check
 app.use('/api/*', async (c, next) => {
   const ip   = getIp(c);
   const path = new URL(c.req.url).pathname;
@@ -131,7 +129,6 @@ app.use('/api/*', async (c, next) => {
   return next();
 });
 
-// Admin IP whitelist
 app.use('/api/admin/*', async (c, next) => {
   const internalKey = c.req.header('X-Internal-Key');
   if (internalKey && internalKey === INTERNAL_API_KEY) return next();
@@ -142,7 +139,6 @@ app.use('/api/admin/*', async (c, next) => {
   return next();
 });
 
-// Replay attack prevention
 app.use('/api/reports/*', async (c, next) => {
   const ts = c.req.header('X-Request-Timestamp');
   if (ts && Math.abs(Date.now() - parseInt(ts)) > 5 * 60 * 1000)
@@ -150,7 +146,6 @@ app.use('/api/reports/*', async (c, next) => {
   return next();
 });
 
-// Auth rate limiter (redis-based)
 app.use('/api/auth/*', async (c, next) => {
   const ip  = getIp(c);
   const key = `rl_cf_auth_${ip}`;
@@ -249,25 +244,22 @@ app.onError((err, c) => {
   return c.json({ success: false, message: 'Terjadi kesalahan server.' }, 500);
 });
 
-// Cron jobs
-const supabase = getSupabaseAdmin();
-
 cron.schedule('0 23 * * 0', () => {
   generateWeeklyArticle().catch(err => console.error('[CRON] Artikel error:', err));
 });
 
 cron.schedule('*/30 * * * *', () => {
-  runScheduler(supabase).catch(err => console.error('[CRON] Robot scheduler error:', err));
+  runScheduler().catch(err => console.error('[CRON] Robot scheduler error:', err));
 });
 
 cron.schedule('*/15 * * * *', () => {
   const now            = new Date();
   const isFirstOfMonth = now.getDate() === 1 && now.getHours() === 0;
   Promise.all([
-    detectTrends(supabase).catch(err => console.error('[CRON] Trend error:', err)),
-    detectThreats(supabase).catch(err => console.error('[CRON] Threat error:', err)),
+    detectTrends().catch(err => console.error('[CRON] Trend error:', err)),
+    detectThreats().catch(err => console.error('[CRON] Threat error:', err)),
     isFirstOfMonth
-      ? runConfidenceDecay(supabase).catch(err => console.error('[CRON] Decay error:', err))
+      ? runConfidenceDecay().catch(err => console.error('[CRON] Decay error:', err))
       : Promise.resolve(),
   ]);
 });
@@ -277,17 +269,17 @@ cron.schedule('0 19 * * *', () => {
   const oneDayAgo     = new Date(Date.now() - 86400000).toISOString();
   Promise.all([
     (async () => {
-      const { error } = await supabase.from('robot_logs').delete().lt('created_at', thirtyDaysAgo);
+      const { error } = await sql`DELETE FROM robot_logs WHERE created_at < ${thirtyDaysAgo}`.catch((err: any) => ({ error: err })) as any;
       if (error) console.error('[CRON] Robot logs cleanup error:', error);
       else console.log('[CRON] Robot logs cleanup selesai');
     })(),
     (async () => {
-      const { error } = await supabase.from('reports').delete().eq('status', 'rejected').lt('created_at', oneDayAgo);
+      const { error } = await sql`DELETE FROM reports WHERE status = 'rejected' AND created_at < ${oneDayAgo}`.catch((err: any) => ({ error: err })) as any;
       if (error) console.error('[CRON] Rejected reports cleanup error:', error);
       else console.log('[CRON] Rejected reports cleanup selesai');
     })(),
   ]);
-}); // ← ini yang hilang
+});
 
 const PORT = parseInt(process.env.PORT ?? '8787');
 serve({ fetch: app.fetch, port: PORT }, () => {

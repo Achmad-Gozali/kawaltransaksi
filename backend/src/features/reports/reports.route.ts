@@ -1,10 +1,10 @@
 import { Hono } from 'hono';
 import { authMiddleware } from '../../core/auth.middleware';
-import { getSupabaseAdmin } from '../../core/supabase';
 import { verifyTurnstile } from '../../core/turnstile';
 import { sendReportCreatedEmail, sendNewReportAdminEmail } from '../../core/resend';
 import { scoreReport, applyVerdict, reEvaluateByNumber } from '../robot/scoring-engine';
 import { isBlocked, recordRejection } from '../robot/auto-blocker';
+import sql from '../../core/db';
 import type { RobotReport } from '../robot/types';
 
 const reports = new Hono<{
@@ -84,23 +84,18 @@ function isValidHttpUrl(url: unknown): string | null {
   } catch { return null; }
 }
 
-async function checkReportRateLimit(
-  supabase: ReturnType<typeof getSupabaseAdmin>,
-  userId: string,
-): Promise<{ blocked: boolean; reason?: string }> {
+async function checkReportRateLimit(userId: string): Promise<{ blocked: boolean; reason?: string }> {
   const now        = new Date();
   const oneHourAgo = new Date(now.getTime() - 3600000).toISOString();
   const oneDayAgo  = new Date(now.getTime() - 86400000).toISOString();
 
-  const [{ count: hourCount }, { count: dayCount }] = await Promise.all([
-    supabase.from('reports').select('id', { count: 'exact', head: true })
-      .eq('reporter_id', userId).gte('created_at', oneHourAgo),
-    supabase.from('reports').select('id', { count: 'exact', head: true })
-      .eq('reporter_id', userId).gte('created_at', oneDayAgo),
+  const [[{ count: hourCount }], [{ count: dayCount }]] = await Promise.all([
+    sql`SELECT COUNT(*) as count FROM reports WHERE reporter_id = ${userId} AND created_at >= ${oneHourAgo}`,
+    sql`SELECT COUNT(*) as count FROM reports WHERE reporter_id = ${userId} AND created_at >= ${oneDayAgo}`,
   ]);
 
-  if ((hourCount ?? 0) >= 3) return { blocked: true, reason: 'Terlalu banyak laporan dalam 1 jam. Coba lagi nanti.' };
-  if ((dayCount  ?? 0) >= 10) return { blocked: true, reason: 'Batas laporan harian tercapai.' };
+  if (parseInt(hourCount) >= 3) return { blocked: true, reason: 'Terlalu banyak laporan dalam 1 jam. Coba lagi nanti.' };
+  if (parseInt(dayCount) >= 10) return { blocked: true, reason: 'Batas laporan harian tercapai.' };
   return { blocked: false };
 }
 
@@ -171,10 +166,9 @@ function buildTargetNumbers(body: Record<string, unknown>, cleanNumber: string):
 
 reports.post('/', authMiddleware, async (c) => {
   try {
-    const userId   = c.get('userId');
-    const ip       = c.req.header('X-Forwarded-For')?.split(',')[0]?.trim() ?? 'anonymous';
-    const body     = await c.req.json();
-    const supabase = getSupabaseAdmin();
+    const userId = c.get('userId');
+    const ip     = c.req.header('X-Forwarded-For')?.split(',')[0]?.trim() ?? 'anonymous';
+    const body   = await c.req.json();
 
     const [userBlock, ipBlock] = await Promise.all([
       isBlocked(userId),
@@ -195,15 +189,16 @@ reports.post('/', authMiddleware, async (c) => {
     if (!body.target_type || !VALID_TARGET_TYPES.includes(body.target_type))
       return c.json({ success: false, message: 'Jenis laporan tidak valid.' }, 400);
 
-    const rateLimit = await checkReportRateLimit(supabase, userId);
+    const rateLimit = await checkReportRateLimit(userId);
     if (rateLimit.blocked)
       return c.json({ success: false, message: rateLimit.reason }, 429);
 
     const cleanNumber = String(body.target_number).replace(/[^0-9]/g, '');
-    const { count: dupCount } = await supabase
-      .from('reports').select('*', { count: 'exact', head: true })
-      .eq('reporter_id', userId).eq('target_number', cleanNumber).neq('status', 'withdrawn');
-    if ((dupCount ?? 0) > 0)
+    const [{ count: dupCount }] = await sql`
+      SELECT COUNT(*) as count FROM reports
+      WHERE reporter_id = ${userId} AND target_number = ${cleanNumber} AND status != 'withdrawn'
+    `;
+    if (parseInt(dupCount) > 0)
       return c.json({ success: false, message: 'Kamu sudah pernah melaporkan nomor ini sebelumnya.' }, 409);
 
     const categoryClean = sanitizeText(String(body.category ?? '').trim());
@@ -211,36 +206,41 @@ reports.post('/', authMiddleware, async (c) => {
       body.evidence_urls?.length > 0 ? body.evidence_urls : body.evidence_url ? [body.evidence_url] : []
     );
 
-    const { data: inserted, error } = await supabase
-      .from('reports')
-      .insert({
-        reporter_id:           userId,
-        target_number:         cleanNumber,
-        target_name:           body.target_name ? sanitizeText(String(body.target_name)) : null,
-        target_type:           body.target_type,
-        category:              categoryClean,
-        chronology:            sanitizeChronology(String(body.chronology ?? '')),
-        evidence_url:          evidenceUrls[0] || null,
-        evidence_urls:         evidenceUrls,
-        status:                'pending',
-        bank_name:             body.bank_name ? sanitizeText(String(body.bank_name)) : null,
-        loss_amount:           body.loss_amount || null,
-        incident_date:         body.incident_date || null,
-        platform:              body.platform ? sanitizeText(String(body.platform)) : null,
-        link_url:              isValidHttpUrl(body.link_url),
-        social_media_accounts: body.social_media_accounts ? sanitizeArray(body.social_media_accounts) : [],
-        has_other_victims:     body.has_other_victims || null,
-        reported_to:           body.reported_to ?? [],
-        suspect_photo_url:     isValidEvidenceUrl(body.suspect_photo_url) ? body.suspect_photo_url : null,
-        target_numbers:        buildTargetNumbers(body, cleanNumber),
-        store_name:            body.store_name ? sanitizeText(String(body.store_name)) : null,
-        suspect_city:          body.suspect_city ? sanitizeText(String(body.suspect_city)) : null,
-      })
-      .select('id')
-      .single();
+    const [inserted] = await sql`
+      INSERT INTO reports (
+        reporter_id, target_number, target_name, target_type, category,
+        chronology, evidence_url, evidence_urls, status, bank_name,
+        loss_amount, incident_date, platform, link_url, social_media_accounts,
+        has_other_victims, reported_to, suspect_photo_url, target_numbers,
+        store_name, suspect_city
+      ) VALUES (
+        ${userId},
+        ${cleanNumber},
+        ${body.target_name ? sanitizeText(String(body.target_name)) : null},
+        ${body.target_type},
+        ${categoryClean},
+        ${sanitizeChronology(String(body.chronology ?? ''))},
+        ${evidenceUrls[0] || null},
+        ${evidenceUrls},
+        'pending',
+        ${body.bank_name ? sanitizeText(String(body.bank_name)) : null},
+        ${body.loss_amount || null},
+        ${body.incident_date || null},
+        ${body.platform ? sanitizeText(String(body.platform)) : null},
+        ${isValidHttpUrl(body.link_url)},
+        ${body.social_media_accounts ? sanitizeArray(body.social_media_accounts) : []},
+        ${body.has_other_victims || null},
+        ${body.reported_to ?? []},
+        ${isValidEvidenceUrl(body.suspect_photo_url) ? body.suspect_photo_url : null},
+        ${JSON.stringify(buildTargetNumbers(body, cleanNumber))},
+        ${body.store_name ? sanitizeText(String(body.store_name)) : null},
+        ${body.suspect_city ? sanitizeText(String(body.suspect_city)) : null}
+      )
+      RETURNING id
+    `;
 
-    if (error || !inserted) {
-      console.error('[REPORTS] Insert error:', error?.message);
+    if (!inserted) {
+      console.error('[REPORTS] Insert error');
       return c.json({ success: false, message: 'Gagal menyimpan laporan.' }, 500);
     }
 
@@ -248,16 +248,16 @@ reports.post('/', authMiddleware, async (c) => {
 
     Promise.resolve().then(() => (async () => {
       try {
-        const [{ data: profile }, { data: freshReport }] = await Promise.all([
-          supabase.from('profiles').select('full_name, email').eq('id', userId).single(),
-          supabase.from('reports').select('*').eq('id', reportId).single(),
+        const [[profile], [freshReport]] = await Promise.all([
+          sql`SELECT full_name, email FROM profiles WHERE id = ${userId} LIMIT 1`,
+          sql`SELECT * FROM reports WHERE id = ${reportId} LIMIT 1`,
         ]);
 
         if (freshReport) {
-          const result = await scoreReport(freshReport as RobotReport, supabase);
+          const result = await scoreReport(freshReport as RobotReport);
           await Promise.all([
-            applyVerdict(freshReport as RobotReport, result, supabase),
-            reEvaluateByNumber(cleanNumber, supabase),
+            applyVerdict(freshReport as RobotReport, result, freshReport.status),
+            reEvaluateByNumber(cleanNumber),
           ]);
           if (result.verdict === 'rejected')
             await recordRejection(userId, ip);
@@ -302,20 +302,17 @@ reports.get('/check-number/:number', async (c) => {
     if (!number || number.length < 6)
       return c.json({ success: false, message: 'Nomor tidak valid.' }, 400);
 
-    const supabase = getSupabaseAdmin();
-    const { count: totalReports } = await supabase
-      .from('reports').select('id', { count: 'exact', head: true })
-      .eq('target_number', number).neq('status', 'withdrawn');
+    const [[{ count: totalReports }], [blacklist]] = await Promise.all([
+      sql`SELECT COUNT(*) as count FROM reports WHERE target_number = ${number} AND status != 'withdrawn'`,
+      sql`SELECT level FROM blacklist WHERE target_number = ${number} LIMIT 1`,
+    ]);
 
-    if (!totalReports || totalReports === 0)
+    if (parseInt(totalReports) === 0)
       return c.json({ success: true, data: { exists: false, totalReports: 0 } });
-
-    const { data: blacklist } = await supabase
-      .from('blacklist').select('level').eq('target_number', number).single();
 
     return c.json({
       success: true,
-      data: { exists: true, totalReports: totalReports ?? 0, level: blacklist?.level ?? null },
+      data: { exists: true, totalReports: parseInt(totalReports), level: blacklist?.level ?? null },
     });
   } catch {
     return c.json({ success: false, message: 'Terjadi kesalahan.' }, 500);

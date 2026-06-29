@@ -4,6 +4,7 @@ import { verifyTurnstile } from '../../core/turnstile';
 import { sendVerificationEmail, sendPasswordResetEmail } from '../../core/resend';
 import { autoBlacklistIfAbuse } from '../../core/abuse';
 import { kv } from '../../core/redis';
+import sql from '../../core/db';
 
 const auth = new Hono();
 
@@ -144,7 +145,7 @@ auth.post('/register', async (c) => {
     }
 
     const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
-      type: 'magiclink',
+      type:  'magiclink',
       email: normalizedEmail,
       options: { redirectTo: `${process.env.FRONTEND_URL}/auth/confirm` },
     });
@@ -153,17 +154,17 @@ auth.post('/register', async (c) => {
       return c.json({ success: false, message: 'Gagal mengirim email verifikasi.' }, 500);
 
     sendVerificationEmail({
-      to: normalizedEmail,
-      fullName: sanitizedFullName,
+      to:               normalizedEmail,
+      fullName:         sanitizedFullName,
       verificationLink: linkData.properties.action_link,
-      apiKey: process.env.RESEND_API_KEY!,
+      apiKey:           process.env.RESEND_API_KEY!,
     }).catch(console.error);
 
     return c.json({
-      success: true,
+      success:              true,
       requiresVerification: true,
-      message: 'Akun berhasil dibuat! Cek email kamu untuk verifikasi.',
-      userId: signUpData.user?.id,
+      message:              'Akun berhasil dibuat! Cek email kamu untuk verifikasi.',
+      userId:               signUpData.user?.id,
     });
   } catch {
     return c.json({ success: false, message: 'Terjadi kesalahan server.' }, 500);
@@ -201,9 +202,10 @@ auth.post('/login', async (c) => {
     const supabase       = getSupabaseAdmin();
     const supabaseClient = getSupabaseClient();
 
-    const { data: profile } = await supabase
-      .from('profiles').select('id, failed_attempts, locked_until, is_banned')
-      .eq('email', normalizedEmail).single();
+    const [profile] = await sql`
+      SELECT id, failed_attempts, locked_until, is_banned
+      FROM profiles WHERE email = ${normalizedEmail} LIMIT 1
+    `;
 
     if (profile) {
       if (profile.is_banned)
@@ -212,7 +214,7 @@ auth.post('/login', async (c) => {
         const lockedUntil = new Date(profile.locked_until);
         if (lockedUntil > new Date())
           return c.json({ success: false, message: 'Akun dikunci sementara.', locked: true, locked_until: profile.locked_until }, 429);
-        await supabase.from('profiles').update({ failed_attempts: 0, locked_until: null }).eq('id', profile.id);
+        await sql`UPDATE profiles SET failed_attempts = 0, locked_until = null WHERE id = ${profile.id}`;
       }
     }
 
@@ -222,26 +224,26 @@ auth.post('/login', async (c) => {
 
     if (signInError) {
       if (!profile) return c.json({ success: false, message: 'Email atau kata sandi salah.' }, 401);
-      const { data: fresh } = await supabase.from('profiles').select('failed_attempts').eq('id', profile.id).single();
+      const [fresh] = await sql`SELECT failed_attempts FROM profiles WHERE id = ${profile.id} LIMIT 1`;
       const currentAttempts = (fresh?.failed_attempts ?? 0) + 1;
       const remaining       = MAX_ATTEMPTS - currentAttempts;
       if (currentAttempts >= MAX_ATTEMPTS) {
-        const lockedUntil = new Date(Date.now() + LOCK_DURATION_MINUTES * 60 * 1000);
-        await supabase.from('profiles').update({ failed_attempts: currentAttempts, locked_until: lockedUntil.toISOString() }).eq('id', profile.id);
+        const lockedUntil = new Date(Date.now() + LOCK_DURATION_MINUTES * 60 * 1000).toISOString();
+        await sql`UPDATE profiles SET failed_attempts = ${currentAttempts}, locked_until = ${lockedUntil} WHERE id = ${profile.id}`;
         await autoBlacklistIfAbuse(ip, 'Berulang kali gagal login');
-        return c.json({ success: false, message: 'Akun dikunci sementara.', locked: true, locked_until: lockedUntil.toISOString() }, 429);
+        return c.json({ success: false, message: 'Akun dikunci sementara.', locked: true, locked_until: lockedUntil }, 429);
       }
-      await supabase.from('profiles').update({ failed_attempts: currentAttempts }).eq('id', profile.id);
+      await sql`UPDATE profiles SET failed_attempts = ${currentAttempts} WHERE id = ${profile.id}`;
       return c.json({
         success: false,
         message: remaining === 1 ? 'Email atau kata sandi salah. Hati-hati, akun akan dikunci.' : 'Email atau kata sandi salah.',
-        locked: false,
+        locked:  false,
         warning: remaining === 1,
       }, 401);
     }
 
     if (signInData.user) {
-      const { data: fresh } = await supabase.from('profiles').select('is_banned').eq('id', signInData.user.id).single();
+      const [fresh] = await sql`SELECT is_banned FROM profiles WHERE id = ${signInData.user.id} LIMIT 1`;
       if (fresh?.is_banned) {
         await supabaseClient.auth.signOut();
         return c.json({ success: false, message: 'Akun Anda telah dinonaktifkan.' }, 403);
@@ -250,7 +252,7 @@ auth.post('/login', async (c) => {
         kv.delete(`rl_login_${ip}_${emailSlug}`),
         kv.delete(`rl_email_${emailSlug}`),
       ]);
-      await supabase.from('profiles').update({ failed_attempts: 0, locked_until: null }).eq('id', signInData.user.id);
+      await sql`UPDATE profiles SET failed_attempts = 0, locked_until = null WHERE id = ${signInData.user.id}`;
     }
 
     return c.json({ success: true, message: 'Login berhasil.', session: signInData.session });
@@ -273,16 +275,16 @@ auth.post('/forgot-password', async (c) => {
     if (check.blocked)
       return c.json({ success: false, message: 'Terlalu banyak percobaan.' }, 429);
 
-    const supabase = getSupabaseAdmin();
-    const { data: profile } = await supabase
-      .from('profiles').select('id, full_name, is_banned')
-      .eq('email', normalizedEmail).single();
+    const [profile] = await sql`
+      SELECT id, full_name, is_banned FROM profiles WHERE email = ${normalizedEmail} LIMIT 1
+    `;
 
     if (!profile || profile.is_banned)
       return c.json({ success: true, message: 'Jika email terdaftar, link reset akan dikirim.' });
 
+    const supabase = getSupabaseAdmin();
     const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
-      type: 'recovery',
+      type:  'recovery',
       email: normalizedEmail,
       options: { redirectTo: `${process.env.FRONTEND_URL}/reset-kata-sandi` },
     });
@@ -291,10 +293,10 @@ auth.post('/forgot-password', async (c) => {
       return c.json({ success: false, message: 'Gagal mengirim email.' }, 500);
 
     sendPasswordResetEmail({
-      to: normalizedEmail,
-      fullName: profile.full_name || 'Pengguna',
+      to:        normalizedEmail,
+      fullName:  profile.full_name || 'Pengguna',
       resetLink: linkData.properties.action_link,
-      apiKey: process.env.RESEND_API_KEY!,
+      apiKey:    process.env.RESEND_API_KEY!,
     }).catch(console.error);
 
     return c.json({ success: true, message: 'Jika email terdaftar, link reset akan dikirim.' });

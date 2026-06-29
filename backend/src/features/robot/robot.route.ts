@@ -1,5 +1,5 @@
 import { Hono } from 'hono';
-import { getSupabaseAdmin } from '../../core/supabase';
+import sql from '../../core/db';
 import { scoreReport, applyVerdict, reEvaluateByNumber } from './scoring-engine';
 import { checkBlacklist, runConfidenceDecay } from './blacklist-engine';
 import { saveHealthSnapshot, buildSnapshot, detectAnomalies, getLatestHealth } from './health-monitor';
@@ -17,89 +17,86 @@ function isInternal(c: any): boolean {
 
 robot.post('/evaluate/:reportId', async (c) => {
   if (!isInternal(c)) return c.json({ success: false, message: 'Akses ditolak.' }, 403);
-  const supabase = getSupabaseAdmin();
-  const { data: report, error } = await supabase
-    .from('reports').select('*').eq('id', c.req.param('reportId')).single();
-  if (error || !report) return c.json({ success: false, message: 'Laporan tidak ditemukan.' }, 404);
-  const result = await scoreReport(report as RobotReport, supabase);
-  await applyVerdict(report as RobotReport, result, supabase, report.status);
+  const [report] = await sql`SELECT * FROM reports WHERE id = ${c.req.param('reportId')} LIMIT 1`;
+  if (!report) return c.json({ success: false, message: 'Laporan tidak ditemukan.' }, 404);
+  const result = await scoreReport(report as RobotReport);
+  await applyVerdict(report as RobotReport, result, report.status);
   return c.json({ success: true, data: result });
 });
 
 robot.post('/evaluate-number/:number', async (c) => {
   if (!isInternal(c)) return c.json({ success: false, message: 'Akses ditolak.' }, 403);
-  await reEvaluateByNumber(c.req.param('number'), getSupabaseAdmin());
+  await reEvaluateByNumber(c.req.param('number'));
   return c.json({ success: true, message: `Re-evaluasi selesai untuk nomor ${c.req.param('number')}.` });
 });
 
 robot.get('/blacklist/:number', async (c) => {
   if (!isInternal(c)) return c.json({ success: false, message: 'Akses ditolak.' }, 403);
-  const result = await checkBlacklist(c.req.param('number'), getSupabaseAdmin());
+  const result = await checkBlacklist(c.req.param('number'));
   return c.json({ success: true, data: result });
 });
 
 robot.get('/blacklist-list', async (c) => {
   if (!isInternal(c)) return c.json({ success: false, message: 'Akses ditolak.' }, 403);
-  const { data } = await getSupabaseAdmin().from('blacklist').select('*').order('unique_reporters', { ascending: false }).limit(50);
-  return c.json({ success: true, data: data ?? [] });
+  const data = await sql`SELECT * FROM blacklist ORDER BY unique_reporters DESC LIMIT 50`;
+  return c.json({ success: true, data });
 });
 
 robot.get('/health', async (c) => {
   if (!isInternal(c)) return c.json({ success: false, message: 'Akses ditolak.' }, 403);
-  const latest = await getLatestHealth(getSupabaseAdmin());
+  const latest = await getLatestHealth();
   return c.json({ success: true, data: latest });
 });
 
 robot.get('/viral', async (c) => {
   if (!isInternal(c)) return c.json({ success: false, message: 'Akses ditolak.' }, 403);
-  const data = await getViralNumbers(getSupabaseAdmin());
+  const data = await getViralNumbers();
   return c.json({ success: true, data });
 });
 
 robot.get('/logs', async (c) => {
   if (!isInternal(c)) return c.json({ success: false, message: 'Akses ditolak.' }, 403);
-  const { data } = await getSupabaseAdmin().from('robot_logs').select('*').order('created_at', { ascending: false }).limit(50);
-  return c.json({ success: true, data: data ?? [] });
+  const data = await sql`SELECT * FROM robot_logs ORDER BY created_at DESC LIMIT 50`;
+  return c.json({ success: true, data });
 });
 
 robot.post('/run-scheduler', async (c) => {
   if (!isInternal(c)) return c.json({ success: false, message: 'Akses ditolak.' }, 403);
-  const result = await runScheduler(getSupabaseAdmin());
+  const result = await runScheduler();
   return c.json({ success: true, data: result });
 });
 
 robot.post('/run-decay', async (c) => {
   if (!isInternal(c)) return c.json({ success: false, message: 'Akses ditolak.' }, 403);
-  const supabase = getSupabaseAdmin();
-  const result   = await runConfidenceDecay(supabase);
-  await writeLog({ action: 'decay', reasons: [result] }, supabase).catch(() => {});
+  const result = await runConfidenceDecay();
+  await writeLog({ action: 'decay', reasons: [result] }).catch(() => {});
   return c.json({ success: true, data: result });
 });
 
 robot.post('/run-trends', async (c) => {
   if (!isInternal(c)) return c.json({ success: false, message: 'Akses ditolak.' }, 403);
-  const result = await detectTrends(getSupabaseAdmin());
+  const result = await detectTrends();
   return c.json({ success: true, data: result });
 });
 
 robot.post('/backfill', async (c) => {
   if (!isInternal(c)) return c.json({ success: false, message: 'Akses ditolak.' }, 403);
 
-  const supabase = getSupabaseAdmin();
-  const stats    = { processed: 0, verified: 0, rejected: 0, skipped: 0, errors: 0 };
+  const stats = { processed: 0, verified: 0, rejected: 0, skipped: 0, errors: 0 };
 
-  const { data: reports } = await supabase
-    .from('reports').select('*')
-    .eq('status', 'verified').eq('robot_status', 'pending')
-    .order('created_at', { ascending: true });
+  const reports = await sql`
+    SELECT * FROM reports
+    WHERE status = 'verified' AND robot_status = 'pending'
+    ORDER BY created_at ASC
+  `;
 
-  if (!reports?.length)
+  if (!reports.length)
     return c.json({ success: true, message: 'Tidak ada laporan yang perlu diproses.', data: stats });
 
   for (const report of reports) {
     try {
-      const result = await scoreReport(report as RobotReport, supabase);
-      await applyVerdict(report as RobotReport, result, supabase, report.status);
+      const result = await scoreReport(report as RobotReport);
+      await applyVerdict(report as RobotReport, result, report.status);
       stats.processed++;
       if (result.verdict === 'verified') stats.verified++;
       if (result.verdict === 'rejected') stats.rejected++;
@@ -107,55 +104,51 @@ robot.post('/backfill', async (c) => {
     } catch (err) {
       console.error(`[BACKFILL] Error evaluasi ${report.id}:`, err);
       stats.errors++;
-      await writeLog({ action: 'evaluate', report_id: report.id, error: String(err) }, supabase).catch(() => {});
+      await writeLog({ action: 'evaluate', report_id: report.id, error: String(err) }).catch(() => {});
     }
   }
 
-  await writeLog({ action: 'scheduler', reasons: [{ ...stats, source: 'backfill' }] }, supabase).catch(() => {});
+  await writeLog({ action: 'scheduler', reasons: [{ ...stats, source: 'backfill' }] }).catch(() => {});
   console.log('[BACKFILL] Selesai:', stats);
   return c.json({ success: true, data: stats });
 });
 
-export async function runScheduler(
-  supabase: ReturnType<typeof getSupabaseAdmin>
-): Promise<{ processed: number; verified: number; rejected: number; errors: number; alerts: string[] }> {
+export async function runScheduler(): Promise<{ processed: number; verified: number; rejected: number; errors: number; alerts: string[] }> {
   const stats     = { processed: 0, verified: 0, rejected: 0, errors: 0 };
   const durations: number[] = [];
 
-  const { count: pendingTotal } = await supabase
-    .from('reports').select('id', { count: 'exact', head: true }).eq('status', 'pending');
+  const [{ count: pendingTotal }] = await sql`SELECT COUNT(*) as count FROM reports WHERE status = 'pending'`;
 
-  const { data: pendingReports } = await supabase
-    .from('reports').select('*')
-    .eq('status', 'pending')
-    .order('created_at', { ascending: true })
-    .limit(50);
+  const pendingReports = await sql`
+    SELECT * FROM reports
+    WHERE status = 'pending'
+    ORDER BY created_at ASC
+    LIMIT 50
+  `;
 
-  if (pendingReports?.length) {
-    for (const report of pendingReports) {
-      const start = Date.now();
-      try {
-        const result = await scoreReport(report as RobotReport, supabase);
-        await applyVerdict(report as RobotReport, result, supabase, report.status);
-        stats.processed++;
-        if (result.verdict === 'verified') stats.verified++;
-        if (result.verdict === 'rejected') stats.rejected++;
-        durations.push(Date.now() - start);
-      } catch (err) {
-        console.error(`[ROBOT] Error evaluasi ${report.id}:`, err);
-        stats.errors++;
-        await writeLog({ action: 'evaluate', report_id: report.id, error: String(err) }, supabase).catch(() => {});
-      }
+  for (const report of pendingReports) {
+    const start = Date.now();
+    try {
+      const result = await scoreReport(report as RobotReport);
+      await applyVerdict(report as RobotReport, result, report.status);
+      stats.processed++;
+      if (result.verdict === 'verified') stats.verified++;
+      if (result.verdict === 'rejected') stats.rejected++;
+      durations.push(Date.now() - start);
+    } catch (err) {
+      console.error(`[ROBOT] Error evaluasi ${report.id}:`, err);
+      stats.errors++;
+      await writeLog({ action: 'evaluate', report_id: report.id, error: String(err) }).catch(() => {});
     }
   }
 
-  const snapshot = buildSnapshot(stats, durations, pendingTotal ?? 0);
-  await saveHealthSnapshot(snapshot, supabase);
+  const snapshot = buildSnapshot(stats, durations, parseInt(pendingTotal ?? '0'));
+  await saveHealthSnapshot(snapshot);
 
   const alerts = detectAnomalies(snapshot);
   if (alerts.length) console.warn('[HEALTH] Anomali:', alerts);
 
-  await writeLog({ action: 'scheduler', reasons: [{ ...stats, alerts }] }, supabase).catch(() => {});
+  await writeLog({ action: 'scheduler', reasons: [{ ...stats, alerts }] }).catch(() => {});
   console.log('[ROBOT] Scheduler selesai:', stats);
   return { ...stats, alerts };
 }

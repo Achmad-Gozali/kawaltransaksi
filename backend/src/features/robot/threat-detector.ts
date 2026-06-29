@@ -1,4 +1,3 @@
-import { getSupabaseAdmin } from '../../core/supabase';
 import { writeLog } from './audit-logger';
 import { kv } from '../../core/redis';
 
@@ -106,9 +105,7 @@ async function blockThreatenedIps(
   return blocked;
 }
 
-export async function detectThreats(
-  supabase: ReturnType<typeof getSupabaseAdmin>,
-): Promise<{ threats: ThreatReport[]; updated: number; blocked: number }> {
+export async function detectThreats(): Promise<{ threats: ThreatReport[]; updated: number; blocked: number }> {
   const [{ samples, logs }, baselines] = await Promise.all([
     collectTraffic(),
     getBaselines(),
@@ -148,9 +145,9 @@ export async function detectThreats(
   if (threats.length > 0) {
     console.log(`[THREAT] ${threats.length} anomali, ${blocked} IP di-block`);
     await writeLog({
-      action: 'scheduler',
+      action:  'scheduler',
       reasons: [{ type: 'threat_detection', threats, blocked }],
-    }, supabase).catch(() => {});
+    }).catch(() => {});
   }
 
   return { threats, updated: Object.keys(baselines).length, blocked };

@@ -2,7 +2,6 @@ import { Hono } from 'hono';
 import { getSupabaseAdmin } from '../../core/supabase';
 import { verifyTurnstile } from '../../core/turnstile';
 import { kv } from '../../core/redis';
-import { getEnv } from '../../types';
 
 const search = new Hono();
 
@@ -54,7 +53,7 @@ search.use('*', async (c, next) => {
 
 search.post('/verify-turnstile', async (c) => {
   try {
-    const env   = getEnv();
+    const env   = process.env;
     const { token } = await c.req.json();
     if (!token || typeof token !== 'string' || !token.trim())
       return c.json({ success: false, message: 'Token tidak ditemukan.' }, 400);
@@ -63,7 +62,7 @@ search.post('/verify-turnstile', async (c) => {
     if (await kv.get(blacklistKey))
       return c.json({ success: false, message: 'Token verifikasi sudah digunakan.' }, 400);
 
-    if (!await verifyTurnstile(token, env.TURNSTILE_SECRET_KEY))
+    if (!await verifyTurnstile(token, env.TURNSTILE_SECRET_KEY!))
       return c.json({ success: false, message: 'Verifikasi keamanan gagal.' }, 400);
 
     await kv.put(blacklistKey, '1', { expirationTtl: 300 });

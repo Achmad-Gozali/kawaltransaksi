@@ -8,6 +8,7 @@ import { getLatestHealth } from '../robot/health-monitor';
 import { getViralNumbers } from '../robot/trend-detector';
 import { kv } from '../../core/redis';
 import { getEnv } from '../../types';
+import sql from '../../core/db';
 
 const admin = new Hono();
 
@@ -26,19 +27,20 @@ const validUUID = (id: string) => UUID_REGEX.test(id);
 
 admin.get('/users', authMiddleware, requireAdmin, async (c) => {
   try {
-    const supabase = getSupabaseAdmin();
-    const [{ data: profiles }, { data: counts }] = await Promise.all([
-      supabase.from('profiles').select('id, full_name, email, role, is_banned, created_at, updated_at').order('created_at', { ascending: false }),
-      supabase.from('reports').select('reporter_id').limit(10000),
+    const [profiles, counts] = await Promise.all([
+      sql`SELECT id, full_name, email, role, is_banned, created_at, updated_at FROM profiles ORDER BY created_at DESC`,
+      sql`SELECT reporter_id FROM reports LIMIT 10000`,
     ]);
+
     const reportCounts: Record<string, number> = {};
-    counts?.forEach((r: { reporter_id: string }) => {
+    counts.forEach((r: any) => {
       reportCounts[r.reporter_id] = (reportCounts[r.reporter_id] || 0) + 1;
     });
+
     return c.json({
       success: true,
-      data: (profiles ?? []).map((p: Record<string, unknown>) => ({
-        ...p, report_count: reportCounts[p.id as string] || 0,
+      data: profiles.map((p: any) => ({
+        ...p, report_count: reportCounts[p.id] || 0,
       })),
     });
   } catch {
@@ -50,7 +52,7 @@ admin.get('/users/:userId/banned', authMiddleware, requireAdmin, async (c) => {
   try {
     const userId = c.req.param('userId');
     if (!validUUID(userId)) return c.json({ success: false, message: 'ID tidak valid.' }, 400);
-    const { data } = await getSupabaseAdmin().from('profiles').select('is_banned').eq('id', userId).single();
+    const [data] = await sql`SELECT is_banned FROM profiles WHERE id = ${userId} LIMIT 1`;
     return c.json({ success: true, is_banned: data?.is_banned ?? false });
   } catch {
     return c.json({ success: false, is_banned: false });
@@ -64,8 +66,7 @@ admin.patch('/users/:id/role', authMiddleware, requireAdmin, async (c) => {
     const { role } = await c.req.json();
     if (!role || !VALID_ROLES.includes(role)) return c.json({ success: false, message: 'Role tidak valid.' }, 400);
     if (c.get('userId') === id) return c.json({ success: false, message: 'Tidak dapat mengubah role diri sendiri.' }, 400);
-    const { error } = await getSupabaseAdmin().from('profiles').update({ role }).eq('id', id);
-    if (error) throw error;
+    await sql`UPDATE profiles SET role = ${role} WHERE id = ${id}`;
     return c.json({ success: true });
   } catch {
     return c.json({ success: false, message: 'Terjadi kesalahan server.' }, 500);
@@ -79,8 +80,7 @@ admin.patch('/users/:id/ban-status', authMiddleware, requireAdmin, async (c) => 
     if (c.get('userId') === id) return c.json({ success: false, message: 'Tidak dapat mengubah status diri sendiri.' }, 400);
     const { is_banned } = await c.req.json();
     if (typeof is_banned !== 'boolean') return c.json({ success: false, message: 'is_banned harus boolean.' }, 400);
-    const { error } = await getSupabaseAdmin().from('profiles').update({ is_banned }).eq('id', id);
-    if (error) throw error;
+    await sql`UPDATE profiles SET is_banned = ${is_banned} WHERE id = ${id}`;
     return c.json({ success: true });
   } catch {
     return c.json({ success: false, message: 'Terjadi kesalahan server.' }, 500);
@@ -94,23 +94,23 @@ admin.patch('/reports/:id/status', authMiddleware, requireAdmin, async (c) => {
     const { status } = await c.req.json();
     if (!status || !VALID_STATUSES.includes(status)) return c.json({ success: false, message: 'Status tidak valid.' }, 400);
 
-    const supabase = getSupabaseAdmin();
-    const { data: report, error: fetchError } = await supabase.from('reports').select('id, target_number, reporter_id').eq('id', id).single();
-    if (fetchError || !report) return c.json({ success: false, message: 'Laporan tidak ditemukan.' }, 404);
+    const [report] = await sql`SELECT id, target_number, reporter_id FROM reports WHERE id = ${id} LIMIT 1`;
+    if (!report) return c.json({ success: false, message: 'Laporan tidak ditemukan.' }, 404);
 
-    const { error } = await supabase.from('reports').update({ status }).eq('id', id);
-    if (error) throw error;
+    await sql`UPDATE reports SET status = ${status} WHERE id = ${id}`;
 
     (async () => {
       try {
         const env = getEnv();
-        const { data: profile } = await supabase.from('profiles').select('full_name, email').eq('id', report.reporter_id).single();
+        const [profile] = await sql`SELECT full_name, email FROM profiles WHERE id = ${report.reporter_id} LIMIT 1`;
         if (profile?.email) {
           await sendReportStatusChangedEmail({
-            to: profile.email, fullName: profile.full_name ?? 'Pengguna',
-            targetNumber: report.target_number, newStatus: status,
-            reportUrl: `https://kawaltransaksi.com/check/${report.target_number}`,
-            apiKey: env.RESEND_API_KEY,
+            to:           profile.email,
+            fullName:     profile.full_name ?? 'Pengguna',
+            targetNumber: report.target_number,
+            newStatus:    status,
+            reportUrl:    `https://kawaltransaksi.com/check/${report.target_number}`,
+            apiKey:       env.RESEND_API_KEY,
           });
         }
       } catch (err) { console.error('[EMAIL] status laporan:', err); }
@@ -188,10 +188,11 @@ admin.get('/iplogs', authMiddleware, requireAdmin, async (c) => {
 
 admin.get('/articles', authMiddleware, requireAdmin, async (c) => {
   try {
-    const { data, error } = await getSupabaseAdmin().from('articles')
-      .select('id, title, slug, summary, content, status, cover_image, published_at, total_reports, top_category, created_at')
-      .order('created_at', { ascending: false });
-    if (error) throw error;
+    const data = await sql`
+      SELECT id, title, slug, summary, content, status, cover_image, published_at,
+             total_reports, top_category, created_at
+      FROM articles ORDER BY created_at DESC
+    `;
     return c.json({ success: true, data });
   } catch {
     return c.json({ success: false, message: 'Gagal mengambil artikel.' }, 500);
@@ -204,11 +205,12 @@ admin.post('/articles', authMiddleware, requireAdmin, async (c) => {
     if (!title || !content || !summary)
       return c.json({ success: false, message: 'Title, content, dan summary wajib diisi.' }, 400);
     const slug = `${title.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '')}-${Date.now()}`;
-    const { data, error } = await getSupabaseAdmin().from('articles').insert({
-      title, content, summary, slug, top_category: top_category || null,
-      status: 'draft', published_at: new Date().toISOString(), created_at: new Date().toISOString(),
-    }).select('id').single();
-    if (error) throw error;
+    const now  = new Date().toISOString();
+    const [data] = await sql`
+      INSERT INTO articles (title, content, summary, slug, top_category, status, published_at, created_at)
+      VALUES (${title}, ${content}, ${summary}, ${slug}, ${top_category || null}, 'draft', ${now}, ${now})
+      RETURNING id
+    `;
     return c.json({ success: true, data });
   } catch {
     return c.json({ success: false, message: 'Gagal membuat artikel.' }, 500);
@@ -248,8 +250,7 @@ admin.post('/articles/:id/cover', authMiddleware, requireAdmin, async (c) => {
     if (uploadError) return c.json({ success: false, message: 'Gagal upload ke storage.' }, 500);
 
     const { data: urlData } = supabase.storage.from('reports').getPublicUrl(path);
-    const { error: updateError } = await supabase.from('articles').update({ cover_image: urlData.publicUrl }).eq('id', id);
-    if (updateError) return c.json({ success: false, message: 'Upload berhasil tapi gagal menyimpan URL.' }, 500);
+    await sql`UPDATE articles SET cover_image = ${urlData.publicUrl} WHERE id = ${id}`;
 
     return c.json({ success: true, cover_url: urlData.publicUrl });
   } catch {
@@ -266,8 +267,7 @@ admin.patch('/articles/:id', authMiddleware, requireAdmin, async (c) => {
     const update: Record<string, unknown> = {};
     for (const key of allowed) if (key in body) update[key] = body[key];
     if (!Object.keys(update).length) return c.json({ success: false, message: 'Tidak ada field yang diupdate.' }, 400);
-    const { error } = await getSupabaseAdmin().from('articles').update(update).eq('id', id);
-    if (error) throw error;
+    await sql`UPDATE articles SET ${sql(update)} WHERE id = ${id}`;
     return c.json({ success: true });
   } catch {
     return c.json({ success: false, message: 'Gagal update artikel.' }, 500);
@@ -278,8 +278,7 @@ admin.delete('/articles/:id', authMiddleware, requireAdmin, async (c) => {
   try {
     const id = c.req.param('id');
     if (!validUUID(id)) return c.json({ success: false, message: 'ID tidak valid.' }, 400);
-    const { error } = await getSupabaseAdmin().from('articles').delete().eq('id', id);
-    if (error) throw error;
+    await sql`DELETE FROM articles WHERE id = ${id}`;
     return c.json({ success: true });
   } catch {
     return c.json({ success: false, message: 'Gagal menghapus artikel.' }, 500);
@@ -288,18 +287,20 @@ admin.delete('/articles/:id', authMiddleware, requireAdmin, async (c) => {
 
 admin.get('/apikeys', authMiddleware, requireAdmin, async (c) => {
   try {
-    const supabase = getSupabaseAdmin();
-    const { data: keys, error } = await supabase.from('api_keys')
-      .select('id, user_id, name, key_prefix, environment, failed_attempts, requests_today, requests_total, daily_limit, last_reset_at, last_used_at, expires_at, is_active, created_at')
-      .order('created_at', { ascending: false });
-    if (error) throw error;
-    const userIds  = [...new Set((keys ?? []).map((k: any) => k.user_id).filter(Boolean))];
+    const keys = await sql`
+      SELECT id, user_id, name, key_prefix, environment, failed_attempts, requests_today,
+             requests_total, daily_limit, last_reset_at, last_used_at, expires_at, is_active, created_at
+      FROM api_keys ORDER BY created_at DESC
+    `;
+
+    const userIds  = [...new Set(keys.map((k: any) => k.user_id).filter(Boolean))];
     const emailMap: Record<string, string> = {};
     if (userIds.length > 0) {
-      const { data: profiles } = await supabase.from('profiles').select('id, email').in('id', userIds);
-      profiles?.forEach((p: any) => { emailMap[p.id] = p.email; });
+      const profiles = await sql`SELECT id, email FROM profiles WHERE id IN ${sql(userIds)}`;
+      profiles.forEach((p: any) => { emailMap[p.id] = p.email; });
     }
-    return c.json({ success: true, data: (keys ?? []).map((k: any) => ({ ...k, user_email: emailMap[k.user_id] ?? null })) });
+
+    return c.json({ success: true, data: keys.map((k: any) => ({ ...k, user_email: emailMap[k.user_id] ?? null })) });
   } catch {
     return c.json({ success: false, message: 'Gagal mengambil API keys.' }, 500);
   }
@@ -310,8 +311,7 @@ admin.patch('/apikeys/:id/toggle', authMiddleware, requireAdmin, async (c) => {
     const id = c.req.param('id');
     if (!validUUID(id)) return c.json({ success: false, message: 'ID tidak valid.' }, 400);
     const { is_active } = await c.req.json();
-    const { error } = await getSupabaseAdmin().from('api_keys').update({ is_active }).eq('id', id);
-    if (error) throw error;
+    await sql`UPDATE api_keys SET is_active = ${is_active} WHERE id = ${id}`;
     return c.json({ success: true });
   } catch {
     return c.json({ success: false, message: 'Gagal update status.' }, 500);
@@ -323,8 +323,7 @@ admin.patch('/apikeys/:id/reset', authMiddleware, requireAdmin, async (c) => {
     const id    = c.req.param('id');
     if (!validUUID(id)) return c.json({ success: false, message: 'ID tidak valid.' }, 400);
     const today = new Date().toISOString().slice(0, 10);
-    const { error } = await getSupabaseAdmin().from('api_keys').update({ requests_today: 0, last_reset_at: today }).eq('id', id);
-    if (error) throw error;
+    await sql`UPDATE api_keys SET requests_today = 0, last_reset_at = ${today} WHERE id = ${id}`;
     return c.json({ success: true });
   } catch {
     return c.json({ success: false, message: 'Gagal reset usage.' }, 500);
@@ -338,8 +337,7 @@ admin.patch('/apikeys/:id/limit', authMiddleware, requireAdmin, async (c) => {
     const { daily_limit } = await c.req.json();
     if (!daily_limit || typeof daily_limit !== 'number' || daily_limit < 1)
       return c.json({ success: false, message: 'daily_limit tidak valid.' }, 400);
-    const { error } = await getSupabaseAdmin().from('api_keys').update({ daily_limit }).eq('id', id);
-    if (error) throw error;
+    await sql`UPDATE api_keys SET daily_limit = ${daily_limit} WHERE id = ${id}`;
     return c.json({ success: true });
   } catch {
     return c.json({ success: false, message: 'Gagal update limit.' }, 500);
@@ -350,8 +348,7 @@ admin.patch('/apikeys/:id/reset-failed', authMiddleware, requireAdmin, async (c)
   try {
     const id = c.req.param('id');
     if (!validUUID(id)) return c.json({ success: false, message: 'ID tidak valid.' }, 400);
-    const { error } = await getSupabaseAdmin().from('api_keys').update({ failed_attempts: 0 }).eq('id', id);
-    if (error) throw error;
+    await sql`UPDATE api_keys SET failed_attempts = 0 WHERE id = ${id}`;
     return c.json({ success: true });
   } catch {
     return c.json({ success: false, message: 'Gagal reset failed attempts.' }, 500);
@@ -362,8 +359,7 @@ admin.delete('/apikeys/:id', authMiddleware, requireAdmin, async (c) => {
   try {
     const id = c.req.param('id');
     if (!validUUID(id)) return c.json({ success: false, message: 'ID tidak valid.' }, 400);
-    const { error } = await getSupabaseAdmin().from('api_keys').delete().eq('id', id);
-    if (error) throw error;
+    await sql`DELETE FROM api_keys WHERE id = ${id}`;
     return c.json({ success: true });
   } catch {
     return c.json({ success: false, message: 'Gagal hapus API key.' }, 500);
@@ -372,7 +368,7 @@ admin.delete('/apikeys/:id', authMiddleware, requireAdmin, async (c) => {
 
 admin.get('/robot/health', authMiddleware, requireAdmin, async (c) => {
   try {
-    const latest = await getLatestHealth(getSupabaseAdmin());
+    const latest = await getLatestHealth();
     return c.json({ success: true, data: latest });
   } catch {
     return c.json({ success: false, message: 'Gagal mengambil health data.' }, 500);
@@ -381,8 +377,8 @@ admin.get('/robot/health', authMiddleware, requireAdmin, async (c) => {
 
 admin.get('/robot/blacklist-list', authMiddleware, requireAdmin, async (c) => {
   try {
-    const { data } = await getSupabaseAdmin().from('blacklist').select('*').order('unique_reporters', { ascending: false }).limit(50);
-    return c.json({ success: true, data: data ?? [] });
+    const data = await sql`SELECT * FROM blacklist ORDER BY unique_reporters DESC LIMIT 50`;
+    return c.json({ success: true, data });
   } catch {
     return c.json({ success: false, message: 'Gagal mengambil blacklist.' }, 500);
   }
@@ -390,7 +386,7 @@ admin.get('/robot/blacklist-list', authMiddleware, requireAdmin, async (c) => {
 
 admin.get('/robot/viral', authMiddleware, requireAdmin, async (c) => {
   try {
-    const data = await getViralNumbers(getSupabaseAdmin());
+    const data = await getViralNumbers();
     return c.json({ success: true, data });
   } catch {
     return c.json({ success: false, message: 'Gagal mengambil data viral.' }, 500);
@@ -399,8 +395,8 @@ admin.get('/robot/viral', authMiddleware, requireAdmin, async (c) => {
 
 admin.get('/robot/logs', authMiddleware, requireAdmin, async (c) => {
   try {
-    const { data } = await getSupabaseAdmin().from('robot_logs').select('*').order('created_at', { ascending: false }).limit(50);
-    return c.json({ success: true, data: data ?? [] });
+    const data = await sql`SELECT * FROM robot_logs ORDER BY created_at DESC LIMIT 50`;
+    return c.json({ success: true, data });
   } catch {
     return c.json({ success: false, message: 'Gagal mengambil logs.' }, 500);
   }
@@ -408,7 +404,7 @@ admin.get('/robot/logs', authMiddleware, requireAdmin, async (c) => {
 
 admin.post('/robot/run-scheduler', authMiddleware, requireAdmin, async (c) => {
   try {
-    const result = await runScheduler(getSupabaseAdmin());
+    const result = await runScheduler();
     return c.json({ success: true, data: result });
   } catch {
     return c.json({ success: false, message: 'Gagal menjalankan scheduler.' }, 500);

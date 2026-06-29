@@ -1,8 +1,8 @@
 import { Hono } from 'hono';
-import { getSupabaseAdmin } from '../../core/supabase';
 import { sendApiAnomalyEmail } from '../../core/resend';
 import { kv } from '../../core/redis';
 import { getEnv } from '../../types';
+import sql from '../../core/db';
 
 const apiPublic = new Hono();
 
@@ -15,6 +15,25 @@ async function hashKey(key: string): Promise<string> {
 }
 
 const isValidKeyFormat = (key: string) => /^kt_(live|test)_[A-Za-z0-9]{40}$/.test(key);
+
+interface ApiKeyData {
+  id: string;
+  user_id: string;
+  name: string;
+  environment: string;
+  requests_today: number;
+  requests_total: number;
+  daily_limit: number;
+  last_reset_at: string;
+  is_active: boolean;
+  expires_at: string | null;
+  failed_attempts: number;
+  userEmail: string | null;
+}
+
+type ValidateResult =
+  | { valid: false; message: string; statusCode: number; keyData?: undefined }
+  | { valid: true; keyData: ApiKeyData; message?: undefined; statusCode?: undefined };
 
 async function checkIpRateLimit(ip: string): Promise<boolean> {
   const key   = `rl_api_v1_${ip}`;
@@ -38,8 +57,7 @@ async function logFailedAttempt(ip: string, reason: string): Promise<void> {
   } catch (err) { console.error('[API] logFailedAttempt:', err); }
 }
 
-async function validateApiKey(key: string, ip: string) {
-  const env = getEnv();
+async function validateApiKey(key: string, ip: string): Promise<ValidateResult> {
   if (!key?.trim()) return { valid: false, message: 'API key tidak ditemukan.', statusCode: 401 };
   if (!isValidKeyFormat(key)) {
     await logFailedAttempt(ip, 'invalid_format');
@@ -53,12 +71,13 @@ async function validateApiKey(key: string, ip: string) {
     return { valid: false, message: 'API key tidak valid.', statusCode: 401 };
   }
 
-  const supabase = getSupabaseAdmin();
-  const { data, error } = await supabase.from('api_keys')
-    .select('id, user_id, name, environment, requests_today, requests_total, daily_limit, last_reset_at, is_active, expires_at, failed_attempts')
-    .eq('key_hash', keyHash).single();
+  const [data] = await sql`
+    SELECT id, user_id, name, environment, requests_today, requests_total,
+           daily_limit, last_reset_at, is_active, expires_at, failed_attempts
+    FROM api_keys WHERE key_hash = ${keyHash} LIMIT 1
+  `;
 
-  if (error || !data) {
+  if (!data) {
     await Promise.all([
       kv.put(`neg_cache_${keyHash}`, 'not_found', { expirationTtl: 600 }),
       logFailedAttempt(ip, 'key_not_found'),
@@ -79,15 +98,15 @@ async function validateApiKey(key: string, ip: string) {
 
   const today = new Date().toISOString().slice(0, 10);
   if (String(data.last_reset_at).slice(0, 10) !== today) {
-    await supabase.from('api_keys').update({ requests_today: 0, last_reset_at: today }).eq('id', data.id);
+    await sql`UPDATE api_keys SET requests_today = 0, last_reset_at = ${today} WHERE id = ${data.id}`;
     data.requests_today = 0;
   }
 
   if (data.requests_today >= data.daily_limit)
     return { valid: false, message: `Batas harian tercapai (${data.daily_limit} request/hari).`, statusCode: 429 };
 
-  const { data: profile } = await supabase.from('profiles').select('email').eq('id', data.user_id).single();
-  return { valid: true, keyData: { ...data, userEmail: profile?.email ?? null } };
+  const [profile] = await sql`SELECT email FROM profiles WHERE id = ${data.user_id} LIMIT 1`;
+  return { valid: true, keyData: { ...data, userEmail: profile?.email ?? null } as ApiKeyData };
 }
 
 async function checkAnomaly(keyId: string, userEmail: string | null): Promise<void> {
@@ -119,11 +138,12 @@ async function checkAnomaly(keyId: string, userEmail: string | null): Promise<vo
 
     if (userEmail && env.RESEND_API_KEY) {
       sendApiAnomalyEmail({
-        to: userEmail, keyId,
+        to:               userEmail,
+        keyId,
         requestsThisHour: newCount,
-        avgPerHour: Math.round(avgHourly),
-        multiplier: Math.round(newCount / avgHourly),
-        apiKey: env.RESEND_API_KEY,
+        avgPerHour:       Math.round(avgHourly),
+        multiplier:       Math.round(newCount / avgHourly),
+        apiKey:           env.RESEND_API_KEY,
       }).catch(console.error);
     }
   } catch (err) { console.error('[ANOMALY]:', err); }
@@ -131,7 +151,6 @@ async function checkAnomaly(keyId: string, userEmail: string | null): Promise<vo
 
 apiPublic.get('/check', async (c) => {
   try {
-    const env            = getEnv();
     const ip             = getIp(c);
     const apiKey         = (c.req.header('X-API-Key') || '').trim();
     const idempotencyKey = c.req.header('Idempotency-Key') || null;
@@ -143,7 +162,7 @@ apiPublic.get('/check', async (c) => {
     if (!valid) return c.json({ success: false, message }, (statusCode ?? 401) as 401 | 429);
 
     if (idempotencyKey) {
-      const cached = await kv.get(`idem_${keyData!.id}_${idempotencyKey}`);
+      const cached = await kv.get(`idem_${keyData.id}_${idempotencyKey}`);
       if (cached) return c.json({ ...JSON.parse(cached), meta: { idempotent: true } });
     }
 
@@ -165,11 +184,14 @@ apiPublic.get('/check', async (c) => {
     } catch {}
 
     if (!checkData) {
-      const { data: reportsData } = await getSupabaseAdmin().from('reports')
-        .select('status, loss_amount, category, created_at, bank_name, target_type')
-        .eq('target_number', number).neq('status', 'withdrawn').order('created_at', { ascending: false });
+      const reportsData = await sql`
+        SELECT status, loss_amount, category, created_at, bank_name, target_type
+        FROM reports
+        WHERE target_number = ${number} AND status != 'withdrawn'
+        ORDER BY created_at DESC
+      `;
 
-      const all      = reportsData ?? [];
+      const all      = reportsData;
       const verified = all.filter((r: any) => r.status === 'verified');
       const pending  = all.filter((r: any) => r.status === 'pending');
 
@@ -187,22 +209,23 @@ apiPublic.get('/check', async (c) => {
       kv.put(cacheKey, JSON.stringify(checkData), { expirationTtl: 300 }).catch(console.error);
     }
 
-    const kd = keyData!;
     const responseBody = {
       success: true, data: checkData,
       meta: {
-        environment:        kd.environment ?? 'live',
-        requests_today:     (kd.requests_today as number) + 1,
-        daily_limit:        kd.daily_limit,
-        requests_remaining: (kd.daily_limit as number) - (kd.requests_today as number) - 1,
-        expires_at:         kd.expires_at ?? null,
+        environment:        keyData.environment ?? 'live',
+        requests_today:     keyData.requests_today + 1,
+        daily_limit:        keyData.daily_limit,
+        requests_remaining: keyData.daily_limit - keyData.requests_today - 1,
+        expires_at:         keyData.expires_at ?? null,
       },
     };
 
     Promise.all([
-      getSupabaseAdmin().rpc('increment_api_usage', { key_id: kd.id }),
-      checkAnomaly(kd.id as string, kd.userEmail as string | null),
-      idempotencyKey ? kv.put(`idem_${kd.id}_${idempotencyKey}`, JSON.stringify(responseBody), { expirationTtl: 300 }) : Promise.resolve(),
+      sql`SELECT increment_api_usage(${keyData.id})`.catch(console.error),
+      checkAnomaly(keyData.id, keyData.userEmail),
+      idempotencyKey
+        ? kv.put(`idem_${keyData.id}_${idempotencyKey}`, JSON.stringify(responseBody), { expirationTtl: 300 })
+        : Promise.resolve(),
     ]).catch(console.error);
 
     return c.json(responseBody);
