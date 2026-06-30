@@ -499,4 +499,32 @@ reports.get('/public/bank/:bank', async (c) => {
   }
 });
 
+reports.get('/public/laporan-publik', async (c) => {
+  try {
+    const type    = c.req.query('type') ?? 'all';
+    const sort    = c.req.query('sort') ?? 'latest';
+    const qRaw    = c.req.query('q') ?? '';
+    const q       = qRaw.replace(/\D/g, '') || qRaw;
+    const page    = Math.max(1, parseInt(c.req.query('page') ?? '1'));
+    const perPage = 12;
+
+    const [data] = await sql`
+      SELECT get_laporan_publik(${type}, ${sort}, ${q}, ${page}, ${perPage}) AS result
+    `;
+
+    return c.json({ success: true, data: data.result });
+  } catch {
+    return c.json({ success: false, message: 'Gagal mengambil data.' }, 500);
+  }
+});
+
+reports.get('/public/laporan-stats', async (c) => {
+  try {
+    const [data] = await sql`SELECT get_laporan_stats() AS result`;
+    return c.json({ success: true, data: data.result ?? [] });
+  } catch {
+    return c.json({ success: false, message: 'Gagal mengambil statistik.' }, 500);
+  }
+});
+
 export default reports;
