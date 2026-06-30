@@ -1,5 +1,5 @@
-import { createClient } from "@/core/supabase/server";
 import { redirect } from "next/navigation";
+import { createClient } from "@/core/supabase/server";
 import Link from "next/link";
 import Image from "next/image";
 import { Phone, Building2, Wallet, ArrowRight } from "lucide-react";
@@ -8,6 +8,8 @@ import StatsChart from "./StatsChart";
 import SearchBar from "./SearchBar";
 
 export const revalidate = 60;
+
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://api.kawaltransaksi.com';
 
 const ewalletNames = ["gopay", "dana", "ovo", "shopeepay", "linkaja"];
 
@@ -121,6 +123,42 @@ function buildPaginationPages(
   return pages;
 }
 
+interface LaporanPublikResponse {
+  data: any[];
+  total_unique: number;
+}
+
+async function getLaporanPublik(params: {
+  type: string; sort: string; q: string; page: number;
+}): Promise<LaporanPublikResponse> {
+  try {
+    const search = new URLSearchParams({
+      type: params.type, sort: params.sort, q: params.q, page: String(params.page),
+    });
+    const res = await fetch(`${BACKEND_URL}/api/reports/public/laporan-publik?${search}`, {
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) return { data: [], total_unique: 0 };
+    const json = await res.json();
+    return json.data ?? { data: [], total_unique: 0 };
+  } catch {
+    return { data: [], total_unique: 0 };
+  }
+}
+
+async function getLaporanStats(): Promise<any[]> {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/reports/public/laporan-stats`, {
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) return [];
+    const json = await res.json();
+    return json.data ?? [];
+  } catch {
+    return [];
+  }
+}
+
 export default async function LaporanPublikPage({
   searchParams,
 }: {
@@ -131,6 +169,7 @@ export default async function LaporanPublikPage({
     page?: string;
   }>;
 }) {
+  // Auth tetap pakai Supabase -- scope Phase 9B
   const supabase = await createClient();
   const {
     data: { user },
@@ -144,27 +183,13 @@ export default async function LaporanPublikPage({
   const page = Math.max(1, parseInt(params.page ?? "1"));
   const perPage = 12;
 
-  // [OK] OPTIMIZED: 2 RPC call parallel, gantiin fetch semua data + grouping di JS
-  // Sebelumnya: fetch semua rows &rarr; grouping di server memory &rarr; slice untuk pagination
-  // Sesudahnya: DB yang grouping + paginate, server terima data yang sudah siap
-  const [laporanResult, statsResult] = await Promise.all([
-    supabase.rpc("get_laporan_publik", {
-      p_type: type,
-      p_sort: sort,
-      p_q: q.replace(/\D/g, "") || q,
-      p_page: page,
-      p_per_page: perPage,
-    }),
-    supabase.rpc("get_laporan_stats"),
+  const [laporanData, allReportsForStats] = await Promise.all([
+    getLaporanPublik({ type, sort, q, page }),
+    getLaporanStats(),
   ]);
 
-  const laporanData = laporanResult.data as {
-    data: any[];
-    total_unique: number;
-  } | null;
-  const paginatedReports: any[] = laporanData?.data ?? [];
-  const totalUniqueNumbers: number = laporanData?.total_unique ?? 0;
-  const allReportsForStats: any[] = statsResult.data ?? [];
+  const paginatedReports: any[] = laporanData.data ?? [];
+  const totalUniqueNumbers: number = laporanData.total_unique ?? 0;
 
   const totalReports = allReportsForStats.length;
   const totalPages = Math.ceil(totalUniqueNumbers / perPage);
