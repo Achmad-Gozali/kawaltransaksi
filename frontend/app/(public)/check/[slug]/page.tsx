@@ -13,9 +13,37 @@ import ReportList from "@/features/check/components/ReportList";
 
 export const revalidate = 60;
 
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://api.kawaltransaksi.com';
+
 interface CheckPageProps {
   params: Promise<{ slug: string }>;
   searchParams: Promise<{ type?: string; bank?: string; wallet?: string }>;
+}
+
+async function fetchCheckPageData(number: string) {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/reports/public/check/${number}`, {
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) return { reports: [], linked: [] };
+    const json = await res.json();
+    return json.data ?? { reports: [], linked: [] };
+  } catch {
+    return { reports: [], linked: [] };
+  }
+}
+
+async function fetchBlacklistData(number: string) {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/reports/public/blacklist/${number}`, {
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) return { blacklist: null, trend: null };
+    const json = await res.json();
+    return json.data ?? { blacklist: null, trend: null };
+  } catch {
+    return { blacklist: null, trend: null };
+  }
 }
 
 export async function generateMetadata({ params }: CheckPageProps): Promise<Metadata> {
@@ -23,15 +51,12 @@ export async function generateMetadata({ params }: CheckPageProps): Promise<Meta
   const realNumber = decodeSlug(slug);
   if (!realNumber) return { title: "Halaman tidak ditemukan - KawalTransaksi" };
 
-  const supabase = await createClient();
-  const { data } = await supabase
-    .from("reports").select("status, loss_amount")
-    .eq("target_number", realNumber).neq("status", "withdrawn");
+  const pageData = await fetchCheckPageData(realNumber);
+  const reports  = (pageData.reports as any[]).filter((r: any) => r.status !== "withdrawn");
 
-  const reports       = data ?? [];
-  const verifiedCount = reports.filter(r => r.status === "verified").length;
-  const pendingCount  = reports.filter(r => r.status === "pending").length;
-  const totalLoss     = reports.reduce((sum, r) => sum + (Number(r.loss_amount) || 0), 0);
+  const verifiedCount = reports.filter((r: any) => r.status === "verified").length;
+  const pendingCount  = reports.filter((r: any) => r.status === "pending").length;
+  const totalLoss     = reports.reduce((sum: number, r: any) => sum + (Number(r.loss_amount) || 0), 0);
   const totalReports  = reports.length;
 
   const formatLoss = (n: number) => {
@@ -245,22 +270,18 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
 
   const [
     { data: { user } },
-    { data: pageData },
-    { data: blacklistData },
-    { data: trendData },
+    pageData,
+    blacklistTrendData,
   ] = await Promise.all([
     supabase.auth.getUser(),
-    supabase.rpc("get_check_page_data", { p_number: realNumber }),
-    supabase.from("blacklist").select("level, total_reports, unique_reporters")
-      .eq("target_number", realNumber).single(),
-    supabase.from("robot_trends").select("is_viral, report_count")
-      .eq("target_number", realNumber).single(),
+    fetchCheckPageData(realNumber),
+    fetchBlacklistData(realNumber),
   ]);
 
   const isLoggedIn    = !!user;
-  const blacklist     = blacklistData ?? null;
-  const isViral       = trendData?.is_viral ?? false;
-  const viralCount    = trendData?.report_count ?? 0;
+  const blacklist     = blacklistTrendData.blacklist ?? null;
+  const isViral       = blacklistTrendData.trend?.is_viral ?? false;
+  const viralCount    = blacklistTrendData.trend?.report_count ?? 0;
   const allReports    = (pageData?.reports as any[]) ?? [];
   const linkedReports = (pageData?.linked  as any[]) ?? [];
 
@@ -380,10 +401,6 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
 
   const typeLabel: Record<string, string> = { phone: "Nomor HP", bank_account: "Rekening Bank", ewallet: "E-Wallet" };
 
-  // ============================================================
-  // PERUBAHAN: structuredData diupgrade ke FAQPage
-  // + tambah breadcrumbData terpisah
-  // ============================================================
   const formatLossForSchema = (n: number) => {
     if (n >= 1_000_000_000) return `Rp ${(n / 1_000_000_000).toFixed(1)} miliar`;
     if (n >= 1_000_000)     return `Rp ${(n / 1_000_000).toFixed(1)} juta`;
@@ -434,27 +451,11 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
     "@context": "https://schema.org",
     "@type": "BreadcrumbList",
     itemListElement: [
-      {
-        "@type": "ListItem",
-        position: 1,
-        name: "Beranda",
-        item: "https://kawaltransaksi.com",
-      },
-      {
-        "@type": "ListItem",
-        position: 2,
-        name: "Cek Nomor",
-        item: "https://kawaltransaksi.com/cek-nomor",
-      },
-      {
-        "@type": "ListItem",
-        position: 3,
-        name: `Nomor ${formatNum(realNumber)}`,
-        item: `https://kawaltransaksi.com/check/${slug}`,
-      },
+      { "@type": "ListItem", position: 1, name: "Beranda", item: "https://kawaltransaksi.com" },
+      { "@type": "ListItem", position: 2, name: "Cek Nomor", item: "https://kawaltransaksi.com/cek-nomor" },
+      { "@type": "ListItem", position: 3, name: `Nomor ${formatNum(realNumber)}`, item: `https://kawaltransaksi.com/check/${slug}` },
     ],
   };
-  // ============================================================
 
   return (
     <>
@@ -462,7 +463,6 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbData) }} />
       <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
 
-        {/* Mobile back nav */}
         <div className="sm:hidden bg-white border-b border-slate-100 sticky top-16 z-10">
           <div className="px-4 py-3 flex items-center justify-between">
             <Link href="/cek-nomor" className="inline-flex items-center gap-1.5 text-slate-500 hover:text-slate-900 text-sm font-medium transition-colors">
@@ -472,7 +472,6 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
           </div>
         </div>
 
-        {/* Status bar */}
         <div className={`${config.barBg} px-4 sm:px-6 py-3`}>
           <div className="max-w-5xl mx-auto flex items-center gap-2 flex-wrap">
             <div className={`w-2 h-2 rounded-full shrink-0 animate-pulse ${config.dotBg}`} />
@@ -487,7 +486,6 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
           </div>
         </div>
 
-        {/* Blacklist banner */}
         {blacklist && (
           <div className={`px-4 sm:px-6 py-3 border-b ${
             blacklist.level === "critical" ? "bg-red-600 border-red-700" :
@@ -514,7 +512,6 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
 
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-4 sm:py-6 pb-24">
 
-          {/* Stats grid */}
           {reports.length > 0 && (
             <div className="grid grid-cols-3 gap-2 sm:gap-3 mb-4 sm:mb-5">
               <div className="bg-white rounded-xl border border-slate-200 p-3 sm:p-5">
@@ -538,7 +535,6 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
 
           <div className="space-y-3 sm:space-y-4">
 
-            {/* 1. NumberCard */}
             <NumberCard
               reports={reports} realNumber={realNumber} config={config}
               defaultType={defaultType} defaultBankName={defaultBankName}
@@ -546,7 +542,6 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
               isLoggedIn={isLoggedIn} carrierInfo={carrierInfo}
             />
 
-            {/* 2. Risk badges + blacklist badge */}
             {(riskBadges.length > 0 || blacklist) && (
               <div className="flex flex-wrap gap-2">
                 {blacklist && <BlacklistBadge level={blacklist.level as BlacklistLevel} />}
@@ -558,7 +553,6 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
               </div>
             )}
 
-            {/* 3. Linked reports banner */}
             {linkedReports.length > 0 && reports.length === 0 && (
               <div className={`rounded-xl overflow-hidden border ${linkedHasVerified ? "bg-red-50 border-red-200" : "bg-amber-50 border-amber-200"}`}>
                 <div className={`px-4 sm:px-5 py-4 border-b ${linkedHasVerified ? "border-red-100" : "border-amber-100"}`}>
@@ -597,7 +591,6 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
               </div>
             )}
 
-            {/* 4. Tetap waspada */}
             {status === "safe" && linkedReports.length === 0 && (
               <div>
                 <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-2 font-medium px-0.5">Tetap waspada</p>
@@ -625,7 +618,6 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
               </div>
             )}
 
-            {/* 5. GATED: Kronologi & bukti */}
             {reports.length > 0 && (
               <GatedContent isLoggedIn={isLoggedIn} label="Login untuk lihat kronologi & bukti lengkap" minHeight="200px">
                 <ReportList reports={reports} hasWithdrawn={hasWithdrawn}
@@ -640,7 +632,6 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
                 linkedHasVerified={linkedHasVerified} />
             )}
 
-            {/* 6. GATED: Nomor lain terkait */}
             {relatedEntries.length > 0 && (
               <GatedContent isLoggedIn={isLoggedIn} label="Login untuk lihat nomor lain terkait pelaku" minHeight="160px">
                 <div>
@@ -670,7 +661,6 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
               </GatedContent>
             )}
 
-            {/* 7. Status verifikasi */}
             {(allReports.length > 0 || linkedHasVerified) && !(hasWithdrawn && reports.length === 0) && (
               <div>
                 <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-2 font-medium px-0.5">Status verifikasi</p>
@@ -697,7 +687,6 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
               </div>
             )}
 
-            {/* 8. CTA + Share */}
             <CtaShareCard slug={slug} shareText={shareText} />
           </div>
         </div>
