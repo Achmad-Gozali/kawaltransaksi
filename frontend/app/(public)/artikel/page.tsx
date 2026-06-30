@@ -1,9 +1,10 @@
-import { createClient } from "@/core/supabase/server";
 import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
 
 export const revalidate = 3600;
+
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://api.kawaltransaksi.com';
 
 export const metadata: Metadata = {
   title: "Artikel & Edukasi Penipuan Online - KawalTransaksi",
@@ -99,17 +100,35 @@ const artikelSchema = {
   },
 };
 
-export default async function ArtikelPage() {
-  const supabase = await createClient();
+interface Article {
+  id: string;
+  title: string;
+  slug: string;
+  summary: string;
+  total_reports: number | null;
+  total_loss: number | null;
+  top_category: string | null;
+  published_at: string;
+  cover_image: string | null;
+  content: string;
+  status: string;
+}
 
-  const { data: articles } = await supabase
-    .from("articles")
-    .select(
-      "id, title, slug, summary, total_reports, total_loss, published_at, cover_image, content, top_category",
-    )
-    .eq("status", "published")
-    .order("published_at", { ascending: false })
-    .limit(20);
+async function getArticles(): Promise<Article[]> {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/articles`, {
+      next: { revalidate: 3600 },
+    });
+    if (!res.ok) return [];
+    const json = await res.json();
+    return json.data ?? [];
+  } catch {
+    return [];
+  }
+}
+
+export default async function ArtikelPage() {
+  const articles = await getArticles();
 
   return (
     <main className="bg-white min-h-screen font-sans">

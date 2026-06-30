@@ -1,4 +1,3 @@
-import { createClient } from "@/core/supabase/server";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -8,20 +7,67 @@ import SidebarArtikel from "./SidebarArtikel";
 export const revalidate = 3600;
 
 const SITE_URL = "https://kawaltransaksi.com";
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL ?? 'https://api.kawaltransaksi.com';
 
 interface Props {
   params: Promise<{ slug: string }>;
 }
 
+interface ArticleDetail {
+  id: string;
+  title: string;
+  slug: string;
+  summary: string;
+  content: string;
+  status: string;
+  cover_image: string | null;
+  published_at: string;
+  total_reports: number | null;
+  total_loss: number | null;
+  top_category: string | null;
+  top_platform: string | null;
+  top_bank: string | null;
+}
+
+interface ArticleListItem {
+  title: string;
+  slug: string;
+  published_at: string;
+  cover_image: string | null;
+  summary: string;
+  top_category: string | null;
+}
+
+async function getArticleDetail(slug: string): Promise<ArticleDetail | null> {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/articles/${slug}`, {
+      next: { revalidate: 3600 },
+    });
+    if (!res.ok) return null;
+    const json = await res.json();
+    return json.data ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function getOtherArticles(currentSlug: string): Promise<ArticleListItem[]> {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/articles`, {
+      next: { revalidate: 3600 },
+    });
+    if (!res.ok) return [];
+    const json = await res.json();
+    const all = (json.data ?? []) as ArticleListItem[];
+    return all.filter((a) => a.slug !== currentSlug).slice(0, 3);
+  } catch {
+    return [];
+  }
+}
+
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
   const { slug } = await params;
-  const supabase = await createClient();
-
-  const { data } = await supabase
-    .from("articles")
-    .select("title, summary, cover_image, published_at, top_category")
-    .eq("slug", slug)
-    .single();
+  const data = await getArticleDetail(slug);
 
   if (!data) {
     return {
@@ -163,24 +209,11 @@ function renderContent(content: string) {
 
 export default async function ArtikelDetailPage({ params }: Props) {
   const { slug } = await params;
-  const supabase = await createClient();
 
-  const { data: article } = await supabase
-    .from("articles")
-    .select("*")
-    .eq("slug", slug)
-    .eq("status", "published")
-    .single();
-
+  const article = await getArticleDetail(slug);
   if (!article) notFound();
 
-  const { data: others } = await supabase
-    .from("articles")
-    .select("title, slug, published_at, cover_image, summary, top_category")
-    .eq("status", "published")
-    .neq("slug", slug)
-    .order("published_at", { ascending: false })
-    .limit(3);
+  const others = await getOtherArticles(slug);
 
   const articleUrl = `${SITE_URL}/artikel/${slug}`;
 
