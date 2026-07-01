@@ -1,5 +1,5 @@
 import { createMiddleware } from 'hono/factory';
-import { getSupabaseAdmin } from './supabase';
+import sql from './db';
 import { kv } from './redis';
 
 const TOKEN_CACHE_TTL      = 120;
@@ -42,10 +42,22 @@ export const authMiddleware = createMiddleware<{
     } catch {}
   }
 
-  const supabase = getSupabaseAdmin();
-  const { data: { user }, error } = await supabase.auth.getUser(token);
+  // Lookup session better-auth (opaque token, wajib DB roundtrip)
+  const [row] = await sql`
+    SELECT
+      s."userId",
+      s."expiresAt",
+      u.email        AS "userEmail",
+      p.role         AS "userRole",
+      p.is_banned    AS "isBanned"
+    FROM session s
+    JOIN "user" u    ON u.id = s."userId"
+    LEFT JOIN profiles p ON p.id = s."userId"
+    WHERE s.token = ${token}
+    LIMIT 1
+  `;
 
-  if (error || !user) {
+  if (!row || new Date(row.expiresAt) <= new Date()) {
     if (ip !== 'anonymous') {
       try {
         const failKey   = `auth_fail_${ip}`;
@@ -64,15 +76,12 @@ export const authMiddleware = createMiddleware<{
     return c.json({ success: false, message: 'Token tidak valid atau sudah kadaluarsa.' }, 401);
   }
 
-  const { data: profile } = await supabase
-    .from('profiles').select('is_banned, role').eq('id', user.id).single();
-
-  if (profile?.is_banned)
+  if (row.isBanned)
     return c.json({ success: false, message: 'Akun Anda telah dinonaktifkan.' }, 403);
 
-  const userId    = user.id;
-  const userEmail = user.email ?? '';
-  const userRole  = profile?.role ?? 'user';
+  const userId    = row.userId;
+  const userEmail = row.userEmail ?? '';
+  const userRole  = row.userRole ?? 'user';
 
   try {
     await kv.put(cacheKey, JSON.stringify({

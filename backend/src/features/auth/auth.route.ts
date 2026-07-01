@@ -1,12 +1,14 @@
 import { Hono } from 'hono';
-import { getSupabaseAdmin, getSupabaseClient } from '../../core/supabase';
+import { auth } from '../../core/auth-better';
 import { verifyTurnstile } from '../../core/turnstile';
 import { sendVerificationEmail, sendPasswordResetEmail } from '../../core/resend';
 import { autoBlacklistIfAbuse } from '../../core/abuse';
 import { kv } from '../../core/redis';
 import sql from '../../core/db';
+import { randomBytes } from 'crypto';
+import bcrypt from 'bcryptjs';
 
-const auth = new Hono();
+const authRoute = new Hono();
 
 const LOCK_DURATION_MINUTES = 10;
 const MAX_ATTEMPTS          = 5;
@@ -90,7 +92,73 @@ async function checkRateLimit(key: string, maxCount: number, ttlSeconds: number)
   }
 }
 
-auth.post('/register', async (c) => {
+async function createVerificationToken(email: string): Promise<string> {
+  const token = randomBytes(32).toString('hex');
+  const expires = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+  const id = randomBytes(16).toString('hex');
+  await sql`
+    INSERT INTO verification (id, identifier, value, "expiresAt", "createdAt", "updatedAt")
+    VALUES (${id}, ${email}, ${token}, ${expires}, now(), now())
+    ON CONFLICT (identifier) DO UPDATE
+    SET value = ${token}, "expiresAt" = ${expires}, "updatedAt" = now()
+  `;
+  return token;
+}
+
+async function createResetToken(email: string): Promise<string> {
+  const token = randomBytes(32).toString('hex');
+  const expires = new Date(Date.now() + 60 * 60 * 1000).toISOString();
+  const id = randomBytes(16).toString('hex');
+  await sql`
+    INSERT INTO verification (id, identifier, value, "expiresAt", "createdAt", "updatedAt")
+    VALUES (${id}, ${'reset:' + email}, ${token}, ${expires}, now(), now())
+    ON CONFLICT (identifier) DO UPDATE
+    SET value = ${token}, "expiresAt" = ${expires}, "updatedAt" = now()
+  `;
+  return token;
+}
+
+/**
+ * Lazy migration: user lama (bcrypt, pra better-auth) login pertama kali
+ * pasca-migrasi. Verify bcrypt manual, kalau cocok re-hash pakai scrypt
+ * (better-auth internal) dan simpan sebagai credential account.
+ *
+ * NOTE: ctx.password.hash & ctx.internalAdapter.createAccount adalah
+ * internal API better-auth (tidak di dokumentasi publik, versi 1.6.22).
+ * Bisa berubah antar versi — test sebelum deploy production.
+ */
+async function tryLazyMigratePassword(userId: string, password: string): Promise<boolean> {
+  const [row] = await sql`
+    SELECT legacy_bcrypt_hash FROM profiles WHERE id = ${userId} LIMIT 1
+  `;
+  if (!row?.legacy_bcrypt_hash) return false;
+
+  const valid = await bcrypt.compare(password, row.legacy_bcrypt_hash);
+  if (!valid) return false;
+
+  const ctx = await auth.$context;
+  const scryptHash = await ctx.password.hash(password);
+
+  const [existingAccount] = await sql`
+    SELECT id FROM account WHERE "userId" = ${userId} AND "providerId" = 'credential' LIMIT 1
+  `;
+
+  if (existingAccount) {
+    await sql`UPDATE account SET password = ${scryptHash}, "updatedAt" = now() WHERE id = ${existingAccount.id}`;
+  } else {
+    await ctx.internalAdapter.createAccount({
+      accountId: userId,
+      providerId: 'credential',
+      userId,
+      password: scryptHash,
+    });
+  }
+
+  await sql`UPDATE profiles SET legacy_bcrypt_hash = NULL WHERE id = ${userId}`;
+  return true;
+}
+
+authRoute.post('/register', async (c) => {
   try {
     const { email, password, fullName, turnstileToken } = await c.req.json();
 
@@ -126,37 +194,36 @@ auth.post('/register', async (c) => {
     if (!await verifyTurnstile(turnstileToken, process.env.TURNSTILE_SECRET_KEY!))
       return c.json({ success: false, message: 'Verifikasi keamanan gagal.' }, 400);
 
-    const supabase = getSupabaseAdmin();
+    const [existing] = await sql`SELECT id FROM "user" WHERE email = ${normalizedEmail} LIMIT 1`;
+    if (existing)
+      return c.json({ success: true, requiresVerification: true, message: 'Akun berhasil dibuat! Cek email kamu.' });
 
-    const { data: signUpData, error: signUpError } = await supabase.auth.admin.createUser({
-      email: normalizedEmail,
-      password,
-      email_confirm: false,
-      user_metadata: { full_name: sanitizedFullName },
+    const result = await auth.api.signUpEmail({
+      body: {
+        email:    normalizedEmail,
+        password: password,
+        name:     sanitizedFullName,
+      },
     });
 
-    if (signUpError) {
-      const isAlreadyExists =
-        signUpError.message.includes('already registered') ||
-        signUpError.message.includes('already exists');
-      if (isAlreadyExists)
-        return c.json({ success: true, requiresVerification: true, message: 'Akun berhasil dibuat! Cek email kamu.' });
+    if (!result || !result.user)
       return c.json({ success: false, message: 'Terjadi kesalahan saat mendaftar.' }, 500);
-    }
 
-    const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
-      type:  'magiclink',
-      email: normalizedEmail,
-      options: { redirectTo: `${process.env.FRONTEND_URL}/auth/confirm` },
-    });
+    const userId = result.user.id;
 
-    if (linkError || !linkData)
-      return c.json({ success: false, message: 'Gagal mengirim email verifikasi.' }, 500);
+    await sql`
+      INSERT INTO profiles (id, email, full_name, role, failed_attempts, is_banned, welcome_sent)
+      VALUES (${userId}, ${normalizedEmail}, ${sanitizedFullName}, 'user', 0, false, false)
+      ON CONFLICT (id) DO NOTHING
+    `.catch(console.error);
+
+    const token = await createVerificationToken(normalizedEmail);
+    const verificationLink = `${process.env.FRONTEND_URL}/auth/verify?token=${token}&email=${encodeURIComponent(normalizedEmail)}`;
 
     sendVerificationEmail({
       to:               normalizedEmail,
       fullName:         sanitizedFullName,
-      verificationLink: linkData.properties.action_link,
+      verificationLink: verificationLink,
       apiKey:           process.env.RESEND_API_KEY!,
     }).catch(console.error);
 
@@ -164,14 +231,15 @@ auth.post('/register', async (c) => {
       success:              true,
       requiresVerification: true,
       message:              'Akun berhasil dibuat! Cek email kamu untuk verifikasi.',
-      userId:               signUpData.user?.id,
+      userId,
     });
-  } catch {
+  } catch (err) {
+    console.error('[AUTH] register error:', err);
     return c.json({ success: false, message: 'Terjadi kesalahan server.' }, 500);
   }
 });
 
-auth.post('/login', async (c) => {
+authRoute.post('/login', async (c) => {
   try {
     const { email, password, turnstileToken } = await c.req.json();
 
@@ -199,9 +267,6 @@ auth.post('/login', async (c) => {
     if (emailCheck.blocked)
       return c.json({ success: false, message: 'Terlalu banyak percobaan login.', retry_after: 300 }, 429);
 
-    const supabase       = getSupabaseAdmin();
-    const supabaseClient = getSupabaseClient();
-
     const [profile] = await sql`
       SELECT id, failed_attempts, locked_until, is_banned
       FROM profiles WHERE email = ${normalizedEmail} LIMIT 1
@@ -218,11 +283,29 @@ auth.post('/login', async (c) => {
       }
     }
 
-    const { data: signInData, error: signInError } = await supabaseClient.auth.signInWithPassword({
-      email: normalizedEmail, password,
-    });
+    let signInResult: any;
+    try {
+      signInResult = await auth.api.signInEmail({
+        body: { email: normalizedEmail, password },
+      });
+    } catch {
+      signInResult = null;
+    }
 
-    if (signInError) {
+    if (!signInResult?.user && profile) {
+      const migrated = await tryLazyMigratePassword(profile.id, password);
+      if (migrated) {
+        try {
+          signInResult = await auth.api.signInEmail({
+            body: { email: normalizedEmail, password },
+          });
+        } catch {
+          signInResult = null;
+        }
+      }
+    }
+
+    if (!signInResult || !signInResult.user) {
       if (!profile) return c.json({ success: false, message: 'Email atau kata sandi salah.' }, 401);
       const [fresh] = await sql`SELECT failed_attempts FROM profiles WHERE id = ${profile.id} LIMIT 1`;
       const currentAttempts = (fresh?.failed_attempts ?? 0) + 1;
@@ -242,26 +325,29 @@ auth.post('/login', async (c) => {
       }, 401);
     }
 
-    if (signInData.user) {
-      const [fresh] = await sql`SELECT is_banned FROM profiles WHERE id = ${signInData.user.id} LIMIT 1`;
-      if (fresh?.is_banned) {
-        await supabaseClient.auth.signOut();
-        return c.json({ success: false, message: 'Akun Anda telah dinonaktifkan.' }, 403);
-      }
-      await Promise.allSettled([
-        kv.delete(`rl_login_${ip}_${emailSlug}`),
-        kv.delete(`rl_email_${emailSlug}`),
-      ]);
-      await sql`UPDATE profiles SET failed_attempts = 0, locked_until = null WHERE id = ${signInData.user.id}`;
-    }
+    const [fresh] = await sql`SELECT is_banned FROM profiles WHERE id = ${signInResult.user.id} LIMIT 1`;
+    if (fresh?.is_banned)
+      return c.json({ success: false, message: 'Akun Anda telah dinonaktifkan.' }, 403);
 
-    return c.json({ success: true, message: 'Login berhasil.', session: signInData.session });
-  } catch {
+    await Promise.allSettled([
+      kv.delete(`rl_login_${ip}_${emailSlug}`),
+      kv.delete(`rl_email_${emailSlug}`),
+      sql`UPDATE profiles SET failed_attempts = 0, locked_until = null WHERE id = ${signInResult.user.id}`,
+    ]);
+
+    return c.json({
+      success: true,
+      message: 'Login berhasil.',
+      session: signInResult.session,
+      user:    signInResult.user,
+    });
+  } catch (err) {
+    console.error('[AUTH] login error:', err);
     return c.json({ success: false, message: 'Terjadi kesalahan server.' }, 500);
   }
 });
 
-auth.post('/forgot-password', async (c) => {
+authRoute.post('/forgot-password', async (c) => {
   try {
     const { email } = await c.req.json();
 
@@ -282,27 +368,81 @@ auth.post('/forgot-password', async (c) => {
     if (!profile || profile.is_banned)
       return c.json({ success: true, message: 'Jika email terdaftar, link reset akan dikirim.' });
 
-    const supabase = getSupabaseAdmin();
-    const { data: linkData, error: linkError } = await supabase.auth.admin.generateLink({
-      type:  'recovery',
-      email: normalizedEmail,
-      options: { redirectTo: `${process.env.FRONTEND_URL}/reset-kata-sandi` },
-    });
-
-    if (linkError || !linkData)
-      return c.json({ success: false, message: 'Gagal mengirim email.' }, 500);
+    const token = await createResetToken(normalizedEmail);
+    const resetLink = `${process.env.FRONTEND_URL}/reset-kata-sandi?token=${token}&email=${encodeURIComponent(normalizedEmail)}`;
 
     sendPasswordResetEmail({
       to:        normalizedEmail,
       fullName:  profile.full_name || 'Pengguna',
-      resetLink: linkData.properties.action_link,
+      resetLink: resetLink,
       apiKey:    process.env.RESEND_API_KEY!,
     }).catch(console.error);
 
     return c.json({ success: true, message: 'Jika email terdaftar, link reset akan dikirim.' });
+  } catch (err) {
+    console.error('[AUTH] forgot-password error:', err);
+    return c.json({ success: false, message: 'Terjadi kesalahan server.' }, 500);
+  }
+});
+
+authRoute.get('/verify-email', async (c) => {
+  try {
+    const token = c.req.query('token');
+    const email = c.req.query('email');
+
+    if (!token || !email)
+      return c.json({ success: false, message: 'Token tidak valid.' }, 400);
+
+    const [verification] = await sql`
+      SELECT * FROM verification
+      WHERE identifier = ${email} AND value = ${token}
+      AND "expiresAt" > now()
+      LIMIT 1
+    `;
+
+    if (!verification)
+      return c.json({ success: false, message: 'Token kadaluarsa atau tidak valid.' }, 400);
+
+    await sql`UPDATE "user" SET "emailVerified" = true WHERE email = ${email}`;
+    await sql`DELETE FROM verification WHERE identifier = ${email}`;
+
+    return c.json({ success: true, message: 'Email berhasil diverifikasi.' });
   } catch {
     return c.json({ success: false, message: 'Terjadi kesalahan server.' }, 500);
   }
 });
 
-export default auth;
+authRoute.post('/reset-password', async (c) => {
+  try {
+    const { token, email, password } = await c.req.json();
+
+    if (!token || !email || !password)
+      return c.json({ success: false, message: 'Data tidak lengkap.' }, 400);
+
+    const [verification] = await sql`
+      SELECT * FROM verification
+      WHERE identifier = ${'reset:' + email} AND value = ${token}
+      AND "expiresAt" > now()
+      LIMIT 1
+    `;
+
+    if (!verification)
+      return c.json({ success: false, message: 'Token kadaluarsa atau tidak valid.' }, 400);
+
+    if (password.length < 8)
+      return c.json({ success: false, message: 'Kata sandi minimal 8 karakter.' }, 400);
+
+    await auth.api.resetPassword({
+      body: { newPassword: password, token },
+    });
+
+    await sql`DELETE FROM verification WHERE identifier = ${'reset:' + email}`;
+
+    return c.json({ success: true, message: 'Kata sandi berhasil direset.' });
+  } catch (err) {
+    console.error('[AUTH] reset-password error:', err);
+    return c.json({ success: false, message: 'Terjadi kesalahan server.' }, 500);
+  }
+});
+
+export default authRoute;

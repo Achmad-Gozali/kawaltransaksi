@@ -20,12 +20,15 @@ export interface Env {
   FRONTEND_URL_CLONE?: string;
   INTERNAL_API_KEY: string;
   HEALTH_SECRET: string;
+  GOOGLE_CLIENT_ID: string;
+  GOOGLE_CLIENT_SECRET: string;
 }
 
 export function getEnv(): Env {
   const required = [
-    'SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY', 'SUPABASE_ANON_KEY',
-    'INTERNAL_API_KEY', 'HEALTH_SECRET',
+    'DATABASE_URL',
+    'INTERNAL_API_KEY',
+    'HEALTH_SECRET',
   ];
   for (const key of required) {
     if (!process.env[key]) throw new Error(`Missing env: ${key}`);
