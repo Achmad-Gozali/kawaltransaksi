@@ -1,120 +1,62 @@
-import { createServerClient } from '@supabase/ssr';
-import { cookies } from 'next/headers';
 import { NextResponse } from 'next/server';
 import type { NextRequest } from 'next/server';
 
-const ALLOWED_OTP_TYPES = ['recovery', 'signup', 'magiclink', 'email'] as const;
-type AllowedOtpType = typeof ALLOWED_OTP_TYPES[number];
-
 function getSafeNext(next: string | null): string {
   if (!next) return '/';
-  try {
-    // Tolak absolute URL / protocol-relative
-    if (next.startsWith('http') || next.startsWith('//')) return '/';
-    // Hanya izinkan path yang dimulai /
-    if (!next.startsWith('/')) return '/';
-    return next;
-  } catch { return '/'; }
+  if (next.startsWith('http') || next.startsWith('//')) return '/';
+  if (!next.startsWith('/')) return '/';
+  return next;
 }
 
 export async function GET(request: NextRequest) {
   const { searchParams, origin } = new URL(request.url);
-  const code       = searchParams.get('code');
-  const token_hash = searchParams.get('token_hash');
-  const type       = searchParams.get('type');
-  const next       = getSafeNext(searchParams.get('next')); // hapus state sebagai fallback
+  const code  = searchParams.get('code');
+  const state = searchParams.get('state');
+  const error = searchParams.get('error');
 
-  const siteUrl      = process.env.NEXT_PUBLIC_SITE_URL;
+  const siteUrl  = process.env.NEXT_PUBLIC_SITE_URL;
   const isProduction = process.env.NODE_ENV === 'production' && !!siteUrl && !origin.includes('localhost');
-  const baseUrl      = isProduction && siteUrl ? siteUrl : origin;
+  const baseUrl  = isProduction && siteUrl ? siteUrl : origin;
+  const redirectTo = getSafeNext(state);
 
-  const cookieStore = await cookies();
-  const supabase    = createServerClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!,
-    {
-      cookies: {
-        getAll() { return cookieStore.getAll(); },
-        setAll(cookiesToSet) {
-          try {
-            cookiesToSet.forEach(({ name, value, options }) => cookieStore.set(name, value, options));
-          } catch {}
-        },
-      },
-    }
-  );
+  if (error || !code)
+    return NextResponse.redirect(`${baseUrl}/login?error=oauth_failed`);
 
-  if (token_hash && type) {
-    // Validasi type — tolak nilai arbitrary
-    if (!ALLOWED_OTP_TYPES.includes(type as AllowedOtpType))
-      return NextResponse.redirect(`${baseUrl}/login?error=invalid_type`);
+  const backendUrl = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
 
-    if (type === 'recovery') {
-      const { error } = await supabase.auth.verifyOtp({ token_hash, type: 'recovery' });
-      if (!error) return NextResponse.redirect(`${baseUrl}/reset-kata-sandi`);
-      return NextResponse.redirect(`${baseUrl}/lupa-kata-sandi?error=link_expired`);
-    }
+  try {
+    const res = await fetch(`${backendUrl}/api/auth/google/callback`, {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body:    JSON.stringify({ code, redirectUri: `${baseUrl}/auth/callback` }),
+    });
 
-    const { error } = await supabase.auth.verifyOtp({ token_hash, type: type as AllowedOtpType });
-    if (!error) {
-      const { data: { user } } = await supabase.auth.getUser();
-      if (user) {
-        const { data: profile } = await supabase.from('profiles').select('is_banned, role').eq('id', user.id).single();
-        if (profile?.is_banned) { await supabase.auth.signOut(); return NextResponse.redirect(`${baseUrl}/login?error=banned`); }
-        if (profile?.role === 'admin') return NextResponse.redirect(`${baseUrl}/admin`);
-      }
-      return NextResponse.redirect(`${baseUrl}${next}`);
-    }
-    return NextResponse.redirect(`${baseUrl}/login?error=link_expired`);
+    const data = await res.json() as {
+      success?: boolean;
+      session?: { token: string; expiresAt: string };
+      user?: { role?: string };
+      message?: string;
+    };
+
+    if (!data.success || !data.session)
+      return NextResponse.redirect(`${baseUrl}/login?error=oauth_failed`);
+
+    const response = NextResponse.redirect(
+      `${baseUrl}${data.user?.role === 'admin' ? '/admin' : redirectTo}`
+    );
+
+    const expires = new Date(data.session.expiresAt || Date.now() + 7 * 86400000);
+    response.cookies.set('better-auth.session_token', data.session.token, {
+      httpOnly: true,
+      secure:   isProduction,
+      sameSite: 'lax',
+      expires,
+      path:     '/',
+    });
+
+    return response;
+  } catch (err) {
+    console.error('[CALLBACK] OAuth error:', err);
+    return NextResponse.redirect(`${baseUrl}/login?error=oauth_failed`);
   }
-
-  if (code) {
-    const isDirectGoogle = searchParams.get('state') !== null && !searchParams.get('next');
-
-    if (isDirectGoogle) {
-      try {
-        const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
-          method:  'POST',
-          headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-          body:    new URLSearchParams({
-            code,
-            client_id:     process.env.GOOGLE_CLIENT_ID!,
-            client_secret: process.env.GOOGLE_CLIENT_SECRET!,
-            redirect_uri:  `${baseUrl}/auth/callback`,
-            grant_type:    'authorization_code',
-          }),
-        });
-
-        const tokenData = await tokenRes.json() as { id_token?: string; access_token?: string; error?: string };
-        if (tokenData.error || !tokenData.id_token) {
-          console.error('Google token exchange error:', tokenData.error);
-          return NextResponse.redirect(`${baseUrl}/login?error=oauth_failed`);
-        }
-
-        const { error } = await supabase.auth.signInWithIdToken({
-          provider:     'google',
-          token:        tokenData.id_token,
-          access_token: tokenData.access_token,
-        });
-        if (error) return NextResponse.redirect(`${baseUrl}/login?error=oauth_failed`);
-      } catch (e) {
-        console.error('OAuth callback error:', e);
-        return NextResponse.redirect(`${baseUrl}/login?error=oauth_failed`);
-      }
-    } else {
-      const { error } = await supabase.auth.exchangeCodeForSession(code);
-      if (error) return NextResponse.redirect(`${baseUrl}/login?error=oauth_failed`);
-    }
-
-    const { data: { user } } = await supabase.auth.getUser();
-    if (user) {
-      const { data: profile } = await supabase.from('profiles').select('is_banned, role').eq('id', user.id).single();
-      if (profile?.is_banned) { await supabase.auth.signOut(); return NextResponse.redirect(`${baseUrl}/login?error=banned`); }
-      if (profile?.role === 'admin') return NextResponse.redirect(`${baseUrl}/admin`);
-    }
-
-    return NextResponse.redirect(`${baseUrl}${next}`);
-  }
-
-  return NextResponse.redirect(`${baseUrl}/login?error=oauth_failed`);
 }

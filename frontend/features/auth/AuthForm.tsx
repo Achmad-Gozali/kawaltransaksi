@@ -1,7 +1,6 @@
 'use client';
 
 import React, { useState, useEffect, Suspense, useRef } from 'react';
-import { createClient } from '@/core/supabase/browser';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
@@ -10,11 +9,9 @@ import {
 } from 'lucide-react';
 import { Turnstile, TurnstileInstance } from '@marsidev/react-turnstile';
 
-interface AuthFormProps {
-  type: 'login' | 'register';
-}
+interface AuthFormProps { type: 'login' | 'register'; }
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:8787';
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || 'http://localhost:3001';
 
 const ALLOWED_DOMAINS = [
   'gmail.com', 'yahoo.com', 'yahoo.co.id', 'outlook.com', 'hotmail.com',
@@ -32,16 +29,13 @@ function normalizeEmail(email: string): string {
 
 function validateEmail(email: string): { valid: boolean; message: string } {
   const parts = email.toLowerCase().trim().split('@');
-  if (parts.length !== 2 || !parts[0] || !parts[1]) {
+  if (parts.length !== 2 || !parts[0] || !parts[1])
     return { valid: false, message: 'Format email tidak valid.' };
-  }
   const domain = parts[1];
-  if (!domain.endsWith('.com') && domain !== 'yahoo.co.id') {
+  if (!domain.endsWith('.com') && domain !== 'yahoo.co.id')
     return { valid: false, message: 'Gunakan email dengan domain yang valid (contoh: @gmail.com, @yahoo.com).' };
-  }
-  if (!ALLOWED_DOMAINS.includes(domain)) {
+  if (!ALLOWED_DOMAINS.includes(domain))
     return { valid: false, message: 'Gunakan email aktif dari Gmail, Yahoo, Outlook, iCloud, atau ProtonMail.' };
-  }
   return { valid: true, message: '' };
 }
 
@@ -49,55 +43,31 @@ interface PasswordCheck { label: string; passed: boolean; }
 
 function getPasswordChecks(password: string): PasswordCheck[] {
   return [
-    { label: 'Minimal 8 karakter', passed: password.length >= 8 },
-    { label: 'Mengandung huruf besar (A-Z)', passed: /[A-Z]/.test(password) },
-    { label: 'Mengandung angka (0-9)', passed: /[0-9]/.test(password) },
-    { label: 'Mengandung simbol (!@#$...)', passed: /[!@#$%^&*()_+\-=\[\]{};\':"\\|,.<>\/?]/.test(password) },
+    { label: 'Minimal 8 karakter',           passed: password.length >= 8 },
+    { label: 'Mengandung huruf besar (A-Z)',  passed: /[A-Z]/.test(password) },
+    { label: 'Mengandung angka (0-9)',        passed: /[0-9]/.test(password) },
+    { label: 'Mengandung simbol (!@#$...)',   passed: /[!@#$%^&*()_+\-=\[\]{};\':"\\|,.<>\/?]/.test(password) },
   ];
 }
 
-function isPasswordValid(password: string): boolean {
-  return getPasswordChecks(password).every(c => c.passed);
-}
+function isPasswordValid(p: string) { return getPasswordChecks(p).every(c => c.passed); }
 
-function getPasswordStrength(password: string): { label: string; color: string; width: string } {
-  if (password.length === 0) return { label: '', color: '', width: '0%' };
-  const passed = getPasswordChecks(password).filter(c => c.passed).length;
-  if (passed <= 1) return { label: 'Lemah', color: 'bg-red-400', width: '25%' };
-  if (passed === 2) return { label: 'Cukup', color: 'bg-yellow-400', width: '50%' };
-  if (passed === 3) return { label: 'Baik', color: 'bg-blue-400', width: '75%' };
-  return { label: 'Kuat', color: 'bg-emerald-500', width: '100%' };
-}
-
-const ERROR_MAP: Record<string, string> = {
-  'Invalid login credentials': 'Email atau kata sandi salah.',
-  'User already registered': 'Email ini sudah terdaftar. Silakan masuk atau gunakan email lain.',
-  'Email not confirmed': 'Email belum dikonfirmasi. Cek kotak masuk email kamu.',
-  'Password should be at least 6 characters': 'Kata sandi tidak memenuhi persyaratan keamanan.',
-  'Unable to validate email address: invalid format': 'Format email tidak valid.',
-  'Failed to fetch': 'Gagal terhubung ke server. Periksa koneksi internet kamu.',
-  'signup is disabled': 'Pendaftaran akun sementara dinonaktifkan.',
-  'Email rate limit exceeded': 'Terlalu banyak percobaan. Tunggu beberapa menit lalu coba lagi.',
-  'over_email_send_rate_limit': 'Batas pengiriman email tercapai. Coba lagi dalam beberapa menit.',
-  'For security purposes, you can only request this after': 'Tunggu beberapa detik sebelum mencoba lagi.',
-};
-
-function translateError(message: string): string {
-  const found = Object.entries(ERROR_MAP).find(([key]) =>
-    message.toLowerCase().includes(key.toLowerCase())
-  );
-  return found?.[1] ?? message;
+function getPasswordStrength(p: string) {
+  if (!p.length) return { label: '', color: '', width: '0%' };
+  const n = getPasswordChecks(p).filter(c => c.passed).length;
+  if (n <= 1) return { label: 'Lemah',  color: 'bg-red-400',    width: '25%'  };
+  if (n === 2) return { label: 'Cukup', color: 'bg-yellow-400', width: '50%'  };
+  if (n === 3) return { label: 'Baik',  color: 'bg-blue-400',   width: '75%'  };
+  return             { label: 'Kuat',   color: 'bg-emerald-500', width: '100%' };
 }
 
 function useCountdown(targetMs: number | null) {
-  const [remaining, setRemaining] = useState<number>(() =>
-    targetMs ? Math.max(0, targetMs - Date.now()) : 0
-  );
+  const [remaining, setRemaining] = useState(() => targetMs ? Math.max(0, targetMs - Date.now()) : 0);
   useEffect(() => {
     const update = () => setRemaining(targetMs ? Math.max(0, targetMs - Date.now()) : 0);
     update();
-    const interval = setInterval(update, 1000);
-    return () => clearInterval(interval);
+    const id = setInterval(update, 1000);
+    return () => clearInterval(id);
   }, [targetMs]);
   return {
     minutes: Math.floor(remaining / 60000),
@@ -109,7 +79,7 @@ function useCountdown(targetMs: number | null) {
 
 const oauthProviders = [
   {
-    id: 'google', label: 'Google',
+    id: 'google' as const, label: 'Google',
     icon: (
       <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none">
         <path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/>
@@ -119,34 +89,34 @@ const oauthProviders = [
       </svg>
     ),
   },
-] as const;
+];
 
 type OAuthProvider = typeof oauthProviders[number]['id'];
 
 function AuthFormInner({ type }: AuthFormProps) {
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
+  const [email, setEmail]                     = useState('');
+  const [password, setPassword]               = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
-  const [fullName, setFullName] = useState('');
-  const [agreed, setAgreed] = useState(false);
-  const [consentError, setConsentError] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
+  const [fullName, setFullName]               = useState('');
+  const [agreed, setAgreed]                   = useState(false);
+  const [consentError, setConsentError]       = useState(false);
+  const [showPassword, setShowPassword]       = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [oauthLoading, setOauthLoading] = useState<OAuthProvider | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState<string | null>(null);
+  const [isLoading, setIsLoading]             = useState(false);
+  const [oauthLoading, setOauthLoading]       = useState<OAuthProvider | null>(null);
+  const [error, setError]                     = useState<string | null>(null);
+  const [success, setSuccess]                 = useState<string | null>(null);
   const [passwordFocused, setPasswordFocused] = useState(false);
-  const [lockedUntilMs, setLockedUntilMs] = useState<number | null>(null);
-  const [isWarning, setIsWarning] = useState(false);
-  const [turnstileToken, setTurnstileToken] = useState<string | null>(null);
+  const [lockedUntilMs, setLockedUntilMs]     = useState<number | null>(null);
+  const [isWarning, setIsWarning]             = useState(false);
+  const [turnstileToken, setTurnstileToken]   = useState<string | null>(null);
   const [turnstileStatus, setTurnstileStatus] = useState<'loading' | 'ready' | 'error'>('loading');
-  const [captchaError, setCaptchaError] = useState<string | null>(null);
+  const [captchaError, setCaptchaError]       = useState<string | null>(null);
   const [verificationSent, setVerificationSent] = useState(false);
-  const [resendCooldown, setResendCooldown] = useState(0);
+  const [resendCooldown, setResendCooldown]   = useState(0);
 
   const turnstileRef = useRef<TurnstileInstance>(null);
-  const consentRef = useRef<HTMLDivElement>(null);
+  const consentRef   = useRef<HTMLDivElement>(null);
 
   const { minutes, seconds, isExpired } = useCountdown(lockedUntilMs);
   const isLocked = lockedUntilMs !== null && !isExpired;
@@ -159,85 +129,73 @@ function AuthFormInner({ type }: AuthFormProps) {
     }
   }, [isExpired, lockedUntilMs]);
 
-  const router = useRouter();
+  const router       = useRouter();
   const searchParams = useSearchParams();
-  const supabase = createClient();
-  const redirectTo = searchParams.get('redirectTo') || '/';
+  const redirectTo   = searchParams.get('redirectTo') || '/';
 
-  const strength = type === 'register' ? getPasswordStrength(password) : { label: '', color: '', width: '0%' };
-  const passwordChecks = type === 'register' ? getPasswordChecks(password) : [];
-  const passwordMatch = confirmPassword.length > 0 && password === confirmPassword;
+  const strength        = type === 'register' ? getPasswordStrength(password) : { label: '', color: '', width: '0%' };
+  const passwordChecks  = type === 'register' ? getPasswordChecks(password) : [];
+  const passwordMatch   = confirmPassword.length > 0 && password === confirmPassword;
   const passwordMismatch = confirmPassword.length > 0 && password !== confirmPassword;
   const emailValidation = type === 'register' && email.includes('@') ? validateEmail(email) : { valid: true, message: '' };
-  const emailInvalid = type === 'register' && email.includes('@') && !emailValidation.valid;
+  const emailInvalid    = type === 'register' && email.includes('@') && !emailValidation.valid;
   const isRegisterInvalid = type === 'register' && (
     emailInvalid || !isPasswordValid(password) || passwordMismatch || fullName.trim().length < 2
   );
   const isSubmitDisabled = isLoading || !!oauthLoading || turnstileStatus !== 'ready' || !turnstileToken || isRegisterInvalid || isLocked;
 
-  const handleOAuthLogin = async (provider: OAuthProvider) => {
+  const handleOAuthLogin = (provider: OAuthProvider) => {
     setOauthLoading(provider);
     setError(null);
-    setIsWarning(false);
-
     const siteUrl = window.location.origin;
-    const params = new URLSearchParams({
-      client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
-      redirect_uri: `${siteUrl}/auth/callback`,
+    const params  = new URLSearchParams({
+      client_id:     process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID!,
+      redirect_uri:  `${siteUrl}/auth/callback`,
       response_type: 'code',
-      scope: 'openid email profile',
-      access_type: 'offline',
-      prompt: 'select_account',
-      state: redirectTo,
+      scope:         'openid email profile',
+      access_type:   'offline',
+      prompt:        'select_account',
+      state:         redirectTo,
     });
-
-    window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params.toString()}`;
+    window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
   };
 
   const handleResend = async () => {
     setIsLoading(true);
-    const { error } = await supabase.auth.resend({ type: 'signup', email });
-    setIsLoading(false);
-    if (error) {
-      setError(translateError(error.message));
-      return;
-    }
-    setResendCooldown(60);
-    const interval = setInterval(() => {
-      setResendCooldown(prev => {
-        if (prev <= 1) { clearInterval(interval); return 0; }
-        return prev - 1;
+    try {
+      await fetch(`${BACKEND_URL}/api/auth/resend-verification`, {
+        method:  'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body:    JSON.stringify({ email }),
       });
-    }, 1000);
+      setResendCooldown(60);
+      const id = setInterval(() => setResendCooldown(p => { if (p <= 1) { clearInterval(id); return 0; } return p - 1; }), 1000);
+    } catch {
+      setError('Gagal mengirim ulang email.');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isLocked) return;
-    setError(null);
-    setSuccess(null);
-    setIsWarning(false);
-    setCaptchaError(null);
-    setConsentError(false);
+    setError(null); setSuccess(null); setIsWarning(false); setCaptchaError(null); setConsentError(false);
 
     if (type === 'register' && !agreed) {
       setConsentError(true);
       consentRef.current?.scrollIntoView({ behavior: 'smooth', block: 'center' });
       return;
     }
+    if (!turnstileToken) { setCaptchaError('Selesaikan verifikasi keamanan terlebih dahulu.'); return; }
 
-    if (!turnstileToken) {
-      setCaptchaError('Selesaikan verifikasi keamanan terlebih dahulu.');
-      return;
-    }
-
-    const sanitizedEmail = email.trim().toLowerCase();
+    const sanitizedEmail    = email.trim().toLowerCase();
     const sanitizedFullName = fullName.trim().replace(/[<>'"]/g, '');
 
     if (type === 'register') {
-      if (!sanitizedFullName || sanitizedFullName.length < 2) { setError('Nama lengkap minimal 2 karakter.'); return; }
-      const emailCheck = validateEmail(sanitizedEmail);
-      if (!emailCheck.valid) { setError(emailCheck.message); return; }
+      if (sanitizedFullName.length < 2) { setError('Nama lengkap minimal 2 karakter.'); return; }
+      const ec = validateEmail(sanitizedEmail);
+      if (!ec.valid) { setError(ec.message); return; }
       if (!isPasswordValid(password)) { setError('Kata sandi tidak memenuhi persyaratan keamanan.'); return; }
       if (password !== confirmPassword) { setError('Kata sandi dan konfirmasi tidak cocok.'); return; }
     }
@@ -245,76 +203,64 @@ function AuthFormInner({ type }: AuthFormProps) {
     setIsLoading(true);
     try {
       if (type === 'register') {
-        const normalizedEmail = normalizeEmail(sanitizedEmail);
-        const registerRes = await fetch(`${BACKEND_URL}/api/auth/register`, {
-          method: 'POST',
+        const res  = await fetch(`${BACKEND_URL}/api/auth/register`, {
+          method:  'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ email: normalizedEmail, password, fullName: sanitizedFullName, turnstileToken }),
+          body:    JSON.stringify({ email: normalizeEmail(sanitizedEmail), password, fullName: sanitizedFullName, turnstileToken }),
         });
-
-        const registerData = await registerRes.json().catch(() => ({})) as {
-          success?: boolean; message?: string; requiresVerification?: boolean;
-        };
-
-        if (!registerData.success) {
-          setError(registerData.message ?? 'Terjadi kesalahan saat mendaftar.');
-          setTurnstileToken(null);
-          turnstileRef.current?.reset();
-          setIsLoading(false);
+        const data = await res.json().catch(() => ({})) as { success?: boolean; message?: string };
+        if (!data.success) {
+          setError(data.message ?? 'Terjadi kesalahan saat mendaftar.');
+          setTurnstileToken(null); turnstileRef.current?.reset();
           return;
         }
-
         setVerificationSent(true);
-        setIsLoading(false);
         return;
       }
 
       // LOGIN
-      const loginRes = await fetch(`${BACKEND_URL}/api/auth/login`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email: sanitizedEmail, password, turnstileToken }),
+      const res  = await fetch(`${BACKEND_URL}/api/auth/login`, {
+        method:      'POST',
+        headers:     { 'Content-Type': 'application/json' },
+        credentials: 'include', // penting: agar cookie better-auth tersimpan
+        body:        JSON.stringify({ email: sanitizedEmail, password, turnstileToken }),
       });
-
-      const loginData = await loginRes.json().catch(() => ({})) as {
-        success?: boolean; message?: string; locked?: boolean;
-        locked_until?: string; warning?: boolean;
-        session?: { access_token: string; refresh_token: string };
+      const data = await res.json().catch(() => ({})) as {
+        success?: boolean; message?: string;
+        locked?: boolean; locked_until?: string; warning?: boolean;
+        session?: { token: string; expiresAt: string };
       };
 
-      if (!loginData.success) {
-        if (loginData.locked && loginData.locked_until) {
-          setLockedUntilMs(new Date(loginData.locked_until).getTime());
-          setError(loginData.message ?? 'Akun dikunci sementara.');
-          setIsWarning(false);
-        } else if (loginData.warning) {
+      if (!data.success) {
+        if (data.locked && data.locked_until) {
+          setLockedUntilMs(new Date(data.locked_until).getTime());
+          setError(data.message ?? 'Akun dikunci sementara.');
+        } else if (data.warning) {
           setIsWarning(true);
-          setError(loginData.message ?? 'Email atau kata sandi salah.');
+          setError(data.message ?? 'Email atau kata sandi salah.');
         } else {
-          setIsWarning(false);
-          setError(loginData.message ?? 'Email atau kata sandi salah.');
+          setError(data.message ?? 'Email atau kata sandi salah.');
         }
-        setTurnstileToken(null);
-        turnstileRef.current?.reset();
+        setTurnstileToken(null); turnstileRef.current?.reset();
         return;
       }
 
-      if (loginData.session) {
-        await supabase.auth.setSession({
-          access_token: loginData.session.access_token,
-          refresh_token: loginData.session.refresh_token,
-        });
+      // Session cookie di-set otomatis oleh backend (better-auth)
+      // Tapi kalau perlu fallback manual set cookie:
+      if (data.session?.token) {
+        const expires = data.session.expiresAt
+          ? new Date(data.session.expiresAt).toUTCString()
+          : new Date(Date.now() + 7 * 86400000).toUTCString();
+        document.cookie = `better-auth.session_token=${data.session.token}; path=/; expires=${expires}; SameSite=Lax${location.protocol === 'https:' ? '; Secure' : ''}`;
       }
 
       setSuccess('Berhasil masuk! Mengalihkan...');
       router.refresh();
-      setTimeout(() => router.push(redirectTo), 1000);
+      setTimeout(() => router.push(redirectTo), 800);
 
-    } catch (err: unknown) {
-      const message = err instanceof Error ? err.message : 'Terjadi kesalahan sistem.';
-      setError(translateError(message));
-      setTurnstileToken(null);
-      turnstileRef.current?.reset();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Terjadi kesalahan sistem.');
+      setTurnstileToken(null); turnstileRef.current?.reset();
     } finally {
       setIsLoading(false);
     }
@@ -322,14 +268,12 @@ function AuthFormInner({ type }: AuthFormProps) {
 
   const errorStyle = isLocked
     ? 'bg-amber-50 border-amber-200 text-amber-700'
-    : isWarning
-    ? 'bg-orange-50 border-orange-300 text-orange-700'
+    : isWarning ? 'bg-orange-50 border-orange-300 text-orange-700'
     : 'bg-red-50 border-red-200 text-red-700';
 
   const errorIcon = isLocked
     ? <Timer className="w-4 h-4 shrink-0 mt-0.5" />
-    : isWarning
-    ? <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
+    : isWarning ? <AlertTriangle className="w-4 h-4 shrink-0 mt-0.5" />
     : <AlertCircle className="w-4 h-4 shrink-0 mt-0.5" />;
 
   if (verificationSent) {
@@ -344,22 +288,16 @@ function AuthFormInner({ type }: AuthFormProps) {
           <h2 className="text-lg font-black text-slate-900 uppercase tracking-tight">Cek Email Kamu!</h2>
           <p className="text-sm text-slate-500 font-medium leading-relaxed">
             Kami sudah kirim link verifikasi ke <span className="font-bold text-slate-700">{email}</span>.
-            Klik link tersebut untuk mengaktifkan akun kamu.
           </p>
-          <p className="text-xs text-slate-400">Tidak ada email? Cek folder spam atau sampah kamu.</p>
-          <button
-            onClick={handleResend}
-            disabled={isLoading || resendCooldown > 0}
-            className="text-xs font-bold text-emerald-700 hover:text-emerald-800 disabled:text-slate-400 disabled:cursor-not-allowed transition-colors"
-          >
+          <p className="text-xs text-slate-400">Tidak ada email? Cek folder spam.</p>
+          <button onClick={handleResend} disabled={isLoading || resendCooldown > 0}
+            className="text-xs font-bold text-emerald-700 hover:text-emerald-800 disabled:text-slate-400 disabled:cursor-not-allowed transition-colors">
             {isLoading ? 'Mengirim...' : resendCooldown > 0 ? `Kirim ulang (${resendCooldown}s)` : 'Kirim Ulang Email'}
           </button>
         </div>
-        <div className="pt-2">
-          <Link href="/login" className="text-xs font-black text-slate-800 hover:text-emerald-700 uppercase tracking-widest flex items-center justify-center gap-1 transition-colors">
-            Kembali ke Halaman Login <ArrowRight className="w-3 h-3" />
-          </Link>
-        </div>
+        <Link href="/login" className="text-xs font-black text-slate-800 hover:text-emerald-700 uppercase tracking-widest flex items-center justify-center gap-1 transition-colors">
+          Kembali ke Login <ArrowRight className="w-3 h-3" />
+        </Link>
       </div>
     );
   }
@@ -399,7 +337,7 @@ function AuthFormInner({ type }: AuthFormProps) {
             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Nama Lengkap</label>
             <div className="relative">
               <UserPlus className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-              <input type="text" value={fullName} onChange={(e) => setFullName(e.target.value)}
+              <input type="text" value={fullName} onChange={e => setFullName(e.target.value)}
                 placeholder="Nama lengkap Anda"
                 className="w-full pl-10 pr-4 py-3 bg-white border border-slate-200 rounded-xl focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all text-sm font-medium text-slate-900 placeholder:text-slate-400 shadow-sm"
                 required />
@@ -411,7 +349,7 @@ function AuthFormInner({ type }: AuthFormProps) {
           <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Alamat Email</label>
           <div className="relative">
             <Mail className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none transition-colors ${emailInvalid ? 'text-red-400' : 'text-slate-400'}`} />
-            <input type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+            <input type="email" value={email} onChange={e => setEmail(e.target.value)}
               placeholder="email@gmail.com"
               className={`w-full pl-10 pr-4 py-3 bg-white border rounded-xl outline-none transition-all text-sm font-medium text-slate-900 placeholder:text-slate-400 shadow-sm focus:ring-2 ${emailInvalid ? 'border-red-300 focus:border-red-400 focus:ring-red-500/10' : 'border-slate-200 focus:border-emerald-500 focus:ring-emerald-500/10'}`}
               required autoComplete="email" disabled={isLocked} />
@@ -433,26 +371,22 @@ function AuthFormInner({ type }: AuthFormProps) {
           <div className="flex items-center justify-between">
             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Kata Sandi</label>
             {type === 'login' && (
-              <Link
-                href="/lupa-kata-sandi"
-                className="text-[10px] font-bold text-slate-400 hover:text-red-600 transition-colors uppercase tracking-widest"
-              >
+              <Link href="/lupa-kata-sandi" className="text-[10px] font-bold text-slate-400 hover:text-red-600 transition-colors uppercase tracking-widest">
                 Lupa kata sandi?
               </Link>
             )}
           </div>
           <div className="relative">
             <Lock className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
-            <input
-              type={showPassword ? 'text' : 'password'} value={password}
-              onChange={(e) => setPassword(e.target.value)}
+            <input type={showPassword ? 'text' : 'password'} value={password}
+              onChange={e => setPassword(e.target.value)}
               onFocus={() => setPasswordFocused(true)} onBlur={() => setPasswordFocused(false)}
               placeholder={type === 'register' ? 'Min. 8 karakter, huruf besar, angka, simbol' : '••••••••'}
               className="w-full pl-10 pr-11 py-3 bg-white border border-slate-200 rounded-xl focus:border-emerald-500 focus:ring-2 focus:ring-emerald-500/10 outline-none transition-all text-sm font-medium text-slate-900 placeholder:text-slate-400 shadow-sm"
               required minLength={type === 'register' ? 8 : 6}
               autoComplete={type === 'login' ? 'current-password' : 'new-password'}
               disabled={isLocked} />
-            <button type="button" onClick={() => setShowPassword(!showPassword)}
+            <button type="button" onClick={() => setShowPassword(p => !p)}
               className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-0.5" tabIndex={-1}>
               {showPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
             </button>
@@ -462,9 +396,7 @@ function AuthFormInner({ type }: AuthFormProps) {
               <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
                 <div className={`h-full rounded-full transition-all duration-300 ${strength.color}`} style={{ width: strength.width }} />
               </div>
-              <p className="text-[10px] font-semibold text-slate-400">
-                Kekuatan: <span className="text-slate-600">{strength.label}</span>
-              </p>
+              <p className="text-[10px] font-semibold text-slate-400">Kekuatan: <span className="text-slate-600">{strength.label}</span></p>
             </div>
           )}
           {type === 'register' && (passwordFocused || password.length > 0) && (
@@ -472,12 +404,8 @@ function AuthFormInner({ type }: AuthFormProps) {
               <p className="text-[10px] font-bold text-slate-500 uppercase tracking-wider mb-2">Persyaratan kata sandi:</p>
               {passwordChecks.map((check, i) => (
                 <div key={i} className="flex items-center gap-2">
-                  {check.passed
-                    ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" />
-                    : <XCircle className="w-3.5 h-3.5 text-slate-300 shrink-0" />}
-                  <span className={`text-[11px] font-medium ${check.passed ? 'text-emerald-700' : 'text-slate-400'}`}>
-                    {check.label}
-                  </span>
+                  {check.passed ? <CheckCircle2 className="w-3.5 h-3.5 text-emerald-500 shrink-0" /> : <XCircle className="w-3.5 h-3.5 text-slate-300 shrink-0" />}
+                  <span className={`text-[11px] font-medium ${check.passed ? 'text-emerald-700' : 'text-slate-400'}`}>{check.label}</span>
                 </div>
               ))}
             </div>
@@ -489,78 +417,46 @@ function AuthFormInner({ type }: AuthFormProps) {
             <label className="text-[10px] font-bold text-slate-500 uppercase tracking-widest block">Konfirmasi Kata Sandi</label>
             <div className="relative">
               <Lock className={`absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 pointer-events-none transition-colors ${passwordMatch ? 'text-emerald-500' : passwordMismatch ? 'text-red-400' : 'text-slate-400'}`} />
-              <input
-                type={showConfirmPassword ? 'text' : 'password'} value={confirmPassword}
-                onChange={(e) => setConfirmPassword(e.target.value)} placeholder="Ulangi kata sandi"
+              <input type={showConfirmPassword ? 'text' : 'password'} value={confirmPassword}
+                onChange={e => setConfirmPassword(e.target.value)} placeholder="Ulangi kata sandi"
                 className={`w-full pl-10 pr-11 py-3 bg-white border rounded-xl outline-none transition-all text-sm font-medium text-slate-900 placeholder:text-slate-400 shadow-sm focus:ring-2 ${passwordMatch ? 'border-emerald-400 focus:border-emerald-500 focus:ring-emerald-500/10' : passwordMismatch ? 'border-red-300 focus:border-red-400 focus:ring-red-500/10' : 'border-slate-200 focus:border-emerald-500 focus:ring-emerald-500/10'}`}
                 required autoComplete="new-password" />
-              <button type="button" onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+              <button type="button" onClick={() => setShowConfirmPassword(p => !p)}
                 className="absolute right-3.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition-colors p-0.5" tabIndex={-1}>
                 {showConfirmPassword ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
               </button>
             </div>
-            {passwordMatch && (
-              <p className="text-[10px] font-semibold text-emerald-600 flex items-center gap-1">
-                <CheckCircle2 className="w-3 h-3" /> Kata sandi cocok
-              </p>
-            )}
-            {passwordMismatch && (
-              <p className="text-[10px] font-semibold text-red-500 flex items-center gap-1">
-                <AlertCircle className="w-3 h-3" /> Kata sandi tidak cocok
-              </p>
-            )}
+            {passwordMatch && <p className="text-[10px] font-semibold text-emerald-600 flex items-center gap-1"><CheckCircle2 className="w-3 h-3" /> Kata sandi cocok</p>}
+            {passwordMismatch && <p className="text-[10px] font-semibold text-red-500 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> Kata sandi tidak cocok</p>}
           </div>
         )}
 
         {type === 'register' && (
           <div ref={consentRef}>
             <label className="flex items-start gap-2.5 cursor-pointer group">
-              <input
-                type="checkbox"
-                checked={agreed}
-                onChange={(e) => { setAgreed(e.target.checked); if (e.target.checked) setConsentError(false); }}
-                className={`mt-0.5 w-4 h-4 shrink-0 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 focus:ring-2 focus:ring-offset-0 cursor-pointer ${consentError ? 'border-red-400 ring-2 ring-red-200' : ''}`}
-              />
+              <input type="checkbox" checked={agreed}
+                onChange={e => { setAgreed(e.target.checked); if (e.target.checked) setConsentError(false); }}
+                className={`mt-0.5 w-4 h-4 shrink-0 rounded border-gray-300 text-emerald-600 focus:ring-emerald-500 cursor-pointer ${consentError ? 'border-red-400 ring-2 ring-red-200' : ''}`} />
               <span className="text-xs text-gray-500 leading-relaxed">
                 Saya menyetujui{' '}
-                <Link href="/syarat-ketentuan" target="_blank" onClick={(e) => e.stopPropagation()}
-                  className="text-gray-700 hover:text-emerald-600 font-medium transition-colors underline underline-offset-2">
-                  Syarat & Ketentuan
-                </Link>
+                <Link href="/syarat-ketentuan" target="_blank" onClick={e => e.stopPropagation()} className="text-gray-700 hover:text-emerald-600 font-medium transition-colors underline underline-offset-2">Syarat & Ketentuan</Link>
                 {' '}dan{' '}
-                <Link href="/kebijakan-privasi" target="_blank" onClick={(e) => e.stopPropagation()}
-                  className="text-gray-700 hover:text-emerald-600 font-medium transition-colors underline underline-offset-2">
-                  Kebijakan Privasi
-                </Link>
+                <Link href="/kebijakan-privasi" target="_blank" onClick={e => e.stopPropagation()} className="text-gray-700 hover:text-emerald-600 font-medium transition-colors underline underline-offset-2">Kebijakan Privasi</Link>
                 {' '}KawalTransaksi.
               </span>
             </label>
-            {consentError && (
-              <p className="mt-1.5 text-[11px] font-semibold text-red-500 flex items-center gap-1">
-                <AlertCircle className="w-3 h-3" /> Centang persetujuan untuk melanjutkan.
-              </p>
-            )}
+            {consentError && <p className="mt-1.5 text-[11px] font-semibold text-red-500 flex items-center gap-1"><AlertCircle className="w-3 h-3" /> Centang persetujuan untuk melanjutkan.</p>}
           </div>
         )}
 
         <div className="flex flex-col items-start gap-2">
-          <Turnstile
-            ref={turnstileRef}
+          <Turnstile ref={turnstileRef}
             siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
-            onSuccess={(token) => { setTurnstileToken(token); setTurnstileStatus('ready'); setCaptchaError(null); }}
+            onSuccess={token => { setTurnstileToken(token); setTurnstileStatus('ready'); setCaptchaError(null); }}
             onExpire={() => { setTurnstileToken(null); setTurnstileStatus('loading'); }}
-            onError={() => { setTurnstileToken(null); setTurnstileStatus('error'); setCaptchaError('Widget keamanan gagal dimuat. Coba refresh halaman.'); }}
-          />
-          {turnstileStatus === 'ready' && !captchaError && (
-            <p className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1">
-              <ShieldCheck className="w-3 h-3" /> Verifikasi keamanan selesai
-            </p>
-          )}
-          {turnstileStatus === 'loading' && (
-            <p className="text-[10px] text-slate-400 font-medium flex items-center gap-1">
-              <Loader2 className="w-3 h-3 animate-spin" /> Memuat verifikasi keamanan...
-            </p>
-          )}
+            onError={() => { setTurnstileToken(null); setTurnstileStatus('error'); setCaptchaError('Widget keamanan gagal dimuat. Coba refresh halaman.'); }} />
+          {turnstileStatus === 'ready' && !captchaError && <p className="text-[10px] text-emerald-600 font-semibold flex items-center gap-1"><ShieldCheck className="w-3 h-3" /> Verifikasi keamanan selesai</p>}
+          {turnstileStatus === 'loading' && <p className="text-[10px] text-slate-400 font-medium flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Memuat verifikasi keamanan...</p>}
           {captchaError && (
             <div className="w-full flex items-start gap-2.5 px-4 py-3 bg-amber-50 border border-amber-200 rounded-xl">
               <AlertCircle className="w-4 h-4 text-amber-500 shrink-0 mt-0.5" />
@@ -576,14 +472,10 @@ function AuthFormInner({ type }: AuthFormProps) {
             : type === 'login' ? 'bg-slate-900 hover:bg-slate-800 shadow-slate-900/20'
             : 'bg-emerald-600 hover:bg-emerald-700 shadow-emerald-600/20'
           }`}>
-          {isLocked
-            ? <><Timer className="w-4 h-4" /> Dikunci {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}</>
-            : isLoading
-            ? <><Loader2 className="w-4 h-4 animate-spin" /> {type === 'login' ? 'Sedang Masuk...' : 'Membuat Akun...'}</>
-            : turnstileStatus === 'loading'
-            ? <><Loader2 className="w-4 h-4 animate-spin" /> Memuat keamanan...</>
-            : isWarning
-            ? <><AlertTriangle className="w-4 h-4" /> Coba Lagi</>
+          {isLocked ? <><Timer className="w-4 h-4" /> Dikunci {String(minutes).padStart(2, '0')}:{String(seconds).padStart(2, '0')}</>
+            : isLoading ? <><Loader2 className="w-4 h-4 animate-spin" /> {type === 'login' ? 'Sedang Masuk...' : 'Membuat Akun...'}</>
+            : turnstileStatus === 'loading' ? <><Loader2 className="w-4 h-4 animate-spin" /> Memuat keamanan...</>
+            : isWarning ? <><AlertTriangle className="w-4 h-4" /> Coba Lagi</>
             : <>{type === 'login' ? 'Masuk' : 'Buat Akun'}<ArrowRight className="w-4 h-4 opacity-70" /></>
           }
         </button>
@@ -596,7 +488,7 @@ function AuthFormInner({ type }: AuthFormProps) {
       </div>
 
       <div className="space-y-2.5">
-        {oauthProviders.map((p) => (
+        {oauthProviders.map(p => (
           <button key={p.id} type="button" onClick={() => handleOAuthLogin(p.id)}
             disabled={!!oauthLoading || isLoading || isLocked}
             className="w-full flex items-center justify-center gap-3 py-3 px-4 bg-white border border-slate-200 rounded-xl font-semibold text-sm text-slate-700 hover:bg-slate-50 hover:border-slate-300 transition-all shadow-sm active:scale-[0.98] disabled:opacity-50">

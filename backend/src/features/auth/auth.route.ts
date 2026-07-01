@@ -118,15 +118,6 @@ async function createResetToken(email: string): Promise<string> {
   return token;
 }
 
-/**
- * Lazy migration: user lama (bcrypt, pra better-auth) login pertama kali
- * pasca-migrasi. Verify bcrypt manual, kalau cocok re-hash pakai scrypt
- * (better-auth internal) dan simpan sebagai credential account.
- *
- * NOTE: ctx.password.hash & ctx.internalAdapter.createAccount adalah
- * internal API better-auth (tidak di dokumentasi publik, versi 1.6.22).
- * Bisa berubah antar versi — test sebelum deploy production.
- */
 async function tryLazyMigratePassword(userId: string, password: string): Promise<boolean> {
   const [row] = await sql`
     SELECT legacy_bcrypt_hash FROM profiles WHERE id = ${userId} LIMIT 1
@@ -218,7 +209,7 @@ authRoute.post('/register', async (c) => {
     `.catch(console.error);
 
     const token = await createVerificationToken(normalizedEmail);
-    const verificationLink = `${process.env.FRONTEND_URL}/auth/verify?token=${token}&email=${encodeURIComponent(normalizedEmail)}`;
+    const verificationLink = `${process.env.FRONTEND_URL}/auth/confirm?token=${token}&email=${encodeURIComponent(normalizedEmail)}`;
 
     sendVerificationEmail({
       to:               normalizedEmail,
@@ -442,6 +433,191 @@ authRoute.post('/reset-password', async (c) => {
   } catch (err) {
     console.error('[AUTH] reset-password error:', err);
     return c.json({ success: false, message: 'Terjadi kesalahan server.' }, 500);
+  }
+});
+
+// ── GET /api/auth/get-session ─────────────────────────────────────────────────
+// Dipakai middleware Next.js untuk validasi session token dari cookie
+authRoute.get('/get-session', async (c) => {
+  const authHeader = c.req.header('Authorization');
+  const token      = authHeader?.startsWith('Bearer ') ? authHeader.slice(7) : null;
+
+  if (!token || token.length < 20)
+    return c.json({ success: false }, 401);
+
+  try {
+    const [row] = await sql`
+      SELECT
+        s."userId",
+        s."expiresAt",
+        p.role     AS role,
+        p.is_banned AS "isBanned"
+      FROM session s
+      LEFT JOIN profiles p ON p.id = s."userId"
+      WHERE s.token = ${token}
+      LIMIT 1
+    `;
+
+    if (!row || new Date(row.expiresAt) <= new Date())
+      return c.json({ success: false }, 401);
+
+    if (row.isBanned)
+      return c.json({ success: false, message: 'banned' }, 403);
+
+    return c.json({
+      success: true,
+      userId:  row.userId,
+      role:    row.role ?? 'user',
+    });
+  } catch (err) {
+    console.error('[AUTH] get-session error:', err);
+    return c.json({ success: false }, 500);
+  }
+});
+
+// ── POST /api/auth/google/callback ───────────────────────────────────────────
+// Tukar Google auth code → better-auth session
+authRoute.post('/google/callback', async (c) => {
+  try {
+    const { code, redirectUri } = await c.req.json() as { code?: string; redirectUri?: string };
+
+    if (!code || !redirectUri)
+      return c.json({ success: false, message: 'Data tidak lengkap.' }, 400);
+
+    // Tukar code → Google tokens
+    const tokenRes = await fetch('https://oauth2.googleapis.com/token', {
+      method:  'POST',
+      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body:    new URLSearchParams({
+        code,
+        client_id:     process.env.GOOGLE_CLIENT_ID!,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+        redirect_uri:  redirectUri,
+        grant_type:    'authorization_code',
+      }),
+    });
+
+    const tokenData = await tokenRes.json() as {
+      id_token?: string; access_token?: string; error?: string;
+    };
+
+    if (tokenData.error || !tokenData.id_token)
+      return c.json({ success: false, message: 'Google OAuth gagal.' }, 400);
+
+    // Ambil user info dari Google
+    const userRes  = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+      headers: { Authorization: `Bearer ${tokenData.access_token}` },
+    });
+    const userInfo = await userRes.json() as {
+      sub: string; email: string; name: string; picture?: string; email_verified?: boolean;
+    };
+
+    if (!userInfo.email)
+      return c.json({ success: false, message: 'Gagal mendapatkan info akun Google.' }, 400);
+
+    // Upsert user ke better-auth tables
+    const [existingUser] = await sql`
+      SELECT id FROM "user" WHERE email = ${userInfo.email} LIMIT 1
+    `;
+
+    let userId: string;
+
+    if (existingUser) {
+      userId = existingUser.id;
+      await sql`
+        UPDATE "user" SET
+          name        = ${userInfo.name},
+          image       = ${userInfo.picture ?? null},
+          "updatedAt" = now()
+        WHERE id = ${userId}
+      `;
+    } else {
+      userId = randomBytes(16).toString('hex');
+      await sql`
+        INSERT INTO "user" (id, name, email, "emailVerified", image, "createdAt", "updatedAt")
+        VALUES (${userId}, ${userInfo.name}, ${userInfo.email}, ${userInfo.email_verified ?? true}, ${userInfo.picture ?? null}, now(), now())
+      `;
+      await sql`
+        INSERT INTO profiles (id, email, full_name, role, failed_attempts, is_banned, welcome_sent)
+        VALUES (${userId}, ${userInfo.email}, ${userInfo.name}, 'user', 0, false, false)
+        ON CONFLICT (id) DO NOTHING
+      `.catch(console.error);
+    }
+
+    // Cek ban
+    const [profile] = await sql`SELECT is_banned, role FROM profiles WHERE id = ${userId} LIMIT 1`;
+    if (profile?.is_banned)
+      return c.json({ success: false, message: 'Akun Anda telah dinonaktifkan.' }, 403);
+
+    // Upsert account (Google provider)
+    const [existingAccount] = await sql`
+      SELECT id FROM account WHERE "userId" = ${userId} AND "providerId" = 'google' LIMIT 1
+    `;
+    if (existingAccount) {
+      await sql`
+        UPDATE account SET
+          "accessToken"  = ${tokenData.access_token ?? null},
+          "idToken"      = ${tokenData.id_token},
+          "updatedAt"    = now()
+        WHERE id = ${existingAccount.id}
+      `;
+    } else {
+      const accountId = randomBytes(16).toString('hex');
+      await sql`
+        INSERT INTO account (id, "userId", "accountId", "providerId", "accessToken", "idToken", "createdAt", "updatedAt")
+        VALUES (${accountId}, ${userId}, ${userInfo.sub}, 'google', ${tokenData.access_token ?? null}, ${tokenData.id_token}, now(), now())
+      `;
+    }
+
+    // Buat session better-auth
+    const sessionToken   = randomBytes(32).toString('hex');
+    const sessionId      = randomBytes(16).toString('hex');
+    const expiresAt      = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+
+    await sql`
+      INSERT INTO session (id, "userId", token, "expiresAt", "createdAt", "updatedAt")
+      VALUES (${sessionId}, ${userId}, ${sessionToken}, ${expiresAt.toISOString()}, now(), now())
+    `;
+
+    return c.json({
+      success: true,
+      session: { token: sessionToken, expiresAt: expiresAt.toISOString() },
+      user:    { id: userId, email: userInfo.email, name: userInfo.name, role: profile?.role ?? 'user' },
+    });
+  } catch (err) {
+    console.error('[AUTH] google/callback error:', err);
+    return c.json({ success: false, message: 'Terjadi kesalahan server.' }, 500);
+  }
+});
+
+// ── POST /api/auth/resend-verification ───────────────────────────────────────
+authRoute.post('/resend-verification', async (c) => {
+  try {
+    const { email } = await c.req.json() as { email?: string };
+    if (!email) return c.json({ success: false }, 400);
+
+    const normalizedEmail = email.trim().toLowerCase();
+    const ip              = getIp(c);
+    const rl              = await checkRateLimit(`rl_resend_${ip}`, 3, 600);
+    if (rl.blocked) return c.json({ success: false, message: 'Terlalu banyak percobaan.' }, 429);
+
+    const [user] = await sql`SELECT id, name FROM "user" WHERE email = ${normalizedEmail} LIMIT 1`;
+    if (!user) return c.json({ success: true }); // silent
+
+    const token            = await createVerificationToken(normalizedEmail);
+    const verificationLink = `${process.env.FRONTEND_URL}/auth/confirm?token=${token}&email=${encodeURIComponent(normalizedEmail)}`;
+
+    sendVerificationEmail({
+      to:               normalizedEmail,
+      fullName:         user.name ?? 'Pengguna',
+      verificationLink: verificationLink,
+      apiKey:           process.env.RESEND_API_KEY!,
+    }).catch(console.error);
+
+    return c.json({ success: true });
+  } catch (err) {
+    console.error('[AUTH] resend-verification error:', err);
+    return c.json({ success: false }, 500);
   }
 });
 
