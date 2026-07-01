@@ -53,6 +53,7 @@ function formatDate(dateStr: string): string {
 }
 
 function estimateReadTime(content: string): string {
+  if (!content) return '1 menit baca';
   const words = content.split(/\s+/).length;
   const minutes = Math.ceil(words / 200);
   return `${minutes} menit baca`;
