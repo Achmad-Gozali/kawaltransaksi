@@ -10,10 +10,19 @@ declare global {
 
 declare const self: ServiceWorkerGlobalScope;
 
+// Hapus semua cache lama saat SW baru aktif
+self.addEventListener('activate', (event) => {
+  event.waitUntil(
+    caches.keys().then((keys) =>
+      Promise.all(keys.map((key) => caches.delete(key)))
+    )
+  );
+});
+
 const serwist = new Serwist({
   precacheEntries: [
     ...(self.__SW_MANIFEST ?? []),
-    { url: '/offline', revision: '1' },  // <- tambah ini
+    { url: '/offline', revision: '1' },
   ],
   skipWaiting: true,
   clientsClaim: true,
