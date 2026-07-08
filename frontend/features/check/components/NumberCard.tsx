@@ -17,6 +17,11 @@ function truncateUrl(url: string, maxLen = 50) {
   return url.length <= maxLen ? url : url.slice(0, maxLen) + "...";
 }
 
+function resolveEvidenceUrl(url: string) {
+  if (url.startsWith("http://") || url.startsWith("https://")) return url;
+  return `${process.env.NEXT_PUBLIC_API_URL}${url}`;
+}
+
 interface CarrierInfo { carrier: string; type: "mobile" | "fixed" | "unknown" }
 
 interface ReportItem {
@@ -144,7 +149,7 @@ export default function NumberCard({
               <div className="shrink-0">
                 <p className="text-[10px] text-slate-400 mb-1.5 text-right">Foto penipu</p>
                 <div className="relative w-14 h-14 sm:w-16 sm:h-16">
-                  <Image src={suspectPhotoUrl} alt="Foto profil penipu" fill className="object-cover rounded-xl border border-slate-200" unoptimized />
+                  <Image src={resolveEvidenceUrl(suspectPhotoUrl)} alt="Foto profil penipu" fill className="object-cover rounded-xl border border-slate-200" unoptimized />
                   <span className="absolute -bottom-1 -right-1 bg-red-600 text-white text-[8px] font-semibold px-1.5 py-0.5 rounded-md uppercase tracking-wide">Penipu</span>
                 </div>
               </div>

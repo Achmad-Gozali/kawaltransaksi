@@ -12,6 +12,11 @@ function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
+function resolveEvidenceUrl(url: string) {
+  if (url.startsWith('http://') || url.startsWith('https://')) return url;
+  return `${process.env.NEXT_PUBLIC_API_URL}${url}`;
+}
+
 interface ReportItem {
   id: string;
   status: string;
@@ -71,7 +76,7 @@ function Lightbox({ urls, initialIndex, onClose }: { urls: string[]; initialInde
         </button>
       )}
       <div className="relative max-w-3xl max-h-[80vh] w-full h-full" onClick={e => e.stopPropagation()}>
-        <Image src={urls[current]} alt={`Bukti ${current + 1}`} fill className="object-contain rounded-lg" unoptimized />
+        <Image src={resolveEvidenceUrl(urls[current])} alt={`Bukti ${current + 1}`} fill className="object-contain rounded-lg" unoptimized />
       </div>
       {urls.length > 1 && (
         <button onClick={e => { e.stopPropagation(); setCurrent(p => (p < urls.length - 1 ? p + 1 : 0)); }}
@@ -84,7 +89,7 @@ function Lightbox({ urls, initialIndex, onClose }: { urls: string[]; initialInde
           {urls.map((url, i) => (
             <button key={i} onClick={e => { e.stopPropagation(); setCurrent(i); }}
               className={`relative w-10 h-10 rounded-lg overflow-hidden border-2 transition-all ${i === current ? 'border-white scale-110' : 'border-white/30 opacity-60'}`}>
-              <Image src={url} alt="" fill className="object-cover" unoptimized />
+              <Image src={resolveEvidenceUrl(url)} alt="" fill className="object-cover" unoptimized />
             </button>
           ))}
         </div>
@@ -107,7 +112,7 @@ function EvidenceGallery({ urls }: { urls: string[] }) {
         {displayUrls.map((url, i) => (
           <button key={i} onClick={() => setLightboxIndex(i)}
             className="group relative aspect-square rounded-xl overflow-hidden border border-slate-200 bg-slate-50 hover:border-slate-400 transition-all cursor-pointer">
-            <Image src={url} alt={`Bukti ${i + 1}`} fill className="object-cover group-hover:scale-105 transition-transform duration-200" loading="lazy" unoptimized />
+            <Image src={resolveEvidenceUrl(url)} alt={`Bukti ${i + 1}`} fill className="object-cover group-hover:scale-105 transition-transform duration-200" loading="lazy" unoptimized />
             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
             <div className="absolute top-1.5 left-1.5 bg-black/50 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md">{i + 1}</div>
           </button>
