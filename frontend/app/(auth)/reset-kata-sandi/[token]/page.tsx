@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { use, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import Image from "next/image";
@@ -15,7 +15,8 @@ function getPasswordChecks(p: string) {
   ];
 }
 
-export default function ResetKataSandiPage({ params }: { params: { token: string } }) {
+export default function ResetKataSandiPage({ params }: { params: Promise<{ token: string }> }) {
+  const { token } = use(params);
   const router = useRouter();
   const [password,        setPassword]        = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
@@ -41,7 +42,7 @@ export default function ResetKataSandiPage({ params }: { params: { token: string
       const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/auth/reset-password`, {
         method:  "POST",
         headers: { "Content-Type": "application/json" },
-        body:    JSON.stringify({ token: params.token, password }),
+        body:    JSON.stringify({ token, password }),
       });
       const data = await res.json();
       if (res.ok) {
