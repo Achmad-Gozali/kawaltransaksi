@@ -1,0 +1,71 @@
+@import "tailwindcss";
+@plugin "@tailwindcss/typography";
+
+/* -- BASE -- */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  scroll-behavior: smooth;
+}
+
+/* -- PAGE TRANSITION -- */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+
+main {
+  animation: fadeIn 0.3s ease-out;
+}
+
+/* -- LOADING BAR -- */
+@keyframes loading {
+  0%   { transform: translateX(-100%); }
+  100% { transform: translateX(250%); }
+}
+
+/* -- SCROLLBAR -- */
+::-webkit-scrollbar       { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: #d4d4d8; }
+::-webkit-scrollbar-thumb:hover { background: #a1a1aa; }
+
+/* -- DRAWER ANIMATIONS -- */
+@keyframes slideInLeft {
+  from { transform: translateX(-100%); }
+  to   { transform: translateX(0); }
+}
+
+@keyframes slideInRight {
+  from { transform: translateX(100%); }
+  to   { transform: translateX(0); }
+}
+
+.animate-slide-in-left  { animation: slideInLeft  0.25s ease-out; }
+.animate-slide-in-right { animation: slideInRight 0.25s ease-out; }
+
+/* -- RECAPTCHA -- */
+.grecaptcha-badge { visibility: hidden !important; }
+
+/* -- DATE INPUT -- */
+input[type="date"]::-webkit-calendar-picker-indicator {
+  opacity: 0.4;
+  cursor: pointer;
+}
+input[type="date"]::-webkit-datetime-edit-fields-wrapper {
+  color: rgb(30 41 59);
+}
+
+/* -- TIPTAP PROSE -- */
+.prose h2 { font-size: 1.25rem; font-weight: 700; margin-top: 1.5rem; margin-bottom: 0.5rem; }
+.prose h3 { font-size: 1.1rem;  font-weight: 700; margin-top: 1.25rem; margin-bottom: 0.4rem; }
+.prose p  { line-height: 1.75; margin-bottom: 1rem; }
+.prose ul, .prose ol { padding-left: 1.5rem; margin-bottom: 1rem; }
+.prose li { margin-bottom: 0.25rem; }
+.prose blockquote { border-left: 3px solid #10b981; padding-left: 1rem; color: #64748b; font-style: italic; }
+.prose hr { border-color: #f1f5f9; margin: 1.5rem 0; }

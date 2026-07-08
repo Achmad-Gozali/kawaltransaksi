@@ -1,0 +1,32 @@
+import { configDotenv } from "dotenv";
+configDotenv();
+
+import Fastify from "fastify";
+import cors from "@fastify/cors";
+import cookie from "@fastify/cookie";
+import multipart from "@fastify/multipart";
+
+import { authRoutes } from "./features/auth/auth.route";
+import { reportsRoutes } from "./features/reports/reports.route";
+import { searchRoutes } from "./features/search/search.route";
+import { adminRoutes } from "./features/admin/admin.route";
+import { uploadRoutes } from "./features/upload/upload.route";
+
+const app = Fastify({ logger: true });
+
+await app.register(cors, {
+  origin: process.env.FRONTEND_URL!,
+  credentials: true,
+});
+await app.register(cookie, { secret: process.env.COOKIE_SECRET! });
+await app.register(multipart, { limits: { fileSize: 5 * 1024 * 1024 } });
+
+await app.register(authRoutes, { prefix: "/api/auth" });
+await app.register(reportsRoutes, { prefix: "/api/reports" });
+await app.register(searchRoutes, { prefix: "/api/search" });
+await app.register(adminRoutes, { prefix: "/api/admin" });
+await app.register(uploadRoutes, { prefix: "/api/upload" });
+
+app.get("/health", async () => ({ status: "ok" }));
+
+await app.listen({ port: Number(process.env.PORT) || 4000, host: "0.0.0.0" });
