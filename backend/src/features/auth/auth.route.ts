@@ -4,10 +4,10 @@ import jwt from "jsonwebtoken";
 import { google } from "googleapis";
 import { createId } from "@paralleldrive/cuid2";
 import { randomInt } from "crypto";
-import { db } from "../../core/db";
-import { users, sessions, passwordResetTokens, otpTokens } from "../../core/schema";
+import { db } from "../../core/db.js";
+import { users, sessions, passwordResetTokens, otpTokens } from "../../core/schema.js";
 import { eq } from "drizzle-orm";
-import { sendOtpEmail, sendPasswordResetEmail } from "../../core/mailer";
+import { sendOtpEmail, sendPasswordResetEmail } from "../../core/mailer.js";
 
 function signTokens(userId: string, role: string) {
   const accessToken  = jwt.sign({ userId, role }, process.env.JWT_ACCESS_SECRET!,  { expiresIn: "15m" });

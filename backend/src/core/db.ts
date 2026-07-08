@@ -1,14 +1,11 @@
 import { drizzle } from "drizzle-orm/postgres-js";
 import postgres from "postgres";
-import * as schema from "./schema";
+import * as schema from "./schema.js";
 
-const client = postgres({
-  host: "127.0.0.1",
-  port: 5433,
-  user: "postgres",
-  password: "postgres",
-  database: "kawaltransaksi",
-  max: 10,
-});
+const connectionString =
+  process.env.DATABASE_URL ??
+  "postgresql://postgres:postgres@localhost:5433/kawaltransaksi";
+
+const client = postgres(connectionString, { max: 10 });
 
 export const db = drizzle(client, { schema });

@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
-import { requireAuth } from "../../core/auth.middleware";
-import { saveFile } from "../../core/storage";
+import { requireAuth } from "../../core/auth.middleware.js";
+import { saveFile } from "../../core/storage.js";
 
 const ALLOWED_MIME = new Set(["image/jpeg", "image/png"]);
 const MAX_SIZE = 5 * 1024 * 1024;

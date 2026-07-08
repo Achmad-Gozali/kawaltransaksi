@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
-import { db } from "./db";
-import { reports, users } from "./schema";
+import { db } from "./db.js";
+import { reports, users } from "./schema.js";
 import { and, eq, gte, sql } from "drizzle-orm";
 
 const UPLOADS_DIR        = path.resolve(process.cwd(), "uploads");

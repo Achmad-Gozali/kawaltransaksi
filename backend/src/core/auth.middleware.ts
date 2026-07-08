@@ -1,6 +1,6 @@
 import type { FastifyRequest, FastifyReply } from "fastify";
 import jwt from "jsonwebtoken";
-import type { JwtPayload } from "../types";
+import type { JwtPayload } from "../types.js";
 
 export async function requireAuth(req: FastifyRequest, reply: FastifyReply) {
   const token = req.headers.authorization?.split(" ")[1];

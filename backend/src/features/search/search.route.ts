@@ -1,6 +1,6 @@
 import type { FastifyInstance } from "fastify";
-import { db } from "../../core/db";
-import { reports } from "../../core/schema";
+import { db } from "../../core/db.js";
+import { reports } from "../../core/schema.js";
 import { eq, and, desc } from "drizzle-orm";
 
 export async function searchRoutes(app: FastifyInstance) {

@@ -1,10 +1,10 @@
 import type { FastifyInstance } from "fastify";
-import { db } from "../../core/db";
-import { reports, evidence } from "../../core/schema";
+import { db } from "../../core/db.js";
+import { reports, evidence } from "../../core/schema.js";
 import { eq, desc, count, and, sql } from "drizzle-orm";
-import { requireAuth } from "../../core/auth.middleware";
-import { saveFile } from "../../core/storage";
-import { checkSpam, checkCompleteness } from "../../core/robot";
+import { requireAuth } from "../../core/auth.middleware.js";
+import { saveFile } from "../../core/storage.js";
+import { checkSpam, checkCompleteness } from "../../core/robot.js";
 
 export async function reportsRoutes(app: FastifyInstance) {
   app.get("/public/recent", async () => {
@@ -44,7 +44,9 @@ export async function reportsRoutes(app: FastifyInstance) {
     const [verified] = await db
       .select({ count: count() })
       .from(reports)
-      .where(and(eq(reports.targetType, "phone"), eq(reports.status, "verified")));
+      .where(
+        and(eq(reports.targetType, "phone"), eq(reports.status, "verified")),
+      );
     const [lossRow] = await db.execute(sql`
       SELECT COALESCE(SUM(amount), 0)::bigint AS total_loss
       FROM reports WHERE target_type = 'phone' AND status = 'verified' AND amount IS NOT NULL
@@ -66,7 +68,12 @@ export async function reportsRoutes(app: FastifyInstance) {
     const [verified] = await db
       .select({ count: count() })
       .from(reports)
-      .where(and(eq(reports.targetType, "bank_account"), eq(reports.status, "verified")));
+      .where(
+        and(
+          eq(reports.targetType, "bank_account"),
+          eq(reports.status, "verified"),
+        ),
+      );
     const [lossRow] = await db.execute(sql`
       SELECT COALESCE(SUM(amount), 0)::bigint AS total_loss
       FROM reports WHERE target_type = 'bank_account' AND status = 'verified' AND amount IS NOT NULL
@@ -119,7 +126,13 @@ export async function reportsRoutes(app: FastifyInstance) {
     const data = await db
       .select()
       .from(reports)
-      .where(and(eq(reports.targetType, "bank_account"), eq(reports.bankName, name), eq(reports.status, "verified")))
+      .where(
+        and(
+          eq(reports.targetType, "bank_account"),
+          eq(reports.bankName, name),
+          eq(reports.status, "verified"),
+        ),
+      )
       .orderBy(desc(reports.createdAt))
       .limit(6);
     return { data: { primary: data, linked: [] } };
@@ -130,7 +143,13 @@ export async function reportsRoutes(app: FastifyInstance) {
     const data = await db
       .select()
       .from(reports)
-      .where(and(eq(reports.targetType, "ewallet"), eq(reports.walletName, name), eq(reports.status, "verified")))
+      .where(
+        and(
+          eq(reports.targetType, "ewallet"),
+          eq(reports.walletName, name),
+          eq(reports.status, "verified"),
+        ),
+      )
       .orderBy(desc(reports.createdAt))
       .limit(6);
     return { data: { primary: data, linked: [] } };
@@ -151,18 +170,18 @@ export async function reportsRoutes(app: FastifyInstance) {
       .from(evidence)
       .where(
         sql`${evidence.reportId} IN (${sql.join(
-          data.map((r) => sql`${r.id}`),
+          data.map((r: typeof reports.$inferSelect) => sql`${r.id}`),
           sql`, `,
         )})`,
       );
 
     const evidenceMap = new Map<string, string[]>();
-    allEvidence.forEach((e) => {
+    allEvidence.forEach((e: typeof evidence.$inferSelect) => {
       if (!evidenceMap.has(e.reportId)) evidenceMap.set(e.reportId, []);
       evidenceMap.get(e.reportId)!.push(e.url);
     });
 
-    const reportsWithEvidence = data.map((r) => ({
+    const reportsWithEvidence = data.map((r: typeof reports.$inferSelect) => ({
       ...r,
       evidenceUrls: evidenceMap.get(r.id) ?? [],
     }));
@@ -175,17 +194,32 @@ export async function reportsRoutes(app: FastifyInstance) {
     const verified = await db
       .select()
       .from(reports)
-      .where(and(eq(reports.targetValue, number), eq(reports.status, "verified")));
-    if (verified.length === 0) return { data: { blacklist: null, trend: null } };
-    const level = verified.length >= 5 ? "critical" : verified.length >= 3 ? "high" : "medium";
-    return { data: { blacklist: { level, unique_reporters: verified.length }, trend: null } };
+      .where(
+        and(eq(reports.targetValue, number), eq(reports.status, "verified")),
+      );
+    if (verified.length === 0)
+      return { data: { blacklist: null, trend: null } };
+    const level =
+      verified.length >= 5
+        ? "critical"
+        : verified.length >= 3
+          ? "high"
+          : "medium";
+    return {
+      data: {
+        blacklist: { level, unique_reporters: verified.length },
+        trend: null,
+      },
+    };
   });
 
   app.get("/laporan-stats", async () => {
     const data = await db
       .select({
         target_type: reports.targetType,
-        bank_name: sql<string | null>`COALESCE(${reports.bankName}, ${reports.walletName})`,
+        bank_name: sql<
+          string | null
+        >`COALESCE(${reports.bankName}, ${reports.walletName})`,
         category: reports.category,
         status: reports.status,
         created_at: reports.createdAt,
@@ -198,15 +232,24 @@ export async function reportsRoutes(app: FastifyInstance) {
   });
 
   app.get("/laporan-publik", async (req) => {
-    const { type = "all", sort = "latest", q = "", page = "1" } = req.query as {
-      type?: string; sort?: string; q?: string; page?: string;
+    const {
+      type = "all",
+      sort = "latest",
+      q = "",
+      page = "1",
+    } = req.query as {
+      type?: string;
+      sort?: string;
+      q?: string;
+      page?: string;
     };
 
-    const pageNum  = Math.max(1, parseInt(page));
-    const perPage  = 12;
-    const offset   = (pageNum - 1) * perPage;
-    const sortDir  = sort === "oldest" ? sql`ASC` : sql`DESC`;
-    const typeFilter   = type !== "all" ? sql`AND r.target_type = ${type}` : sql``;
+    const pageNum = Math.max(1, parseInt(page));
+    const perPage = 12;
+    const offset = (pageNum - 1) * perPage;
+    const sortDir = sort === "oldest" ? sql`ASC` : sql`DESC`;
+    const typeFilter =
+      type !== "all" ? sql`AND r.target_type = ${type}` : sql``;
     const searchFilter = q.trim()
       ? sql`AND (r.target_value ILIKE ${"%" + q.trim() + "%"} OR r.bank_name ILIKE ${"%" + q.trim() + "%"} OR r.wallet_name ILIKE ${"%" + q.trim() + "%"})`
       : sql``;
@@ -234,12 +277,18 @@ export async function reportsRoutes(app: FastifyInstance) {
       FROM reports r WHERE 1=1 ${typeFilter} ${searchFilter}
     `);
 
-    return { data: { data: rows, total_unique: (countRow as any).total_unique ?? 0 } };
+    return {
+      data: { data: rows, total_unique: (countRow as any).total_unique ?? 0 },
+    };
   });
 
   app.get("/:id", async (req, reply) => {
     const { id } = req.params as { id: string };
-    const [report] = await db.select().from(reports).where(eq(reports.id, id)).limit(1);
+    const [report] = await db
+      .select()
+      .from(reports)
+      .where(eq(reports.id, id))
+      .limit(1);
     if (!report) return reply.status(404).send({ error: "Not found" });
     return { data: report };
   });
@@ -247,16 +296,30 @@ export async function reportsRoutes(app: FastifyInstance) {
   // ── POST / — Buat laporan baru dengan robot check ──────────────────────
   app.post("/", { preHandler: requireAuth }, async (req, reply) => {
     const {
-      targetType, targetValue, targetName, bankName, walletName,
-      amount, description, chronology, category, platform,
-      incidentDate, hasOtherVictims, storeName, suspectCity,
-      suspectPhotoUrl, socialMediaAccounts, linkUrl, reportedTo,
+      targetType,
+      targetValue,
+      targetName,
+      bankName,
+      walletName,
+      amount,
+      description,
+      chronology,
+      category,
+      platform,
+      incidentDate,
+      hasOtherVictims,
+      storeName,
+      suspectCity,
+      suspectPhotoUrl,
+      socialMediaAccounts,
+      linkUrl,
+      reportedTo,
       evidenceUrls,
     } = req.body as any;
 
     // [1] SPAM CHECK — tolak sebelum masuk DB
     const spamResult = await checkSpam({
-      userId:      req.user!.userId,
+      userId: req.user!.userId,
       targetType,
       targetValue,
       description: description ?? "",
@@ -268,7 +331,7 @@ export async function reportsRoutes(app: FastifyInstance) {
 
     // [2] COMPLETENESS CHECK — tentukan status
     const status = await checkCompleteness({
-      userId:      req.user!.userId,
+      userId: req.user!.userId,
       description,
       chronology,
       category,
@@ -282,34 +345,36 @@ export async function reportsRoutes(app: FastifyInstance) {
     const [report] = await db
       .insert(reports)
       .values({
-        userId:              req.user!.userId,
+        userId: req.user!.userId,
         targetType,
         targetValue,
-        targetName:          targetName          ?? null,
-        bankName:            bankName            ?? null,
-        walletName:          walletName          ?? null,
-        amount:              amount              ?? null,
+        targetName: targetName ?? null,
+        bankName: bankName ?? null,
+        walletName: walletName ?? null,
+        amount: amount ?? null,
         description,
-        chronology:          chronology          ?? null,
-        category:            category            ?? null,
-        platform:            platform            ?? null,
-        incidentDate:        incidentDate        ? new Date(incidentDate) : null,
-        hasOtherVictims:     hasOtherVictims     ?? null,
-        storeName:           storeName           ?? null,
-        suspectCity:         suspectCity         ?? null,
-        suspectPhotoUrl:     suspectPhotoUrl     ?? null,
+        chronology: chronology ?? null,
+        category: category ?? null,
+        platform: platform ?? null,
+        incidentDate: incidentDate ? new Date(incidentDate) : null,
+        hasOtherVictims: hasOtherVictims ?? null,
+        storeName: storeName ?? null,
+        suspectCity: suspectCity ?? null,
+        suspectPhotoUrl: suspectPhotoUrl ?? null,
         socialMediaAccounts: socialMediaAccounts ?? null,
-        linkUrl:             linkUrl             ?? null,
-        reportedTo:          reportedTo          ?? null,
+        linkUrl: linkUrl ?? null,
+        reportedTo: reportedTo ?? null,
         status,
       })
       .returning();
 
     // [4] SIMPAN EVIDENCE
     if (evidenceUrls?.length) {
-      await db.insert(evidence).values(
-        evidenceUrls.map((url: string) => ({ reportId: report.id, url })),
-      );
+      await db
+        .insert(evidence)
+        .values(
+          evidenceUrls.map((url: string) => ({ reportId: report.id, url })),
+        );
     }
 
     return { data: { ...report, robotStatus: status } };
@@ -317,15 +382,20 @@ export async function reportsRoutes(app: FastifyInstance) {
 
   app.post("/:id/evidence", { preHandler: requireAuth }, async (req, reply) => {
     const { id } = req.params as { id: string };
-    const [report] = await db.select().from(reports).where(eq(reports.id, id)).limit(1);
+    const [report] = await db
+      .select()
+      .from(reports)
+      .where(eq(reports.id, id))
+      .limit(1);
     if (!report) return reply.status(404).send({ error: "Report not found" });
-    if (report.userId !== req.user!.userId) return reply.status(403).send({ error: "Forbidden" });
+    if (report.userId !== req.user!.userId)
+      return reply.status(403).send({ error: "Forbidden" });
 
-    const parts  = req.files();
+    const parts = req.files();
     const saved: string[] = [];
     for await (const part of parts) {
       const buffer = await part.toBuffer();
-      const url    = await saveFile(buffer, part.filename);
+      const url = await saveFile(buffer, part.filename);
       await db.insert(evidence).values({ reportId: id, url });
       saved.push(url);
     }

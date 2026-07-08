@@ -6,11 +6,11 @@ import cors from "@fastify/cors";
 import cookie from "@fastify/cookie";
 import multipart from "@fastify/multipart";
 
-import { authRoutes } from "./features/auth/auth.route";
-import { reportsRoutes } from "./features/reports/reports.route";
-import { searchRoutes } from "./features/search/search.route";
-import { adminRoutes } from "./features/admin/admin.route";
-import { uploadRoutes } from "./features/upload/upload.route";
+import { authRoutes } from "./features/auth/auth.route.js";
+import { reportsRoutes } from "./features/reports/reports.route.js";
+import { searchRoutes } from "./features/search/search.route.js";
+import { adminRoutes } from "./features/admin/admin.route.js";
+import { uploadRoutes } from "./features/upload/upload.route.js";
 
 const app = Fastify({ logger: true });
 

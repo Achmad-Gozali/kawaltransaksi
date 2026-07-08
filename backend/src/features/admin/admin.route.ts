@@ -1,8 +1,8 @@
 import type { FastifyInstance } from "fastify";
-import { db } from "../../core/db";
-import { reports, users, evidence, articles } from "../../core/schema";
+import { db } from "../../core/db.js";
+import { reports, users, evidence, articles } from "../../core/schema.js";
 import { eq, desc, count, sql } from "drizzle-orm";
-import { requireAdmin } from "../../core/auth.middleware";
+import { requireAdmin } from "../../core/auth.middleware.js";
 
 function slugify(text: string) {
   return text.toLowerCase().trim()
