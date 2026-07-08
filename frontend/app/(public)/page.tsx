@@ -2,6 +2,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { Phone, Landmark, Wallet, ArrowRight } from "lucide-react";
 import * as motion from "motion/react-client";
+import { maskName } from "@/core/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -77,6 +78,7 @@ interface ReportItem {
   id: string;
   targetValue: string;
   targetType: string;
+  targetName: string | null;
   bankName: string | null;
   description: string;
   createdAt: string;
@@ -248,11 +250,13 @@ export default async function HomePage() {
               {recentReports.map((report, i) => {
                 const meta = getTargetMeta(report.targetType, report.bankName);
                 const logoSrc = getPlatformLogo(report.targetType, report.bankName);
+                const isVerified = report.status === "verified";
                 const statusMap: Record<string, { label: string; className: string }> = {
                   verified: { label: "Terverifikasi",      className: "bg-emerald-50 text-emerald-700 border-emerald-200" },
                   pending:  { label: "Dalam Investigasi",  className: "bg-amber-50 text-amber-700 border-amber-200" },
                 };
                 const statusStyle = statusMap[report.status] ?? statusMap.pending;
+                const displayName = isVerified ? (report.targetName ?? "Anonymous") : maskName(report.targetName);
 
                 return (
                   <motion.div
@@ -275,6 +279,9 @@ export default async function HomePage() {
                       <div className="mb-4">
                         <p className="text-base sm:text-lg font-black tracking-tight text-slate-900 group-hover:text-slate-700 transition-colors font-mono">
                           {report.targetValue}
+                        </p>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1 truncate">
+                          A.N. {displayName}
                         </p>
                       </div>
                       <div className="flex items-center justify-between pt-3 border-t border-slate-100">

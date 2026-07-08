@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import { Phone, Building2, Wallet, ArrowRight } from "lucide-react";
-import { formatDateID, encodeSlug } from "@/core/utils";
+import { formatDateID, encodeSlug, maskName } from "@/core/utils";
 import StatsChart from "./StatsChart";
 import SearchBar from "./SearchBar";
 
@@ -222,7 +222,7 @@ export default async function LaporanPublikPage({
                 const aggStatus = getAggregateStatus(Number(report.verified_count), Number(report.pending_count));
                 const badge = getStatusBadge(aggStatus, Number(report.verified_count));
                 const isVerified = Number(report.verified_count) > 0;
-                const displayName = isVerified ? report.target_name : null;
+                const displayName = isVerified ? (report.target_name ?? "Anonymous") : maskName(report.target_name);
 
                 return (
                   <Link key={report.target_number} href={`/check/${encodeSlug(report.target_number)}`}
@@ -234,7 +234,7 @@ export default async function LaporanPublikPage({
                     <div className="mb-3 flex-1">
                       <p className="text-lg sm:text-xl font-black font-mono tracking-tight text-slate-900 group-hover:text-slate-700 transition-colors break-all">{report.target_number}</p>
                       <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1 truncate">
-                        {displayName ? `A.N. ${displayName}` : isVerified ? "A.N. Anonymous" : "Identitas belum terverifikasi"}
+                        A.N. {displayName}
                       </p>
                     </div>
                     <div className="flex items-center justify-between pt-3 border-t border-slate-100">

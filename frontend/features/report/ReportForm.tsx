@@ -303,8 +303,14 @@ export default function ReportForm() {
             ref={turnstileRef}
             siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
             onSuccess={setTurnstileToken}
-            onExpire={() => setTurnstileToken(null)}
-            onError={() => setTurnstileToken(null)}
+            onExpire={() => {
+              setTurnstileToken(null);
+              setError('Verifikasi keamanan kedaluwarsa. Silakan selesaikan ulang di bawah.');
+            }}
+            onError={() => {
+              setTurnstileToken(null);
+              setError('Verifikasi keamanan gagal dimuat. Coba muat ulang halaman atau periksa koneksi internet kamu.');
+            }}
             options={{ theme: 'light' }}
           />
         </div>

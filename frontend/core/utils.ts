@@ -33,3 +33,12 @@ export function formatNum(num: string): string {
 export function decodeSlug(slug: string): string {
   return decodeURIComponent(slug);
 }
+
+export function maskName(name: string | null): string {
+  if (!name) return 'Anonymous';
+  return name
+    .trim()
+    .split(/\s+/)
+    .map((word) => word.charAt(0).toUpperCase() + '*'.repeat(Math.max(word.length - 1, 1)))
+    .join(' ');
+}
