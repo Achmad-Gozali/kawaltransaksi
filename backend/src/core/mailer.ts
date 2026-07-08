@@ -62,3 +62,33 @@ export async function sendPasswordResetEmail(email: string, name: string, resetL
     `,
   });
 }
+
+export async function sendSystemUpdateEmail(email: string, name: string) {
+  const frontendUrl = process.env.FRONTEND_URL!;
+
+  await getResend().emails.send({
+    from:    FROM,
+    to:      email,
+    subject: "Pembaruan Sistem KawalTransaksi — Mohon Reset Kata Sandi",
+    html: `
+      <div style="font-family:sans-serif;max-width:480px;margin:0 auto;padding:32px 24px;background:#fff;">
+        <img src="${frontendUrl}/logo.png" alt="KawalTransaksi" style="height:32px;margin-bottom:24px;" />
+        <h2 style="font-size:20px;font-weight:700;color:#0f172a;margin:0 0 8px;">Sistem KawalTransaksi Telah Diperbarui</h2>
+        <p style="font-size:14px;color:#64748b;margin:0 0 16px;line-height:1.6;">
+          Halo <strong>${name}</strong>, kami baru saja menyelesaikan pembaruan besar pada sistem KawalTransaksi untuk meningkatkan keamanan dan performa platform.
+        </p>
+        <p style="font-size:14px;color:#64748b;margin:0 0 24px;line-height:1.6;">
+          Akun kamu beserta riwayat laporan tetap aman dan sudah kami pindahkan ke sistem baru. Namun, untuk alasan keamanan, kamu perlu <strong>membuat kata sandi baru</strong> sebelum bisa login kembali.
+        </p>
+        <a href="${frontendUrl}/lupa-kata-sandi" style="display:inline-block;padding:12px 24px;background:#059669;color:#fff;font-size:14px;font-weight:600;border-radius:10px;text-decoration:none;">
+          Buat Kata Sandi Baru
+        </a>
+        <p style="font-size:12px;color:#94a3b8;margin:24px 0 0;line-height:1.6;">
+          Klik tombol di atas, masukkan email kamu (<strong>${email}</strong>), dan ikuti instruksi untuk membuat kata sandi baru.
+        </p>
+        <hr style="border:none;border-top:1px solid #f1f5f9;margin:24px 0;" />
+        <p style="font-size:11px;color:#cbd5e1;margin:0;">© 2026 KawalTransaksi · kawaltransaksi.com</p>
+      </div>
+    `,
+  });
+}
