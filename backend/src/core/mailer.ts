@@ -4,7 +4,7 @@ function getResend() {
   return new Resend(process.env.RESEND_API_KEY!);
 }
 
-const FROM = "KawalTransaksi <onboarding@resend.dev>";
+const FROM = "KawalTransaksi <noreply@kawaltransaksi.com>";
 
 export async function sendOtpEmail(email: string, name: string, otp: string) {
   const frontendUrl = process.env.FRONTEND_URL!;
