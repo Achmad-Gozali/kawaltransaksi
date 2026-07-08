@@ -1,5 +1,26 @@
+# dependencies
 node_modules/
+
+# build
 dist/
+
+# env
 .env
+.env.local
+
+# uploads
 uploads/
+
+# logs
+*.log
+npm-debug.log*
+
+# source maps
 *.js.map
+
+# misc
+.DS_Store
+*.pem
+
+# typescript
+*.tsbuildinfo
