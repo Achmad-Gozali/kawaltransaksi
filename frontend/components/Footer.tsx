@@ -5,7 +5,6 @@ const layananUtama = [
   { label: 'Cek Nomor',      href: '/cek-nomor' },
   { label: 'Cek Rekening',   href: '/cek-rekening' },
   { label: 'Lapor Penipuan', href: '/report' },
-  { label: 'Developer API',  href: '/developer' },
 ];
 
 const bantuanLegal = [

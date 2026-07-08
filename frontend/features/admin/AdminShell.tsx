@@ -6,7 +6,7 @@ import { useRouter, useSearchParams } from 'next/navigation';
 import {
   LayoutDashboard, FileText, BarChart2, Users,
   Home, LogOut, ChevronLeft, ChevronRight,
-  Search, X, Shield, ShieldX, Menu, Newspaper, MessageCircle, Code2,
+  Search, X, Shield, Menu, Newspaper, MessageCircle,
 } from 'lucide-react';
 
 interface AdminShellProps {
@@ -34,13 +34,6 @@ const navGroups = [
     items: [
       { id: 'pengguna', label: 'Pengguna', icon: Users,         href: '/admin?tab=pengguna' },
       { id: 'feedback', label: 'Feedback', icon: MessageCircle, href: '/admin?tab=feedback' },
-    ],
-  },
-  {
-    label: 'SISTEM & KEAMANAN',
-    items: [
-      { id: 'blacklist', label: 'IP Blacklist', icon: ShieldX, href: '/admin?tab=blacklist' },
-      { id: 'apikeys',   label: 'API Keys',     icon: Code2,   href: '/admin?tab=apikeys'   },
     ],
   },
 ];
@@ -100,7 +93,7 @@ function NavContent({ onNavClick, collapsed, activeTab, email, initial, onLogout
                 );
               })}
             </div>
-            {!isDesktopCollapsed && group.label !== 'SISTEM & KEAMANAN' && (
+            {!isDesktopCollapsed && group.label !== 'PENGGUNA & SUPPORT' && (
               <div className="mt-3 border-t border-slate-100" />
             )}
           </div>

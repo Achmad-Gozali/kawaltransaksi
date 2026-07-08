@@ -6,10 +6,8 @@ import DashboardTab from '@/features/admin/tabs/DashboardTab';
 import LaporanTab   from '@/features/admin/tabs/LaporanTab';
 import StatistikTab from '@/features/admin/tabs/StatistikTab';
 import PenggunaTab  from '@/features/admin/tabs/PenggunaTab';
-import BlacklistTab from '@/features/admin/tabs/BlacklistTab';
 import ArtikelTab   from '@/features/admin/tabs/ArtikelTab';
 import FeedbackTab  from '@/features/admin/tabs/FeedbackTab';
-import ApiKeysTab   from '@/features/admin/tabs/ApiKeysTab';
 import type { Stats, Report, AdminUser, Tab } from '@/features/admin/types';
 import type { FeedbackItem } from '@/features/admin/tabs/FeedbackTab';
 
@@ -28,10 +26,8 @@ function DashboardInner({
     case 'laporan':   return <LaporanTab reports={reports} token={token} initialSearch={initialSearch} />;
     case 'statistik': return <StatistikTab stats={stats} reports={reports} />;
     case 'pengguna':  return <PenggunaTab users={users} />;
-    case 'blacklist': return <BlacklistTab token={token} />;
     case 'artikel':   return <ArtikelTab token={token} />;
     case 'feedback':  return <FeedbackTab feedbacks={feedbacks} token={token} />;
-    case 'apikeys':   return <ApiKeysTab token={token} />;
     default:          return <DashboardTab stats={stats} reports={reports} />;
   }
 }

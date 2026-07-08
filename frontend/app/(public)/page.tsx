@@ -326,45 +326,6 @@ export default async function HomePage() {
           </div>
         </div>
       </section>
-
-      <div className="bg-slate-100 overflow-hidden">
-        <svg viewBox="0 0 1440 60" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" className="w-full h-8 sm:h-14 block">
-          <path d="M0,40 C360,0 1080,60 1440,20 L1440,60 L0,60 Z" fill="#ffffff" />
-        </svg>
-      </div>
-
-      {/* DEVELOPER API — coming soon */}
-      <section className="bg-white py-14 sm:py-20 px-4 sm:px-6">
-        <div className="max-w-4xl mx-auto">
-          <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-6 mb-10 sm:mb-12">
-            <div>
-              <p className="text-xs font-bold text-emerald-600 uppercase tracking-widest mb-3">Untuk Developer</p>
-              <h2 className="text-2xl sm:text-3xl font-bold text-slate-900 leading-tight">
-                Bangun Produk yang Lebih Aman<br />dengan Data Anti-Penipuan
-              </h2>
-              <p className="text-slate-500 text-sm sm:text-base mt-4 max-w-lg leading-relaxed">
-                KawalTransaksi membuka akses basis data laporan penipuan komunitas melalui REST API. Cocok untuk marketplace, fintech, atau platform yang membutuhkan lapisan verifikasi tambahan.
-              </p>
-            </div>
-            <span className="shrink-0 w-full sm:w-auto text-center px-6 py-3 bg-slate-200 text-slate-400 text-sm font-bold tracking-wide rounded-xl cursor-not-allowed">
-              Segera Hadir
-            </span>
-          </div>
-          <div className="grid grid-cols-3 gap-px bg-slate-200 rounded-2xl overflow-hidden">
-            {[
-              { label: "Gratis", value: "300 req/hari", sub: "Tanpa kartu kredit" },
-              { label: "Endpoint", value: "REST API", sub: "HTTPS, format JSON" },
-              { label: "Data", value: "Terverifikasi", sub: "Dari laporan komunitas" },
-            ].map((item, i) => (
-              <div key={i} className="bg-white px-3 sm:px-6 py-4 sm:py-5 text-center">
-                <p className="text-[10px] sm:text-xs font-bold text-slate-400 uppercase tracking-widest mb-1">{item.label}</p>
-                <p className="text-sm sm:text-base font-black text-slate-900 mb-0.5">{item.value}</p>
-                <p className="text-[10px] sm:text-xs text-slate-400 hidden sm:block">{item.sub}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
     </main>
   );
 }

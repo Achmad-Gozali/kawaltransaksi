@@ -214,6 +214,19 @@ export async function reportsRoutes(app: FastifyInstance) {
     };
   });
 
+  app.get("/public/sitemap-targets", async () => {
+    const rows = await db.execute(sql`
+      SELECT
+        target_value,
+        MAX(created_at) AS last_reported
+      FROM reports
+      WHERE status IN ('verified', 'pending')
+      GROUP BY target_value
+      ORDER BY last_reported DESC
+    `);
+    return { data: rows };
+  });
+
   app.get("/laporan-stats", async () => {
     const data = await db
       .select({

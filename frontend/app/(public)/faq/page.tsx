@@ -40,24 +40,40 @@ const faqs = [
   },
 ];
 
+const structuredData = {
+  "@context": "https://schema.org",
+  "@type": "FAQPage",
+  mainEntity: faqs.map((faq) => ({
+    "@type": "Question",
+    name: faq.q,
+    acceptedAnswer: {
+      "@type": "Answer",
+      text: faq.a,
+    },
+  })),
+};
+
 export default function FaqPage() {
   return (
-    <div className="min-h-screen bg-white">
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-28 pb-16">
-        <div className="mb-10">
-          <h1 className="text-3xl font-bold text-slate-900 mb-2">Pertanyaan Umum</h1>
-          <p className="text-slate-500 text-sm">Hal-hal yang sering ditanyakan seputar KawalTransaksi.</p>
-        </div>
+    <>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
+      <div className="min-h-screen bg-white">
+        <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-28 pb-16">
+          <div className="mb-10">
+            <h1 className="text-3xl font-bold text-slate-900 mb-2">Pertanyaan Umum</h1>
+            <p className="text-slate-500 text-sm">Hal-hal yang sering ditanyakan seputar KawalTransaksi.</p>
+          </div>
 
-        <div className="space-y-3">
-          {faqs.map((faq, i) => (
-            <div key={i} className="border border-slate-200 rounded-xl p-5">
-              <p className="text-sm font-bold text-slate-900 mb-2">{faq.q}</p>
-              <p className="text-sm text-slate-500 leading-relaxed">{faq.a}</p>
-            </div>
-          ))}
+          <div className="space-y-3">
+            {faqs.map((faq, i) => (
+              <div key={i} className="border border-slate-200 rounded-xl p-5">
+                <p className="text-sm font-bold text-slate-900 mb-2">{faq.q}</p>
+                <p className="text-sm text-slate-500 leading-relaxed">{faq.a}</p>
+              </div>
+            ))}
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }

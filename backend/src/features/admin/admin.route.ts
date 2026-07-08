@@ -119,6 +119,16 @@ export async function adminRoutes(app: FastifyInstance) {
     return { data: article };
   });
 
+  app.get("/articles/sitemap", async () => {
+    const rows = await db.execute(sql`
+      SELECT slug, updated_at
+      FROM articles
+      WHERE status = 'published'
+      ORDER BY updated_at DESC
+    `);
+    return { data: rows };
+  });
+
   app.get("/articles/:id", { preHandler: requireAdmin }, async (req, reply) => {
     const { id } = req.params as { id: string };
     const [article] = await db.select().from(articles).where(eq(articles.id, id)).limit(1);
