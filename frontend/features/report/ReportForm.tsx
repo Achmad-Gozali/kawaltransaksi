@@ -330,12 +330,6 @@ export default function ReportForm() {
           </button>
         )}
       </div>
-
-      {currentStep === 3 && (
-        <p className="text-center text-xs text-slate-300 uppercase tracking-widest font-medium pb-4">
-          Laporan divalidasi sistem - Identitas pelapor terlindungi
-        </p>
-      )}
     </div>
   );
 }
