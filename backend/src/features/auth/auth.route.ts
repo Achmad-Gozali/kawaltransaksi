@@ -21,6 +21,7 @@ function setRefreshCookie(reply: any, token: string) {
     secure:   process.env.NODE_ENV === "production",
     sameSite: "lax",
     path:     "/",
+    domain:   process.env.NODE_ENV === "production" ? ".kawaltransaksi.com" : undefined,
     maxAge:   60 * 60 * 24 * 7,
   });
 }
