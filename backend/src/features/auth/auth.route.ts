@@ -27,6 +27,16 @@ function setRefreshCookie(reply: any, token: string) {
   });
 }
 
+function clearRefreshCookie(reply: any) {
+  reply.clearCookie("refresh_token", {
+    httpOnly: true,
+    secure:   process.env.NODE_ENV === "production",
+    sameSite: "lax",
+    path:     "/",
+    domain:   process.env.NODE_ENV === "production" ? ".kawaltransaksi.com" : undefined,
+  });
+}
+
 async function saveSession(userId: string, refreshToken: string) {
   const expiresAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
   await db.insert(sessions).values({ userId, refreshToken, expiresAt });
@@ -196,7 +206,7 @@ export async function authRoutes(app: FastifyInstance) {
   app.post("/logout", async (req, reply) => {
     const token = req.cookies?.refresh_token;
     if (token) await deleteSession(token);
-    reply.clearCookie("refresh_token", { path: "/" });
+    clearRefreshCookie(reply);
     return { message: "Logged out." };
   });
 
