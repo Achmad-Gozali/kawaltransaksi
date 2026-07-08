@@ -1,9 +1,10 @@
 'use client';
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import { Loader2, AlertCircle, CheckCircle2, Send, ArrowLeft, ArrowRight } from 'lucide-react';
 import * as motion from 'motion/react-client';
+import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile';
 import { uploadToStorage } from '@/core/storage/upload';
 import { authClient } from '@/core/auth/client';
 import { STEPS, MAX_TARGET_NUMBERS, MAX_EVIDENCE_FILES } from '@/features/report/constants';
@@ -78,6 +79,9 @@ export default function ReportForm() {
   const [suspectPhotoPreview, setSuspectPhotoPreview] = useState<string | null>(null);
   const [customCategory,      setCustomCategory]      = useState('');
   const [customPlatform,      setCustomPlatform]      = useState('');
+  const [turnstileToken,      setTurnstileToken]      = useState<string | null>(null);
+
+  const turnstileRef = useRef<TurnstileInstance>(null);
 
   const updateTarget = (index: number, updated: TargetEntry) =>
     setTargets(prev => prev.map((t, i) => i === index ? updated : t));
@@ -147,6 +151,11 @@ export default function ReportForm() {
   };
 
   const handleSubmit = async () => {
+    if (!turnstileToken) {
+      setError('Selesaikan verifikasi keamanan terlebih dahulu.');
+      return;
+    }
+
     setIsLoading(true); setError(null); setUploadProgress(null);
     try {
       const freshToken = await authClient.refresh();
@@ -211,6 +220,7 @@ export default function ReportForm() {
           suspectPhotoUrl,
           storeName:           formData.store_name || null,
           suspectCity:         formData.suspect_city || null,
+          turnstileToken,
         }),
       });
 
@@ -220,9 +230,13 @@ export default function ReportForm() {
         setTimeout(() => router.push(`/check/${encodeURIComponent(primary.number)}`), 1500);
       } else {
         setError(result.error || 'Gagal mengirim laporan.');
+        turnstileRef.current?.reset();
+        setTurnstileToken(null);
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Terjadi kesalahan. Periksa koneksi dan coba lagi.');
+      turnstileRef.current?.reset();
+      setTurnstileToken(null);
     } finally {
       setIsLoading(false); setUploadProgress(null);
     }
@@ -283,6 +297,19 @@ export default function ReportForm() {
         {stepComponents[currentStep - 1]}
       </motion.div>
 
+      {currentStep === 3 && (
+        <div className="flex justify-center">
+          <Turnstile
+            ref={turnstileRef}
+            siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
+            onSuccess={setTurnstileToken}
+            onExpire={() => setTurnstileToken(null)}
+            onError={() => setTurnstileToken(null)}
+            options={{ theme: 'light' }}
+          />
+        </div>
+      )}
+
       <div className={`flex gap-3 ${currentStep === 1 ? 'justify-end' : 'justify-between'}`}>
         {currentStep > 1 && (
           <button type="button" onClick={() => navigate('prev')}
@@ -296,7 +323,7 @@ export default function ReportForm() {
             Lanjut <ArrowRight className="w-4 h-4" />
           </button>
         ) : (
-          <button type="button" onClick={handleSubmit} disabled={isLoading}
+          <button type="button" onClick={handleSubmit} disabled={isLoading || !turnstileToken}
             className="flex items-center gap-2 px-8 py-3 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold rounded-xl transition-all disabled:opacity-50 active:scale-95 shadow-sm shadow-emerald-200">
             {isLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
             {uploadProgress ?? 'Kirim Laporan'}

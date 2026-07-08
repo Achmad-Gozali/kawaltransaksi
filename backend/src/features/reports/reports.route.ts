@@ -5,6 +5,7 @@ import { eq, desc, count, and, sql } from "drizzle-orm";
 import { requireAuth } from "../../core/auth.middleware.js";
 import { saveFile } from "../../core/storage.js";
 import { checkSpam, checkCompleteness } from "../../core/robot.js";
+import { verifyTurnstile } from "../../core/turnstile.js";
 
 export async function reportsRoutes(app: FastifyInstance) {
   app.get("/public/recent", async () => {
@@ -315,7 +316,12 @@ export async function reportsRoutes(app: FastifyInstance) {
       linkUrl,
       reportedTo,
       evidenceUrls,
+      turnstileToken,
     } = req.body as any;
+
+    const turnstileValid = await verifyTurnstile(turnstileToken, req.ip);
+    if (!turnstileValid)
+      return reply.status(400).send({ error: "Verifikasi keamanan gagal. Silakan coba lagi." });
 
     // [1] SPAM CHECK — tolak sebelum masuk DB
     const spamResult = await checkSpam({

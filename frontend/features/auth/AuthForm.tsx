@@ -3,6 +3,7 @@
 import React, { useState, useRef, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile';
 import {
   Loader2, AlertCircle, CheckCircle2, Mail, Lock,
   UserPlus, ArrowRight, Eye, EyeOff, XCircle,
@@ -66,11 +67,13 @@ function AuthFormInner({ type }: AuthFormProps) {
   const [error, setError]                             = useState<string | null>(null);
   const [success, setSuccess]                         = useState<string | null>(null);
   const [passwordFocused, setPasswordFocused]         = useState(false);
+  const [turnstileToken, setTurnstileToken]           = useState<string | null>(null);
 
-  const consentRef   = useRef<HTMLDivElement>(null);
-  const router       = useRouter();
-  const searchParams = useSearchParams();
-  const redirectTo   = searchParams.get('redirectTo') || '/';
+  const consentRef    = useRef<HTMLDivElement>(null);
+  const turnstileRef  = useRef<TurnstileInstance>(null);
+  const router        = useRouter();
+  const searchParams  = useSearchParams();
+  const redirectTo    = searchParams.get('redirectTo') || '/';
 
   const oauthError = searchParams.get('error');
   const oauthErrorMap: Record<string, string> = {
@@ -96,6 +99,11 @@ function AuthFormInner({ type }: AuthFormProps) {
       return;
     }
 
+    if (type === 'register' && !turnstileToken) {
+      setError('Selesaikan verifikasi keamanan terlebih dahulu.');
+      return;
+    }
+
     const sanitizedEmail    = email.trim().toLowerCase();
     const sanitizedFullName = fullName.trim().replace(/[<>'"]/g, '');
 
@@ -110,7 +118,7 @@ function AuthFormInner({ type }: AuthFormProps) {
     setIsLoading(true);
     try {
       if (type === 'register') {
-        const res = await authClient.register(sanitizedFullName, sanitizedEmail, password);
+        const res = await authClient.register(sanitizedFullName, sanitizedEmail, password, turnstileToken!);
         if ((res as any).requiresVerification) {
           setSuccess('Akun dibuat! Mengalihkan ke verifikasi email...');
           setTimeout(() => router.push(`/verifikasi-email?userId=${(res as any).user.id}&email=${encodeURIComponent(sanitizedEmail)}`), 800);
@@ -131,6 +139,10 @@ function AuthFormInner({ type }: AuthFormProps) {
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Terjadi kesalahan sistem.');
+      if (type === 'register') {
+        turnstileRef.current?.reset();
+        setTurnstileToken(null);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -275,7 +287,20 @@ function AuthFormInner({ type }: AuthFormProps) {
           </div>
         )}
 
-        <button type="submit" disabled={isLoading || isGoogleLoading}
+        {type === 'register' && (
+          <div className="flex justify-center pt-1">
+            <Turnstile
+              ref={turnstileRef}
+              siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
+              onSuccess={setTurnstileToken}
+              onExpire={() => setTurnstileToken(null)}
+              onError={() => setTurnstileToken(null)}
+              options={{ theme: 'light' }}
+            />
+          </div>
+        )}
+
+        <button type="submit" disabled={isLoading || isGoogleLoading || (type === 'register' && !turnstileToken)}
           className={`w-full py-3.5 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 active:scale-[0.98] shadow-md disabled:opacity-50 disabled:cursor-not-allowed text-sm uppercase tracking-widest mt-2 ${
             type === 'login' ? 'bg-slate-900 hover:bg-slate-800' : 'bg-emerald-600 hover:bg-emerald-700'
           }`}>

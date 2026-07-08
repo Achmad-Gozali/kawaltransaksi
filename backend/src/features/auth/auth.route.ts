@@ -8,6 +8,7 @@ import { db } from "../../core/db.js";
 import { users, sessions, passwordResetTokens, otpTokens } from "../../core/schema.js";
 import { eq } from "drizzle-orm";
 import { sendOtpEmail, sendPasswordResetEmail } from "../../core/mailer.js";
+import { verifyTurnstile } from "../../core/turnstile.js";
 
 function signTokens(userId: string, role: string) {
   const accessToken  = jwt.sign({ userId, role }, process.env.JWT_ACCESS_SECRET!,  { expiresIn: "15m" });
@@ -55,12 +56,16 @@ function getOAuthClient() {
 
 export async function authRoutes(app: FastifyInstance) {
   app.post("/register", async (req, reply) => {
-    const { name, email, password } = req.body as {
-      name: string; email: string; password: string;
+    const { name, email, password, turnstileToken } = req.body as {
+      name: string; email: string; password: string; turnstileToken: string;
     };
 
     if (!name?.trim() || !email?.trim() || !password)
       return reply.status(400).send({ error: "Semua field wajib diisi." });
+
+    const turnstileValid = await verifyTurnstile(turnstileToken, req.ip);
+    if (!turnstileValid)
+      return reply.status(400).send({ error: "Verifikasi keamanan gagal. Silakan coba lagi." });
 
     const [existing] = await db.select().from(users).where(eq(users.email, email)).limit(1);
     if (existing) return reply.status(409).send({ error: "Email sudah terdaftar." });

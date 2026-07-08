@@ -25,8 +25,8 @@ export const authClient = {
     return res;
   },
 
-  register: async (name: string, email: string, password: string): Promise<AuthResponse> => {
-    const res = await api.post<AuthResponse>("/api/auth/register", { name, email, password });
+  register: async (name: string, email: string, password: string, turnstileToken: string): Promise<AuthResponse> => {
+    const res = await api.post<AuthResponse>("/api/auth/register", { name, email, password, turnstileToken });
     accessToken = res.accessToken;
     return res;
   },
