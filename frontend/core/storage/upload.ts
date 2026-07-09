@@ -41,45 +41,49 @@ async function stripExif(file: File): Promise<File> {
   });
 }
 
-export async function uploadToStorage(file: File): Promise<string> {
-  if (file.size > MAX_FILE_SIZE) throw new Error('Ukuran file melebihi batas 5MB.');
-  if (!ALLOWED_MIME_TYPES.includes(file.type)) throw new Error('Tipe file tidak didukung. Hanya JPEG dan PNG.');
+export async function uploadToStorage(
+  file: File,
+  folder: "reports" | "articles"
+): Promise<string> {
+  if (file.size > MAX_FILE_SIZE) throw new Error("Ukuran file melebihi batas 5MB.");
+  if (!ALLOWED_MIME_TYPES.includes(file.type)) throw new Error("Tipe file tidak didukung. Hanya JPEG dan PNG.");
 
   const isValid = await validateFileSignature(file);
-  if (!isValid) throw new Error('File tidak valid atau telah dimanipulasi.');
+  if (!isValid) throw new Error("File tidak valid atau telah dimanipulasi.");
 
   const cleanFile = await stripExif(file);
 
-  // v2: ambil token dari authClient (memory)
-  const { authClient } = await import('@/core/auth/client');
+  const { authClient } = await import("@/core/auth/client");
   let token = authClient.getToken();
   if (!token) {
     token = await authClient.refresh();
-    if (!token) throw new Error('Sesi habis. Silakan login ulang.');
+    if (!token) throw new Error("Sesi habis. Silakan login ulang.");
   }
 
   const formData = new FormData();
-  formData.append('file', cleanFile);
+  formData.append("file", cleanFile);
+  formData.append("folder", folder);
 
   const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/upload`, {
-    method: 'POST',
+    method: "POST",
     headers: { Authorization: `Bearer ${token}` },
     body: formData,
   });
 
   const result = await res.json();
-  if (!res.ok) throw new Error(result.error ?? 'Gagal mengupload file.');
+  if (!res.ok) throw new Error(result.error ?? "Gagal mengupload file.");
   return result.data.url;
 }
 
 export async function uploadMultipleToStorage(
   files: File[],
+  folder: "reports" | "articles",
   onProgress?: (current: number, total: number) => void
 ): Promise<string[]> {
   const urls: string[] = [];
   for (let i = 0; i < files.length; i++) {
     onProgress?.(i + 1, files.length);
-    urls.push(await uploadToStorage(files[i]));
+    urls.push(await uploadToStorage(files[i], folder));
   }
   return urls;
 }

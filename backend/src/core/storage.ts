@@ -1,25 +1,29 @@
-import { createReadStream } from "fs";
 import { writeFile, mkdir, unlink } from "fs/promises";
 import path from "path";
 import { createId } from "@paralleldrive/cuid2";
 
 const UPLOAD_DIR = process.env.UPLOAD_DIR || "./uploads";
+export type UploadFolder = "reports" | "articles";
 
-export async function saveFile(buffer: Buffer, originalName: string): Promise<string> {
-  await mkdir(UPLOAD_DIR, { recursive: true });
+export async function saveFile(
+  buffer: Buffer,
+  originalName: string,
+  folder: UploadFolder
+): Promise<string> {
+  const dir = path.join(UPLOAD_DIR, folder);
+  await mkdir(dir, { recursive: true });
   const ext = path.extname(originalName);
   const filename = `${createId()}${ext}`;
-  const filepath = path.join(UPLOAD_DIR, filename);
-  await writeFile(filepath, buffer);
-  return `/uploads/${filename}`;
+  await writeFile(path.join(dir, filename), buffer);
+  return `/uploads/${folder}/${filename}`;
 }
 
 export async function deleteFile(url: string | null | undefined): Promise<void> {
   if (!url) return;
   if (!url.startsWith("/uploads/")) return;
 
-  const filename = path.basename(url);
-  const filepath = path.join(UPLOAD_DIR, filename);
+  const relative = url.slice("/uploads/".length);
+  const filepath = path.join(UPLOAD_DIR, relative);
 
   try {
     await unlink(filepath);

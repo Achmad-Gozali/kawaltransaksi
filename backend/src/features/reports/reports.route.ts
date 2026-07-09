@@ -417,7 +417,7 @@ export async function reportsRoutes(app: FastifyInstance) {
     const saved: string[] = [];
     for await (const part of parts) {
       const buffer = await part.toBuffer();
-      const url = await saveFile(buffer, part.filename);
+      const url = await saveFile(buffer, part.filename, "reports");
       await db.insert(evidence).values({ reportId: id, url });
       saved.push(url);
     }

@@ -137,23 +137,24 @@ export default function ArtikelTab({ token }: { token: string }) {
     setView('editor');
   };
 
-  const handleThumbnailUpload = async (file: File) => {
-    setUploading(true);
-    try {
-      const fd = new FormData();
-      fd.append('file', file);
-      const res  = await fetch(`${API_URL}/api/upload`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${getToken()}` },
-        body: fd,
-      });
-      const data = await res.json();
-      if (data.data?.url) {
-        setForm(f => ({ ...f, thumbnail: data.data.url }));
-        setThumbnailPreview(`${API_URL}${data.data.url}`);
-      }
-    } finally { setUploading(false); }
-  };
+const handleThumbnailUpload = async (file: File) => {
+  setUploading(true);
+  try {
+    const fd = new FormData();
+    fd.append('file', file);
+    fd.append('folder', 'articles');
+    const res  = await fetch(`${API_URL}/api/upload`, {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${getToken()}` },
+      body: fd,
+    });
+    const data = await res.json();
+    if (data.data?.url) {
+      setForm(f => ({ ...f, thumbnail: data.data.url }));
+      setThumbnailPreview(`${API_URL}${data.data.url}`);
+    }
+  } finally { setUploading(false); }
+};
 
   const handleSave = async (saveStatus?: string) => {
     if (!form.title.trim()) return;

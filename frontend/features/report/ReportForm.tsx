@@ -158,7 +158,7 @@ export default function ReportForm() {
       const uploadedUrls: string[] = [];
       for (let i = 0; i < evidenceFiles.length; i++) {
         setUploadProgress(`Mengupload foto ${i + 1} dari ${evidenceFiles.length}...`);
-        uploadedUrls.push(await uploadToStorage(evidenceFiles[i].file).catch(err => {
+        uploadedUrls.push(await uploadToStorage(evidenceFiles[i].file, "reports").catch(err => {
           throw new Error(err instanceof Error ? err.message : 'Gagal upload foto.');
         }));
       }
@@ -166,7 +166,7 @@ export default function ReportForm() {
       let suspectPhotoUrl: string | null = null;
       if (suspectPhoto) {
         setUploadProgress('Mengupload foto profil penipu...');
-        suspectPhotoUrl = await uploadToStorage(suspectPhoto).catch(err => {
+        suspectPhotoUrl = await uploadToStorage(suspectPhoto, "reports").catch(err => {
           throw new Error(err instanceof Error ? err.message : 'Gagal upload foto profil.');
         });
       }

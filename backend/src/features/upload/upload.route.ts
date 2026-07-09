@@ -1,9 +1,10 @@
 import type { FastifyInstance } from "fastify";
 import { requireAuth } from "../../core/auth.middleware.js";
-import { saveFile } from "../../core/storage.js";
+import { saveFile, type UploadFolder } from "../../core/storage.js";
 
 const ALLOWED_MIME = new Set(["image/jpeg", "image/png"]);
 const MAX_SIZE = 5 * 1024 * 1024;
+const ALLOWED_FOLDERS = new Set<UploadFolder>(["reports", "articles"]);
 
 export async function uploadRoutes(app: FastifyInstance) {
   app.post("/", { preHandler: requireAuth }, async (req, reply) => {
@@ -12,6 +13,15 @@ export async function uploadRoutes(app: FastifyInstance) {
     if (!data) return reply.code(400).send({ error: "Tidak ada file yang dikirim." });
     if (!ALLOWED_MIME.has(data.mimetype))
       return reply.code(400).send({ error: "Tipe file tidak didukung. Hanya JPEG dan PNG." });
+
+    const folderField = data.fields?.folder;
+    const folderValue =
+      folderField && "value" in folderField ? String(folderField.value) : "";
+
+    if (!ALLOWED_FOLDERS.has(folderValue as UploadFolder))
+      return reply.code(400).send({ error: "Kategori upload tidak valid." });
+
+    const folder = folderValue as UploadFolder;
 
     const chunks: Buffer[] = [];
     let size = 0;
@@ -26,7 +36,6 @@ export async function uploadRoutes(app: FastifyInstance) {
 
     const buffer = Buffer.concat(chunks);
 
-    // Validasi magic bytes
     const isJpeg = buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
     const isPng =
       buffer[0] === 0x89 &&
@@ -38,7 +47,7 @@ export async function uploadRoutes(app: FastifyInstance) {
       return reply.code(400).send({ error: "File tidak valid atau telah dimanipulasi." });
 
     const ext = data.mimetype === "image/png" ? ".png" : ".jpg";
-    const url = await saveFile(buffer, `upload${ext}`);
+    const url = await saveFile(buffer, `upload${ext}`, folder);
 
     return reply.send({ data: { url } });
   });
