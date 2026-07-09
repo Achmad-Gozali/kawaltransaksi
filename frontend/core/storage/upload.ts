@@ -61,8 +61,8 @@ export async function uploadToStorage(
   }
 
   const formData = new FormData();
-  formData.append("file", cleanFile);
   formData.append("folder", folder);
+  formData.append("file", cleanFile);
 
   const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/upload`, {
     method: "POST",

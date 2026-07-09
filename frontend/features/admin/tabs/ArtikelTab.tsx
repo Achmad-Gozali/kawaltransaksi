@@ -141,8 +141,8 @@ const handleThumbnailUpload = async (file: File) => {
   setUploading(true);
   try {
     const fd = new FormData();
-    fd.append('file', file);
     fd.append('folder', 'articles');
+    fd.append('file', file);
     const res  = await fetch(`${API_URL}/api/upload`, {
       method: 'POST',
       headers: { Authorization: `Bearer ${getToken()}` },
