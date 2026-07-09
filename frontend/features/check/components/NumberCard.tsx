@@ -29,6 +29,7 @@ interface ReportItem {
   targetName?: string | null;
   targetType?: string | null;
   bankName?: string | null;
+  walletName?: string | null;
   suspectPhotoUrl?: string | null;
   socialMediaAccounts?: string[] | null;
   linkUrl?: string | null;
@@ -91,10 +92,11 @@ export default function NumberCard({
   const storeName   = reports.find(r => r.storeName)?.storeName ?? null;
   const suspectCity = reports.find(r => r.suspectCity)?.suspectCity ?? null;
 
-  const bankNameFromDB = reports[0]?.bankName ?? null;
-  const targetType     = reports[0]?.targetType ?? defaultType;
+  const bankNameFromDB   = reports[0]?.bankName ?? null;
+  const walletNameFromDB = reports[0]?.walletName ?? null;
+  const targetType       = reports[0]?.targetType ?? defaultType;
 
-  const displayLabel = bankNameFromDB ?? defaultBankName ?? defaultWalletName ?? (targetTypeLabel[targetType] ?? null);
+  const displayLabel = bankNameFromDB ?? walletNameFromDB ?? defaultBankName ?? defaultWalletName ?? (targetTypeLabel[targetType] ?? null);
   const hasContext   = reports.length > 0 || defaultBankName !== null || defaultWalletName !== null || hasTypeParam;
   const showLabel    = hasContext && displayLabel !== null;
 
