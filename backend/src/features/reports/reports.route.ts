@@ -308,7 +308,10 @@ export async function reportsRoutes(app: FastifyInstance) {
   });
 
   // ── POST / — Buat laporan baru dengan robot check ──────────────────────
-  app.post("/", { preHandler: requireAuth }, async (req, reply) => {
+  app.post("/", {
+  preHandler: requireAuth,
+  config: { rateLimit: { max: 3, timeWindow: "1 hour" } },
+  }, async (req, reply) => {
     const {
       targetType,
       targetValue,

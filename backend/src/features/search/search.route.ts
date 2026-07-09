@@ -4,7 +4,9 @@ import { reports } from "../../core/schema.js";
 import { eq, and, desc } from "drizzle-orm";
 
 export async function searchRoutes(app: FastifyInstance) {
-  app.get("/nomor/:value", async (req, reply) => {
+  app.get("/nomor/:value", {
+    config: { rateLimit: { max: 10, timeWindow: "1 minute" } },
+  }, async (req, reply) => {
     const { value } = req.params as { value: string };
 
     const data = await db.select().from(reports)
@@ -14,7 +16,9 @@ export async function searchRoutes(app: FastifyInstance) {
     return { data, total: data.length };
   });
 
-  app.get("/rekening/:bank/:value", async (req, reply) => {
+  app.get("/rekening/:bank/:value", {
+    config: { rateLimit: { max: 10, timeWindow: "1 minute" } },
+  }, async (req, reply) => {
     const { bank, value } = req.params as { bank: string; value: string };
 
     const data = await db.select().from(reports)
@@ -28,7 +32,9 @@ export async function searchRoutes(app: FastifyInstance) {
     return { data, total: data.length };
   });
 
-  app.get("/ewallet/:wallet/:value", async (req, reply) => {
+  app.get("/ewallet/:wallet/:value", {
+    config: { rateLimit: { max: 10, timeWindow: "1 minute" } },
+  }, async (req, reply) => {
     const { wallet, value } = req.params as { wallet: string; value: string };
 
     const data = await db.select().from(reports)

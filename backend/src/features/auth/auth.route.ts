@@ -65,7 +65,9 @@ function getOAuthClient() {
 }
 
 export async function authRoutes(app: FastifyInstance) {
-  app.post("/register", async (req, reply) => {
+  app.post("/register", {
+    config: { rateLimit: { max: 3, timeWindow: "1 hour" } },
+  }, async (req, reply) => {
     const { name, email, password, turnstileToken } = req.body as {
       name: string; email: string; password: string; turnstileToken: string;
     };
@@ -133,7 +135,9 @@ export async function authRoutes(app: FastifyInstance) {
     return { message: "Email berhasil diverifikasi." };
   });
 
-  app.post("/resend-otp", async (req, reply) => {
+  app.post("/resend-otp", {
+    config: { rateLimit: { max: 3, timeWindow: "1 hour" } },
+  }, async (req, reply) => {
     const { userId } = req.body as { userId: string };
     if (!userId) return reply.status(400).send({ error: "UserId wajib diisi." });
 
@@ -154,7 +158,9 @@ export async function authRoutes(app: FastifyInstance) {
     return { message: "OTP baru telah dikirim ke email kamu." };
   });
 
-  app.post("/login", async (req, reply) => {
+  app.post("/login", {
+    config: { rateLimit: { max: 5, timeWindow: "15 minutes" } },
+  }, async (req, reply) => {
     const { email, password } = req.body as { email: string; password: string };
 
     const [user] = await db.select().from(users).where(eq(users.email, email.trim().toLowerCase())).limit(1);
@@ -284,7 +290,9 @@ export async function authRoutes(app: FastifyInstance) {
     }
   });
 
-  app.post("/forgot-password", async (req, reply) => {
+  app.post("/forgot-password", {
+    config: { rateLimit: { max: 3, timeWindow: "1 hour" } },
+  }, async (req, reply) => {
     const { email } = req.body as { email: string };
     if (!email?.trim()) return reply.status(400).send({ error: "Email wajib diisi." });
 
@@ -305,7 +313,9 @@ export async function authRoutes(app: FastifyInstance) {
     return { message: "Jika email terdaftar, link reset akan dikirim." };
   });
 
-  app.post("/reset-password", async (req, reply) => {
+  app.post("/reset-password", {
+    config: { rateLimit: { max: 3, timeWindow: "15 minutes" } },
+  }, async (req, reply) => {
     const { token, password } = req.body as { token: string; password: string };
     if (!token || !password) return reply.status(400).send({ error: "Token dan password wajib diisi." });
     if (password.length < 8) return reply.status(400).send({ error: "Password minimal 8 karakter." });

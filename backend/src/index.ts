@@ -8,6 +8,7 @@ import cors from "@fastify/cors";
 import cookie from "@fastify/cookie";
 import multipart from "@fastify/multipart";
 import fastifyStatic from "@fastify/static";
+import rateLimit from "@fastify/rate-limit";
 
 import { authRoutes } from "./features/auth/auth.route.js";
 import { reportsRoutes } from "./features/reports/reports.route.js";
@@ -17,7 +18,7 @@ import { uploadRoutes } from "./features/upload/upload.route.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-const app = Fastify({ logger: true });
+const app = Fastify({ logger: true, trustProxy: true });
 
 await app.register(cors, {
   origin: process.env.FRONTEND_URL!,
@@ -25,6 +26,14 @@ await app.register(cors, {
 });
 await app.register(cookie, { secret: process.env.COOKIE_SECRET! });
 await app.register(multipart, { limits: { fileSize: 5 * 1024 * 1024 } });
+await app.register(rateLimit, {
+  global: true,
+  max: 50,
+  timeWindow: "1 minute",
+  errorResponseBuilder: (_req, context) => ({
+    error: `Terlalu banyak permintaan. Coba lagi dalam ${Math.ceil(context.ttl / 1000)} detik.`,
+  }),
+});
 
 const uploadDir = process.env.UPLOAD_DIR
   ? path.resolve(process.env.UPLOAD_DIR)
