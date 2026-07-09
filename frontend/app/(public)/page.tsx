@@ -57,18 +57,17 @@ function formatLoss(amount: number) {
   return `Rp${amount.toLocaleString("id-ID")}`;
 }
 
-function getPlatformLogo(type: string, bankName: string | null) {
-  if (!bankName) return null;
-  const key = bankName.toLowerCase();
+function getPlatformLogo(type: string, bankName: string | null, walletName: string | null) {
+  const key = (walletName ?? bankName ?? "").toLowerCase();
   if (type === "ewallet" || ewalletNames.includes(key)) return ewalletLogoMap[key] ?? null;
   if (type === "bank_account") return bankLogoMap[key] ?? null;
   return null;
 }
 
-function getTargetMeta(type: string, bankName: string | null) {
-  const key = bankName?.toLowerCase() || "";
+function getTargetMeta(type: string, bankName: string | null, walletName: string | null) {
+  const key = (walletName ?? bankName ?? "").toLowerCase();
   if (type === "ewallet" || (type === "phone" && ewalletNames.includes(key)))
-    return { icon: Wallet, label: bankName ?? "E-Wallet", color: "text-violet-600", bg: "bg-violet-50", border: "border-violet-200" };
+    return { icon: Wallet, label: walletName ?? bankName ?? "E-Wallet", color: "text-violet-600", bg: "bg-violet-50", border: "border-violet-200" };
   if (type === "bank_account")
     return { icon: Landmark, label: bankName ?? "Rekening Bank", color: "text-blue-600", bg: "bg-blue-50", border: "border-blue-200" };
   return { icon: Phone, label: "Nomor HP", color: "text-slate-600", bg: "bg-slate-50", border: "border-slate-200" };
@@ -80,6 +79,7 @@ interface ReportItem {
   targetType: string;
   targetName: string | null;
   bankName: string | null;
+  walletName: string | null;
   description: string;
   createdAt: string;
   status: string;
@@ -203,7 +203,6 @@ export default async function HomePage() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6">
           <div className="text-center mb-10 sm:mb-12">
             <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900">Bagaimana KawalTransaksi Bekerja?</h2>
-            <p className="text-slate-500 text-sm sm:text-base mt-2">Berikut ilustrasi bagaimana KawalTransaksi mengidentifikasi penipuan.</p>
           </div>
           <motion.div
             initial={{ opacity: 0, y: 16 }}
@@ -248,8 +247,8 @@ export default async function HomePage() {
           ) : (
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
               {recentReports.map((report, i) => {
-                const meta = getTargetMeta(report.targetType, report.bankName);
-                const logoSrc = getPlatformLogo(report.targetType, report.bankName);
+                const meta = getTargetMeta(report.targetType, report.bankName, report.walletName);
+                const logoSrc = getPlatformLogo(report.targetType, report.bankName, report.walletName);
                 const isVerified = report.status === "verified";
                 const statusMap: Record<string, { label: string; className: string }> = {
                   verified: { label: "Terverifikasi",      className: "bg-emerald-50 text-emerald-700 border-emerald-200" },
