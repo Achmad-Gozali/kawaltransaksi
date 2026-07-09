@@ -31,7 +31,9 @@ await app.register(rateLimit, {
   max: 50,
   timeWindow: "1 minute",
   errorResponseBuilder: (_req, context) => ({
-    error: `Terlalu banyak permintaan. Coba lagi dalam ${Math.ceil(context.ttl / 1000)} detik.`,
+    statusCode: 429,
+    error: "Too Many Requests",
+    message: `Terlalu banyak permintaan. Coba lagi dalam ${Math.ceil(context.ttl / 1000)} detik.`,
   }),
 });
 
