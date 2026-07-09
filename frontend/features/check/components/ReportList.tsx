@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { ShieldCheck, Clock, CheckCircle2, AlertCircle, ShieldAlert, X, ChevronLeft, ChevronRight, Info } from 'lucide-react';
+import { ShieldCheck, Clock, CheckCircle2, AlertCircle, ShieldAlert, X, ChevronLeft, ChevronRight, Info, FileX2 } from 'lucide-react';
 
 function cleanChronology(text: string) {
   return text.replace(/^["'""]+|["'""]+$/g, '').trim();
@@ -47,6 +47,28 @@ function getAllEvidenceUrls(reports: ReportItem[]) {
   return Array.from(urlSet);
 }
 
+function EvidenceThumb({ url, alt, className }: { url: string; alt: string; className?: string }) {
+  const [failed, setFailed] = useState(false);
+  if (failed) {
+    return (
+      <div className={`flex flex-col items-center justify-center gap-1 bg-slate-100 ${className ?? ''}`}>
+        <FileX2 className="w-4 h-4 text-slate-300" />
+        <span className="text-[8px] text-slate-400 leading-none">Tak tersedia</span>
+      </div>
+    );
+  }
+  return (
+    <Image
+      src={resolveEvidenceUrl(url)}
+      alt={alt}
+      fill
+      className={className}
+      unoptimized
+      onError={() => setFailed(true)}
+    />
+  );
+}
+
 function Lightbox({ urls, initialIndex, onClose }: { urls: string[]; initialIndex: number; onClose: () => void }) {
   const [current, setCurrent] = useState(initialIndex);
 
@@ -76,7 +98,7 @@ function Lightbox({ urls, initialIndex, onClose }: { urls: string[]; initialInde
         </button>
       )}
       <div className="relative max-w-3xl max-h-[80vh] w-full h-full" onClick={e => e.stopPropagation()}>
-        <Image src={resolveEvidenceUrl(urls[current])} alt={`Bukti ${current + 1}`} fill className="object-contain rounded-lg" unoptimized />
+        <EvidenceThumb url={urls[current]} alt={`Bukti ${current + 1}`} className="object-contain rounded-lg" />
       </div>
       {urls.length > 1 && (
         <button onClick={e => { e.stopPropagation(); setCurrent(p => (p < urls.length - 1 ? p + 1 : 0)); }}
@@ -89,7 +111,7 @@ function Lightbox({ urls, initialIndex, onClose }: { urls: string[]; initialInde
           {urls.map((url, i) => (
             <button key={i} onClick={e => { e.stopPropagation(); setCurrent(i); }}
               className={`relative w-10 h-10 rounded-lg overflow-hidden border-2 transition-all ${i === current ? 'border-white scale-110' : 'border-white/30 opacity-60'}`}>
-              <Image src={resolveEvidenceUrl(url)} alt="" fill className="object-cover" unoptimized />
+              <EvidenceThumb url={url} alt="" className="object-cover" />
             </button>
           ))}
         </div>
@@ -112,7 +134,7 @@ function EvidenceGallery({ urls }: { urls: string[] }) {
         {displayUrls.map((url, i) => (
           <button key={i} onClick={() => setLightboxIndex(i)}
             className="group relative aspect-square rounded-xl overflow-hidden border border-slate-200 bg-slate-50 hover:border-slate-400 transition-all cursor-pointer">
-            <Image src={resolveEvidenceUrl(url)} alt={`Bukti ${i + 1}`} fill className="object-cover group-hover:scale-105 transition-transform duration-200" loading="lazy" unoptimized />
+            <EvidenceThumb url={url} alt={`Bukti ${i + 1}`} className="object-cover group-hover:scale-105 transition-transform duration-200" />
             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors" />
             <div className="absolute top-1.5 left-1.5 bg-black/50 text-white text-[9px] font-bold px-1.5 py-0.5 rounded-md">{i + 1}</div>
           </button>

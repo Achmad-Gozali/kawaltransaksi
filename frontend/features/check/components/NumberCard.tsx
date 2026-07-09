@@ -1,8 +1,9 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
-import { Lock, Signal, MapPin, Store } from "lucide-react";
+import { Lock, Signal, MapPin, Store, UserRound } from "lucide-react";
 import { formatNum } from "@/core/utils";
 
 function formatSosmed(acc: string) {
@@ -65,6 +66,8 @@ export default function NumberCard({
   defaultType = "phone", defaultBankName = null, defaultWalletName = null,
   hasTypeParam = false, isLoggedIn = false, carrierInfo = null,
 }: Props) {
+  const [photoFailed, setPhotoFailed] = useState(false);
+
   const hasVerified     = reports.some(r => r.status === "verified");
   const canSeeIdentity  = hasVerified && isLoggedIn;
 
@@ -145,12 +148,29 @@ export default function NumberCard({
               )}
             </div>
 
-            {suspectPhotoUrl && (
+            {suspectPhotoUrl && !photoFailed && (
               <div className="shrink-0">
                 <p className="text-[10px] text-slate-400 mb-1.5 text-right">Foto penipu</p>
                 <div className="relative w-14 h-14 sm:w-16 sm:h-16">
-                  <Image src={resolveEvidenceUrl(suspectPhotoUrl)} alt="Foto profil penipu" fill className="object-cover rounded-xl border border-slate-200" unoptimized />
+                  <Image
+                    src={resolveEvidenceUrl(suspectPhotoUrl)}
+                    alt="Foto profil penipu"
+                    fill
+                    className="object-cover rounded-xl border border-slate-200"
+                    unoptimized
+                    onError={() => setPhotoFailed(true)}
+                  />
                   <span className="absolute -bottom-1 -right-1 bg-red-600 text-white text-[8px] font-semibold px-1.5 py-0.5 rounded-md uppercase tracking-wide">Penipu</span>
+                </div>
+              </div>
+            )}
+
+            {suspectPhotoUrl && photoFailed && (
+              <div className="shrink-0">
+                <p className="text-[10px] text-slate-400 mb-1.5 text-right">Foto penipu</p>
+                <div className="relative w-14 h-14 sm:w-16 sm:h-16 rounded-xl border border-slate-200 bg-slate-100 flex flex-col items-center justify-center gap-0.5">
+                  <UserRound className="w-5 h-5 text-slate-300" />
+                  <span className="text-[7px] text-slate-400 leading-none">Tak tersedia</span>
                 </div>
               </div>
             )}
