@@ -1,33 +1,17 @@
 'use client';
 
-import { Trash2 } from 'lucide-react';
 import { Input, Sel } from '@/features/report/ui/primitives';
 import { bankList, ewalletList } from '@/features/report/constants';
 import type { TargetEntry } from '@/features/report/types';
 
 interface Props {
   entry: TargetEntry;
-  index: number;
-  isPrimary: boolean;
   onChange: (updated: TargetEntry) => void;
-  onRemove?: () => void;
 }
 
-export function TargetEntryCard({ entry, index, isPrimary, onChange, onRemove }: Props) {
+export function TargetEntryCard({ entry, onChange }: Props) {
   return (
     <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
-      <div className="flex items-center justify-between">
-        <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">
-          {isPrimary ? 'Nomor Utama' : `Nomor Tambahan ${index}`}
-        </span>
-        {onRemove && (
-          <button type="button" onClick={onRemove}
-            className="p-1.5 text-slate-300 hover:text-red-400 hover:bg-red-50 rounded-lg transition-all">
-            <Trash2 className="w-3.5 h-3.5" />
-          </button>
-        )}
-      </div>
-
       <div>
         <Sel value={entry.type} onChange={e => onChange({ ...entry, type: e.target.value as any, bank_name: '', ewallet_name: '' })}>
           <option value="phone">Nomor HP / WhatsApp</option>

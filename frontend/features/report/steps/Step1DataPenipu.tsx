@@ -5,7 +5,6 @@ import { Plus, Upload, X, Trash2, AlertCircle } from 'lucide-react';
 import { Card, SectionTitle, Label, Input, Sel } from '@/features/report/ui/primitives';
 import { TargetEntryCard } from '@/features/report/ui/TargetEntryCard';
 import {
-  MAX_TARGET_NUMBERS,
   categoryList,
   platformList,
   provinsiList,
@@ -14,14 +13,12 @@ import {
 import type { TargetEntry, ReportFormData } from '@/features/report/types';
 
 interface Step1Props {
-  targets: TargetEntry[];
+  target: TargetEntry;
   formData: ReportFormData;
   suspectPhotoPreview: string | null;
   customCategory: string;
   customPlatform: string;
-  onUpdateTarget: (index: number, updated: TargetEntry) => void;
-  onAddTarget: () => void;
-  onRemoveTarget: (index: number) => void;
+  onUpdateTarget: (updated: TargetEntry) => void;
   onFormDataChange: (data: ReportFormData) => void;
   onSuspectPhotoChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onRemoveSuspectPhoto: () => void;
@@ -34,9 +31,9 @@ interface Step1Props {
 }
 
 export function Step1DataPenipu({
-  targets, formData, suspectPhotoPreview,
+  target, formData, suspectPhotoPreview,
   customCategory, customPlatform,
-  onUpdateTarget, onAddTarget, onRemoveTarget,
+  onUpdateTarget,
   onFormDataChange, onSuspectPhotoChange, onRemoveSuspectPhoto,
   onAddSocialField, onRemoveSocialField, onUpdateSocialField,
   onToggleReportedTo, onCustomCategoryChange, onCustomPlatformChange,
@@ -49,30 +46,9 @@ export function Step1DataPenipu({
         <div className="p-4 sm:p-5">
           <SectionTitle
             title="Nomor Penipu"
-            subtitle={`Tambahkan semua nomor terkait pelaku -- maks ${MAX_TARGET_NUMBERS} nomor`}
+            subtitle="Nomor HP, rekening, atau e-wallet yang digunakan pelaku"
           />
-          <div className="space-y-3">
-            {targets.map((entry: TargetEntry, index: number) => (
-              <TargetEntryCard
-                key={index}
-                entry={entry}
-                index={index}
-                isPrimary={index === 0}
-                onChange={(updated) => onUpdateTarget(index, updated)}
-                onRemove={index > 0 ? () => onRemoveTarget(index) : undefined}
-              />
-            ))}
-          </div>
-          {targets.length < MAX_TARGET_NUMBERS && (
-            <button
-              type="button"
-              onClick={onAddTarget}
-              className="mt-4 w-full flex items-center justify-center gap-2 py-3 border-2 border-dashed border-slate-200 rounded-2xl text-sm font-semibold text-slate-400 hover:border-emerald-300 hover:text-emerald-600 hover:bg-emerald-50/30 transition-all active:scale-95"
-            >
-              <Plus className="w-4 h-4" />
-              Tambah Nomor Lain ({targets.length}/{MAX_TARGET_NUMBERS})
-            </button>
-          )}
+          <TargetEntryCard entry={target} onChange={onUpdateTarget} />
         </div>
       </Card>
 

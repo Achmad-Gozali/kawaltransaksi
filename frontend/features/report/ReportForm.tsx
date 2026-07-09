@@ -7,13 +7,13 @@ import * as motion from 'motion/react-client';
 import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile';
 import { uploadToStorage } from '@/core/storage/upload';
 import { authClient } from '@/core/auth/client';
-import { STEPS, MAX_TARGET_NUMBERS, MAX_EVIDENCE_FILES } from '@/features/report/constants';
+import { STEPS, MAX_EVIDENCE_FILES } from '@/features/report/constants';
 import type { TargetEntry, EvidenceFile, ReportFormData } from '@/features/report/types';
 import { Step1DataPenipu } from '@/features/report/steps/Step1DataPenipu';
 import { Step2Kronologi } from '@/features/report/steps/Step2Kronologi';
 import { Step3BuktiKirim } from '@/features/report/steps/Step3BuktiKirim';
 
-const defaultEntry = (): TargetEntry => ({
+const defaultTarget = (): TargetEntry => ({
   number: '', name: '', type: 'phone', bank_name: '', ewallet_name: '',
   custom_bank_name: '', custom_ewallet_name: '',
 });
@@ -72,7 +72,7 @@ export default function ReportForm() {
   const [isSuccess,           setIsSuccess]           = useState(false);
   const [error,               setError]               = useState<string | null>(null);
   const [uploadProgress,      setUploadProgress]      = useState<string | null>(null);
-  const [targets,             setTargets]             = useState<TargetEntry[]>([defaultEntry()]);
+  const [target,               setTarget]              = useState<TargetEntry>(defaultTarget());
   const [formData,            setFormData]            = useState<ReportFormData>(defaultFormData());
   const [evidenceFiles,       setEvidenceFiles]       = useState<EvidenceFile[]>([]);
   const [suspectPhoto,        setSuspectPhoto]        = useState<File | null>(null);
@@ -82,14 +82,6 @@ export default function ReportForm() {
   const [turnstileToken,      setTurnstileToken]      = useState<string | null>(null);
 
   const turnstileRef = useRef<TurnstileInstance>(null);
-
-  const updateTarget = (index: number, updated: TargetEntry) =>
-    setTargets(prev => prev.map((t, i) => i === index ? updated : t));
-  const addTarget = () => {
-    if (targets.length < MAX_TARGET_NUMBERS) setTargets(prev => [...prev, defaultEntry()]);
-  };
-  const removeTarget = (index: number) =>
-    setTargets(prev => prev.filter((_, i) => i !== index));
 
   const updateArrayField = useCallback((action: 'add' | 'remove' | 'update', index?: number, val?: string) => {
     setFormData(f => {
@@ -135,10 +127,8 @@ export default function ReportForm() {
   const navigate = (dir: 'next' | 'prev') => {
     setError(null);
     if (dir === 'next') {
-      if (currentStep === 1 && !targets[0].number.trim())
-        return setError('Nomor HP atau rekening utama wajib diisi.');
-      if (currentStep === 1 && targets.slice(1).some(t => !t.number.trim()))
-        return setError('Nomor tambahan wajib diisi, atau hapus jika tidak perlu.');
+      if (currentStep === 1 && !target.number.trim())
+        return setError('Nomor HP, rekening, atau e-wallet wajib diisi.');
       if (currentStep === 1 && !formData.category)
         return setError('Kategori penipuan wajib dipilih.');
       if (currentStep === 2 && formData.chronology.trim().length < 20)
@@ -181,16 +171,15 @@ export default function ReportForm() {
         });
       }
 
-      const primary          = targets[0];
       const resolvedCategory = formData.category === 'Lainnya' ? (customCategory.trim() || 'Lainnya') : formData.category;
       const resolvedPlatform = formData.platform === 'Lainnya' ? (customPlatform.trim() || 'Lainnya') : (formData.platform || null);
 
-      const resolvedBankName = primary.type === 'bank_account'
-        ? (primary.bank_name === 'Lainnya' ? (primary.custom_bank_name?.trim() || 'Lainnya') : primary.bank_name)
+      const resolvedBankName = target.type === 'bank_account'
+        ? (target.bank_name === 'Lainnya' ? (target.custom_bank_name?.trim() || 'Lainnya') : target.bank_name)
         : null;
 
-      const resolvedWalletName = primary.type === 'ewallet'
-        ? (primary.ewallet_name === 'Lainnya' ? (primary.custom_ewallet_name?.trim() || 'Lainnya') : primary.ewallet_name)
+      const resolvedWalletName = target.type === 'ewallet'
+        ? (target.ewallet_name === 'Lainnya' ? (target.custom_ewallet_name?.trim() || 'Lainnya') : target.ewallet_name)
         : null;
 
       setUploadProgress('Mengirim laporan...');
@@ -201,9 +190,9 @@ export default function ReportForm() {
           Authorization:  `Bearer ${authClient.getToken()}`,
         },
         body: JSON.stringify({
-          targetValue:         primary.number,
-          targetType:          primary.type,
-          targetName:          primary.name?.trim() || null,
+          targetValue:         target.number,
+          targetType:          target.type,
+          targetName:          target.name?.trim() || null,
           bankName:            resolvedBankName,
           walletName:          resolvedWalletName,
           category:            resolvedCategory,
@@ -227,7 +216,7 @@ export default function ReportForm() {
       const result = await res.json();
       if (result.data?.id) {
         setIsSuccess(true);
-        setTimeout(() => router.push(`/check/${encodeURIComponent(primary.number)}`), 1500);
+        setTimeout(() => router.push(`/check/${encodeURIComponent(target.number)}`), 1500);
       } else {
         setError(result.error || 'Gagal mengirim laporan.');
         turnstileRef.current?.reset();
@@ -255,10 +244,10 @@ export default function ReportForm() {
   const stepComponents = [
     <Step1DataPenipu
       key="step1"
-      targets={targets} formData={formData}
+      target={target} formData={formData}
       suspectPhotoPreview={suspectPhotoPreview}
       customCategory={customCategory} customPlatform={customPlatform}
-      onUpdateTarget={updateTarget} onAddTarget={addTarget} onRemoveTarget={removeTarget}
+      onUpdateTarget={setTarget}
       onFormDataChange={setFormData}
       onSuspectPhotoChange={(e) => handlePhotoChange(e.target.files?.[0] || null, 'suspect')}
       onRemoveSuspectPhoto={() => { setSuspectPhoto(null); setSuspectPhotoPreview(null); }}
