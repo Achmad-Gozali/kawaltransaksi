@@ -3,6 +3,7 @@ import { db } from "../../core/db.js";
 import { reports, users, evidence, articles } from "../../core/schema.js";
 import { eq, desc, count, sql } from "drizzle-orm";
 import { requireAdmin } from "../../core/auth.middleware.js";
+import { deleteFile } from "../../core/storage.js";
 
 function slugify(text: string) {
   return text.toLowerCase().trim()
@@ -156,6 +157,11 @@ export async function adminRoutes(app: FastifyInstance) {
     const [existing] = await db.select().from(articles).where(eq(articles.id, id)).limit(1);
     if (!existing) return reply.status(404).send({ error: "Not found" });
 
+    const thumbnailChanged = thumbnail !== undefined && thumbnail !== existing.thumbnail;
+    if (thumbnailChanged) {
+      await deleteFile(existing.thumbnail);
+    }
+
     const [updated] = await db.update(articles).set({
       title:       title       ?? existing.title,
       slug:        title       ? slugify(title) : existing.slug,
@@ -173,6 +179,12 @@ export async function adminRoutes(app: FastifyInstance) {
 
   app.delete("/articles/:id", { preHandler: requireAdmin }, async (req, reply) => {
     const { id } = req.params as { id: string };
+
+    const [existing] = await db.select().from(articles).where(eq(articles.id, id)).limit(1);
+    if (existing?.thumbnail) {
+      await deleteFile(existing.thumbnail);
+    }
+
     await db.delete(articles).where(eq(articles.id, id));
     return { message: "Artikel dihapus." };
   });
