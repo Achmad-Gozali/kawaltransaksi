@@ -19,7 +19,7 @@
     "@node-rs/argon2": "^2.0.2",
     "@paralleldrive/cuid2": "^3.3.0",
     "dotenv": "^16.5.0",
-    "drizzle-orm": "^0.44.2",
+    "drizzle-orm": "^0.45.2",
     "fastify": "^5.3.2",
     "googleapis": "^173.0.0",
     "jsonwebtoken": "^9.0.2",
@@ -30,7 +30,7 @@
   "devDependencies": {
     "@types/jsonwebtoken": "^9.0.9",
     "@types/node": "^22.15.21",
-    "drizzle-kit": "^0.31.1",
+    "drizzle-kit": "^0.31.10",
     "tsx": "^4.19.4",
     "typescript": "^5.8.3"
   }
