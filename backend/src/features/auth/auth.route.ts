@@ -9,6 +9,7 @@ import { users, sessions, passwordResetTokens, otpTokens } from "../../core/sche
 import { eq } from "drizzle-orm";
 import { sendOtpEmail, sendPasswordResetEmail } from "../../core/mailer.js";
 import { verifyTurnstile } from "../../core/turnstile.js";
+import { requireAuth } from "../../core/auth.middleware.js";
 
 const ALLOWED_EMAIL_DOMAINS = [
   "gmail.com", "yahoo.com", "yahoo.co.id", "outlook.com", "hotmail.com",
@@ -283,78 +284,54 @@ export async function authRoutes(app: FastifyInstance) {
     return { message: "Logged out." };
   });
 
-  app.get("/me", async (req, reply) => {
-    const token = req.headers.authorization?.split(" ")[1];
-    if (!token) return reply.status(401).send({ error: "Unauthorized." });
+  app.get("/me", { preHandler: requireAuth }, async (req, reply) => {
+    const [user] = await db.select({
+      id:         users.id,
+      name:       users.name,
+      email:      users.email,
+      role:       users.role,
+      isVerified: users.isVerified,
+    }).from(users).where(eq(users.id, req.user!.userId)).limit(1);
 
-    try {
-      const payload = jwt.verify(token, process.env.JWT_ACCESS_SECRET!) as { userId: string };
-      const [user]  = await db.select({
-        id:         users.id,
-        name:       users.name,
-        email:      users.email,
-        role:       users.role,
-        isVerified: users.isVerified,
-      }).from(users).where(eq(users.id, payload.userId)).limit(1);
-
-      if (!user) return reply.status(404).send({ error: "User not found." });
-      return user;
-    } catch {
-      return reply.status(401).send({ error: "Invalid token." });
-    }
+    if (!user) return reply.status(404).send({ error: "User not found." });
+    return user;
   });
 
-  app.patch("/me", async (req, reply) => {
-    const token = req.headers.authorization?.split(" ")[1];
-    if (!token) return reply.status(401).send({ error: "Unauthorized." });
+  app.patch("/me", { preHandler: requireAuth }, async (req, reply) => {
+    const { name } = req.body as { name?: string };
 
-    try {
-      const payload = jwt.verify(token, process.env.JWT_ACCESS_SECRET!) as { userId: string };
-      const { name } = req.body as { name?: string };
+    if (!name?.trim()) return reply.status(400).send({ error: "Nama tidak boleh kosong." });
 
-      if (!name?.trim()) return reply.status(400).send({ error: "Nama tidak boleh kosong." });
+    const [updated] = await db.update(users)
+      .set({ name: name.trim(), updatedAt: new Date() })
+      .where(eq(users.id, req.user!.userId))
+      .returning({ id: users.id, name: users.name, email: users.email, role: users.role, isVerified: users.isVerified });
 
-      const [updated] = await db.update(users)
-        .set({ name: name.trim(), updatedAt: new Date() })
-        .where(eq(users.id, payload.userId))
-        .returning({ id: users.id, name: users.name, email: users.email, role: users.role, isVerified: users.isVerified });
-
-      return updated;
-    } catch {
-      return reply.status(401).send({ error: "Invalid token." });
-    }
+    return updated;
   });
 
-  app.patch("/change-password", async (req, reply) => {
-    const token = req.headers.authorization?.split(" ")[1];
-    if (!token) return reply.status(401).send({ error: "Unauthorized." });
+  app.patch("/change-password", { preHandler: requireAuth }, async (req, reply) => {
+    const { currentPassword, newPassword } = req.body as { currentPassword: string; newPassword: string };
 
-    try {
-      const payload = jwt.verify(token, process.env.JWT_ACCESS_SECRET!) as { userId: string };
-      const { currentPassword, newPassword } = req.body as { currentPassword: string; newPassword: string };
+    if (!currentPassword || !newPassword)
+      return reply.status(400).send({ error: "Semua field wajib diisi." });
+    if (!isPasswordStrong(newPassword))
+      return reply.status(400).send({ error: "Kata sandi baru harus minimal 8 karakter, mengandung huruf besar, angka, dan simbol." });
 
-      if (!currentPassword || !newPassword)
-        return reply.status(400).send({ error: "Semua field wajib diisi." });
-      if (!isPasswordStrong(newPassword))
-        return reply.status(400).send({ error: "Kata sandi baru harus minimal 8 karakter, mengandung huruf besar, angka, dan simbol." });
+    const [user] = await db.select().from(users).where(eq(users.id, req.user!.userId)).limit(1);
+    if (!user) return reply.status(404).send({ error: "User tidak ditemukan." });
+    if (!user.passwordHash)
+      return reply.status(400).send({ error: "Akun ini menggunakan Google login. Tidak bisa ganti password." });
 
-      const [user] = await db.select().from(users).where(eq(users.id, payload.userId)).limit(1);
-      if (!user) return reply.status(404).send({ error: "User tidak ditemukan." });
-      if (!user.passwordHash)
-        return reply.status(400).send({ error: "Akun ini menggunakan Google login. Tidak bisa ganti password." });
+    const valid = await verify(user.passwordHash, currentPassword);
+    if (!valid) return reply.status(400).send({ error: "Password saat ini salah." });
 
-      const valid = await verify(user.passwordHash, currentPassword);
-      if (!valid) return reply.status(400).send({ error: "Password saat ini salah." });
+    const passwordHash = await hash(newPassword);
+    await db.update(users)
+      .set({ passwordHash, updatedAt: new Date() })
+      .where(eq(users.id, req.user!.userId));
 
-      const passwordHash = await hash(newPassword);
-      await db.update(users)
-        .set({ passwordHash, updatedAt: new Date() })
-        .where(eq(users.id, payload.userId));
-
-      return { message: "Password berhasil diubah." };
-    } catch {
-      return reply.status(401).send({ error: "Invalid token." });
-    }
+    return { message: "Password berhasil diubah." };
   });
 
   app.post("/forgot-password", {

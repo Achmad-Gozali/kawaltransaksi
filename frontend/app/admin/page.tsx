@@ -19,9 +19,8 @@ async function adminFetch(path: string, token: string) {
 export default async function AdminPage() {
   const cookieStore  = await cookies();
   const refreshToken = cookieStore.get('refresh_token')?.value;
-  if (!refreshToken) redirect('/login?redirectTo=/admin');
+  if (!refreshToken) redirect('/');
 
-  // Refresh dulu untuk dapat accessToken
   const refreshRes = await fetch(`${BASE}/api/auth/refresh`, {
     method: 'POST',
     headers: { Cookie: cookieStore.toString() },
@@ -29,7 +28,14 @@ export default async function AdminPage() {
   });
   const refreshData = await refreshRes.json();
   const token = refreshData?.accessToken;
-  if (!token) redirect('/login?redirectTo=/admin');
+  if (!token) redirect('/');
+
+  const meRes = await fetch(`${BASE}/api/auth/me`, {
+    headers: { Authorization: `Bearer ${token}` },
+    cache: 'no-store',
+  });
+  const me = await meRes.json();
+  if (!meRes.ok || me?.role !== 'admin') redirect('/');
 
   const [statsRes, reportsRes, usersRes] = await Promise.all([
     adminFetch('/api/admin/stats', token),
