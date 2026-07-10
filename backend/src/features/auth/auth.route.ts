@@ -3,7 +3,7 @@ import { hash, verify } from "@node-rs/argon2";
 import jwt from "jsonwebtoken";
 import { google } from "googleapis";
 import { createId } from "@paralleldrive/cuid2";
-import { randomInt } from "crypto";
+import { randomInt, createHash } from "crypto";
 import { db } from "../../core/db.js";
 import { users, sessions, passwordResetTokens, otpTokens } from "../../core/schema.js";
 import { eq } from "drizzle-orm";
@@ -28,6 +28,32 @@ function isPasswordStrong(password: string): boolean {
     /[0-9]/.test(password) &&
     /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)
   );
+}
+
+async function isPasswordBreached(password: string): Promise<boolean> {
+  try {
+    const sha1 = createHash("sha1").update(password).digest("hex").toUpperCase();
+    const prefix = sha1.slice(0, 5);
+    const suffix = sha1.slice(5);
+
+    const res = await fetch(`https://api.pwnedpasswords.com/range/${prefix}`, {
+      signal: AbortSignal.timeout(5000),
+    });
+
+    if (!res.ok) return false;
+
+    const text = await res.text();
+    const lines = text.split("\n");
+
+    for (const line of lines) {
+      const [hashSuffix] = line.split(":");
+      if (hashSuffix?.trim() === suffix) return true;
+    }
+
+    return false;
+  } catch {
+    return false;
+  }
 }
 
 function signTokens(userId: string, role: string) {
@@ -106,6 +132,10 @@ export async function authRoutes(app: FastifyInstance) {
 
     if (!isPasswordStrong(password))
       return reply.status(400).send({ error: "Kata sandi harus minimal 8 karakter, mengandung huruf besar, angka, dan simbol." });
+
+    const breached = await isPasswordBreached(password);
+    if (breached)
+      return reply.status(400).send({ error: "Kata sandi ini pernah muncul dalam kebocoran data. Gunakan kata sandi lain yang belum pernah dipakai di layanan lain." });
 
     const [existing] = await db.select().from(users).where(eq(users.email, sanitizedEmail)).limit(1);
     if (existing) return reply.status(409).send({ error: "Email sudah terdaftar." });
