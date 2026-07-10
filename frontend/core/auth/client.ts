@@ -19,8 +19,8 @@ export const authClient = {
   getToken: () => accessToken,
   clearToken: () => { accessToken = null; },
 
-  login: async (email: string, password: string): Promise<AuthResponse> => {
-    const res = await api.post<AuthResponse>("/api/auth/login", { email, password });
+  login: async (email: string, password: string, turnstileToken: string): Promise<AuthResponse> => {
+    const res = await api.post<AuthResponse>("/api/auth/login", { email, password, turnstileToken });
     accessToken = res.accessToken;
     return res;
   },

@@ -189,7 +189,16 @@ export async function authRoutes(app: FastifyInstance) {
   app.post("/login", {
     config: { rateLimit: { max: 5, timeWindow: "15 minutes" } },
   }, async (req, reply) => {
-    const { email, password } = req.body as { email: string; password: string };
+    const { email, password, turnstileToken } = req.body as {
+      email: string; password: string; turnstileToken: string;
+    };
+
+    if (!email?.trim() || !password)
+      return reply.status(400).send({ error: "Email dan password wajib diisi." });
+
+    const turnstileValid = await verifyTurnstile(turnstileToken, req.ip);
+    if (!turnstileValid)
+      return reply.status(400).send({ error: "Verifikasi keamanan gagal. Silakan coba lagi." });
 
     const [user] = await db.select().from(users).where(eq(users.email, email.trim().toLowerCase())).limit(1);
     if (!user || !user.passwordHash)

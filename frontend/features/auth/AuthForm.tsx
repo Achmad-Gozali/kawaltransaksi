@@ -99,7 +99,7 @@ function AuthFormInner({ type }: AuthFormProps) {
       return;
     }
 
-    if (type === 'register' && !turnstileToken) {
+    if (!turnstileToken) {
       setError('Selesaikan verifikasi keamanan terlebih dahulu.');
       return;
     }
@@ -118,7 +118,7 @@ function AuthFormInner({ type }: AuthFormProps) {
     setIsLoading(true);
     try {
       if (type === 'register') {
-        const res = await authClient.register(sanitizedFullName, sanitizedEmail, password, turnstileToken!);
+        const res = await authClient.register(sanitizedFullName, sanitizedEmail, password, turnstileToken);
         if ((res as any).requiresVerification) {
           setSuccess('Akun dibuat! Mengalihkan ke verifikasi email...');
           setTimeout(() => router.push(`/verifikasi-email?userId=${(res as any).user.id}&email=${encodeURIComponent(sanitizedEmail)}`), 800);
@@ -127,7 +127,7 @@ function AuthFormInner({ type }: AuthFormProps) {
           setTimeout(() => router.push(getRedirectPath(res.user.role, redirectTo)), 800);
         }
       } else {
-        const res = await authClient.login(sanitizedEmail, password);
+        const res = await authClient.login(sanitizedEmail, password, turnstileToken);
         if ((res as any).requiresVerification) {
           setSuccess('Mengarahkan ke verifikasi email...');
           setTimeout(() => router.push(`/verifikasi-email?userId=${(res as any).user.id}&email=${encodeURIComponent(sanitizedEmail)}`), 800);
@@ -139,10 +139,8 @@ function AuthFormInner({ type }: AuthFormProps) {
       }
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Terjadi kesalahan sistem.');
-      if (type === 'register') {
-        turnstileRef.current?.reset();
-        setTurnstileToken(null);
-      }
+      turnstileRef.current?.reset();
+      setTurnstileToken(null);
     } finally {
       setIsLoading(false);
     }
@@ -287,20 +285,18 @@ function AuthFormInner({ type }: AuthFormProps) {
           </div>
         )}
 
-        {type === 'register' && (
-          <div className="flex justify-center pt-1">
-            <Turnstile
-              ref={turnstileRef}
-              siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
-              onSuccess={setTurnstileToken}
-              onExpire={() => setTurnstileToken(null)}
-              onError={() => setTurnstileToken(null)}
-              options={{ theme: 'light' }}
-            />
-          </div>
-        )}
+        <div className="flex justify-center pt-1">
+          <Turnstile
+            ref={turnstileRef}
+            siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY!}
+            onSuccess={setTurnstileToken}
+            onExpire={() => setTurnstileToken(null)}
+            onError={() => setTurnstileToken(null)}
+            options={{ theme: 'light' }}
+          />
+        </div>
 
-        <button type="submit" disabled={isLoading || isGoogleLoading || (type === 'register' && !turnstileToken)}
+        <button type="submit" disabled={isLoading || isGoogleLoading || !turnstileToken}
           className={`w-full py-3.5 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 active:scale-[0.98] shadow-md disabled:opacity-50 disabled:cursor-not-allowed text-sm uppercase tracking-widest mt-2 ${
             type === 'login' ? 'bg-slate-900 hover:bg-slate-800' : 'bg-emerald-600 hover:bg-emerald-700'
           }`}>
