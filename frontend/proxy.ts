@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 
-const protectedRoutes = ["/dashboard", "/admin", "/laporan-publik"];
+const protectedRoutes = ["/dashboard", "/laporan-publik"];
 const authRoutes = ["/login", "/register"];
 
 export function proxy(req: NextRequest) {
