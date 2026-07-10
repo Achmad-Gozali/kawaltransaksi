@@ -1,31 +1,43 @@
 'use client';
 
 import { useState } from 'react';
-import { FileText, Clock, CheckCircle2, XCircle, ArrowRight, TrendingUp } from 'lucide-react';
+import { FileText, Clock, CheckCircle2, XCircle, ArrowRight, TrendingUp, UserPlus, Users } from 'lucide-react';
 import Link from 'next/link';
 import { authClient } from '@/core/auth/client';
 import type { Stats, Report } from '@/features/admin/types';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
+const STATUS_BADGE: Record<string, string> = {
+  pending:  'bg-amber-50 text-amber-700 border-amber-200',
+  verified: 'bg-emerald-50 text-emerald-700 border-emerald-200',
+  rejected: 'bg-red-50 text-red-600 border-red-200',
+};
+
+const STATUS_LABEL: Record<string, string> = {
+  pending:  'Pending',
+  verified: 'Verified',
+  rejected: 'Ditolak',
+};
+
 function getField(r: Report, camel: keyof Report, snake: keyof Report) {
   return (r[camel] ?? r[snake]) as string | null | undefined;
 }
 
-function formatDateID(d: string) {
-  try { return new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' }); }
-  catch { return d; }
+interface DashboardStats extends Stats {
+  newUsers?: number;
 }
 
-export default function DashboardTab({ stats, reports: initial }: { stats: Stats; reports: Report[] }) {
+export default function DashboardTab({ stats, reports: initial }: { stats: DashboardStats; reports: Report[] }) {
   const [reports, setReports] = useState<Report[]>(initial);
   const [loading, setLoading] = useState<string | null>(null);
 
   const cards = [
-    { label: 'Total Laporan', value: stats.total,    icon: FileText,    color: 'text-slate-700' },
-    { label: 'Pending',       value: stats.pending,  icon: Clock,       color: 'text-slate-700' },
-    { label: 'Terverifikasi', value: stats.verified, icon: CheckCircle2, color: 'text-slate-700' },
-    { label: 'Ditolak',       value: stats.rejected, icon: XCircle,     color: 'text-slate-700' },
+    { label: 'Total Laporan', value: stats.total,               icon: FileText },
+    { label: 'Pending',       value: stats.pending,              icon: Clock },
+    { label: 'Terverifikasi', value: stats.verified,             icon: CheckCircle2 },
+    { label: 'Ditolak',       value: stats.rejected,              icon: XCircle },
+    { label: 'Pengguna Baru', value: stats.newUsers ?? 0,         icon: UserPlus },
   ];
 
   const pending = reports.filter(r => r.status === 'pending').slice(0, 5);
@@ -49,21 +61,21 @@ export default function DashboardTab({ stats, reports: initial }: { stats: Stats
   return (
     <div className="space-y-6">
       {/* Stat cards */}
-      <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-        {cards.map(({ label, value, icon: Icon, color }) => (
-          <div key={label} className="bg-white border border-slate-200 rounded-xl p-4">
-            <div className="flex items-center justify-between mb-3">
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
+        {cards.map(({ label, value, icon: Icon }) => (
+          <div key={label} className="bg-slate-50 rounded-lg p-3">
+            <div className="flex items-center justify-between mb-2">
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{label}</p>
               <Icon className="w-3.5 h-3.5 text-slate-400" />
             </div>
-            <p className="text-3xl font-black text-slate-900">{value}</p>
+            <p className="text-2xl font-black text-slate-900">{value}</p>
           </div>
         ))}
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
         {/* Pending — butuh aksi */}
-        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+        <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
             <div className="flex items-center gap-2">
               <p className="text-sm font-bold text-slate-800">Butuh Review</p>
@@ -94,22 +106,24 @@ export default function DashboardTab({ stats, reports: initial }: { stats: Stats
                   <div key={r.id} className="flex items-center gap-3 px-4 py-3 hover:bg-slate-50 transition-colors">
                     <div className="flex-1 min-w-0">
                       <p className="text-sm font-bold font-mono text-slate-900 truncate">{val}</p>
-                      <p className="text-[10px] text-slate-400 mt-0.5">{typeLabel} · {r.category ?? '—'} · {formatDateID(date)}</p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">{typeLabel} · {r.category ?? '—'} · {date}</p>
                     </div>
                     <div className="flex gap-1.5 shrink-0">
                       <button
                         onClick={() => updateStatus(r.id, 'verified')}
                         disabled={loading === r.id + 'verified'}
-                        className="px-2.5 py-1 bg-white hover:bg-slate-50 text-slate-700 text-[10px] font-bold rounded-lg border border-slate-200 transition-all disabled:opacity-40"
+                        className="p-1.5 bg-white hover:bg-emerald-50 text-emerald-500 hover:text-emerald-700 rounded-lg border border-slate-200 hover:border-emerald-200 transition-all disabled:opacity-40"
+                        aria-label="Verifikasi"
                       >
-                        ✓ Verif
+                        <CheckCircle2 className="w-3.5 h-3.5" />
                       </button>
                       <button
                         onClick={() => updateStatus(r.id, 'rejected')}
                         disabled={loading === r.id + 'rejected'}
-                        className="px-2.5 py-1 bg-white hover:bg-slate-50 text-slate-700 text-[10px] font-bold rounded-lg border border-slate-200 transition-all disabled:opacity-40"
+                        className="p-1.5 bg-white hover:bg-red-50 text-red-400 hover:text-red-600 rounded-lg border border-slate-200 hover:border-red-200 transition-all disabled:opacity-40"
+                        aria-label="Tolak"
                       >
-                        ✕ Tolak
+                        <XCircle className="w-3.5 h-3.5" />
                       </button>
                     </div>
                   </div>
@@ -120,7 +134,7 @@ export default function DashboardTab({ stats, reports: initial }: { stats: Stats
         </div>
 
         {/* Laporan terbaru */}
-        <div className="bg-white border border-slate-200 rounded-xl overflow-hidden">
+        <div className="bg-white border border-slate-200 rounded-lg overflow-hidden">
           <div className="flex items-center justify-between px-4 py-3 border-b border-slate-100">
             <p className="text-sm font-bold text-slate-800">Laporan Terbaru</p>
             <Link href="?tab=laporan" className="text-[10px] font-bold text-slate-400 hover:text-slate-700 uppercase tracking-widest transition-colors flex items-center gap-1">
@@ -135,14 +149,16 @@ export default function DashboardTab({ stats, reports: initial }: { stats: Stats
               {recent.map(r => {
                 const val  = getField(r, 'targetValue', 'target_value') ?? '';
                 const date = getField(r, 'createdAt',   'created_at')   ?? '';
+                const badgeClass = STATUS_BADGE[r.status] ?? STATUS_BADGE.pending;
+                const badgeLabel = STATUS_LABEL[r.status] ?? 'Pending';
                 return (
                   <div key={r.id} className="flex items-center gap-3 px-4 py-2.5 hover:bg-slate-50 transition-colors">
                     <div className="flex-1 min-w-0">
                       <p className="text-xs font-bold font-mono text-slate-900 truncate">{val}</p>
-                      <p className="text-[10px] text-slate-400 mt-0.5">{r.category ?? '—'} · {formatDateID(date)}</p>
+                      <p className="text-[10px] text-slate-400 mt-0.5">{r.category ?? '—'} · {date}</p>
                     </div>
-                    <span className="text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0 bg-white text-slate-600 border-slate-200">
-                      {r.status === 'verified' ? 'Verified' : r.status === 'rejected' ? 'Ditolak' : 'Pending'}
+                    <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full border shrink-0 ${badgeClass}`}>
+                      {badgeLabel}
                     </span>
                   </div>
                 );
@@ -157,11 +173,11 @@ export default function DashboardTab({ stats, reports: initial }: { stats: Stats
         {[
           { label: 'Lihat Semua Laporan', href: '?tab=laporan',   icon: FileText   },
           { label: 'Statistik',           href: '?tab=statistik', icon: TrendingUp },
-          { label: 'Pengguna',            href: '?tab=pengguna',  icon: CheckCircle2 },
+          { label: 'Pengguna',            href: '?tab=pengguna',  icon: Users },
           { label: 'IP Blacklist',        href: '?tab=blacklist', icon: XCircle    },
         ].map(({ label, href, icon: Icon }) => (
           <Link key={href} href={href}
-            className="flex items-center gap-2.5 bg-white border border-slate-200 rounded-xl px-4 py-3 hover:border-slate-300 hover:bg-slate-50 transition-all group">
+            className="flex items-center gap-2.5 bg-white border border-slate-200 rounded-lg px-4 py-3 hover:border-slate-300 hover:bg-slate-50 transition-all group">
             <Icon className="w-4 h-4 text-slate-400 shrink-0" />
             <span className="text-xs font-semibold text-slate-700 group-hover:text-slate-900 transition-colors">{label}</span>
             <ArrowRight className="w-3 h-3 text-slate-300 ml-auto group-hover:text-slate-500 transition-colors" />

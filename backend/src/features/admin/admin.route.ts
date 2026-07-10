@@ -1,7 +1,7 @@
 import type { FastifyInstance } from "fastify";
 import { db } from "../../core/db.js";
 import { reports, users, evidence, articles } from "../../core/schema.js";
-import { eq, desc, count, sql } from "drizzle-orm";
+import { eq, desc, count, sql, gte } from "drizzle-orm";
 import { requireAdmin } from "../../core/auth.middleware.js";
 import { deleteFile } from "../../core/storage.js";
 
@@ -15,11 +15,24 @@ function slugify(text: string) {
 export async function adminRoutes(app: FastifyInstance) {
   // ── STATS ──────────────────────────────────────────────────────────────────
   app.get("/stats", { preHandler: requireAdmin }, async () => {
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
+
     const [totalReports] = await db.select({ count: count() }).from(reports);
     const [totalUsers]   = await db.select({ count: count() }).from(users);
     const [pending]      = await db.select({ count: count() }).from(reports).where(eq(reports.status, "pending"));
+    const [verified]     = await db.select({ count: count() }).from(reports).where(eq(reports.status, "verified"));
+    const [rejected]     = await db.select({ count: count() }).from(reports).where(eq(reports.status, "rejected"));
+    const [newUsers]     = await db.select({ count: count() }).from(users).where(gte(users.createdAt, sevenDaysAgo));
+
     return {
-      data: { totalReports: totalReports.count, totalUsers: totalUsers.count, pending: pending.count },
+      data: {
+        totalReports: totalReports.count,
+        totalUsers:   totalUsers.count,
+        pending:      pending.count,
+        verified:     verified.count,
+        rejected:     rejected.count,
+        newUsers:     newUsers.count,
+      },
     };
   });
 
