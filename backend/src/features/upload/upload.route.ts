@@ -5,7 +5,10 @@ import { saveFile, validateImageBuffer, type UploadFolder } from "../../core/sto
 const ALLOWED_FOLDERS = new Set<UploadFolder>(["reports", "articles"]);
 
 export async function uploadRoutes(app: FastifyInstance) {
-  app.post("/", { preHandler: requireAuth }, async (req, reply) => {
+  app.post("/", {
+  preHandler: requireAuth,
+  config: { rateLimit: { max: 10, timeWindow: "1 minute" } },
+}, async (req, reply) => {
     const data = await req.file();
 
     if (!data) return reply.code(400).send({ error: "Tidak ada file yang dikirim." });

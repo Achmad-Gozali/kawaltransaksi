@@ -397,7 +397,10 @@ app.get("/laporan-stats", async () => {
     return { data: { ...report, robotStatus: status } };
   });
 
-  app.post("/:id/evidence", { preHandler: requireAuth }, async (req, reply) => {
+    app.post("/:id/evidence", {
+    preHandler: requireAuth,
+    config: { rateLimit: { max: 10, timeWindow: "1 minute" } },
+    }, async (req, reply) => {
     const { id } = req.params as { id: string };
     const [report] = await db
       .select()
