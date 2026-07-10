@@ -3,9 +3,11 @@ import { db } from "../../core/db.js";
 import { reports, evidence } from "../../core/schema.js";
 import { eq, desc, count, and, sql } from "drizzle-orm";
 import { requireAuth } from "../../core/auth.middleware.js";
-import { saveFile } from "../../core/storage.js";
+import { saveFile, validateImageBuffer } from "../../core/storage.js";
 import { checkSpam, checkCompleteness } from "../../core/robot.js";
 import { verifyTurnstile } from "../../core/turnstile.js";
+
+const MAX_FILES_PER_REQUEST = 10;
 
 export async function reportsRoutes(app: FastifyInstance) {
   app.get("/public/recent", async () => {
@@ -227,13 +229,11 @@ export async function reportsRoutes(app: FastifyInstance) {
     return { data: rows };
   });
 
-  app.get("/laporan-stats", async () => {
+app.get("/laporan-stats", async () => {
     const data = await db
       .select({
         target_type: reports.targetType,
-        bank_name: sql<
-          string | null
-        >`COALESCE(${reports.bankName}, ${reports.walletName})`,
+        bank_name: sql<string | null>`COALESCE(${reports.bankName}, ${reports.walletName})`,
         category: reports.category,
         status: reports.status,
         created_at: reports.createdAt,
@@ -307,7 +307,6 @@ export async function reportsRoutes(app: FastifyInstance) {
     return { data: report };
   });
 
-  // ── POST / — Buat laporan baru dengan robot check ──────────────────────
   app.post("/", {
   preHandler: requireAuth,
   config: { rateLimit: { max: 3, timeWindow: "1 hour" } },
@@ -339,7 +338,6 @@ export async function reportsRoutes(app: FastifyInstance) {
     if (!turnstileValid)
       return reply.status(400).send({ error: "Verifikasi keamanan gagal. Silakan coba lagi." });
 
-    // [1] SPAM CHECK — tolak sebelum masuk DB
     const spamResult = await checkSpam({
       userId: req.user!.userId,
       targetType,
@@ -351,7 +349,6 @@ export async function reportsRoutes(app: FastifyInstance) {
       return reply.status(400).send({ error: spamResult.reason });
     }
 
-    // [2] COMPLETENESS CHECK — tentukan status
     const status = await checkCompleteness({
       userId: req.user!.userId,
       description,
@@ -363,7 +360,6 @@ export async function reportsRoutes(app: FastifyInstance) {
       evidenceUrls: evidenceUrls ?? [],
     });
 
-    // [3] SIMPAN KE DB
     const [report] = await db
       .insert(reports)
       .values({
@@ -390,7 +386,6 @@ export async function reportsRoutes(app: FastifyInstance) {
       })
       .returning();
 
-    // [4] SIMPAN EVIDENCE
     if (evidenceUrls?.length) {
       await db
         .insert(evidence)
@@ -415,12 +410,26 @@ export async function reportsRoutes(app: FastifyInstance) {
 
     const parts = req.files();
     const saved: string[] = [];
+    let fileCount = 0;
+
     for await (const part of parts) {
+      fileCount++;
+      if (fileCount > MAX_FILES_PER_REQUEST) {
+        return reply.status(400).send({ error: `Maksimal ${MAX_FILES_PER_REQUEST} file per permintaan.` });
+      }
+
       const buffer = await part.toBuffer();
-      const url = await saveFile(buffer, part.filename, "reports");
+      const validation = validateImageBuffer(buffer, part.mimetype);
+
+      if (!validation.valid) {
+        return reply.status(400).send({ error: validation.error });
+      }
+
+      const url = await saveFile(buffer, `evidence${validation.ext}`, "reports");
       await db.insert(evidence).values({ reportId: id, url });
       saved.push(url);
     }
+
     return { data: saved };
   });
 

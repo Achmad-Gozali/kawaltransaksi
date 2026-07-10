@@ -5,6 +5,38 @@ import { createId } from "@paralleldrive/cuid2";
 const UPLOAD_DIR = process.env.UPLOAD_DIR || "./uploads";
 export type UploadFolder = "reports" | "articles";
 
+const ALLOWED_MIME = new Set(["image/jpeg", "image/png"]);
+const MAX_SIZE = 5 * 1024 * 1024;
+
+export interface ImageValidationResult {
+  valid: boolean;
+  error?: string;
+  ext?: ".jpg" | ".png";
+}
+
+export function validateImageBuffer(buffer: Buffer, mimetype: string): ImageValidationResult {
+  if (!ALLOWED_MIME.has(mimetype)) {
+    return { valid: false, error: "Tipe file tidak didukung. Hanya JPEG dan PNG." };
+  }
+
+  if (buffer.length > MAX_SIZE) {
+    return { valid: false, error: "Ukuran file melebihi batas 5MB." };
+  }
+
+  const isJpeg = buffer[0] === 0xff && buffer[1] === 0xd8 && buffer[2] === 0xff;
+  const isPng =
+    buffer[0] === 0x89 &&
+    buffer[1] === 0x50 &&
+    buffer[2] === 0x4e &&
+    buffer[3] === 0x47;
+
+  if (!isJpeg && !isPng) {
+    return { valid: false, error: "File tidak valid atau telah dimanipulasi." };
+  }
+
+  return { valid: true, ext: mimetype === "image/png" ? ".png" : ".jpg" };
+}
+
 export async function saveFile(
   buffer: Buffer,
   originalName: string,
