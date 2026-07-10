@@ -63,7 +63,7 @@ export default function DashboardTab({ stats, reports: initial }: { stats: Dashb
       {/* Stat cards */}
       <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
         {cards.map(({ label, value, icon: Icon }) => (
-          <div key={label} className="bg-slate-50 rounded-lg p-3">
+          <div key={label} className="bg-white border border-slate-200 rounded-lg p-3">
             <div className="flex items-center justify-between mb-2">
               <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest">{label}</p>
               <Icon className="w-3.5 h-3.5 text-slate-400" />

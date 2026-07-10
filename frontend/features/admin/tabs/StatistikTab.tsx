@@ -13,7 +13,7 @@ function getField(r: Report, camel: keyof Report, snake: keyof Report) {
 
 function StatCard({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="bg-slate-50 rounded-lg p-3">
+    <div className="bg-white border border-slate-200 rounded-lg p-3">
       <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{label}</p>
       <p className="text-xl font-black text-slate-900">{value}</p>
     </div>
