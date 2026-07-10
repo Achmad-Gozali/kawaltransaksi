@@ -4,17 +4,24 @@ import type { JwtPayload } from "../types.js";
 
 export async function requireAuth(req: FastifyRequest, reply: FastifyReply) {
   const token = req.headers.authorization?.split(" ")[1];
-  if (!token) return reply.status(401).send({ error: "Unauthorized" });
+  if (!token) {
+    reply.status(401).send({ error: "Unauthorized" });
+    return false;
+  }
   try {
     req.user = jwt.verify(token, process.env.JWT_ACCESS_SECRET!) as JwtPayload;
+    return true;
   } catch {
-    return reply.status(401).send({ error: "Invalid token" });
+    reply.status(401).send({ error: "Invalid token" });
+    return false;
   }
 }
 
 export async function requireAdmin(req: FastifyRequest, reply: FastifyReply) {
-  await requireAuth(req, reply);
+  const authenticated = await requireAuth(req, reply);
+  if (!authenticated) return;
+
   if (req.user?.role !== "admin") {
-    return reply.status(403).send({ error: "Forbidden" });
+    reply.status(403).send({ error: "Forbidden" });
   }
 }

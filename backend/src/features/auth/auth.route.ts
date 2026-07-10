@@ -10,6 +10,26 @@ import { eq } from "drizzle-orm";
 import { sendOtpEmail, sendPasswordResetEmail } from "../../core/mailer.js";
 import { verifyTurnstile } from "../../core/turnstile.js";
 
+const ALLOWED_EMAIL_DOMAINS = [
+  "gmail.com", "yahoo.com", "yahoo.co.id", "outlook.com", "hotmail.com",
+  "icloud.com", "live.com", "protonmail.com", "mail.com", "googlemail.com",
+];
+
+function isEmailDomainAllowed(email: string): boolean {
+  const parts = email.toLowerCase().trim().split("@");
+  if (parts.length !== 2 || !parts[1]) return false;
+  return ALLOWED_EMAIL_DOMAINS.includes(parts[1]);
+}
+
+function isPasswordStrong(password: string): boolean {
+  return (
+    password.length >= 8 &&
+    /[A-Z]/.test(password) &&
+    /[0-9]/.test(password) &&
+    /[!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/?]/.test(password)
+  );
+}
+
 function signTokens(userId: string, role: string) {
   const accessToken  = jwt.sign({ userId, role }, process.env.JWT_ACCESS_SECRET!,  { expiresIn: "15m" });
   const refreshToken = jwt.sign({ userId },       process.env.JWT_REFRESH_SECRET!, { expiresIn: "7d"  });
@@ -79,13 +99,21 @@ export async function authRoutes(app: FastifyInstance) {
     if (!turnstileValid)
       return reply.status(400).send({ error: "Verifikasi keamanan gagal. Silakan coba lagi." });
 
-    const [existing] = await db.select().from(users).where(eq(users.email, email)).limit(1);
+    const sanitizedEmail = email.trim().toLowerCase();
+
+    if (!isEmailDomainAllowed(sanitizedEmail))
+      return reply.status(400).send({ error: "Gunakan email dari Gmail, Yahoo, Outlook, iCloud, atau ProtonMail." });
+
+    if (!isPasswordStrong(password))
+      return reply.status(400).send({ error: "Kata sandi harus minimal 8 karakter, mengandung huruf besar, angka, dan simbol." });
+
+    const [existing] = await db.select().from(users).where(eq(users.email, sanitizedEmail)).limit(1);
     if (existing) return reply.status(409).send({ error: "Email sudah terdaftar." });
 
     const passwordHash = await hash(password);
     const [user] = await db.insert(users).values({
       name:       name.trim(),
-      email:      email.trim().toLowerCase(),
+      email:      sanitizedEmail,
       passwordHash,
       isVerified: false,
     }).returning();
@@ -268,8 +296,8 @@ export async function authRoutes(app: FastifyInstance) {
 
       if (!currentPassword || !newPassword)
         return reply.status(400).send({ error: "Semua field wajib diisi." });
-      if (newPassword.length < 8)
-        return reply.status(400).send({ error: "Password baru minimal 8 karakter." });
+      if (!isPasswordStrong(newPassword))
+        return reply.status(400).send({ error: "Kata sandi baru harus minimal 8 karakter, mengandung huruf besar, angka, dan simbol." });
 
       const [user] = await db.select().from(users).where(eq(users.id, payload.userId)).limit(1);
       if (!user) return reply.status(404).send({ error: "User tidak ditemukan." });
@@ -318,7 +346,8 @@ export async function authRoutes(app: FastifyInstance) {
   }, async (req, reply) => {
     const { token, password } = req.body as { token: string; password: string };
     if (!token || !password) return reply.status(400).send({ error: "Token dan password wajib diisi." });
-    if (password.length < 8) return reply.status(400).send({ error: "Password minimal 8 karakter." });
+    if (!isPasswordStrong(password))
+      return reply.status(400).send({ error: "Kata sandi harus minimal 8 karakter, mengandung huruf besar, angka, dan simbol." });
 
     const [resetToken] = await db.select().from(passwordResetTokens)
       .where(eq(passwordResetTokens.token, token)).limit(1);
