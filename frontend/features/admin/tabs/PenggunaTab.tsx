@@ -1,12 +1,20 @@
 'use client';
 
 import { useState } from 'react';
-import { Search, Shield, ShieldOff, User, Crown } from 'lucide-react';
+import { Search, Shield, ShieldOff, User, Crown, FileText } from 'lucide-react';
 import type { AdminUser } from '@/features/admin/types';
 import { formatDateID } from '@/core/utils';
 import { authClient } from '@/core/auth/client';
 
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+
+function getReportCount(u: AdminUser): number {
+  return u.reportCount ?? u.report_count ?? 0;
+}
+
+function getCreatedAt(u: AdminUser): string {
+  return u.createdAt ?? u.created_at ?? '';
+}
 
 export default function PenggunaTab({ users: initial }: { users: AdminUser[] }) {
   const [users, setUsers]     = useState(initial);
@@ -70,53 +78,64 @@ export default function PenggunaTab({ users: initial }: { users: AdminUser[] }) 
           <div className="bg-white border border-slate-200 rounded-xl py-10 text-center text-sm text-slate-400">
             Tidak ada pengguna ditemukan.
           </div>
-        ) : filtered.map(u => (
-          <div key={u.id} className="bg-white border border-slate-200 rounded-xl px-4 py-3 flex items-center gap-3 hover:border-slate-300 transition-colors">
-            {/* Avatar */}
-            <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 font-bold text-sm ${
-              u.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-600'
-            }`}>
-              {u.name.charAt(0).toUpperCase()}
-            </div>
+        ) : filtered.map(u => {
+          const reportCount = getReportCount(u);
+          const createdAt   = getCreatedAt(u);
 
-            {/* Info */}
-            <div className="flex-1 min-w-0">
-              <div className="flex items-center gap-1.5">
-                <p className="text-sm font-semibold text-slate-900 truncate">{u.name}</p>
-                {u.role === 'admin' && <Crown className="w-3 h-3 text-purple-500 shrink-0" />}
+          return (
+            <div key={u.id} className="bg-white border border-slate-200 rounded-xl px-4 py-3 flex items-center gap-3 hover:border-slate-300 transition-colors">
+              {/* Avatar */}
+              <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 font-bold text-sm ${
+                u.role === 'admin' ? 'bg-purple-100 text-purple-700' : 'bg-slate-100 text-slate-600'
+              }`}>
+                {u.name.charAt(0).toUpperCase()}
               </div>
-              <p className="text-xs text-slate-400 truncate">{u.email}</p>
-            </div>
 
-            {/* Role badge */}
-            <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border shrink-0 hidden sm:inline-flex items-center gap-1 ${
-              u.role === 'admin'
-                ? 'bg-purple-50 text-purple-700 border-purple-200'
-                : 'bg-slate-50 text-slate-600 border-slate-200'
-            }`}>
-              {u.role === 'admin' ? <><Shield className="w-2.5 h-2.5" /> Admin</> : <><User className="w-2.5 h-2.5" /> User</>}
-            </span>
+              {/* Info */}
+              <div className="flex-1 min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <p className="text-sm font-semibold text-slate-900 truncate">{u.name}</p>
+                  {u.role === 'admin' && <Crown className="w-3 h-3 text-purple-500 shrink-0" />}
+                </div>
+                <p className="text-xs text-slate-400 truncate">{u.email}</p>
+              </div>
 
-            {/* Tanggal */}
-            <p className="text-[10px] text-slate-400 shrink-0 hidden md:block">{formatDateID(u.createdAt)}</p>
+              {/* Report count */}
+              <div className="hidden sm:flex items-center gap-1 text-xs text-slate-500 shrink-0" title="Jumlah laporan yang pernah dikirim">
+                <FileText className="w-3 h-3 text-slate-400" />
+                <span>{reportCount} laporan</span>
+              </div>
 
-            {/* Action */}
-            <button
-              onClick={() => toggleRole(u.id, u.role)}
-              disabled={loading === u.id}
-              className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold rounded-lg border transition-all disabled:opacity-40 ${
+              {/* Role badge */}
+              <span className={`text-[10px] font-bold px-2.5 py-1 rounded-full border shrink-0 hidden sm:inline-flex items-center gap-1 ${
                 u.role === 'admin'
-                  ? 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200'
-                  : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-purple-50 hover:text-purple-700 hover:border-purple-200'
-              }`}
-            >
-              {loading === u.id ? '...' : u.role === 'admin'
-                ? <><ShieldOff className="w-3 h-3" /> Jadikan User</>
-                : <><Shield className="w-3 h-3" /> Jadikan Admin</>
-              }
-            </button>
-          </div>
-        ))}
+                  ? 'bg-purple-50 text-purple-700 border-purple-200'
+                  : 'bg-slate-50 text-slate-600 border-slate-200'
+              }`}>
+                {u.role === 'admin' ? <><Shield className="w-2.5 h-2.5" /> Admin</> : <><User className="w-2.5 h-2.5" /> User</>}
+              </span>
+
+              {/* Tanggal */}
+              <p className="text-[10px] text-slate-400 shrink-0 hidden md:block">{formatDateID(createdAt)}</p>
+
+              {/* Action */}
+              <button
+                onClick={() => toggleRole(u.id, u.role)}
+                disabled={loading === u.id}
+                className={`shrink-0 flex items-center gap-1.5 px-3 py-1.5 text-[10px] font-bold rounded-lg border transition-all disabled:opacity-40 ${
+                  u.role === 'admin'
+                    ? 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-red-50 hover:text-red-600 hover:border-red-200'
+                    : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-purple-50 hover:text-purple-700 hover:border-purple-200'
+                }`}
+              >
+                {loading === u.id ? '...' : u.role === 'admin'
+                  ? <><ShieldOff className="w-3 h-3" /> Jadikan User</>
+                  : <><Shield className="w-3 h-3" /> Jadikan Admin</>
+                }
+              </button>
+            </div>
+          );
+        })}
       </div>
     </div>
   );

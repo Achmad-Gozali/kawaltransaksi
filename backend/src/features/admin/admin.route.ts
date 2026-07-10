@@ -25,9 +25,10 @@ export async function adminRoutes(app: FastifyInstance) {
 
   // ── REPORTS ────────────────────────────────────────────────────────────────
   app.get("/reports", { preHandler: requireAdmin }, async (req) => {
-    const { status, page = "1", limit = "20", q = "" } = req.query as any;
+    const { status, targetType, page = "1", limit = "20", q = "" } = req.query as any;
     const offset       = (Number(page) - 1) * Number(limit);
     const statusFilter = status ? sql`AND r.status = ${status}` : sql``;
+    const typeFilter   = targetType ? sql`AND r.target_type = ${targetType}` : sql``;
     const searchFilter = q.trim()
       ? sql`AND (r.target_value ILIKE ${"%" + q.trim() + "%"} OR r.category ILIKE ${"%" + q.trim() + "%"} OR u.email ILIKE ${"%" + q.trim() + "%"})`
       : sql``;
@@ -40,7 +41,7 @@ export async function adminRoutes(app: FastifyInstance) {
       FROM reports r
       LEFT JOIN evidence e ON e.report_id = r.id
       LEFT JOIN users u ON u.id = r.user_id
-      WHERE 1=1 ${statusFilter} ${searchFilter}
+      WHERE 1=1 ${statusFilter} ${typeFilter} ${searchFilter}
       GROUP BY r.id, u.name, u.email
       ORDER BY r.created_at DESC
       LIMIT ${Number(limit)} OFFSET ${offset}
@@ -61,10 +62,15 @@ export async function adminRoutes(app: FastifyInstance) {
 
   // ── USERS ──────────────────────────────────────────────────────────────────
   app.get("/users", { preHandler: requireAdmin }, async () => {
-    const data = await db.select({
-      id: users.id, name: users.name, email: users.email,
-      role: users.role, createdAt: users.createdAt,
-    }).from(users).orderBy(desc(users.createdAt));
+    const data = await db.execute(sql`
+      SELECT
+        u.id, u.name, u.email, u.role, u.created_at,
+        COUNT(r.id)::int AS report_count
+      FROM users u
+      LEFT JOIN reports r ON r.user_id = u.id
+      GROUP BY u.id
+      ORDER BY u.created_at DESC
+    `);
     return { data };
   });
 

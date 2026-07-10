@@ -50,6 +50,10 @@ export interface AdminUser {
   email: string;
   role: string;
   createdAt: string;
+  reportCount?: number;
+  // snake_case fallback dari API
+  created_at?: string;
+  report_count?: number;
 }
 
 export interface Stats {

@@ -37,18 +37,41 @@ function getField<T>(r: Report, camel: keyof Report, snake: keyof Report): T | n
 interface Props { reports: Report[]; token: string; initialSearch?: string; }
 
 export default function ReportsTab({ reports: initial, token, initialSearch = '' }: Props) {
-  const [reports, setReports]   = useState<Report[]>(initial);
-  const [search, setSearch]     = useState(initialSearch);
-  const [loading, setLoading]   = useState<string | null>(null);
-  const [expanded, setExpanded] = useState<string | null>(null);
+  const [reports, setReports]         = useState<Report[]>(initial);
+  const [search, setSearch]           = useState(initialSearch);
+  const [statusFilter, setStatusFilter] = useState('');
+  const [typeFilter, setTypeFilter]   = useState('');
+  const [loading, setLoading]         = useState<string | null>(null);
+  const [bulkLoading, setBulkLoading] = useState(false);
+  const [expanded, setExpanded]       = useState<string | null>(null);
+  const [selected, setSelected]       = useState<Set<string>>(new Set());
 
   const filtered = reports.filter(r => {
     const val       = (getField(r, 'targetValue', 'target_value') as string) ?? '';
+    const type      = (getField(r, 'targetType',  'target_type')  as string) ?? '';
     const cat       = r.category ?? '';
     const userEmail = (r as any).user_email ?? '';
     const q         = search.toLowerCase();
-    return val.toLowerCase().includes(q) || cat.toLowerCase().includes(q) || userEmail.toLowerCase().includes(q);
+    const matchesQ      = val.toLowerCase().includes(q) || cat.toLowerCase().includes(q) || userEmail.toLowerCase().includes(q);
+    const matchesStatus = !statusFilter || r.status === statusFilter;
+    const matchesType   = !typeFilter || type === typeFilter;
+    return matchesQ && matchesStatus && matchesType;
   });
+
+  const pendingSelectedIds = Array.from(selected).filter(id => {
+    const r = reports.find(x => x.id === id);
+    return r?.status === 'pending';
+  });
+
+  const toggleSelect = (id: string) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id); else next.add(id);
+      return next;
+    });
+  };
+
+  const clearSelection = () => setSelected(new Set());
 
   const updateStatus = async (id: string, status: 'verified' | 'rejected') => {
     setLoading(id);
@@ -65,17 +88,89 @@ export default function ReportsTab({ reports: initial, token, initialSearch = ''
     }
   };
 
+  const bulkUpdateStatus = async (status: 'verified' | 'rejected') => {
+    setBulkLoading(true);
+    try {
+      const t = authClient.getToken() ?? token;
+      const ids = pendingSelectedIds;
+      await Promise.all(ids.map(id =>
+        fetch(`${API_URL}/api/admin/reports/${id}/status`, {
+          method:  'PATCH',
+          headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${t}` },
+          body:    JSON.stringify({ status }),
+        })
+      ));
+      setReports(prev => prev.map(r => ids.includes(r.id) ? { ...r, status } : r));
+      clearSelection();
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
   return (
     <div className="space-y-3">
-      <div className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
-        <input
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          placeholder="Cari nomor, kategori, atau email..."
-          className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:border-emerald-400"
-        />
+      <div className="flex flex-wrap gap-2">
+        <div className="relative flex-1 min-w-[200px]">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+          <input
+            value={search}
+            onChange={e => setSearch(e.target.value)}
+            placeholder="Cari nomor, kategori, atau email..."
+            className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:border-emerald-400"
+          />
+        </div>
+        <select
+          value={statusFilter}
+          onChange={e => setStatusFilter(e.target.value)}
+          className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:border-emerald-400 text-slate-700"
+        >
+          <option value="">Semua status</option>
+          <option value="pending">Pending</option>
+          <option value="verified">Terverifikasi</option>
+          <option value="rejected">Ditolak</option>
+        </select>
+        <select
+          value={typeFilter}
+          onChange={e => setTypeFilter(e.target.value)}
+          className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-sm outline-none focus:border-emerald-400 text-slate-700"
+        >
+          <option value="">Semua tipe</option>
+          <option value="phone">Nomor HP</option>
+          <option value="bank_account">Rekening Bank</option>
+          <option value="ewallet">E-Wallet</option>
+        </select>
       </div>
+
+      {selected.size > 0 && (
+        <div className="bg-slate-100 rounded-lg px-3 py-2 flex items-center gap-2 text-sm text-slate-600">
+          <span>{selected.size} laporan dipilih</span>
+          {pendingSelectedIds.length < selected.size && (
+            <span className="text-xs text-slate-400">({pendingSelectedIds.length} pending yang bisa diproses)</span>
+          )}
+          <div className="ml-auto flex gap-2">
+            <button
+              onClick={() => bulkUpdateStatus('verified')}
+              disabled={bulkLoading || pendingSelectedIds.length === 0}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition-all disabled:opacity-40"
+            >
+              <CheckCircle className="w-3.5 h-3.5" /> Verifikasi semua
+            </button>
+            <button
+              onClick={() => bulkUpdateStatus('rejected')}
+              disabled={bulkLoading || pendingSelectedIds.length === 0}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500 hover:bg-red-600 text-white text-xs font-semibold rounded-lg transition-all disabled:opacity-40"
+            >
+              <XCircle className="w-3.5 h-3.5" /> Tolak semua
+            </button>
+            <button
+              onClick={clearSelection}
+              className="px-3 py-1.5 text-xs font-semibold text-slate-500 hover:text-slate-700 transition-colors"
+            >
+              Batal
+            </button>
+          </div>
+        </div>
+      )}
 
       <div className="space-y-2">
         {filtered.length === 0 && (
@@ -83,6 +178,7 @@ export default function ReportsTab({ reports: initial, token, initialSearch = ''
         )}
         {filtered.map(r => {
           const isExpanded   = expanded === r.id;
+          const isSelected   = selected.has(r.id);
           const status       = STATUS_MAP[r.status] ?? STATUS_MAP.pending;
           const targetValue  = (getField(r, 'targetValue',         'target_value')          as string)   ?? '';
           const targetType   = (getField(r, 'targetType',          'target_type')           as string)   ?? '';
@@ -102,9 +198,15 @@ export default function ReportsTab({ reports: initial, token, initialSearch = ''
           const userName     = (r as any).user_name  ?? null;
 
           return (
-            <div key={r.id} className="bg-white border border-slate-200 rounded-lg overflow-hidden">
+            <div key={r.id} className={`bg-white border rounded-lg overflow-hidden transition-colors ${isSelected ? 'border-emerald-300' : 'border-slate-200'}`}>
               {/* Row utama */}
               <div className="flex items-center gap-3 px-4 py-3">
+                <input
+                  type="checkbox"
+                  checked={isSelected}
+                  onChange={() => toggleSelect(r.id)}
+                  className="shrink-0 w-4 h-4 accent-emerald-600"
+                />
                 <div className="flex-1 min-w-0 grid grid-cols-2 sm:grid-cols-5 gap-x-4 gap-y-1 text-xs">
                   <div>
                     <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">Nomor</p>
