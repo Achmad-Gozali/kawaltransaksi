@@ -423,21 +423,48 @@ export async function authRoutes(app: FastifyInstance) {
       return reply.redirect(`${frontendUrl}/login?error=google_cancelled`);
 
     try {
-      const oauth2 = getOAuthClient();
-      const { tokens } = await oauth2.getToken(code);
-      oauth2.setCredentials(tokens);
+      const { execFile } = await import("child_process");
+      const { promisify } = await import("util");
+      const execFileAsync = promisify(execFile);
 
-      const oauth2Api = google.oauth2({ version: "v2", auth: oauth2 });
-      const { data } = await oauth2Api.userinfo.get();
+      const tokenParams = new URLSearchParams({
+        code,
+        client_id: process.env.GOOGLE_CLIENT_ID!,
+        client_secret: process.env.GOOGLE_CLIENT_SECRET!,
+        redirect_uri: process.env.GOOGLE_REDIRECT_URI!,
+        grant_type: "authorization_code",
+      });
 
-      if (!data.email || !data.name)
+      const { stdout: tokenStdout } = await execFileAsync("curl", [
+        "-sS", "-X", "POST",
+        "https://oauth2.googleapis.com/token",
+        "--max-time", "10",
+        "-d", tokenParams.toString(),
+      ]);
+
+      const tokenData = JSON.parse(tokenStdout);
+      if (!tokenData.access_token) {
+        app.log.error({ tokenData }, "Google token exchange failed");
+        return reply.redirect(`${frontendUrl}/login?error=google_failed`);
+      }
+
+      const { stdout: userStdout } = await execFileAsync("curl", [
+        "-sS", "-X", "GET",
+        "https://www.googleapis.com/oauth2/v2/userinfo",
+        "--max-time", "10",
+        "-H", `Authorization: Bearer ${tokenData.access_token}`,
+      ]);
+
+      const userData = JSON.parse(userStdout);
+
+      if (!userData.email || !userData.name)
         return reply.redirect(`${frontendUrl}/login?error=google_no_email`);
 
-      const email = data.email.toLowerCase();
+      const email = userData.email.toLowerCase();
       let [user] = await db.select().from(users).where(eq(users.email, email)).limit(1);
 
       if (!user) {
-        [user] = await db.insert(users).values({ name: data.name, email, isVerified: true }).returning();
+        [user] = await db.insert(users).values({ name: userData.name, email, isVerified: true }).returning();
       }
 
       const { accessToken, refreshToken } = signTokens(user.id, user.role);
