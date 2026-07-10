@@ -33,15 +33,16 @@ export default async function AdminPage() {
 
   const [statsRes, reportsRes, usersRes] = await Promise.all([
     adminFetch('/api/admin/stats', token),
-    adminFetch('/api/admin/reports', token),
+    adminFetch('/api/admin/reports?limit=1000', token),
     adminFetch('/api/admin/users', token),
   ]);
 
   const stats = {
     total:    Number(statsRes.data?.totalReports ?? 0),
     pending:  Number(statsRes.data?.pending      ?? 0),
-    verified: Number(statsRes.data?.totalReports ?? 0) - Number(statsRes.data?.pending ?? 0),
-    rejected: 0,
+    verified: Number(statsRes.data?.verified     ?? 0),
+    rejected: Number(statsRes.data?.rejected     ?? 0),
+    newUsers: Number(statsRes.data?.newUsers     ?? 0),
   };
 
   return (
