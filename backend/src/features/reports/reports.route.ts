@@ -229,10 +229,9 @@ export async function reportsRoutes(app: FastifyInstance) {
     return { data: rows };
   });
 
-app.get("/laporan-stats", async () => {
+  app.get("/laporan-stats", async () => {
     const data = await db
       .select({
-        target_type: reports.targetType,
         bank_name: sql<string | null>`COALESCE(${reports.bankName}, ${reports.walletName})`,
         category: reports.category,
         status: reports.status,
@@ -308,8 +307,8 @@ app.get("/laporan-stats", async () => {
   });
 
   app.post("/", {
-  preHandler: requireAuth,
-  config: { rateLimit: { max: 3, timeWindow: "1 hour" } },
+    preHandler: requireAuth,
+    config: { rateLimit: { max: 3, timeWindow: "1 hour" } },
   }, async (req, reply) => {
     const {
       targetType,
@@ -338,10 +337,14 @@ app.get("/laporan-stats", async () => {
     if (!turnstileValid)
       return reply.status(400).send({ error: "Verifikasi keamanan gagal. Silakan coba lagi." });
 
+    const cleanTargetValue = typeof targetValue === "string" ? targetValue.replace(/\D/g, "") : "";
+    if (!cleanTargetValue)
+      return reply.status(400).send({ error: "Nomor tujuan wajib diisi dan hanya boleh berisi angka." });
+
     const spamResult = await checkSpam({
       userId: req.user!.userId,
       targetType,
-      targetValue,
+      targetValue: cleanTargetValue,
       description: description ?? "",
     });
 
@@ -356,7 +359,7 @@ app.get("/laporan-stats", async () => {
       category,
       amount,
       targetType,
-      targetValue,
+      targetValue: cleanTargetValue,
       evidenceUrls: evidenceUrls ?? [],
     });
 
@@ -365,7 +368,7 @@ app.get("/laporan-stats", async () => {
       .values({
         userId: req.user!.userId,
         targetType,
-        targetValue,
+        targetValue: cleanTargetValue,
         targetName: targetName ?? null,
         bankName: bankName ?? null,
         walletName: walletName ?? null,
@@ -397,10 +400,10 @@ app.get("/laporan-stats", async () => {
     return { data: { ...report, robotStatus: status } };
   });
 
-    app.post("/:id/evidence", {
+  app.post("/:id/evidence", {
     preHandler: requireAuth,
     config: { rateLimit: { max: 10, timeWindow: "1 minute" } },
-    }, async (req, reply) => {
+  }, async (req, reply) => {
     const { id } = req.params as { id: string };
     const [report] = await db
       .select()

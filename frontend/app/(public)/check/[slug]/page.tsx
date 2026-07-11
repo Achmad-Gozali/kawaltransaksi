@@ -38,7 +38,7 @@ async function fetchBlacklistData(number: string) {
 
 export async function generateMetadata({ params }: CheckPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const realNumber = decodeSlug(slug);
+  const realNumber = decodeSlug(slug).replace(/\D/g, "");
   if (!realNumber) return { title: "Halaman tidak ditemukan - KawalTransaksi" };
 
   const pageData = await fetchCheckPageData(realNumber);
@@ -242,8 +242,8 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
 
   if (!slug || slug.length > 50) notFound();
 
-  const realNumber = decodeSlug(slug);
-  if (!realNumber || !/^\d+$/.test(realNumber)) notFound();
+  const realNumber = decodeSlug(slug).replace(/\D/g, "");
+  if (!realNumber) notFound();
 
   const defaultType       = type === "bank" ? "bank_account" : type === "ewallet" ? "ewallet" : "phone";
   const hasTypeParam      = !!type;

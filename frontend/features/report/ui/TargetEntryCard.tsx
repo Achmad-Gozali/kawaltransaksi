@@ -66,7 +66,7 @@ export function TargetEntryCard({ entry, onChange }: Props) {
         type={entry.type === 'phone' ? 'tel' : 'text'}
         inputMode="numeric"
         value={entry.number}
-        onChange={e => onChange({ ...entry, number: e.target.value })}
+        onChange={e => onChange({ ...entry, number: e.target.value.replace(/\D/g, '') })}
         placeholder={
           entry.type === 'phone' ? '08xxxxxxxxxx'
           : entry.type === 'bank_account' ? 'Nomor rekening'

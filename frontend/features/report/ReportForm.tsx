@@ -146,6 +146,12 @@ export default function ReportForm() {
       return;
     }
 
+    const cleanNumber = target.number.replace(/\D/g, '');
+    if (!cleanNumber) {
+      setError('Nomor HP, rekening, atau e-wallet wajib diisi.');
+      return;
+    }
+
     setIsLoading(true); setError(null); setUploadProgress(null);
     try {
       const freshToken = await authClient.refresh();
@@ -190,7 +196,7 @@ export default function ReportForm() {
           Authorization:  `Bearer ${authClient.getToken()}`,
         },
         body: JSON.stringify({
-          targetValue:         target.number,
+          targetValue:         cleanNumber,
           targetType:          target.type,
           targetName:          target.name?.trim() || null,
           bankName:            resolvedBankName,
@@ -216,7 +222,7 @@ export default function ReportForm() {
       const result = await res.json();
       if (result.data?.id) {
         setIsSuccess(true);
-        setTimeout(() => router.push(`/check/${encodeURIComponent(target.number)}`), 1500);
+        setTimeout(() => router.push(`/check/${encodeURIComponent(cleanNumber)}`), 1500);
       } else {
         setError(result.error || 'Gagal mengirim laporan.');
         turnstileRef.current?.reset();
