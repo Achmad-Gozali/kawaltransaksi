@@ -5,7 +5,7 @@ import AdminShell from '@/features/admin/AdminShell';
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const cookieStore  = await cookies();
   const refreshToken = cookieStore.get('refresh_token')?.value;
-  if (!refreshToken) redirect('/login?redirectTo=/admin');
+  if (!refreshToken) redirect('/');
 
   const base = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
@@ -16,7 +16,7 @@ export default async function AdminLayout({ children }: { children: React.ReactN
   });
   const refreshData = await refreshRes.json();
   const token = refreshData?.accessToken;
-  if (!token) redirect('/login?redirectTo=/admin');
+  if (!token) redirect('/');
 
   const meRes = await fetch(`${base}/api/auth/me`, {
     headers: { Authorization: `Bearer ${token}` },
