@@ -2,20 +2,99 @@
 
 import { useMemo, useRef, useEffect } from 'react';
 import Chart from 'chart.js/auto';
+import {
+  FileText, Hourglass, ShieldCheck, Wallet, TrendingUp,
+  ArrowUpRight, ArrowDownRight,
+} from 'lucide-react';
 import type { Stats, Report } from '@/features/admin/types';
 
 const AXIS_TEXT  = '#898781';
 const GRID_COLOR = '#e1e0d9';
 
+const BRAND = {
+  emeraldDeep: '#047857',
+  emerald:     '#059669',
+  emeraldSoft: '#10b981',
+  amber:       '#f59e0b',
+  rose:        '#e11d48',
+};
+
 function getField(r: Report, camel: keyof Report, snake: keyof Report) {
   return (r[camel] ?? r[snake]) as string | null | undefined;
 }
 
-function StatCard({ label, value }: { label: string; value: string | number }) {
+function calcTrend(series: number[]): number | null {
+  if (series.length < 4) return null;
+  const mid = Math.floor(series.length / 2);
+  const firstHalf  = series.slice(0, mid).reduce((a, b) => a + b, 0);
+  const secondHalf = series.slice(mid).reduce((a, b) => a + b, 0);
+  if (firstHalf === 0) return secondHalf > 0 ? 100 : 0;
+  return Math.round(((secondHalf - firstHalf) / firstHalf) * 100);
+}
+
+function Sparkline({ data, color }: { data: number[]; color: string }) {
+  if (!data || data.length < 2) return null;
+  const max = Math.max(...data, 1);
+  const min = Math.min(...data, 0);
+  const range = max - min || 1;
+  const points = data
+    .map((v, i) => {
+      const x = (i / (data.length - 1)) * 100;
+      const y = 32 - ((v - min) / range) * 28 - 2;
+      return `${x},${y}`;
+    })
+    .join(' ');
   return (
-    <div className="bg-white border border-slate-200 rounded-lg p-3">
-      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{label}</p>
-      <p className="text-xl font-black text-slate-900">{value}</p>
+    <svg viewBox="0 0 100 32" preserveAspectRatio="none" className="w-full h-8">
+      <polyline
+        points={points}
+        fill="none"
+        stroke={color}
+        strokeWidth="2.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+        vectorEffect="non-scaling-stroke"
+      />
+    </svg>
+  );
+}
+
+function StatCard({
+  icon: Icon, iconBg, iconColor, label, value, trend, spark, sparkColor,
+}: {
+  icon: React.ElementType;
+  iconBg: string;
+  iconColor: string;
+  label: string;
+  value: string | number;
+  trend?: number | null;
+  spark?: number[];
+  sparkColor: string;
+}) {
+  const isUp = (trend ?? 0) >= 0;
+  return (
+    <div className="bg-white border border-slate-200 rounded-2xl p-4 flex flex-col gap-3 hover:border-slate-300 transition-colors">
+      <div className="flex items-center justify-between">
+        <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${iconBg}`}>
+          <Icon className={`w-4 h-4 ${iconColor}`} strokeWidth={2.25} />
+        </div>
+        {trend != null && (
+          <span className={`flex items-center gap-0.5 text-[11px] font-bold ${isUp ? 'text-emerald-600' : 'text-rose-500'}`}>
+            {isUp ? <ArrowUpRight className="w-3 h-3" /> : <ArrowDownRight className="w-3 h-3" />}
+            {Math.abs(trend!)}%
+          </span>
+        )}
+      </div>
+      <div>
+        <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-1">{label}</p>
+        <p className="text-2xl font-black text-slate-900 tabular-nums">{value}</p>
+      </div>
+      {spark && spark.length > 1 && (
+        <div>
+          <Sparkline data={spark} color={sparkColor} />
+          <p className="text-[10px] text-slate-400 -mt-0.5">vs 30 hari lalu</p>
+        </div>
+      )}
     </div>
   );
 }
@@ -40,9 +119,9 @@ export default function StatistikTab({ stats, reports }: { stats: Stats; reports
 
   const data = useMemo(() => {
     const statusData = [
-      { name: 'Terverifikasi', value: stats.verified, color: '#1baf7a' },
-      { name: 'Pending',       value: stats.pending,  color: '#eda100' },
-      { name: 'Ditolak',       value: stats.rejected, color: '#e34948' },
+      { name: 'Terverifikasi', value: stats.verified, color: BRAND.emeraldSoft },
+      { name: 'Pending',       value: stats.pending,  color: BRAND.amber },
+      { name: 'Ditolak',       value: stats.rejected, color: BRAND.rose },
     ].filter(d => d.value > 0);
 
     const typeCount: Record<string, number> = {};
@@ -72,7 +151,9 @@ export default function StatistikTab({ stats, reports }: { stats: Stats; reports
       .slice(0, 6)
       .map(([name, value]) => ({ name, value }));
 
-    const trendMap: Record<string, { date: string; total: number; verified: number; pending: number; sortKey: number }> = {};
+    const trendMap: Record<string, {
+      date: string; total: number; verified: number; pending: number; loss: number; sortKey: number;
+    }> = {};
     const now   = Date.now();
     const day30 = 30 * 24 * 60 * 60 * 1000;
 
@@ -81,10 +162,11 @@ export default function StatistikTab({ stats, reports }: { stats: Stats; reports
       const date    = new Date(dateStr);
       if (!dateStr || now - date.getTime() > day30) return;
       const key = date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
-      if (!trendMap[key]) trendMap[key] = { date: key, total: 0, verified: 0, pending: 0, sortKey: date.getTime() };
+      if (!trendMap[key]) trendMap[key] = { date: key, total: 0, verified: 0, pending: 0, loss: 0, sortKey: date.getTime() };
       trendMap[key].total++;
       if (r.status === 'verified') trendMap[key].verified++;
       if (r.status === 'pending')  trendMap[key].pending++;
+      trendMap[key].loss += r.amount ?? 0;
     });
     const trendData = Object.values(trendMap).sort((a, b) => a.sortKey - b.sortKey);
 
@@ -92,7 +174,19 @@ export default function StatistikTab({ stats, reports }: { stats: Stats; reports
     const totalLoss  = reports.reduce((sum, r) => sum + (r.amount ?? 0), 0);
     const avgLoss    = withAmount.length > 0 ? Math.round(totalLoss / withAmount.length) : 0;
 
-    return { statusData, typeData, categoryData, platformData, trendData, totalLoss, avgLoss };
+    const totalSeries    = trendData.map(d => d.total);
+    const pendingSeries  = trendData.map(d => d.pending);
+    const verifiedSeries = trendData.map(d => d.verified);
+    const lossSeries     = trendData.map(d => d.loss);
+
+    return {
+      statusData, typeData, categoryData, platformData, trendData, totalLoss, avgLoss,
+      totalTrend:    calcTrend(totalSeries),
+      pendingTrend:  calcTrend(pendingSeries),
+      verifiedTrend: calcTrend(verifiedSeries),
+      lossTrend:     calcTrend(lossSeries),
+      totalSeries, pendingSeries, verifiedSeries, lossSeries,
+    };
   }, [stats, reports]);
 
   const formatRupiah = (n: number) => {
@@ -107,9 +201,9 @@ export default function StatistikTab({ stats, reports }: { stats: Stats; reports
     data: {
       labels: data.trendData.map(d => d.date),
       datasets: [
-        { label: 'Total',        data: data.trendData.map(d => d.total),    borderColor: '#2a78d6', borderWidth: 2, pointRadius: 0, tension: 0.35 },
-        { label: 'Terverifikasi', data: data.trendData.map(d => d.verified), borderColor: '#1baf7a', borderWidth: 2, pointRadius: 0, tension: 0.35 },
-        { label: 'Pending',      data: data.trendData.map(d => d.pending),  borderColor: '#eda100', borderWidth: 2, pointRadius: 0, tension: 0.35 },
+        { label: 'Total',        data: data.trendData.map(d => d.total),    borderColor: BRAND.emeraldDeep, borderWidth: 2, pointRadius: 0, tension: 0.35 },
+        { label: 'Terverifikasi', data: data.trendData.map(d => d.verified), borderColor: BRAND.emeraldSoft, borderWidth: 2, pointRadius: 0, tension: 0.35 },
+        { label: 'Pending',      data: data.trendData.map(d => d.pending),  borderColor: BRAND.amber,       borderWidth: 2, pointRadius: 0, tension: 0.35 },
       ],
     },
     options: {
@@ -135,7 +229,7 @@ export default function StatistikTab({ stats, reports }: { stats: Stats; reports
     type: 'bar',
     data: {
       labels: data.categoryData.map(d => d.name),
-      datasets: [{ data: data.categoryData.map(d => d.value), backgroundColor: '#2a78d6', borderRadius: 4, barThickness: 16 }],
+      datasets: [{ data: data.categoryData.map(d => d.value), backgroundColor: BRAND.emerald, borderRadius: 4, barThickness: 16 }],
     },
     options: {
       indexAxis: 'y',
@@ -151,17 +245,37 @@ export default function StatistikTab({ stats, reports }: { stats: Stats; reports
   return (
     <div className="space-y-4">
       {/* Overview */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-2">
-        <StatCard label="Total Laporan"   value={stats.total} />
-        <StatCard label="Pending"          value={stats.pending} />
-        <StatCard label="Terverifikasi"    value={stats.verified} />
-        <StatCard label="Total Kerugian"   value={formatRupiah(data.totalLoss)} />
-        <StatCard label="Rata-rata"        value={formatRupiah(data.avgLoss)} />
+      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+        <StatCard
+          icon={FileText} iconBg="bg-emerald-50" iconColor="text-emerald-600"
+          label="Total Laporan" value={stats.total}
+          trend={data.totalTrend} spark={data.totalSeries} sparkColor={BRAND.emeraldDeep}
+        />
+        <StatCard
+          icon={Hourglass} iconBg="bg-amber-50" iconColor="text-amber-600"
+          label="Pending" value={stats.pending}
+          trend={data.pendingTrend} spark={data.pendingSeries} sparkColor={BRAND.amber}
+        />
+        <StatCard
+          icon={ShieldCheck} iconBg="bg-emerald-50" iconColor="text-emerald-600"
+          label="Terverifikasi" value={stats.verified}
+          trend={data.verifiedTrend} spark={data.verifiedSeries} sparkColor={BRAND.emeraldSoft}
+        />
+        <StatCard
+          icon={Wallet} iconBg="bg-rose-50" iconColor="text-rose-600"
+          label="Total Kerugian" value={formatRupiah(data.totalLoss)}
+          trend={data.lossTrend} spark={data.lossSeries} sparkColor={BRAND.rose}
+        />
+        <StatCard
+          icon={TrendingUp} iconBg="bg-slate-100" iconColor="text-slate-600"
+          label="Rata-rata" value={formatRupiah(data.avgLoss)}
+          trend={data.lossTrend} spark={data.lossSeries} sparkColor={BRAND.emerald}
+        />
       </div>
 
       {/* Trend + Status */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-        <div className="lg:col-span-2 bg-white border border-slate-200 rounded-lg p-5">
+        <div className="lg:col-span-2 bg-white border border-slate-200 rounded-2xl p-5">
           <p className="text-sm font-bold text-slate-800 mb-4">Tren Laporan — 30 Hari Terakhir</p>
           {data.trendData.length === 0 ? (
             <div className="h-48 flex items-center justify-center text-sm text-slate-400">Belum ada data</div>
@@ -173,15 +287,15 @@ export default function StatistikTab({ stats, reports }: { stats: Stats; reports
                 </canvas>
               </div>
               <div className="flex gap-4 mt-3 text-[11px] text-slate-500">
-                <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-[#2a78d6]" />Total</span>
-                <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-[#1baf7a]" />Terverifikasi</span>
-                <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm bg-[#eda100]" />Pending</span>
+                <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm" style={{ background: BRAND.emeraldDeep }} />Total</span>
+                <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm" style={{ background: BRAND.emeraldSoft }} />Terverifikasi</span>
+                <span className="flex items-center gap-1.5"><span className="w-2 h-2 rounded-sm" style={{ background: BRAND.amber }} />Pending</span>
               </div>
             </>
           )}
         </div>
 
-        <div className="bg-white border border-slate-200 rounded-lg p-5">
+        <div className="bg-white border border-slate-200 rounded-2xl p-5">
           <p className="text-sm font-bold text-slate-800 mb-4">Status Laporan</p>
           {data.statusData.length === 0 ? (
             <div className="h-48 flex items-center justify-center text-sm text-slate-400">Belum ada data</div>
@@ -210,7 +324,7 @@ export default function StatistikTab({ stats, reports }: { stats: Stats; reports
 
       {/* Kategori + Tipe */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div className="bg-white border border-slate-200 rounded-lg p-5">
+        <div className="bg-white border border-slate-200 rounded-2xl p-5">
           <p className="text-sm font-bold text-slate-800 mb-4">Kategori Penipuan</p>
           {data.categoryData.length === 0 ? (
             <div className="h-48 flex items-center justify-center text-sm text-slate-400">Belum ada data</div>
@@ -224,7 +338,7 @@ export default function StatistikTab({ stats, reports }: { stats: Stats; reports
         </div>
 
         <div className="space-y-4">
-          <div className="bg-white border border-slate-200 rounded-lg p-5">
+          <div className="bg-white border border-slate-200 rounded-2xl p-5">
             <p className="text-sm font-bold text-slate-800 mb-3">Jenis Target</p>
             {data.typeData.length === 0 ? (
               <p className="text-sm text-slate-400 text-center py-4">Belum ada data</p>
@@ -239,7 +353,7 @@ export default function StatistikTab({ stats, reports }: { stats: Stats; reports
                         <span className="font-bold text-slate-800">{d.value} <span className="text-slate-400 font-normal">({pct}%)</span></span>
                       </div>
                       <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                        <div className="h-full rounded-full transition-all bg-[#2a78d6]" style={{ width: `${pct}%` }} />
+                        <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: BRAND.emerald }} />
                       </div>
                     </div>
                   );
@@ -249,7 +363,7 @@ export default function StatistikTab({ stats, reports }: { stats: Stats; reports
           </div>
 
           {data.platformData.length > 0 ? (
-            <div className="bg-white border border-slate-200 rounded-lg p-5">
+            <div className="bg-white border border-slate-200 rounded-2xl p-5">
               <p className="text-sm font-bold text-slate-800 mb-3">Platform Terbanyak</p>
               <div className="space-y-2">
                 {data.platformData.map((d, i) => {
@@ -262,7 +376,7 @@ export default function StatistikTab({ stats, reports }: { stats: Stats; reports
                         <span className="font-bold text-slate-800">{d.value}</span>
                       </div>
                       <div className="h-1.5 bg-slate-100 rounded-full overflow-hidden">
-                        <div className="h-full rounded-full transition-all bg-[#2a78d6]" style={{ width: `${pct}%` }} />
+                        <div className="h-full rounded-full transition-all" style={{ width: `${pct}%`, background: BRAND.emerald }} />
                       </div>
                     </div>
                   );
@@ -270,7 +384,7 @@ export default function StatistikTab({ stats, reports }: { stats: Stats; reports
               </div>
             </div>
           ) : (
-            <div className="bg-white border border-slate-200 rounded-lg p-5">
+            <div className="bg-white border border-slate-200 rounded-2xl p-5">
               <p className="text-sm font-bold text-slate-800 mb-3">Platform Terbanyak</p>
               <p className="text-sm text-slate-400 text-center py-4">Belum ada data</p>
             </div>
