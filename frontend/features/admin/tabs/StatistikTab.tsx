@@ -168,7 +168,18 @@ export default function StatistikTab({ stats, reports }: { stats: Stats; reports
       if (r.status === 'pending')  trendMap[key].pending++;
       trendMap[key].loss += r.amount ?? 0;
     });
-    const trendData = Object.values(trendMap).sort((a, b) => a.sortKey - b.sortKey);
+
+    // Isi setiap hari dalam rentang 30 hari terakhir, termasuk yang gak ada laporannya (diisi 0).
+    // Ini murni soal representasi sumbu-x — jumlah laporan asli tetap sama persis, gak ada data dummy ditambahkan.
+    const filledTrendData: typeof trendMap[string][] = [];
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(now - i * 24 * 60 * 60 * 1000);
+      const key = d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
+      filledTrendData.push(
+        trendMap[key] ?? { date: key, total: 0, verified: 0, pending: 0, loss: 0, sortKey: d.getTime() }
+      );
+    }
+    const trendData = filledTrendData;
 
     const withAmount = reports.filter(r => r.amount);
     const totalLoss  = reports.reduce((sum, r) => sum + (r.amount ?? 0), 0);
@@ -201,9 +212,9 @@ export default function StatistikTab({ stats, reports }: { stats: Stats; reports
     data: {
       labels: data.trendData.map(d => d.date),
       datasets: [
-        { label: 'Total',        data: data.trendData.map(d => d.total),    borderColor: BRAND.emeraldDeep, borderWidth: 2, pointRadius: 0, tension: 0.35 },
-        { label: 'Terverifikasi', data: data.trendData.map(d => d.verified), borderColor: BRAND.emeraldSoft, borderWidth: 2, pointRadius: 0, tension: 0.35 },
-        { label: 'Pending',      data: data.trendData.map(d => d.pending),  borderColor: BRAND.amber,       borderWidth: 2, pointRadius: 0, tension: 0.35 },
+        { label: 'Total',        data: data.trendData.map(d => d.total),    borderColor: BRAND.emeraldDeep, borderWidth: 2, pointRadius: 0, tension: 0.3 },
+        { label: 'Terverifikasi', data: data.trendData.map(d => d.verified), borderColor: BRAND.emeraldSoft, borderWidth: 2, pointRadius: 0, tension: 0.3 },
+        { label: 'Pending',      data: data.trendData.map(d => d.pending),  borderColor: BRAND.amber,       borderWidth: 2, pointRadius: 0, tension: 0.3 },
       ],
     },
     options: {
