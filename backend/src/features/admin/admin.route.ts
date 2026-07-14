@@ -73,6 +73,29 @@ export async function adminRoutes(app: FastifyInstance) {
     return { data: updated };
   });
 
+  app.delete("/reports/:id", { preHandler: requireAdmin }, async (req, reply) => {
+    const { id } = req.params as { id: string };
+
+    const [existing] = await db.select().from(reports).where(eq(reports.id, id)).limit(1);
+    if (!existing) return reply.status(404).send({ error: "Laporan tidak ditemukan." });
+
+    // Hapus semua file evidence yang terkait sebelum hapus baris database,
+    // supaya tidak ada file yatim (orphaned) tertinggal di storage.
+    const relatedEvidence = await db.select().from(evidence).where(eq(evidence.reportId, id));
+    for (const e of relatedEvidence) {
+      await deleteFile(e.url);
+    }
+    if (existing.suspectPhotoUrl) {
+      await deleteFile(existing.suspectPhotoUrl);
+    }
+
+    // evidence dihapus dulu (foreign key ke reports), baru laporan-nya sendiri
+    await db.delete(evidence).where(eq(evidence.reportId, id));
+    await db.delete(reports).where(eq(reports.id, id));
+
+    return { message: "Laporan berhasil dihapus." };
+  });
+
   // ── USERS ──────────────────────────────────────────────────────────────────
   app.get("/users", { preHandler: requireAdmin }, async () => {
     const data = await db.execute(sql`
