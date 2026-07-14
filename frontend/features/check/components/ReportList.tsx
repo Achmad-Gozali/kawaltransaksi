@@ -4,6 +4,15 @@ import { useState, useEffect } from 'react';
 import Image from 'next/image';
 import { ShieldCheck, Clock, CheckCircle2, AlertCircle, ShieldAlert, X, ChevronLeft, ChevronRight, Info, FileX2 } from 'lucide-react';
 
+// Sebagian data lama (path relatif "/uploads/...") berdampingan dengan data baru
+// (URL R2 lengkap "https://img.kawaltransaksi.com/...") pasca migrasi storage.
+// Fungsi ini menangani keduanya supaya gambar tetap tampil benar untuk data manapun.
+function resolveImageUrl(p: string | null | undefined): string | null {
+  if (!p) return null;
+  if (p.startsWith('http://') || p.startsWith('https://')) return p;
+  return `${process.env.NEXT_PUBLIC_API_URL}${p}`;
+}
+
 function cleanChronology(text: string) {
   return text.replace(/^["'""]+|["'""]+$/g, '').trim();
 }
@@ -12,9 +21,9 @@ function formatDate(dateStr: string) {
   return new Date(dateStr).toLocaleDateString('id-ID', { day: 'numeric', month: 'short', year: 'numeric' });
 }
 
-function resolveEvidenceUrl(url: string) {
+function resolveEvidenceUrl(url: string): string | null {
   if (url.startsWith('http://') || url.startsWith('https://')) return url;
-  return `${process.env.NEXT_PUBLIC_API_URL}${url}`;
+  return resolveImageUrl(url);
 }
 
 interface ReportItem {
@@ -59,7 +68,7 @@ function EvidenceThumb({ url, alt, className }: { url: string; alt: string; clas
   }
   return (
     <Image
-      src={resolveEvidenceUrl(url)}
+      src={resolveEvidenceUrl(url) ?? ''}
       alt={alt}
       fill
       className={className}

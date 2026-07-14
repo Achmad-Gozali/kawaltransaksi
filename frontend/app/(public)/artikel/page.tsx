@@ -12,6 +12,15 @@ export const dynamic = 'force-dynamic';
 const BASE    = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
+// Thumbnail di database sekarang berisi URL R2 lengkap (https://img.kawaltransaksi.com/...)
+// hasil migrasi, tapi fungsi ini tetap mendukung path relatif lama (/uploads/...) untuk jaga-jaga
+// kalau ada data yang belum sempat ter-migrasi atau sumber lain di masa depan.
+function resolveImageUrl(path: string | null | undefined): string | null {
+  if (!path) return null;
+  if (path.startsWith('http://') || path.startsWith('https://')) return path;
+  return `${API_URL}${path}`;
+}
+
 function formatDateID(d: string) {
   try { return new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }); }
   catch { return d; }
@@ -51,14 +60,15 @@ export default async function ArtikelPage() {
             {(articles as any[]).map((a) => {
               const publishedAt = a.published_at ?? a.publishedAt ?? a.created_at;
               const rt          = readingTime(a.content);
+              const thumbUrl    = resolveImageUrl(a.thumbnail);
               return (
                 <Link key={a.id ?? a.slug} href={`/artikel/${a.slug}`}
                   className="group flex flex-col bg-white border border-slate-200 rounded-lg overflow-hidden hover:shadow-md transition-all duration-200">
                   {/* Thumbnail */}
-                  {a.thumbnail ? (
+                  {thumbUrl ? (
                     <div className="relative w-full h-48 bg-slate-100 overflow-hidden">
                       <Image
-                        src={`${API_URL}${a.thumbnail}`}
+                        src={thumbUrl}
                         alt={a.title}
                         fill
                         className="object-cover group-hover:scale-105 transition-transform duration-300"

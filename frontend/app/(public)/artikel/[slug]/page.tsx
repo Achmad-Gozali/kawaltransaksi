@@ -6,6 +6,15 @@ import type { Metadata } from 'next';
 const BASE    = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
+// Thumbnail di database sekarang berisi URL R2 lengkap (https://img.kawaltransaksi.com/...)
+// hasil migrasi, tapi fungsi ini tetap mendukung path relatif lama (/uploads/...) untuk jaga-jaga
+// kalau ada data yang belum sempat ter-migrasi atau sumber lain di masa depan.
+function resolveImageUrl(path: string | null | undefined): string | null {
+  if (!path) return null;
+  if (path.startsWith('http://') || path.startsWith('https://')) return path;
+  return `${API_URL}${path}`;
+}
+
 function formatDateID(d: string) {
   try { return new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }); }
   catch { return d; }
@@ -39,10 +48,11 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params;
   const article  = await getArticle(slug);
   if (!article) return { title: 'Artikel tidak ditemukan' };
+  const thumbUrl = resolveImageUrl(article.thumbnail);
   return {
     title:       `${article.title} — KawalTransaksi`,
     description: article.excerpt ?? undefined,
-    openGraph:   { images: article.thumbnail ? [`${API_URL}${article.thumbnail}`] : [] },
+    openGraph:   { images: thumbUrl ? [thumbUrl] : [] },
   };
 }
 
@@ -54,13 +64,14 @@ export default async function ArtikelDetailPage({ params }: { params: Promise<{ 
   const publishedAt = article.published_at ?? article.publishedAt;
   const updatedAt   = article.updated_at ?? article.updatedAt ?? publishedAt;
   const rt          = readingTime(article.content);
+  const thumbUrl    = resolveImageUrl(article.thumbnail);
 
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "Article",
     headline: article.title,
     description: article.excerpt ?? undefined,
-    image: article.thumbnail ? [`${API_URL}${article.thumbnail}`] : undefined,
+    image: thumbUrl ? [thumbUrl] : undefined,
     datePublished: publishedAt ?? undefined,
     dateModified: updatedAt ?? undefined,
     articleSection: article.category ?? undefined,
@@ -102,10 +113,10 @@ export default async function ArtikelDetailPage({ params }: { params: Promise<{ 
                 {rt && <><span>·</span><span>{rt}</span></>}
               </div>
 
-              {article.thumbnail && (
+              {thumbUrl && (
                 <div className="relative w-full aspect-[16/9] rounded-lg overflow-hidden mb-8 bg-slate-100">
                   <Image
-                    src={`${API_URL}${article.thumbnail}`}
+                    src={thumbUrl}
                     alt={article.title}
                     fill
                     className="object-cover"
@@ -134,12 +145,13 @@ export default async function ArtikelDetailPage({ params }: { params: Promise<{ 
                     {recents.slice(0, 3).map((a: any) => {
                       const pub = a.published_at ?? a.publishedAt ?? a.created_at;
                       const art = readingTime(a.content);
+                      const rThumbUrl = resolveImageUrl(a.thumbnail);
                       return (
                         <Link key={a.slug} href={`/artikel/${a.slug}`}
                           className="group flex flex-col bg-white border border-slate-200 rounded-lg overflow-hidden hover:shadow-md transition-all duration-200">
-                          {a.thumbnail ? (
+                          {rThumbUrl ? (
                             <div className="relative w-full h-36 bg-slate-100 overflow-hidden">
-                              <Image src={`${API_URL}${a.thumbnail}`} alt={a.title} fill className="object-cover group-hover:scale-105 transition-transform duration-300" unoptimized />
+                              <Image src={rThumbUrl} alt={a.title} fill className="object-cover group-hover:scale-105 transition-transform duration-300" unoptimized />
                             </div>
                           ) : (
                             <div className="w-full h-36 bg-slate-100 flex items-center justify-center">
@@ -176,11 +188,12 @@ export default async function ArtikelDetailPage({ params }: { params: Promise<{ 
                   {recents.map((a: any) => {
                     const pub = a.published_at ?? a.publishedAt ?? a.created_at;
                     const art = readingTime(a.content);
+                    const sThumbUrl = resolveImageUrl(a.thumbnail);
                     return (
                       <Link key={a.slug} href={`/artikel/${a.slug}`} className="flex gap-3 group">
-                        {a.thumbnail ? (
+                        {sThumbUrl ? (
                           <div className="relative w-16 h-14 rounded-lg overflow-hidden bg-slate-100 shrink-0">
-                            <Image src={`${API_URL}${a.thumbnail}`} alt={a.title} fill className="object-cover" unoptimized />
+                            <Image src={sThumbUrl} alt={a.title} fill className="object-cover" unoptimized />
                           </div>
                         ) : (
                           <div className="w-16 h-14 rounded-lg bg-slate-100 shrink-0 flex items-center justify-center">

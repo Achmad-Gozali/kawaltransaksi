@@ -13,6 +13,15 @@ import type { Report } from '@/features/admin/types';
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 const PER_PAGE = 10;
 
+// Sebagian data lama (path relatif "/uploads/...") berdampingan dengan data baru
+// (URL R2 lengkap "https://img.kawaltransaksi.com/...") pasca migrasi storage.
+// Fungsi ini menangani keduanya supaya gambar tetap tampil benar untuk data manapun.
+function resolveImageUrl(p: string | null | undefined): string | null {
+  if (!p) return null;
+  if (p.startsWith('http://') || p.startsWith('https://')) return p;
+  return `${API_URL}${p}`;
+}
+
 const STATUS_MAP: Record<string, { label: string; className: string; dot: string }> = {
   pending:  { label: 'Pending',       className: 'bg-amber-50 text-amber-700 border-amber-200',     dot: 'bg-amber-500'   },
   verified: { label: 'Terverifikasi', className: 'bg-emerald-50 text-emerald-700 border-emerald-200', dot: 'bg-emerald-500' },
@@ -298,7 +307,7 @@ function DetailModal({ report, onClose, onVerify, onReject, loading }: {
             <div>
               <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-1.5">Foto Profil Penipu</p>
               <div className="relative w-20 h-20 rounded-lg overflow-hidden border border-slate-200">
-                <Image src={`${API_URL}${suspectPhoto}`} alt="Foto penipu" fill className="object-cover" unoptimized />
+                <Image src={resolveImageUrl(suspectPhoto) ?? ''} alt="Foto penipu" fill className="object-cover" unoptimized />
               </div>
             </div>
           )}
@@ -308,9 +317,9 @@ function DetailModal({ report, onClose, onVerify, onReject, loading }: {
               <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-1.5">Bukti ({evidenceUrls.length})</p>
               <div className="flex flex-wrap gap-2">
                 {evidenceUrls.map((url, i) => (
-                  <a key={i} href={`${API_URL}${url}`} target="_blank" rel="noopener noreferrer"
+                  <a key={i} href={resolveImageUrl(url) ?? '#'} target="_blank" rel="noopener noreferrer"
                     className="relative w-20 h-20 rounded-lg overflow-hidden border border-slate-200 hover:border-emerald-400 transition-colors group">
-                    <Image src={`${API_URL}${url}`} alt={`Bukti ${i + 1}`} fill className="object-cover" unoptimized />
+                    <Image src={resolveImageUrl(url) ?? ''} alt={`Bukti ${i + 1}`} fill className="object-cover" unoptimized />
                     <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-all flex items-center justify-center">
                       <Eye className="w-4 h-4 text-white opacity-0 group-hover:opacity-100 transition-opacity" />
                     </div>
