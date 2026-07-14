@@ -36,6 +36,84 @@ export async function adminRoutes(app: FastifyInstance) {
     };
   });
 
+  app.get("/activity", { preHandler: requireAdmin }, async () => {
+    const LIMIT = 15; // ambil lebih banyak dari kebutuhan tampilan (biasanya 5), supaya setelah digabung & diurutkan tetap cukup
+
+    // Laporan yang baru masuk
+    const newReports = await db.execute(sql`
+      SELECT id, target_value, created_at AS ts
+      FROM reports
+      ORDER BY created_at DESC
+      LIMIT ${LIMIT}
+    `);
+
+    // Laporan yang statusnya berubah (verified/rejected) — pakai updated_at sebagai proxy waktu perubahan status.
+    // Catatan: updated_at ikut berubah untuk update reports lain di masa depan; saat ini aman karena
+    // satu-satunya endpoint yang men-touch updated_at adalah PATCH /reports/:id/status.
+    const statusChanges = await db.execute(sql`
+      SELECT id, target_value, status, updated_at AS ts
+      FROM reports
+      WHERE status IN ('verified', 'rejected') AND updated_at > created_at
+      ORDER BY updated_at DESC
+      LIMIT ${LIMIT}
+    `);
+
+    // Pengguna baru
+    const newUsers = await db.execute(sql`
+      SELECT id, email, created_at AS ts
+      FROM users
+      ORDER BY created_at DESC
+      LIMIT ${LIMIT}
+    `);
+
+    // Artikel baru dipublikasikan
+    const newArticles = await db.execute(sql`
+      SELECT id, title, published_at AS ts
+      FROM articles
+      WHERE status = 'published' AND published_at IS NOT NULL
+      ORDER BY published_at DESC
+      LIMIT ${LIMIT}
+    `);
+
+    type ActivityItem = {
+      type: "report_new" | "report_verified" | "report_rejected" | "user_new" | "article_published";
+      id: string;
+      label: string;
+      ts: string;
+    };
+
+    const items: ActivityItem[] = [
+      ...(newReports as any[]).map(r => ({
+        type: "report_new" as const,
+        id: r.id,
+        label: `Laporan ID ${r.target_value} menunggu review`,
+        ts: r.ts,
+      })),
+      ...(statusChanges as any[]).map(r => ({
+        type: r.status === "verified" ? ("report_verified" as const) : ("report_rejected" as const),
+        id: r.id,
+        label: `Laporan ID ${r.target_value} telah ${r.status === "verified" ? "diverifikasi" : "ditolak"}`,
+        ts: r.ts,
+      })),
+      ...(newUsers as any[]).map(u => ({
+        type: "user_new" as const,
+        id: u.id,
+        label: `${u.email} telah mendaftar`,
+        ts: u.ts,
+      })),
+      ...(newArticles as any[]).map(a => ({
+        type: "article_published" as const,
+        id: a.id,
+        label: `"${a.title}"`,
+        ts: a.ts,
+      })),
+    ]
+      .sort((a, b) => new Date(b.ts).getTime() - new Date(a.ts).getTime())
+      .slice(0, LIMIT);
+
+    return { data: items };
+  });
+
   // ── REPORTS ────────────────────────────────────────────────────────────────
   app.get("/reports", { preHandler: requireAdmin }, async (req) => {
     const { status, targetType, page = "1", limit = "20", q = "" } = req.query as any;
