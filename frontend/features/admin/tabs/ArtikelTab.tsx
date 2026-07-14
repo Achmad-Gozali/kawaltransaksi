@@ -439,7 +439,7 @@ export default function ArtikelTab({ token }: { token: string }) {
                 {paginated.map(a => {
                   const preview = previewUrl(a);
                   return (
-                    <tr key={a.id} className="hover:bg-slate-50/60 transition-colors">
+                    <tr key={a.id} className="hover:bg-slate-50/60 transition-colors align-top">
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           {a.thumbnail ? (
@@ -469,8 +469,8 @@ export default function ArtikelTab({ token }: { token: string }) {
                         ) : <span className="text-xs text-slate-300">—</span>}
                       </td>
                       <td className="px-4 py-3 hidden sm:table-cell">
-                        <div className="flex items-center gap-1.5 text-xs text-slate-500">
-                          <Calendar className="w-3 h-3 text-slate-400" />
+                        <div className="flex items-center gap-1.5 text-xs text-slate-500 whitespace-nowrap">
+                          <Calendar className="w-3 h-3 text-slate-400 shrink-0" />
                           {formatDateID(a.createdAt)}
                         </div>
                       </td>
