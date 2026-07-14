@@ -15,15 +15,6 @@ import { authClient } from '@/core/auth/client';
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 const PER_PAGE = 8;
 
-// Sebagian data lama (path relatif "/uploads/...") berdampingan dengan data baru
-// (URL R2 lengkap "https://img.kawaltransaksi.com/...") pasca migrasi storage.
-// Fungsi ini menangani keduanya supaya gambar tetap tampil benar untuk data manapun.
-function resolveImageUrl(p: string | null | undefined): string | null {
-  if (!p) return null;
-  if (p.startsWith('http://') || p.startsWith('https://')) return p;
-  return `${API_URL}${p}`;
-}
-
 interface Article {
   id: string;
   title: string;
@@ -226,7 +217,7 @@ export default function ArtikelTab({ token }: { token: string }) {
     const a    = data.data as ArticleFull;
     setEditing(a);
     setForm({ title: a.title, excerpt: a.excerpt ?? '', content: a.content, thumbnail: a.thumbnail ?? '', category: a.category, status: a.status });
-    setThumbnailPreview(a.thumbnail ? resolveImageUrl(a.thumbnail) : null);
+    setThumbnailPreview(a.thumbnail ? a.thumbnail : null);
     setView('editor');
   };
 
@@ -244,7 +235,7 @@ export default function ArtikelTab({ token }: { token: string }) {
       const data = await res.json();
       if (data.data?.url) {
         setForm(f => ({ ...f, thumbnail: data.data.url }));
-        setThumbnailPreview(resolveImageUrl(data.data.url));
+        setThumbnailPreview(data.data.url);
       }
     } finally { setUploading(false); }
   };
@@ -453,7 +444,7 @@ export default function ArtikelTab({ token }: { token: string }) {
                         <div className="flex items-center gap-3">
                           {a.thumbnail ? (
                             <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 bg-slate-100">
-                              <img src={resolveImageUrl(a.thumbnail) ?? undefined} alt={a.title} className="w-full h-full object-cover" />
+                              <img src={a.thumbnail ?? undefined} alt={a.title} className="w-full h-full object-cover" />
                             </div>
                           ) : (
                             <div className="w-12 h-12 rounded-lg shrink-0 bg-slate-50 border border-slate-100 flex items-center justify-center">

@@ -6,15 +6,6 @@ import Link from "next/link";
 import { Lock, Signal, MapPin, Store, UserRound } from "lucide-react";
 import { formatNum } from "@/core/utils";
 
-// Sebagian data lama (path relatif "/uploads/...") berdampingan dengan data baru
-// (URL R2 lengkap "https://img.kawaltransaksi.com/...") pasca migrasi storage.
-// Fungsi ini menangani keduanya supaya gambar tetap tampil benar untuk data manapun.
-function resolveImageUrl(p: string | null | undefined): string | null {
-  if (!p) return null;
-  if (p.startsWith('http://') || p.startsWith('https://')) return p;
-  return `${process.env.NEXT_PUBLIC_API_URL}${p}`;
-}
-
 function formatSosmed(acc: string) {
   const cleaned = acc.trim();
   if (cleaned.startsWith("http://") || cleaned.startsWith("https://"))
@@ -25,11 +16,6 @@ function formatSosmed(acc: string) {
 
 function truncateUrl(url: string, maxLen = 50) {
   return url.length <= maxLen ? url : url.slice(0, maxLen) + "...";
-}
-
-function resolveEvidenceUrl(url: string): string | null {
-  if (url.startsWith("http://") || url.startsWith("https://")) return url;
-  return resolveImageUrl(url);
 }
 
 interface CarrierInfo { carrier: string; type: "mobile" | "fixed" | "unknown" }
@@ -164,7 +150,7 @@ export default function NumberCard({
                 <p className="text-[10px] text-slate-400 mb-1.5 text-right">Foto penipu</p>
                 <div className="relative w-14 h-14 sm:w-16 sm:h-16">
                   <Image
-                    src={resolveEvidenceUrl(suspectPhotoUrl) ?? ''}
+                    src={suspectPhotoUrl ?? ''}
                     alt="Foto profil penipu"
                     fill
                     className="object-cover rounded-xl border border-slate-200"

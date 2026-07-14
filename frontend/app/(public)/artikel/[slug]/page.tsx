@@ -6,15 +6,6 @@ import type { Metadata } from 'next';
 const BASE    = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 
-// Thumbnail di database sekarang berisi URL R2 lengkap (https://img.kawaltransaksi.com/...)
-// hasil migrasi, tapi fungsi ini tetap mendukung path relatif lama (/uploads/...) untuk jaga-jaga
-// kalau ada data yang belum sempat ter-migrasi atau sumber lain di masa depan.
-function resolveImageUrl(path: string | null | undefined): string | null {
-  if (!path) return null;
-  if (path.startsWith('http://') || path.startsWith('https://')) return path;
-  return `${API_URL}${path}`;
-}
-
 function formatDateID(d: string) {
   try { return new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }); }
   catch { return d; }
@@ -48,7 +39,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const { slug } = await params;
   const article  = await getArticle(slug);
   if (!article) return { title: 'Artikel tidak ditemukan' };
-  const thumbUrl = resolveImageUrl(article.thumbnail);
+  const thumbUrl = article.thumbnail;
   return {
     title:       `${article.title} — KawalTransaksi`,
     description: article.excerpt ?? undefined,
@@ -64,7 +55,7 @@ export default async function ArtikelDetailPage({ params }: { params: Promise<{ 
   const publishedAt = article.published_at ?? article.publishedAt;
   const updatedAt   = article.updated_at ?? article.updatedAt ?? publishedAt;
   const rt          = readingTime(article.content);
-  const thumbUrl    = resolveImageUrl(article.thumbnail);
+  const thumbUrl    = article.thumbnail;
 
   const structuredData = {
     "@context": "https://schema.org",
@@ -145,7 +136,7 @@ export default async function ArtikelDetailPage({ params }: { params: Promise<{ 
                     {recents.slice(0, 3).map((a: any) => {
                       const pub = a.published_at ?? a.publishedAt ?? a.created_at;
                       const art = readingTime(a.content);
-                      const rThumbUrl = resolveImageUrl(a.thumbnail);
+                      const rThumbUrl = a.thumbnail;
                       return (
                         <Link key={a.slug} href={`/artikel/${a.slug}`}
                           className="group flex flex-col bg-white border border-slate-200 rounded-lg overflow-hidden hover:shadow-md transition-all duration-200">
@@ -188,7 +179,7 @@ export default async function ArtikelDetailPage({ params }: { params: Promise<{ 
                   {recents.map((a: any) => {
                     const pub = a.published_at ?? a.publishedAt ?? a.created_at;
                     const art = readingTime(a.content);
-                    const sThumbUrl = resolveImageUrl(a.thumbnail);
+                    const sThumbUrl = a.thumbnail;
                     return (
                       <Link key={a.slug} href={`/artikel/${a.slug}`} className="flex gap-3 group">
                         {sThumbUrl ? (
