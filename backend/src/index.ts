@@ -1,13 +1,10 @@
 import { configDotenv } from "dotenv";
 configDotenv();
 
-import path from "path";
-import { fileURLToPath } from "url";
 import Fastify from "fastify";
 import cors from "@fastify/cors";
 import cookie from "@fastify/cookie";
 import multipart from "@fastify/multipart";
-import fastifyStatic from "@fastify/static";
 import rateLimit from "@fastify/rate-limit";
 
 import { authRoutes } from "./features/auth/auth.route.js";
@@ -15,8 +12,6 @@ import { reportsRoutes } from "./features/reports/reports.route.js";
 import { searchRoutes } from "./features/search/search.route.js";
 import { adminRoutes } from "./features/admin/admin.route.js";
 import { uploadRoutes } from "./features/upload/upload.route.js";
-
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const app = Fastify({ logger: true, trustProxy: true });
 
@@ -37,14 +32,9 @@ await app.register(rateLimit, {
   }),
 });
 
-const uploadDir = process.env.UPLOAD_DIR
-  ? path.resolve(process.env.UPLOAD_DIR)
-  : path.resolve(__dirname, "../uploads");
-
-await app.register(fastifyStatic, {
-  root: uploadDir,
-  prefix: "/uploads/",
-});
+// Catatan: registrasi @fastify/static untuk /uploads/ SUDAH DIHAPUS.
+// Semua file (evidence, thumbnail, foto) sekarang dilayani langsung dari
+// Cloudflare R2 lewat https://img.kawaltransaksi.com, bukan dari VPS lagi.
 
 await app.register(authRoutes, { prefix: "/api/auth" });
 await app.register(reportsRoutes, { prefix: "/api/reports" });

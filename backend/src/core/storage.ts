@@ -1,12 +1,22 @@
-import { writeFile, mkdir, unlink } from "fs/promises";
-import path from "path";
+import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
 import { createId } from "@paralleldrive/cuid2";
 
-const UPLOAD_DIR = process.env.UPLOAD_DIR || "./uploads";
 export type UploadFolder = "reports" | "articles";
 
 const ALLOWED_MIME = new Set(["image/jpeg", "image/png"]);
 const MAX_SIZE = 5 * 1024 * 1024;
+
+const R2_BUCKET     = process.env.R2_BUCKET_NAME!;
+const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL!.replace(/\/$/, ""); // buang trailing slash kalau ada
+
+const r2 = new S3Client({
+  region: "auto",
+  endpoint: process.env.R2_ENDPOINT!,
+  credentials: {
+    accessKeyId:     process.env.R2_ACCESS_KEY_ID!,
+    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
+  },
+});
 
 export interface ImageValidationResult {
   valid: boolean;
@@ -37,29 +47,61 @@ export function validateImageBuffer(buffer: Buffer, mimetype: string): ImageVali
   return { valid: true, ext: mimetype === "image/png" ? ".png" : ".jpg" };
 }
 
+function contentTypeFromExt(ext: string): string {
+  return ext === ".png" ? "image/png" : "image/jpeg";
+}
+
+/**
+ * Simpan buffer ke Cloudflare R2, kembalikan URL publik lengkap.
+ * Signature sengaja dipertahankan sama seperti versi filesystem lama
+ * (buffer, originalName, folder) => Promise<string> supaya semua pemanggil
+ * (reports.route.ts, admin.route.ts, upload.route.ts) tidak perlu diubah.
+ */
 export async function saveFile(
   buffer: Buffer,
   originalName: string,
   folder: UploadFolder
 ): Promise<string> {
-  const dir = path.join(UPLOAD_DIR, folder);
-  await mkdir(dir, { recursive: true });
-  const ext = path.extname(originalName);
-  const filename = `${createId()}${ext}`;
-  await writeFile(path.join(dir, filename), buffer);
-  return `/uploads/${folder}/${filename}`;
+  const ext = originalName.includes(".") ? originalName.slice(originalName.lastIndexOf(".")) : "";
+  const key = `${folder}/${createId()}${ext}`;
+
+  await r2.send(
+    new PutObjectCommand({
+      Bucket:      R2_BUCKET,
+      Key:         key,
+      Body:        buffer,
+      ContentType: contentTypeFromExt(ext),
+    })
+  );
+
+  return `${R2_PUBLIC_URL}/${key}`;
 }
 
+/**
+ * Hapus file dari R2 berdasarkan URL publiknya.
+ * Menerima baik URL R2 penuh (https://img.kawaltransaksi.com/reports/xxx.jpg)
+ * maupun path lama gaya filesystem (/uploads/reports/xxx.jpg) untuk kompatibilitas
+ * mundur selama migrasi — path lama akan di-skip dengan aman (tidak throw)
+ * karena filenya memang tidak lagi ada di R2.
+ */
 export async function deleteFile(url: string | null | undefined): Promise<void> {
   if (!url) return;
-  if (!url.startsWith("/uploads/")) return;
 
-  const relative = url.slice("/uploads/".length);
-  const filepath = path.join(UPLOAD_DIR, relative);
+  let key: string | null = null;
+
+  if (url.startsWith(R2_PUBLIC_URL)) {
+    key = url.slice(R2_PUBLIC_URL.length + 1); // +1 buang leading slash
+  } else if (url.startsWith("/uploads/")) {
+    // URL lama dari era filesystem — sudah tidak relevan pasca migrasi, skip saja
+    return;
+  }
+
+  if (!key) return;
 
   try {
-    await unlink(filepath);
+    await r2.send(new DeleteObjectCommand({ Bucket: R2_BUCKET, Key: key }));
   } catch (err: any) {
-    if (err.code !== "ENOENT") throw err;
+    // Kalau object memang sudah tidak ada, jangan sampai bikin request gagal
+    if (err.name !== "NoSuchKey") throw err;
   }
 }
