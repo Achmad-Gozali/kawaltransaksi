@@ -1,14 +1,15 @@
 'use client';
 
-import React, { useState, useRef, Suspense } from 'react';
+import React, { useState, useRef, useEffect, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { Turnstile, type TurnstileInstance } from '@marsidev/react-turnstile';
 import {
   Loader2, AlertCircle, CheckCircle2, Mail, Lock,
-  UserPlus, ArrowRight, Eye, EyeOff, XCircle,
+  UserPlus, ArrowRight, Eye, EyeOff, XCircle, Clock,
 } from 'lucide-react';
 import { authClient } from '@/core/auth/client';
+import { ApiError } from '@/core/api';
 
 interface AuthFormProps { type: 'login' | 'register'; }
 
@@ -16,6 +17,8 @@ const ALLOWED_DOMAINS = [
   'gmail.com', 'yahoo.com', 'yahoo.co.id', 'outlook.com', 'hotmail.com',
   'icloud.com', 'live.com', 'protonmail.com', 'mail.com', 'googlemail.com',
 ];
+
+const COOLDOWN_STORAGE_KEY = 'kt_login_cooldown_until';
 
 function validateEmail(email: string) {
   const parts = email.toLowerCase().trim().split('@');
@@ -53,6 +56,51 @@ function getRedirectPath(role: string, fallback: string) {
   return fallback || '/';
 }
 
+function formatClockTime(timestampMs: number): string {
+  return new Date(timestampMs).toLocaleTimeString('id-ID', {
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function formatRemaining(totalSeconds: number): string {
+  const m = Math.ceil(totalSeconds / 60);
+  if (m <= 1) return 'sekitar 1 menit lagi';
+  return `sekitar ${m} menit lagi`;
+}
+
+function readStoredCooldown(): number {
+  if (typeof window === 'undefined') return 0;
+  try {
+    const raw = window.localStorage.getItem(COOLDOWN_STORAGE_KEY);
+    if (!raw) return 0;
+    const until = parseInt(raw, 10);
+    if (!Number.isFinite(until)) return 0;
+    return until > Date.now() ? until : 0;
+  } catch {
+    return 0;
+  }
+}
+
+function writeStoredCooldown(untilMs: number) {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.setItem(COOLDOWN_STORAGE_KEY, String(untilMs));
+  } catch {
+    // localStorage bisa gagal (mode privat/quota) — cooldown tetap
+    // jalan dari React state saja, cuma tidak survive reload.
+  }
+}
+
+function clearStoredCooldown() {
+  if (typeof window === 'undefined') return;
+  try {
+    window.localStorage.removeItem(COOLDOWN_STORAGE_KEY);
+  } catch {
+    // no-op
+  }
+}
+
 function AuthFormInner({ type }: AuthFormProps) {
   const [email, setEmail]                             = useState('');
   const [password, setPassword]                       = useState('');
@@ -68,6 +116,8 @@ function AuthFormInner({ type }: AuthFormProps) {
   const [success, setSuccess]                         = useState<string | null>(null);
   const [passwordFocused, setPasswordFocused]         = useState(false);
   const [turnstileToken, setTurnstileToken]           = useState<string | null>(null);
+  const [cooldownUntil, setCooldownUntil]             = useState(0);
+  const [nowTick, setNowTick]                         = useState(0);
 
   const consentRef    = useRef<HTMLDivElement>(null);
   const turnstileRef  = useRef<TurnstileInstance>(null);
@@ -89,9 +139,37 @@ function AuthFormInner({ type }: AuthFormProps) {
   const emailValidation = type === 'register' && email.includes('@') ? validateEmail(email) : { valid: true, message: '' };
   const emailInvalid    = type === 'register' && email.includes('@') && !emailValidation.valid;
 
+  // Cek localStorage sekali saat form dimuat (termasuk setelah reload),
+  // supaya cooldown yang belum habis tidak hilang begitu saja.
+  useEffect(() => {
+    if (type !== 'login') return;
+    const stored = readStoredCooldown();
+    if (stored > 0) setCooldownUntil(stored);
+  }, [type]);
+
+  const remainingSeconds = cooldownUntil > 0
+    ? Math.max(0, Math.ceil((cooldownUntil - Date.now()) / 1000))
+    : 0;
+
+  useEffect(() => {
+    if (cooldownUntil <= 0) return;
+    const interval = setInterval(() => {
+      if (Date.now() >= cooldownUntil) {
+        setCooldownUntil(0);
+        clearStoredCooldown();
+        clearInterval(interval);
+      } else {
+        setNowTick(t => t + 1);
+      }
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [cooldownUntil]);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null); setSuccess(null); setConsentError(false);
+
+    if (remainingSeconds > 0) return;
 
     if (type === 'register' && !agreed) {
       setConsentError(true);
@@ -138,7 +216,13 @@ function AuthFormInner({ type }: AuthFormProps) {
         }
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Terjadi kesalahan sistem.');
+      if (err instanceof ApiError && err.status === 429 && err.retryAfter) {
+        const until = Date.now() + err.retryAfter * 1000;
+        setCooldownUntil(until);
+        if (type === 'login') writeStoredCooldown(until);
+      } else {
+        setError(err instanceof Error ? err.message : 'Terjadi kesalahan sistem.');
+      }
       turnstileRef.current?.reset();
       setTurnstileToken(null);
     } finally {
@@ -151,6 +235,11 @@ function AuthFormInner({ type }: AuthFormProps) {
     window.location.href = `${process.env.NEXT_PUBLIC_API_URL}/api/auth/google`;
   };
 
+  const isDisabled = isLoading || isGoogleLoading || !turnstileToken || remainingSeconds > 0;
+  const cooldownMessage = remainingSeconds > 0
+    ? `Terlalu banyak percobaan. Coba lagi jam ${formatClockTime(cooldownUntil)} (${formatRemaining(remainingSeconds)}).`
+    : null;
+
   return (
     <div className="w-full">
       {(oauthError && oauthErrorMap[oauthError]) && (
@@ -159,10 +248,12 @@ function AuthFormInner({ type }: AuthFormProps) {
           <p className="text-xs font-semibold text-red-700 leading-relaxed">{oauthErrorMap[oauthError]}</p>
         </div>
       )}
-      {error && (
+      {(error || cooldownMessage) && (
         <div className="mb-5 p-3.5 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3">
-          <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
-          <p className="text-xs font-semibold text-red-700 leading-relaxed">{error}</p>
+          {cooldownMessage
+            ? <Clock className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />
+            : <AlertCircle className="w-4 h-4 text-red-500 shrink-0 mt-0.5" />}
+          <p className="text-xs font-semibold text-red-700 leading-relaxed">{cooldownMessage ?? error}</p>
         </div>
       )}
       {success && (
@@ -296,11 +387,13 @@ function AuthFormInner({ type }: AuthFormProps) {
           />
         </div>
 
-        <button type="submit" disabled={isLoading || isGoogleLoading || !turnstileToken}
+        <button type="submit" disabled={isDisabled}
           className={`w-full py-3.5 text-white font-bold rounded-xl transition-all flex items-center justify-center gap-2 active:scale-[0.98] shadow-md disabled:opacity-50 disabled:cursor-not-allowed text-sm uppercase tracking-widest mt-2 ${
             type === 'login' ? 'bg-slate-900 hover:bg-slate-800' : 'bg-emerald-600 hover:bg-emerald-700'
           }`}>
-          {isLoading
+          {remainingSeconds > 0
+            ? <><Clock className="w-4 h-4" /> Coba lagi jam {formatClockTime(cooldownUntil)}</>
+            : isLoading
             ? <><Loader2 className="w-4 h-4 animate-spin" /> {type === 'login' ? 'Sedang Masuk...' : 'Membuat Akun...'}</>
             : <>{type === 'login' ? 'Masuk' : 'Buat Akun'}<ArrowRight className="w-4 h-4 opacity-70" /></>
           }
