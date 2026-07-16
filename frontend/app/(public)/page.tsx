@@ -89,7 +89,10 @@ interface Stats { total: number; verified: number; totalLoss: number; }
 
 async function getRecentReports(): Promise<ReportItem[]> {
   try {
-    const res = await fetch(`${BACKEND_URL}/api/reports/public/recent`, { signal: AbortSignal.timeout(5000) });
+    const res = await fetch(`${BACKEND_URL}/api/reports/public/recent`, {
+      signal: AbortSignal.timeout(5000),
+      cache: "no-store",
+    });
     if (!res.ok) return [];
     const json = await res.json();
     return json.data ?? [];
@@ -98,7 +101,10 @@ async function getRecentReports(): Promise<ReportItem[]> {
 
 async function getStats(): Promise<Stats> {
   try {
-    const res = await fetch(`${BACKEND_URL}/api/reports/public/stats`, { signal: AbortSignal.timeout(5000) });
+    const res = await fetch(`${BACKEND_URL}/api/reports/public/stats`, {
+      signal: AbortSignal.timeout(5000),
+      cache: "no-store",
+    });
     if (!res.ok) return { total: 0, verified: 0, totalLoss: 0 };
     const json = await res.json();
     return json.data ?? { total: 0, verified: 0, totalLoss: 0 };

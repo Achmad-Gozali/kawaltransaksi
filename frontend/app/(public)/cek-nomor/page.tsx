@@ -51,7 +51,10 @@ const RANK_STYLE: Record<number, string> = {
 
 async function getStats() {
   try {
-    const res = await fetch(`${BACKEND_URL}/api/reports/public/stats-nomor`, { signal: AbortSignal.timeout(5000) });
+    const res = await fetch(`${BACKEND_URL}/api/reports/public/stats-nomor`, {
+      signal: AbortSignal.timeout(5000),
+      cache: "no-store",
+    });
     if (!res.ok) return { totalLaporan: 0, totalNomor: 0, totalKerugian: 0 };
     return (await res.json()).data ?? { totalLaporan: 0, totalNomor: 0, totalKerugian: 0 };
   } catch { return { totalLaporan: 0, totalNomor: 0, totalKerugian: 0 }; }
@@ -59,7 +62,10 @@ async function getStats() {
 
 async function getLeaderboard() {
   try {
-    const res = await fetch(`${BACKEND_URL}/api/reports/public/leaderboard-nomor`, { signal: AbortSignal.timeout(5000) });
+    const res = await fetch(`${BACKEND_URL}/api/reports/public/leaderboard-nomor`, {
+      signal: AbortSignal.timeout(5000),
+      cache: "no-store",
+    });
     if (!res.ok) return [];
     return (await res.json()).data ?? [];
   } catch { return []; }

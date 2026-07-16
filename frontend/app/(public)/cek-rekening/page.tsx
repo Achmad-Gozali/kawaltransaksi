@@ -56,7 +56,10 @@ function getBankLogo(bankName: string | null): string | null {
 
 async function getStats() {
   try {
-    const res = await fetch(`${BACKEND_URL}/api/reports/public/stats-rekening`, { signal: AbortSignal.timeout(5000) });
+    const res = await fetch(`${BACKEND_URL}/api/reports/public/stats-rekening`, {
+      signal: AbortSignal.timeout(5000),
+      cache: "no-store",
+    });
     if (!res.ok) return { totalLaporan: 0, totalRekening: 0, totalKerugian: 0 };
     return (await res.json()).data ?? { totalLaporan: 0, totalRekening: 0, totalKerugian: 0 };
   } catch { return { totalLaporan: 0, totalRekening: 0, totalKerugian: 0 }; }
@@ -64,7 +67,10 @@ async function getStats() {
 
 async function getLeaderboard() {
   try {
-    const res = await fetch(`${BACKEND_URL}/api/reports/public/leaderboard-rekening`, { signal: AbortSignal.timeout(5000) });
+    const res = await fetch(`${BACKEND_URL}/api/reports/public/leaderboard-rekening`, {
+      signal: AbortSignal.timeout(5000),
+      cache: "no-store",
+    });
     if (!res.ok) return [];
     return (await res.json()).data ?? [] as { target_number: string; bank_name: string | null; report_count: number }[];
   } catch { return []; }
