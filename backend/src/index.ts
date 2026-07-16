@@ -18,6 +18,7 @@ const app = Fastify({ logger: true, trustProxy: true });
 await app.register(cors, {
   origin: process.env.FRONTEND_URL!,
   credentials: true,
+  exposedHeaders: ["Retry-After"],
 });
 await app.register(cookie, { secret: process.env.COOKIE_SECRET! });
 await app.register(multipart, { limits: { fileSize: 5 * 1024 * 1024 } });
