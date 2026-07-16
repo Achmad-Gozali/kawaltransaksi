@@ -6,6 +6,7 @@ import cors from "@fastify/cors";
 import cookie from "@fastify/cookie";
 import multipart from "@fastify/multipart";
 import rateLimit from "@fastify/rate-limit";
+import helmet from "@fastify/helmet";
 
 import { authRoutes } from "./features/auth/auth.route.js";
 import { reportsRoutes } from "./features/reports/reports.route.js";
@@ -15,6 +16,10 @@ import { uploadRoutes } from "./features/upload/upload.route.js";
 
 const app = Fastify({ logger: true, trustProxy: true });
 
+await app.register(helmet, {
+  contentSecurityPolicy: false,
+  crossOriginResourcePolicy: { policy: "cross-origin" },
+});
 await app.register(cors, {
   origin: process.env.FRONTEND_URL!,
   credentials: true,
