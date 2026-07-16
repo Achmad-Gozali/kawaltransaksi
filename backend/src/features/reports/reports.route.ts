@@ -132,7 +132,7 @@ export async function reportsRoutes(app: FastifyInstance) {
       .where(
         and(
           eq(reports.targetType, "bank_account"),
-          eq(reports.bankName, name),
+          sql`${reports.bankName} ILIKE ${"%" + name + "%"}`,
           eq(reports.status, "verified"),
         ),
       )
@@ -149,7 +149,7 @@ export async function reportsRoutes(app: FastifyInstance) {
       .where(
         and(
           eq(reports.targetType, "ewallet"),
-          eq(reports.walletName, name),
+          sql`${reports.walletName} ILIKE ${"%" + name + "%"}`,
           eq(reports.status, "verified"),
         ),
       )
@@ -335,7 +335,7 @@ export async function reportsRoutes(app: FastifyInstance) {
 
     const turnstileValid = await verifyTurnstile(turnstileToken, req.ip);
     if (!turnstileValid)
-      return reply.status(400).send({ error: "Verifikasi keamanan gagal. Silakan coba lagi." });
+      return reply.status(400).send({ error: "Verifikasi keamanan tidak berhasil. Silakan coba kembali." });
 
     const cleanTargetValue = typeof targetValue === "string" ? targetValue.replace(/\D/g, "") : "";
     if (!cleanTargetValue)
