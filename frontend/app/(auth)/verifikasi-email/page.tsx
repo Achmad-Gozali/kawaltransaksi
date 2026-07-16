@@ -79,12 +79,12 @@ function VerifikasiEmailInner() {
         setSuccess(true);
         setTimeout(() => router.push("/"), 1500);
       } else {
-        setError(data.error || "OTP tidak valid.");
+        setError(data.error || "Kode verifikasi tidak valid.");
         setOtp(["", "", "", "", "", ""]);
         inputRefs.current[0]?.focus();
       }
     } catch {
-      setError("Gagal menghubungi server.");
+      setError("Gagal menghubungi server. Silakan periksa koneksi Anda.");
     } finally {
       setLoading(false);
     }
@@ -107,10 +107,10 @@ function VerifikasiEmailInner() {
         setOtp(["", "", "", "", "", ""]);
         inputRefs.current[0]?.focus();
       } else {
-        setError(data.error || "Gagal kirim ulang OTP.");
+        setError(data.error || "Gagal mengirim ulang kode verifikasi.");
       }
     } catch {
-      setError("Gagal menghubungi server.");
+      setError("Gagal menghubungi server. Silakan periksa koneksi Anda.");
     } finally {
       setResending(false);
     }
@@ -119,7 +119,7 @@ function VerifikasiEmailInner() {
   if (!userId) {
     return (
       <div className="text-center py-12">
-        <p className="text-sm text-slate-500">Link verifikasi tidak valid.</p>
+        <p className="text-sm text-slate-500">Tautan verifikasi tidak valid.</p>
         <Link href="/register" className="mt-4 inline-block text-sm font-semibold text-emerald-600">Daftar ulang</Link>
       </div>
     );
@@ -142,7 +142,7 @@ function VerifikasiEmailInner() {
               <div className="w-14 h-14 bg-emerald-50 border border-emerald-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <CheckCircle2 className="w-7 h-7 text-emerald-500" />
               </div>
-              <h2 className="text-lg font-bold text-slate-900 mb-2">Email Terverifikasi!</h2>
+              <h2 className="text-lg font-bold text-slate-900 mb-2">Email Berhasil Diverifikasi</h2>
               <p className="text-sm text-slate-500">Mengalihkan ke beranda...</p>
             </div>
           ) : (
@@ -153,7 +153,7 @@ function VerifikasiEmailInner() {
                 </div>
                 <h1 className="text-xl font-bold text-gray-900 mb-1">Verifikasi Email</h1>
                 <p className="text-sm text-gray-500 leading-relaxed">
-                  Kode OTP telah dikirim ke<br />
+                  Kode verifikasi telah dikirim ke<br />
                   <span className="font-semibold text-slate-700">{decodeURIComponent(email)}</span>
                 </p>
               </div>
@@ -194,7 +194,7 @@ function VerifikasiEmailInner() {
                 {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Memverifikasi...</> : "Verifikasi"}
               </button>
 
-              <div className="mt-5 text-center">
+              <div className="mt-5 text-center space-y-2">
                 {canResend ? (
                   <button
                     onClick={handleResend}
@@ -202,13 +202,16 @@ function VerifikasiEmailInner() {
                     className="inline-flex items-center gap-1.5 text-sm font-semibold text-emerald-600 hover:text-emerald-700 transition-colors disabled:opacity-50"
                   >
                     {resending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
-                    Kirim ulang kode
+                    Kirim Ulang Kode
                   </button>
                 ) : (
                   <p className="text-sm text-slate-400">
-                    Kirim ulang dalam <span className="font-semibold text-slate-600">{countdown}s</span>
+                    Kirim ulang dalam <span className="font-semibold text-slate-600">{countdown} detik</span>
                   </p>
                 )}
+                <p className="text-[11px] text-slate-400">
+                  Tidak menemukan kode? Cek folder Spam di email Anda.
+                </p>
               </div>
             </>
           )}
