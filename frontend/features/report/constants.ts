@@ -223,16 +223,6 @@ export const categoryList = [
   { value: 'Lainnya',                label: 'Lainnya' },
 ];
 
-export const reportedToOptions = [
-  { value: 'polisi', label: 'Polisi / Bareskrim' },
-  { value: 'ojk', label: 'OJK (Otoritas Jasa Keuangan)' },
-  { value: 'bi', label: 'Bank Indonesia (BI)' },
-  { value: 'kominfo', label: 'Kominfo' },
-  { value: 'platform', label: 'Platform terkait (Shopee, Tokopedia, dll)' },
-  { value: 'bank', label: 'Bank / Penyedia Rekening terkait' },
-  { value: 'belum', label: 'Belum lapor' },
-];
-
 export const provinsiList = [
   'Aceh', 'Sumatera Utara', 'Sumatera Barat', 'Riau', 'Kepulauan Riau',
   'Jambi', 'Bengkulu', 'Sumatera Selatan', 'Kepulauan Bangka Belitung',
