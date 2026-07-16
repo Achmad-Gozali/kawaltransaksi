@@ -77,8 +77,10 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
           script: |
+            set -e
             cd ~/kawaltransaksi
-            git pull
+            git fetch origin main
+            git reset --hard origin/main
 
             if [ "${{ needs.detect-changes.outputs.backend }}" = "true" ]; then
               echo "Rebuilding backend..."
