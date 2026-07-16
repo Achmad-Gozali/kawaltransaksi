@@ -38,8 +38,13 @@ export default async function EwalletDetailPage({ params }: PageProps) {
   const data = ewalletData[walletKey];
   if (!data) notFound();
 
-  type ReportRow = { target_number: string; target_name: string | null; status: string; created_at: string; };
-  let allRows: ReportRow[] = [];
+  type ApiReportRow = {
+    targetValue: string;
+    targetName: string | null;
+    status: string;
+    createdAt: string;
+  };
+  let allRows: ApiReportRow[] = [];
 
   try {
     const res = await fetch(`${BACKEND_URL}/api/reports/public/ewallet/${encodeURIComponent(data.dbName)}`);
@@ -49,7 +54,13 @@ export default async function EwalletDetailPage({ params }: PageProps) {
   const totalCount    = allRows.length;
   const verifiedCount = allRows.filter(r => r.status === "verified").length;
   const pendingCount  = allRows.filter(r => r.status === "pending").length;
-  const reports       = allRows.slice(0, 6).map(r => ({ ...r, masked: maskNumber(r.target_number), dateFormatted: formatDateID(r.created_at) }));
+  const reports       = allRows.slice(0, 6).map(r => ({
+    target_number: r.targetValue,
+    target_name:   r.targetName,
+    status:        r.status,
+    masked:        maskNumber(r.targetValue),
+    dateFormatted: formatDateID(r.createdAt),
+  }));
 
   const structuredData = {
     "@context": "https://schema.org", "@type": "WebPage",
