@@ -24,7 +24,6 @@ export interface ReportFormData {
   link_url: string;
   social_media_accounts: string[];
   has_other_victims: '' | 'yes' | 'no';
-  reported_to: string[];
   store_name: string;
   suspect_city: string;
 }

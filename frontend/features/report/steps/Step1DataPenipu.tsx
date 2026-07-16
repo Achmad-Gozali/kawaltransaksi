@@ -8,7 +8,6 @@ import {
   categoryList,
   platformList,
   provinsiList,
-  reportedToOptions,
 } from '@/features/report/constants';
 import type { TargetEntry, ReportFormData } from '@/features/report/types';
 
@@ -25,7 +24,6 @@ interface Step1Props {
   onAddSocialField: () => void;
   onRemoveSocialField: (index: number) => void;
   onUpdateSocialField: (index: number, value: string) => void;
-  onToggleReportedTo: (value: string) => void;
   onCustomCategoryChange: (val: string) => void;
   onCustomPlatformChange: (val: string) => void;
 }
@@ -36,7 +34,7 @@ export function Step1DataPenipu({
   onUpdateTarget,
   onFormDataChange, onSuspectPhotoChange, onRemoveSuspectPhoto,
   onAddSocialField, onRemoveSocialField, onUpdateSocialField,
-  onToggleReportedTo, onCustomCategoryChange, onCustomPlatformChange,
+  onCustomCategoryChange, onCustomPlatformChange,
 }: Step1Props) {
   return (
     <div className="space-y-4">
@@ -319,56 +317,31 @@ export function Step1DataPenipu({
             </div>
           )}
 
-          <div className="space-y-5">
-            <div>
-              <Label optional>Ada korban lain yang kamu ketahui?</Label>
-              <div className="flex gap-3 mt-1.5">
-                {[
-                  { val: 'yes', label: 'Ya, ada korban lain' },
-                  { val: 'no',  label: 'Hanya saya' },
-                ].map((opt) => (
-                  <button
-                    key={opt.val}
-                    type="button"
-                    onClick={() =>
-                      onFormDataChange({
-                        ...formData,
-                        has_other_victims: formData.has_other_victims === opt.val ? '' : (opt.val as 'yes' | 'no'),
-                      })
-                    }
-                    className={`flex-1 py-3 px-3 rounded-xl text-sm font-semibold border transition-all active:scale-95 ${
-                      formData.has_other_victims === opt.val
-                        ? 'bg-slate-900 text-white border-slate-900'
-                        : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'
-                    }`}
-                  >
-                    {opt.label}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <Label optional>Sudah lapor ke mana?</Label>
-              <div className="grid grid-cols-2 gap-2.5 mt-1.5">
-                {reportedToOptions.map((opt: { value: string; label: string }) => {
-                  const active = formData.reported_to.includes(opt.value);
-                  return (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => onToggleReportedTo(opt.value)}
-                      className={`py-3 px-3 rounded-xl text-sm font-semibold border text-left transition-all active:scale-95 ${
-                        active
-                          ? 'bg-slate-900 text-white border-slate-900'
-                          : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'
-                      }`}
-                    >
-                      {opt.label}
-                    </button>
-                  );
-                })}
-              </div>
+          <div>
+            <Label optional>Ada korban lain yang kamu ketahui?</Label>
+            <div className="flex gap-3 mt-1.5">
+              {[
+                { val: 'yes', label: 'Ya, ada korban lain' },
+                { val: 'no',  label: 'Hanya saya' },
+              ].map((opt) => (
+                <button
+                  key={opt.val}
+                  type="button"
+                  onClick={() =>
+                    onFormDataChange({
+                      ...formData,
+                      has_other_victims: formData.has_other_victims === opt.val ? '' : (opt.val as 'yes' | 'no'),
+                    })
+                  }
+                  className={`flex-1 py-3 px-3 rounded-xl text-sm font-semibold border transition-all active:scale-95 ${
+                    formData.has_other_victims === opt.val
+                      ? 'bg-slate-900 text-white border-slate-900'
+                      : 'bg-white text-slate-500 border-slate-200 hover:border-slate-300'
+                  }`}
+                >
+                  {opt.label}
+                </button>
+              ))}
             </div>
           </div>
         </div>

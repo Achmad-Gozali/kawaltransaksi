@@ -23,7 +23,7 @@ const defaultFormData = (): ReportFormData => ({
   chronology: '', loss_amount: '',
   incident_date: '', platform: '', link_url: '',
   social_media_accounts: [''], has_other_victims: '',
-  reported_to: [], store_name: '', suspect_city: '',
+  store_name: '', suspect_city: '',
 });
 
 function readFileAsDataUrl(file: File): Promise<string> {
@@ -92,14 +92,6 @@ export default function ReportForm() {
       return { ...f, social_media_accounts: arr };
     });
   }, []);
-
-  const toggleReportedTo = useCallback((val: string) =>
-    setFormData(f => ({
-      ...f,
-      reported_to: f.reported_to.includes(val)
-        ? f.reported_to.filter(v => v !== val)
-        : [...f.reported_to, val],
-    })), []);
 
   const handlePhotoChange = useCallback(async (
     file: File | null, type: 'suspect' | 'evidence', e?: React.ChangeEvent<HTMLInputElement>
@@ -211,7 +203,6 @@ export default function ReportForm() {
           linkUrl:             formData.link_url || null,
           socialMediaAccounts: formData.social_media_accounts.filter(Boolean),
           hasOtherVictims:     formData.has_other_victims || null,
-          reportedTo:          formData.reported_to,
           suspectPhotoUrl,
           storeName:           formData.store_name || null,
           suspectCity:         formData.suspect_city || null,
@@ -260,7 +251,6 @@ export default function ReportForm() {
       onAddSocialField={() => updateArrayField('add')}
       onRemoveSocialField={(i) => updateArrayField('remove', i)}
       onUpdateSocialField={(i, v) => updateArrayField('update', i, v)}
-      onToggleReportedTo={toggleReportedTo}
       onCustomCategoryChange={(val) => setCustomCategory(val)}
       onCustomPlatformChange={(val) => setCustomPlatform(val)}
     />,
