@@ -1,4 +1,3 @@
-$content = @"
 node_modules/
 .env
 .env.local
@@ -12,6 +11,7 @@ uploads/
 backend/uploads/
 kawaltransaksi-ssl-backup.txt
 migrate-supabase.env
-"@
-
-[System.IO.File]::WriteAllText("$PWD\.gitignore", $content, [System.Text.UTF8Encoding]::new($false))
+.env.backup
+backups/
+*.sql
+*.tar.gz
