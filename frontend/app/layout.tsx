@@ -11,7 +11,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'KawalTransaksi - Cek & Laporkan Nomor Penipu',
+  title: 'Cek Nomor Penipu Online, Rekening & E-Wallet | KawalTransaksi',
   description: 'Cek nomor HP, rekening bank, dan e-wallet terindikasi penipuan secara gratis. Database laporan komunitas anti-penipuan Indonesia terlengkap.',
   metadataBase: new URL('https://kawaltransaksi.com'),
   icons: {
@@ -23,33 +23,55 @@ export const metadata: Metadata = {
     shortcut: '/icons/favicon-32x32.png',
   },
   keywords: [
+    // -- Cek nomor HP / WA --
     'cek nomor penipu', 'cek nomor hp penipu', 'cek nomor telepon penipu',
     'nomor hp penipu', 'nomor penipu indonesia', 'cek nomor penipuan',
     'lacak nomor penipu', 'cek nomor wa penipu', 'cek nomor whatsapp penipu',
-    'nomor wa penipu', 'cek rekening penipu', 'cek rekening bank penipu',
-    'rekening penipuan', 'cek rekening BCA penipu', 'cek rekening BRI penipu',
-    'cek rekening BNI penipu', 'cek rekening Mandiri penipu', 'cek rekening BSI penipu',
-    'cek rekening CIMB penipu', 'nomor rekening penipu', 'rekening bank penipu',
-    'cek nomor rekening', 'cek ewallet penipu', 'cek GoPay penipu', 'cek OVO penipu',
-    'cek Dana penipu', 'cek ShopeePay penipu', 'cek LinkAja penipu', 'gopay penipu',
-    'ovo penipu', 'dana penipu', 'shopeepay penipu', 'dompet digital penipu',
+    'nomor wa penipu', 'apakah nomor ini penipu', 'nomor ini penipu atau bukan',
+
+    // -- Cek rekening bank (umum) --
+    'cek rekening penipu', 'cek rekening bank penipu', 'rekening penipuan',
+    'nomor rekening penipu', 'rekening bank penipu', 'cek nomor rekening',
+    'cara cek rekening penipu', 'cek rekening sebelum transfer',
+    'verifikasi rekening sebelum bayar',
+
+    // -- Cek rekening per bank --
+    'cek rekening BCA penipu', 'cek rekening BRI penipu', 'cek rekening BNI penipu',
+    'cek rekening Mandiri penipu', 'cek rekening BSI penipu', 'cek rekening CIMB penipu',
+    'cek rekening SeaBank penipu', 'cek rekening Allo Bank penipu',
+    'cek rekening Aladin penipu', 'cek rekening Maybank penipu',
+    'cek rekening BJB penipu',
+
+    // -- Cek e-wallet --
+    'cek ewallet penipu', 'cek GoPay penipu', 'cek OVO penipu', 'cek Dana penipu',
+    'cek ShopeePay penipu', 'cek LinkAja penipu', 'gopay penipu', 'ovo penipu',
+    'dana penipu', 'shopeepay penipu', 'dompet digital penipu',
+
+    // -- Lapor penipuan --
     'lapor penipuan online', 'laporkan penipu', 'laporan penipuan online indonesia',
     'cara lapor penipuan online', 'lapor rekening penipu', 'lapor nomor penipu',
-    'lapor penipuan jual beli online', 'lapor investasi bodong', 'modus penipuan online',
-    'penipuan jual beli online', 'investasi bodong', 'pinjaman online ilegal', 'pinjol ilegal',
-    'phishing indonesia', 'social engineering', 'penipuan transfer dana', 'penipuan COD',
-    'penipuan marketplace', 'penipuan tokopedia', 'penipuan shopee', 'penipuan olx',
-    'penipuan facebook marketplace', 'anti penipuan indonesia', 'database penipu indonesia',
-    'database nomor penipu', 'database rekening penipu', 'cek penipuan online',
-    'hindari penipuan online', 'waspada penipuan online', 'komunitas anti penipuan',
-    'blacklist penipu', 'blacklist rekening penipu', 'kawaltransaksi', 'kawal transaksi',
+    'lapor penipuan jual beli online', 'lapor investasi bodong',
+
+    // -- Modus & jenis penipuan --
+    'modus penipuan online', 'penipuan jual beli online', 'investasi bodong',
+    'pinjaman online ilegal', 'pinjol ilegal', 'phishing indonesia',
+    'social engineering', 'penipuan transfer dana', 'penipuan COD',
+    'penipuan segitiga', 'penipuan marketplace', 'penipuan tokopedia',
+    'penipuan shopee', 'penipuan olx', 'penipuan facebook marketplace',
+    'cek penjual online terpercaya',
+
+    // -- Brand & database --
+    'anti penipuan indonesia', 'database penipu indonesia', 'database nomor penipu',
+    'database rekening penipu', 'cek penipuan online', 'hindari penipuan online',
+    'waspada penipuan online', 'komunitas anti penipuan', 'blacklist penipu',
+    'blacklist rekening penipu', 'kawaltransaksi', 'kawal transaksi',
     'kawaltransaksi.com',
   ],
   authors:   [{ name: 'KawalTransaksi' }],
   creator:   'KawalTransaksi',
   publisher: 'KawalTransaksi',
   openGraph: {
-    title:       'KawalTransaksi - Cek & Laporkan Nomor Penipu',
+    title:       'Cek Nomor Penipu Online, Rekening & E-Wallet | KawalTransaksi',
     description: 'Cek nomor HP, rekening bank, dan e-wallet terindikasi penipuan secara gratis. Database laporan komunitas anti-penipuan Indonesia.',
     type:        'website',
     locale:      'id_ID',
@@ -58,7 +80,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card:        'summary_large_image',
-    title:       'KawalTransaksi - Cek & Laporkan Nomor Penipu',
+    title:       'Cek Nomor Penipu Online, Rekening & E-Wallet | KawalTransaksi',
     description: 'Cek nomor HP, rekening bank, dan e-wallet terindikasi penipuan secara gratis.',
   },
   robots:     { index: true, follow: true },
