@@ -98,7 +98,7 @@ async function getRecentReports(): Promise<ReportItem[]> {
     return json.data ?? [];
   } catch { return []; }
 }
-
+  
 async function getStats(): Promise<Stats> {
   try {
     const res = await fetch(`${BACKEND_URL}/api/reports/public/stats`, {
