@@ -1,0 +1,37 @@
+# dependencies (di-install ulang di dalam container via npm ci)
+node_modules
+npm-debug.log*
+
+# build output (dibuat ulang saat build)
+dist
+
+# env (jangan pernah ikut ke build image — pakai environment di docker-compose)
+.env
+.env.local
+.env.example
+
+# uploads (data user, bukan bagian dari image; sudah pakai volume mount)
+uploads
+
+# git
+.git
+.gitignore
+
+# logs & source maps
+*.log
+*.js.map
+
+# ide / os
+.vscode
+.DS_Store
+*.pem
+
+# typescript
+*.tsbuildinfo
+
+# docker itself
+Dockerfile
+.dockerignore
+
+# drizzle migrations tetap perlu ikut (jangan di-exclude) karena
+# dibutuhkan saat runtime untuk npm run db:migrate

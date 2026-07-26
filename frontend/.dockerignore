@@ -1,0 +1,38 @@
+# dependencies (di-install ulang di dalam container via npm ci)
+node_modules
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.pnpm-debug.log*
+
+# next.js build output (dibuat ulang saat build, jangan bawa cache lama)
+.next
+out
+
+# git
+.git
+.gitignore
+
+# env (jangan pernah ikut ke build image — pakai ARG/ENV di docker-compose)
+.env
+.env.local
+.env.*.local
+.env.backup
+
+# ide / os
+.vscode
+.DS_Store
+*.pem
+
+# testing & misc
+coverage
+*.tsbuildinfo
+
+# docs yang tidak perlu ikut image
+README.md
+AGENTS.md
+CLAUDE.md
+
+# docker itself
+Dockerfile
+.dockerignore
