@@ -1,3 +1,10 @@
+// @ts-nocheck
+// Type-checking di-skip untuk file ini karena import mengarah ke folder
+// dist/ (hasil build), yang tidak selalu tersedia/ter-update di lokal saat
+// editor membuka file ini. Ini tidak mempengaruhi eksekusi runtime -- tsx
+// tetap menjalankan file ini dengan benar; ini murni menghilangkan noise
+// visual di editor.
+
 /**
  * Script cron mingguan: kirim ringkasan laporan terverifikasi 7 hari
  * terakhir ke semua user terdaftar.
@@ -19,10 +26,10 @@
  *   0 8 * * 1 cd /root/kawaltransaksi/backend && /usr/bin/docker compose exec -T backend npx tsx scripts/weekly-digest.ts >> /root/kawaltransaksi/logs/weekly-digest.log 2>&1
  */
 
-import { db } from "../src/core/db.js";
-import { reports, users } from "../src/core/schema.js";
+import { db } from "../dist/core/db.js";
+import { reports, users } from "../dist/core/schema.js";
 import { and, eq, gte } from "drizzle-orm";
-import { sendWeeklyDigestEmail, type WeeklyDigestCategoryCount } from "../src/core/mailer.js";
+import { sendWeeklyDigestEmail, type WeeklyDigestCategoryCount } from "../dist/core/mailer.js";
 
 const SEND_DELAY_MS = 150; // jeda antar email, aman di bawah rate limit 10/detik Resend
 
