@@ -27,13 +27,13 @@
     "jsonwebtoken": "^9.0.2",
     "postgres": "^3.4.5",
     "redis": "^6.1.0",
-    "resend": "^6.17.1"
+    "resend": "^6.17.1",
+    "tsx": "^4.19.4"
   },
   "devDependencies": {
     "@types/jsonwebtoken": "^9.0.9",
     "@types/node": "^22.15.21",
     "drizzle-kit": "^0.31.10",
-    "tsx": "^4.19.4",
     "typescript": "^5.8.3"
   }
 }
