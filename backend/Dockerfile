@@ -11,6 +11,7 @@ WORKDIR /app
 COPY package*.json ./
 RUN npm ci --omit=dev
 COPY --from=builder --chown=node:node /app/dist ./dist
+COPY --from=builder --chown=node:node /app/scripts ./scripts
 USER node
 EXPOSE 4000
 CMD ["node", "dist/index.js"]
