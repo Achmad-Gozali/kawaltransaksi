@@ -1,7 +1,8 @@
 import Link from "next/link";
 import Image from "next/image";
+import { cookies } from "next/headers";
 import { Phone, Building2, Wallet, ArrowRight } from "lucide-react";
-import { formatDateID, encodeSlug, maskName } from "@/core/utils";
+import { formatDateID, encodeSlug, maskName, maskNumber } from "@/core/utils";
 import StatsChart from "./StatsChart";
 import SearchBar from "./SearchBar";
 
@@ -49,7 +50,7 @@ function getAggregateStatus(verifiedCount: number, pendingCount: number): string
 function getStatusBadge(status: string, reportCount: number) {
   switch (status) {
     case "verified": return { label: reportCount > 1 ? `${reportCount}x Terverifikasi` : "Terverifikasi", className: "bg-emerald-50 text-emerald-700 border-emerald-200" };
-    case "pending": return { label: "Menunggu", className: "bg-amber-50 text-amber-700 border-amber-200" };
+    case "pending": return { label: "Pending", className: "bg-amber-50 text-amber-700 border-amber-200" };
     case "withdrawn": return { label: "Sedang Direvisi", className: "bg-slate-100 text-slate-500 border-slate-200" };
     default: return { label: status, className: "bg-slate-50 text-slate-500 border-slate-200" };
   }
@@ -103,10 +104,12 @@ export default async function LaporanPublikPage({
   const page = Math.max(1, parseInt(params.page ?? "1"));
   const perPage = 12;
 
-  const [laporanData, allReportsForStats] = await Promise.all([
+  const [laporanData, allReportsForStats, cookieStore] = await Promise.all([
     getLaporanPublik({ type, sort, q, page }),
     getLaporanStats(),
+    cookies(),
   ]);
+  const isLoggedIn = !!cookieStore.get("refresh_token")?.value;
 
   const paginatedReports: any[] = laporanData.data ?? [];
   const totalUniqueNumbers: number = laporanData.total_unique ?? 0;
@@ -223,6 +226,7 @@ export default async function LaporanPublikPage({
                 const badge = getStatusBadge(aggStatus, Number(report.verified_count));
                 const isVerified = Number(report.verified_count) > 0;
                 const displayName = isVerified ? (report.target_name ?? "Anonymous") : maskName(report.target_name);
+                const displayNumber = isLoggedIn ? report.target_number : maskNumber(report.target_number);
 
                 return (
                   <Link key={report.target_number} href={`/check/${encodeSlug(report.target_number)}`}
@@ -232,7 +236,7 @@ export default async function LaporanPublikPage({
                       <span className="text-[10px] text-slate-400 font-medium shrink-0 ml-2">{formatDateID(report.latest_at)}</span>
                     </div>
                     <div className="mb-3 flex-1">
-                      <p className="text-lg sm:text-xl font-black font-mono tracking-tight text-slate-900 group-hover:text-slate-700 transition-colors break-all">{report.target_number}</p>
+                      <p className="text-lg sm:text-xl font-black font-mono tracking-tight text-slate-900 group-hover:text-slate-700 transition-colors break-all">{displayNumber}</p>
                       <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1 truncate">
                         A.N. {displayName}
                       </p>

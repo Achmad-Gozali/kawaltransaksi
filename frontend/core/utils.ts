@@ -2,10 +2,26 @@ export function encodeSlug(str: string): string {
   return encodeURIComponent(str.trim());
 }
 
+/**
+ * Sensor nomor (HP/rekening) mengikuti standar umum (bank, kartu kredit):
+ * tampilkan 4 digit awal + 4 digit akhir, sensor bagian tengah.
+ * Contoh: "0895370985943" -> "0895*****5943"
+ *
+ * Untuk nomor pendek (<= 8 digit), fallback ke sensor separuh tengah
+ * secara proporsional supaya tidak sampai menampilkan seluruh nomor.
+ */
 export function maskNumber(num: string): string {
   if (!num) return '';
-  if (num.length <= 4) return '*'.repeat(num.length);
-  return '*'.repeat(num.length - 4) + num.slice(-4);
+  const len = num.length;
+
+  if (len <= 8) {
+    // Nomor pendek: sisakan sedikit di depan & belakang, sensor tengah.
+    const visible = Math.max(1, Math.floor(len / 4));
+    if (len <= visible * 2) return '*'.repeat(len);
+    return num.slice(0, visible) + '*'.repeat(len - visible * 2) + num.slice(-visible);
+  }
+
+  return num.slice(0, 4) + '*'.repeat(len - 8) + num.slice(-4);
 }
 
 export function formatDateID(dateString: string): string {

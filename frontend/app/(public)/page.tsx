@@ -1,8 +1,9 @@
 import Link from "next/link";
 import Image from "next/image";
+import { cookies } from "next/headers";
 import { Phone, Landmark, Wallet, ArrowRight } from "lucide-react";
 import * as motion from "motion/react-client";
-import { maskName } from "@/core/utils";
+import { maskName, maskNumber } from "@/core/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -138,7 +139,8 @@ function StatsCard({ stats }: { stats: Stats }) {
 }
 
 export default async function HomePage() {
-  const [recentReports, stats] = await Promise.all([getRecentReports(), getStats()]);
+  const [recentReports, stats, cookieStore] = await Promise.all([getRecentReports(), getStats(), cookies()]);
+  const isLoggedIn = !!cookieStore.get("refresh_token")?.value;
 
   return (
     <main className="bg-white text-slate-900 font-sans overflow-x-hidden">
@@ -257,11 +259,12 @@ export default async function HomePage() {
                 const logoSrc = getPlatformLogo(report.targetType, report.bankName, report.walletName);
                 const isVerified = report.status === "verified";
                 const statusMap: Record<string, { label: string; className: string }> = {
-                  verified: { label: "Terverifikasi",      className: "bg-emerald-50 text-emerald-700 border-emerald-200" },
-                  pending:  { label: "Dalam Investigasi",  className: "bg-amber-50 text-amber-700 border-amber-200" },
+                  verified: { label: "Terverifikasi", className: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+                  pending:  { label: "Pending",        className: "bg-amber-50 text-amber-700 border-amber-200" },
                 };
                 const statusStyle = statusMap[report.status] ?? statusMap.pending;
                 const displayName = isVerified ? (report.targetName ?? "Anonymous") : maskName(report.targetName);
+                const displayNumber = isLoggedIn ? report.targetValue : maskNumber(report.targetValue);
 
                 return (
                   <motion.div
@@ -282,8 +285,8 @@ export default async function HomePage() {
                         <span className="text-xs text-slate-500 font-medium">{formatDateID(report.createdAt)}</span>
                       </div>
                       <div className="mb-4">
-                        <p className="text-base sm:text-lg font-black tracking-tight text-slate-900 group-hover:text-slate-700 transition-colors font-mono">
-                          {report.targetValue}
+                        <p className="text-base sm:text-lg font-black tracking-tight text-slate-900 group-hover:text-slate-700 transition-colors font-mono break-all">
+                          {displayNumber}
                         </p>
                         <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1 truncate">
                           A.N. {displayName}

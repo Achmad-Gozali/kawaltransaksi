@@ -1,4 +1,5 @@
 import { notFound } from "next/navigation";
+import { cookies } from "next/headers";
 import type { Metadata } from "next";
 import { maskNumber, formatDateID } from "@/core/utils";
 import BankPageClient from "./BankPageClient";
@@ -39,6 +40,9 @@ export default async function BankDetailPage({ params }: PageProps) {
   const data = bankData[bankKey];
   if (!data) notFound();
 
+  const cookieStore = await cookies();
+  const isLoggedIn  = !!cookieStore.get("refresh_token")?.value;
+
   type ApiReportRow = {
     targetValue: string;
     targetName: string | null;
@@ -55,11 +59,14 @@ export default async function BankDetailPage({ params }: PageProps) {
   const totalCount    = allRows.length;
   const verifiedCount = allRows.filter(r => r.status === "verified").length;
   const pendingCount  = allRows.filter(r => r.status === "pending").length;
-  const reports       = allRows.slice(0, 6).map(r => ({
+  // Nomor tersensor untuk pengunjung, nomor asli untuk yang sudah login.
+  // Keputusan sensor dilakukan di server agar nomor asli tidak pernah
+  // terkirim ke browser pengunjung yang belum login sama sekali.
+  const reports = allRows.slice(0, 6).map(r => ({
     target_number: r.targetValue,
     target_name:   r.targetName,
     status:        r.status,
-    masked:        maskNumber(r.targetValue),
+    displayNumber: isLoggedIn ? r.targetValue : maskNumber(r.targetValue),
     dateFormatted: formatDateID(r.createdAt),
   }));
 
@@ -74,7 +81,7 @@ export default async function BankDetailPage({ params }: PageProps) {
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
-      <BankPageClient bankId={bankKey} bankData={data} reports={reports} totalCount={totalCount} verifiedCount={verifiedCount} pendingCount={pendingCount} />
+      <BankPageClient bankId={bankKey} bankData={data} reports={reports} totalCount={totalCount} verifiedCount={verifiedCount} pendingCount={pendingCount} isLoggedIn={isLoggedIn} />
     </>
   );
 }

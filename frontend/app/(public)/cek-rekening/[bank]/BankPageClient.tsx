@@ -12,16 +12,17 @@ interface BankData {
 
 interface ReportRow {
   target_number: string; target_name: string | null;
-  status: string; masked: string; dateFormatted: string;
+  status: string; displayNumber: string; dateFormatted: string;
 }
 
 interface Props {
   bankData: BankData; bankId: string;
   reports: ReportRow[]; totalCount: number;
   verifiedCount: number; pendingCount: number;
+  isLoggedIn: boolean;
 }
 
-export default function BankPageClient({ bankData: data, bankId, reports, totalCount, verifiedCount, pendingCount }: Props) {
+export default function BankPageClient({ bankData: data, bankId, reports, totalCount, verifiedCount, pendingCount, isLoggedIn }: Props) {
   return (
     <div className="min-h-screen bg-slate-50 text-slate-900 pb-16" style={{ fontFamily: "'Inter', sans-serif" }}>
       <div className="sm:hidden bg-white border-b border-slate-100">
@@ -120,7 +121,7 @@ export default function BankPageClient({ bankData: data, bankId, reports, totalC
                   {reports.map((report, i) => (
                     <tr key={i} className="group hover:bg-slate-50/60 transition-colors">
                       <td className="px-5 py-4">
-                        <p className="text-sm font-medium text-slate-900 tracking-wider" style={{ fontFamily: "'DM Mono', monospace" }}>{report.masked}</p>
+                        <p className="text-sm font-medium text-slate-900 tracking-wider" style={{ fontFamily: "'DM Mono', monospace" }}>{report.displayNumber}</p>
                         <p className="text-[10px] text-slate-400 mt-0.5">a.n. {report.target_name || "Tidak diketahui"}</p>
                       </td>
                       <td className="px-5 py-4">
@@ -142,7 +143,7 @@ export default function BankPageClient({ bankData: data, bankId, reports, totalC
                 {reports.map((report, i) => (
                   <Link key={i} href={`/check/${encodeSlug(report.target_number)}?type=bank&bank=${bankId}`} className="flex items-center justify-between px-4 py-3.5 hover:bg-slate-50/60 transition-colors">
                     <div>
-                      <p className="text-sm font-medium text-slate-900 tracking-wider" style={{ fontFamily: "'DM Mono', monospace" }}>{report.masked}</p>
+                      <p className="text-sm font-medium text-slate-900 tracking-wider" style={{ fontFamily: "'DM Mono', monospace" }}>{report.displayNumber}</p>
                       <p className="text-[10px] text-slate-400 mt-0.5">a.n. {report.target_name || "Tidak diketahui"}</p>
                     </div>
                     <div className="flex items-center gap-2">

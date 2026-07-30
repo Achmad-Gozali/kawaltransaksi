@@ -66,7 +66,7 @@ export async function generateMetadata({ params }: CheckPageProps): Promise<Meta
       ? `Nomor ${formattedNumber} dilaporkan ${totalReports}x sebagai penipu dengan ${verifiedCount} laporan terverifikasi dan total kerugian ${formatLoss(totalLoss)}. Cek detail laporan sebelum bertransaksi.`
       : `Nomor ${formattedNumber} dilaporkan ${totalReports}x sebagai penipu dengan ${verifiedCount} laporan terverifikasi. Jangan bertransaksi dengan nomor ini.`;
   } else if (pendingCount > 0) {
-    title = `Nomor ${formattedNumber} - Dalam Investigasi (${pendingCount} Laporan Masuk) | KawalTransaksi`;
+    title = `Nomor ${formattedNumber} - Pending (${pendingCount} Laporan Masuk) | KawalTransaksi`;
     description = `Nomor ${formattedNumber} sedang dalam proses verifikasi dengan ${pendingCount} laporan masuk. Tetap waspada sebelum melakukan transaksi.`;
   } else {
     title = `Cek Nomor ${formattedNumber} - Tidak Ada Laporan | KawalTransaksi`;
@@ -252,7 +252,6 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
 
   const checkedAt    = new Date();
   const cookieStore  = await cookies();
-  // v2 auth: cek refresh_token (httpOnly cookie)
   const sessionToken = cookieStore.get("refresh_token")?.value;
   const isLoggedIn   = !!sessionToken;
 
@@ -316,7 +315,7 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
       nameBadgeText: linkedHasVerified ? "text-red-800" : "text-amber-800",
       nameBadgeBorder: linkedHasVerified ? "border-red-200" : "border-amber-200",
       verdict: hasWithdrawn && pendingReports.length === 0 && verifiedCount === 0
-        ? "Ada riwayat laporan" : linkedHasVerified ? "Terkait pelaku terverifikasi" : "Dalam investigasi",
+        ? "Ada riwayat laporan" : linkedHasVerified ? "Terkait pelaku terverifikasi" : "Pending",
       verdictSub: hasWithdrawn && pendingReports.length === 0 && verifiedCount === 0
         ? "Laporan untuk nomor ini sedang dalam proses revisi oleh pelapor."
         : linkedHasVerified

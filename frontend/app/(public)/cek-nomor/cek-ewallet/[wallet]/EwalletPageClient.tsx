@@ -12,13 +12,14 @@ interface EwalletData {
 
 interface ReportRow {
   target_number: string; target_name: string | null;
-  status: string; masked: string; dateFormatted: string;
+  status: string; displayNumber: string; dateFormatted: string;
 }
 
 interface Props {
   walletData: EwalletData; walletId: string;
   reports: ReportRow[]; totalCount: number;
   verifiedCount: number; pendingCount: number;
+  isLoggedIn: boolean;
 }
 
 const SOCIALS: Record<string, { instagram?: string; tiktok?: string }> = {
@@ -45,7 +46,7 @@ function TiktokIcon() {
   );
 }
 
-export default function EwalletPageClient({ walletData: data, walletId, reports, totalCount, verifiedCount, pendingCount }: Props) {
+export default function EwalletPageClient({ walletData: data, walletId, reports, totalCount, verifiedCount, pendingCount, isLoggedIn }: Props) {
   const socials = SOCIALS[data.name] ?? {};
   const hasSocials = socials.instagram || socials.tiktok;
 
@@ -161,7 +162,7 @@ export default function EwalletPageClient({ walletData: data, walletId, reports,
                   {reports.map((report, i) => (
                     <tr key={i} className="group hover:bg-slate-50/60 transition-colors">
                       <td className="px-5 py-4">
-                        <p className="text-sm font-medium text-slate-900 tracking-wider" style={{ fontFamily: "'DM Mono', monospace" }}>{report.masked}</p>
+                        <p className="text-sm font-medium text-slate-900 tracking-wider" style={{ fontFamily: "'DM Mono', monospace" }}>{report.displayNumber}</p>
                         <p className="text-[10px] text-slate-400 mt-0.5">a.n. {report.target_name || "Tidak diketahui"}</p>
                       </td>
                       <td className="px-5 py-4">
@@ -183,7 +184,7 @@ export default function EwalletPageClient({ walletData: data, walletId, reports,
                 {reports.map((report, i) => (
                   <Link key={i} href={`/check/${encodeSlug(report.target_number)}?type=ewallet&wallet=${walletId}`} className="flex items-center justify-between px-4 py-3.5 hover:bg-slate-50/60 transition-colors">
                     <div>
-                      <p className="text-sm font-medium text-slate-900 tracking-wider" style={{ fontFamily: "'DM Mono', monospace" }}>{report.masked}</p>
+                      <p className="text-sm font-medium text-slate-900 tracking-wider" style={{ fontFamily: "'DM Mono', monospace" }}>{report.displayNumber}</p>
                       <p className="text-[10px] text-slate-400 mt-0.5">a.n. {report.target_name || "Tidak diketahui"}</p>
                     </div>
                     <div className="flex items-center gap-2">

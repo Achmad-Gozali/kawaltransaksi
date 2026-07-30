@@ -4,7 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Lock, Signal, MapPin, Store, UserRound } from "lucide-react";
-import { formatNum } from "@/core/utils";
+import { formatNum, maskNumber } from "@/core/utils";
 
 function formatSosmed(acc: string) {
   const cleaned = acc.trim();
@@ -95,6 +95,11 @@ export default function NumberCard({
   const hasContext   = reports.length > 0 || defaultBankName !== null || defaultWalletName !== null || hasTypeParam;
   const showLabel    = hasContext && displayLabel !== null;
 
+  // Nomor disensor untuk pengunjung yang belum login (standar 4 depan + 4
+  // belakang kelihatan, tengah disensor). formatNum menambahkan spasi tiap
+  // 4 digit supaya tetap mudah dibaca, baik versi asli maupun tersensor.
+  const displayNumber = isLoggedIn ? formatNum(realNumber) : formatNum(maskNumber(realNumber));
+
   const infoGrid = [
     category    ? { label: "Kategori",   value: category,    className: "text-slate-800" } : null,
     platform    ? { label: "Platform",   value: platform,    className: "text-slate-800" } : null,
@@ -110,8 +115,8 @@ export default function NumberCard({
         <div className="p-4 sm:p-6">
           <div className="flex justify-between items-start gap-3">
             <div className="flex-1 min-w-0">
-              <p className="text-[28px] sm:text-5xl font-semibold text-slate-900 tracking-tight break-all leading-none mb-3 font-mono">
-                {formatNum(realNumber)}
+              <p className="text-[28px] sm:text-5xl font-semibold text-slate-900 tracking-tight break-all leading-none font-mono mb-3">
+                {displayNumber}
               </p>
               <div className="flex flex-wrap items-center gap-1.5">
                 {targetName && (
