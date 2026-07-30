@@ -27,10 +27,36 @@ await app.register(cors, {
 });
 await app.register(cookie, { secret: process.env.COOKIE_SECRET! });
 await app.register(multipart, { limits: { fileSize: 5 * 1024 * 1024 } });
+
+// ── Burst protection (lapis 1) ───────────────────────────────────────────
+// Mendeteksi lonjakan request cepat dari satu sumber (pola pentest/bot),
+// terpisah dari rate limit per-menit/jam yang sudah ada di masing-masing
+// route (misal /login 5x/15menit). Window sangat pendek (5 detik) supaya
+// user normal -- termasuk yang membuka banyak tab atau halaman yang fetch
+// beberapa endpoint sekaligus -- tidak pernah kena, tapi lonjakan otomatis
+// (ratusan request dalam hitungan detik) langsung ditolak sebelum sempat
+// membebani nginx/upstream seperti insiden sebelumnya.
+await app.register(rateLimit, {
+  global: true,
+  max: 20,
+  timeWindow: "5 seconds",
+  nameSpace: "burst-",
+  errorResponseBuilder: (_req, context) => ({
+    statusCode: 429,
+    error: "Too Many Requests",
+    message: `Terlalu banyak permintaan dalam waktu singkat. Coba lagi dalam ${Math.ceil(context.ttl / 1000)} detik.`,
+  }),
+});
+
+// ── Rate limit umum (lapis 2) ─────────────────────────────────────────────
+// Berlaku untuk semua endpoint yang TIDAK mendefinisikan rate limit sendiri
+// (misal endpoint di auth.route.ts yang sudah punya config.rateLimit
+// masing-masing -- itu tetap dipakai, bukan digantikan oleh yang ini).
 await app.register(rateLimit, {
   global: true,
   max: 50,
   timeWindow: "1 minute",
+  nameSpace: "general-",
   errorResponseBuilder: (_req, context) => ({
     statusCode: 429,
     error: "Too Many Requests",
