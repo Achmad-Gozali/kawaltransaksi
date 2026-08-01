@@ -3,7 +3,7 @@ import { hash, verify } from "@node-rs/argon2";
 import jwt from "jsonwebtoken";
 import { google } from "googleapis";
 import { createId } from "@paralleldrive/cuid2";
-import { randomInt, createHash } from "crypto";
+import { randomInt, randomBytes, createHash } from "crypto";
 import { db } from "../../core/db.js";
 import { users, sessions, passwordResetTokens, otpTokens } from "../../core/schema.js";
 import { eq } from "drizzle-orm";
@@ -384,20 +384,40 @@ export async function authRoutes(app: FastifyInstance) {
 
   app.get("/google", async (_req, reply) => {
     const oauth2 = getOAuthClient();
+    const state  = randomBytes(32).toString("hex");
+
+    // State disimpan di cookie sendiri (bukan refresh_token) supaya scope-nya
+    // sempit -- cuma dipakai untuk cegah OAuth login CSRF, dicek & dihapus lagi
+    // begitu callback selesai diproses.
+    reply.setCookie("google_oauth_state", state, {
+      httpOnly: true,
+      secure:   process.env.NODE_ENV === "production",
+      sameSite: "lax",
+      path:     "/api/auth/google",
+      maxAge:   10 * 60,
+    });
+
     const url = oauth2.generateAuthUrl({
       access_type: "offline",
       scope: ["profile", "email"],
       prompt: "select_account",
+      state,
     });
     return reply.redirect(url);
   });
 
   app.get("/google/callback", async (req, reply) => {
-    const { code, error } = req.query as { code?: string; error?: string };
-    const frontendUrl = process.env.FRONTEND_URL!;
+    const { code, state, error } = req.query as { code?: string; state?: string; error?: string };
+    const frontendUrl   = process.env.FRONTEND_URL!;
+    const expectedState = req.cookies?.google_oauth_state;
+
+    reply.clearCookie("google_oauth_state", { path: "/api/auth/google" });
 
     if (error || !code)
       return reply.redirect(`${frontendUrl}/login?error=google_cancelled`);
+
+    if (!state || !expectedState || state !== expectedState)
+      return reply.redirect(`${frontendUrl}/login?error=google_failed`);
 
     try {
       const { execFile } = await import("child_process");
