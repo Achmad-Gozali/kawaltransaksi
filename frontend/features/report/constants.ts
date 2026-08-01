@@ -1,5 +1,4 @@
 export const MAX_EVIDENCE_FILES = 10;
-export const MAX_TARGET_NUMBERS = 5;
 
 export const STEPS = [
   { number: 1, label: 'Data Penipu' },
