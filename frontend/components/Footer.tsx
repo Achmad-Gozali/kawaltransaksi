@@ -8,7 +8,7 @@ const layananUtama = [
 ];
 
 const bantuanLegal = [
-  { label: 'Tentang Kami',      href: '/about' },
+  { label: 'Tentang Kami',      href: '/tentang-kami' },
   { label: 'FAQ',               href: '/faq' },
   { label: 'Kontak Kami',       href: '/kontak' },
   { label: 'Syarat Ketentuan',  href: '/syarat-ketentuan' },
