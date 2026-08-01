@@ -202,6 +202,20 @@ export interface CompletenessInput {
 
 export type ReportStatus = "verified" | "pending";
 
+/**
+ * User "terpercaya" = sudah pernah punya laporan berstatus verified
+ * sebelumnya. Existence check (LIMIT 1), bukan full count, karena kita cuma
+ * butuh tahu ada/tidaknya -- ditopang index reports_user_id_status_idx.
+ */
+async function isTrustedUser(userId: string): Promise<boolean> {
+  const [row] = await db
+    .select({ id: reports.id })
+    .from(reports)
+    .where(and(eq(reports.userId, userId), eq(reports.status, "verified")))
+    .limit(1);
+  return !!row;
+}
+
 export async function checkCompleteness(input: CompletenessInput): Promise<ReportStatus> {
   const { userId, description, chronology, category, amount, targetType, targetValue, evidenceUrls } = input;
 
@@ -230,8 +244,13 @@ export async function checkCompleteness(input: CompletenessInput): Promise<Repor
   const text = stripWhitespace(chronology ?? description);
   if (text.length < 20) return "pending";
 
-  // 5. Minimal 8 kata unik
-  if (countUniqueWords(text) < 8) return "pending";
+  // 5. Minimal kata unik: 5 untuk user terpercaya (sudah pernah verified
+  // sebelumnya -- 5 adalah floor yang sudah wajib dipenuhi semua orang lewat
+  // checkSpam() gerbang #7, bukan angka baru yang lebih longgar dari itu),
+  // 8 untuk user lain.
+  const trusted = await isTrustedUser(userId);
+  const minUniqueWords = trusted ? 5 : 8;
+  if (countUniqueWords(text) < minUniqueWords) return "pending";
 
   // 6. Nomor mencurigakan → pending
   if (isSuspiciousNumber(targetType, targetValue)) return "pending";

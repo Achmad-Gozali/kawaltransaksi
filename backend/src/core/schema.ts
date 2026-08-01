@@ -1,4 +1,4 @@
-import { pgTable, text, timestamp, pgEnum, integer, boolean } from "drizzle-orm/pg-core";
+import { pgTable, text, timestamp, pgEnum, integer, boolean, index } from "drizzle-orm/pg-core";
 import { createId } from "@paralleldrive/cuid2";
 
 export const roleEnum         = pgEnum("role",           ["user", "admin"]);
@@ -49,7 +49,12 @@ export const reports = pgTable("reports", {
   status:              reportStatusEnum("status").notNull().default("pending"),
   createdAt:           timestamp("created_at").notNull().defaultNow(),
   updatedAt:           timestamp("updated_at").notNull().defaultNow(),
-});
+}, (table) => [
+  // Dipakai buat cek trust score (punya laporan verified sebelumnya?) di
+  // robot.ts, sekaligus mempercepat query per-user lain di checkSpam()
+  // (cek duplikat & rate limit harian) yang sebelumnya full table scan.
+  index("reports_user_id_status_idx").on(table.userId, table.status),
+]);
 
 export const evidence = pgTable("evidence", {
   id:        text("id").primaryKey().$defaultFn(() => createId()),
