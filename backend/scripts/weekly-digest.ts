@@ -19,8 +19,11 @@
  *     PERLU direvisi untuk menyebar pengiriman ke beberapa hari.
  *   - Rate limit: 10 request/detik -> diberi jeda 150ms antar pengiriman.
  *
- * Cara jalan manual (testing):
- *   cd backend && npx tsx scripts/weekly-digest.ts
+ * Cara jalan manual (testing) di lokal (di luar container docker):
+ *   cd backend && npx tsx --env-file=.env scripts/weekly-digest.ts
+ * (--env-file wajib disertakan kalau dijalankan di luar container -- di dalam
+ * container docker, env var sudah ter-set duluan oleh docker-compose, jadi
+ * cukup seperti contoh crontab di bawah, tanpa perlu --env-file.)
  *
  * Contoh baris crontab (jalan tiap Senin jam 08:00 WIB):
  *   0 8 * * 1 cd /root/kawaltransaksi/backend && /usr/bin/docker compose exec -T backend npx tsx scripts/weekly-digest.ts >> /root/kawaltransaksi/logs/weekly-digest.log 2>&1

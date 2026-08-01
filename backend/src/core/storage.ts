@@ -6,17 +6,40 @@ export type UploadFolder = "reports" | "articles";
 const ALLOWED_MIME = new Set(["image/jpeg", "image/png"]);
 const MAX_SIZE = 5 * 1024 * 1024;
 
-const R2_BUCKET     = process.env.R2_BUCKET_NAME!;
-const R2_PUBLIC_URL = process.env.R2_PUBLIC_URL!.replace(/\/$/, ""); // buang trailing slash kalau ada
+interface R2Context {
+  client:    S3Client;
+  bucket:    string;
+  publicUrl: string;
+}
 
-const r2 = new S3Client({
-  region: "auto",
-  endpoint: process.env.R2_ENDPOINT!,
-  credentials: {
-    accessKeyId:     process.env.R2_ACCESS_KEY_ID!,
-    secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
-  },
-});
+let r2Context: R2Context | null = null;
+
+/**
+ * Lazy-init + memoize client & config R2 (pola sama seperti getResend() di
+ * mailer.ts). Sengaja TIDAK dibaca di top-level module -- di ES Modules,
+ * modul yang di-import (lewat rantai reports.route.ts/admin.route.ts/
+ * upload.route.ts -> storage.ts) dievaluasi SEBELUM configDotenv() di
+ * index.ts sempat jalan, jadi process.env.* masih kosong kalau dibaca di
+ * top-level. Dengan dipanggil di dalam fungsi (saat request beneran masuk),
+ * .env sudah pasti ke-load duluan.
+ */
+function getR2(): R2Context {
+  if (!r2Context) {
+    r2Context = {
+      client: new S3Client({
+        region: "auto",
+        endpoint: process.env.R2_ENDPOINT!,
+        credentials: {
+          accessKeyId:     process.env.R2_ACCESS_KEY_ID!,
+          secretAccessKey: process.env.R2_SECRET_ACCESS_KEY!,
+        },
+      }),
+      bucket:    process.env.R2_BUCKET_NAME!,
+      publicUrl: process.env.R2_PUBLIC_URL!.replace(/\/$/, ""), // buang trailing slash kalau ada
+    };
+  }
+  return r2Context;
+}
 
 export interface ImageValidationResult {
   valid: boolean;
@@ -62,19 +85,20 @@ export async function saveFile(
   originalName: string,
   folder: UploadFolder
 ): Promise<string> {
+  const { client, bucket, publicUrl } = getR2();
   const ext = originalName.includes(".") ? originalName.slice(originalName.lastIndexOf(".")) : "";
   const key = `${folder}/${createId()}${ext}`;
 
-  await r2.send(
+  await client.send(
     new PutObjectCommand({
-      Bucket:      R2_BUCKET,
+      Bucket:      bucket,
       Key:         key,
       Body:        buffer,
       ContentType: contentTypeFromExt(ext),
     })
   );
 
-  return `${R2_PUBLIC_URL}/${key}`;
+  return `${publicUrl}/${key}`;
 }
 
 /**
@@ -87,10 +111,11 @@ export async function saveFile(
 export async function deleteFile(url: string | null | undefined): Promise<void> {
   if (!url) return;
 
+  const { client, bucket, publicUrl } = getR2();
   let key: string | null = null;
 
-  if (url.startsWith(R2_PUBLIC_URL)) {
-    key = url.slice(R2_PUBLIC_URL.length + 1); // +1 buang leading slash
+  if (url.startsWith(publicUrl)) {
+    key = url.slice(publicUrl.length + 1); // +1 buang leading slash
   } else if (url.startsWith("/uploads/")) {
     // URL lama dari era filesystem — sudah tidak relevan pasca migrasi, skip saja
     return;
@@ -99,7 +124,7 @@ export async function deleteFile(url: string | null | undefined): Promise<void> 
   if (!key) return;
 
   try {
-    await r2.send(new DeleteObjectCommand({ Bucket: R2_BUCKET, Key: key }));
+    await client.send(new DeleteObjectCommand({ Bucket: bucket, Key: key }));
   } catch (err: any) {
     // Kalau object memang sudah tidak ada, jangan sampai bikin request gagal
     if (err.name !== "NoSuchKey") throw err;
@@ -113,12 +138,13 @@ export async function deleteFile(url: string | null | undefined): Promise<void> 
  * sebagai "tidak valid" tanpa perlu try/catch sendiri.
  */
 export async function getFileSizeFromR2(url: string): Promise<number> {
-  if (!url.startsWith(R2_PUBLIC_URL)) return 0;
+  const { client, bucket, publicUrl } = getR2();
+  if (!url.startsWith(publicUrl)) return 0;
 
-  const key = url.slice(R2_PUBLIC_URL.length + 1); // +1 buang leading slash
+  const key = url.slice(publicUrl.length + 1); // +1 buang leading slash
 
   try {
-    const res = await r2.send(new HeadObjectCommand({ Bucket: R2_BUCKET, Key: key }));
+    const res = await client.send(new HeadObjectCommand({ Bucket: bucket, Key: key }));
     return res.ContentLength ?? 0;
   } catch {
     return 0;

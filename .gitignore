@@ -13,5 +13,5 @@ kawaltransaksi-ssl-backup.txt
 migrate-supabase.env
 .env.backup
 backups/
-*.sql
+backups/*.sql
 *.tar.gz

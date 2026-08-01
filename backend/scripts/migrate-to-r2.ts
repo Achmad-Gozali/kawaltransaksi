@@ -6,10 +6,15 @@
  * CARA PAKAI:
  *   1. Jalankan dulu dalam mode DRY RUN (default) untuk lihat apa yang akan terjadi,
  *      TANPA benar-benar upload atau ubah database:
- *        npx tsx scripts/migrate-to-r2.ts
+ *        npx tsx --env-file=.env scripts/migrate-to-r2.ts
  *
  *   2. Kalau hasil dry run terlihat benar, jalankan sungguhan dengan flag --execute:
- *        npx tsx scripts/migrate-to-r2.ts --execute
+ *        npx tsx --env-file=.env scripts/migrate-to-r2.ts --execute
+ *
+ * Catatan: --env-file=.env wajib disertakan saat dijalankan manual di lokal --
+ * import { db } dari core/db.js dievaluasi sebelum configDotenv() di bawah ini
+ * sempat jalan (ini soal urutan evaluasi modul ES, lihat catatan di storage.ts),
+ * jadi DATABASE_URL harus sudah ter-load oleh Node sendiri lebih dulu.
  *
  * PENTING: backup database dulu sebelum menjalankan dengan --execute.
  * Script ini TIDAK menghapus file lokal di uploads/ — itu langkah terpisah,
