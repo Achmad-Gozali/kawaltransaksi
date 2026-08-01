@@ -368,39 +368,43 @@ export async function reportsRoutes(app: FastifyInstance) {
       evidenceUrls: evidenceUrls ?? [],
     });
 
-    const [report] = await db
-      .insert(reports)
-      .values({
-        userId: req.user!.userId,
-        targetType,
-        targetValue: cleanTargetValue,
-        targetName: targetName ?? null,
-        bankName: bankName ?? null,
-        walletName: walletName ?? null,
-        amount: amount ?? null,
-        description,
-        chronology: chronology ?? null,
-        category: category ?? null,
-        platform: platform ?? null,
-        incidentDate: incidentDate ? new Date(incidentDate) : null,
-        hasOtherVictims: hasOtherVictims ?? null,
-        storeName: storeName ?? null,
-        suspectCity: suspectCity ?? null,
-        suspectPhotoUrl: suspectPhotoUrl ?? null,
-        socialMediaAccounts: socialMediaAccounts ?? null,
-        linkUrl: linkUrl ?? null,
-        reportedTo: reportedTo ?? null,
-        status,
-      })
-      .returning();
+    const report = await db.transaction(async (tx) => {
+      const [inserted] = await tx
+        .insert(reports)
+        .values({
+          userId: req.user!.userId,
+          targetType,
+          targetValue: cleanTargetValue,
+          targetName: targetName ?? null,
+          bankName: bankName ?? null,
+          walletName: walletName ?? null,
+          amount: amount ?? null,
+          description,
+          chronology: chronology ?? null,
+          category: category ?? null,
+          platform: platform ?? null,
+          incidentDate: incidentDate ? new Date(incidentDate) : null,
+          hasOtherVictims: hasOtherVictims ?? null,
+          storeName: storeName ?? null,
+          suspectCity: suspectCity ?? null,
+          suspectPhotoUrl: suspectPhotoUrl ?? null,
+          socialMediaAccounts: socialMediaAccounts ?? null,
+          linkUrl: linkUrl ?? null,
+          reportedTo: reportedTo ?? null,
+          status,
+        })
+        .returning();
 
-    if (evidenceUrls?.length) {
-      await db
-        .insert(evidence)
-        .values(
-          evidenceUrls.map((url: string) => ({ reportId: report.id, url })),
-        );
-    }
+      if (evidenceUrls?.length) {
+        await tx
+          .insert(evidence)
+          .values(
+            evidenceUrls.map((url: string) => ({ reportId: inserted.id, url })),
+          );
+      }
+
+      return inserted;
+    });
 
     return { data: { ...report, robotStatus: status } };
   });
