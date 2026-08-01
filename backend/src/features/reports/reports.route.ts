@@ -298,7 +298,7 @@ export async function reportsRoutes(app: FastifyInstance) {
     };
   });
 
-  app.get("/:id", async (req, reply) => {
+  app.get("/:id", { preHandler: requireAuth }, async (req, reply) => {
     const { id } = req.params as { id: string };
     const [report] = await db
       .select()
@@ -306,6 +306,8 @@ export async function reportsRoutes(app: FastifyInstance) {
       .where(eq(reports.id, id))
       .limit(1);
     if (!report) return reply.status(404).send({ error: "Not found" });
+    if (report.userId !== req.user!.userId && req.user!.role !== "admin")
+      return reply.status(403).send({ error: "Forbidden" });
     return { data: report };
   });
 
