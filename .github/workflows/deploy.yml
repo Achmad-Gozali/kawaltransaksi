@@ -76,6 +76,7 @@ jobs:
           username: ${{ secrets.SSH_USER }}
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           port: ${{ secrets.SSH_PORT }}
+          command_timeout: 20m
           script: |
             set -e
             cd ~/kawaltransaksi
@@ -85,9 +86,35 @@ jobs:
             if [ "${{ needs.detect-changes.outputs.backend }}" = "true" ]; then
               echo "Rebuilding backend..."
               docker compose up -d --build --force-recreate backend
+              echo "Waiting for backend to be healthy..."
+              for i in $(seq 1 30); do
+                if curl -sf http://127.0.0.1:4000/health > /dev/null 2>&1; then
+                  echo "Backend is healthy."
+                  break
+                fi
+                if [ "$i" = "30" ]; then
+                  echo "Backend failed to become healthy after 60s"
+                  docker logs kawaltransaksi-backend-1 --tail 50
+                  exit 1
+                fi
+                sleep 2
+              done
             fi
 
             if [ "${{ needs.detect-changes.outputs.frontend }}" = "true" ]; then
               echo "Rebuilding frontend..."
               docker compose up -d --build --force-recreate frontend
+              echo "Waiting for frontend to be healthy..."
+              for i in $(seq 1 30); do
+                if curl -sf http://127.0.0.1:3000 > /dev/null 2>&1; then
+                  echo "Frontend is healthy."
+                  break
+                fi
+                if [ "$i" = "30" ]; then
+                  echo "Frontend failed to become healthy after 60s"
+                  docker logs kawaltransaksi-frontend-1 --tail 50
+                  exit 1
+                fi
+                sleep 2
+              done
             fi
