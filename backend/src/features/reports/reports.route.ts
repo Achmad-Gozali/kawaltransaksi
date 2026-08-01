@@ -163,7 +163,10 @@ export async function reportsRoutes(app: FastifyInstance) {
     const data = await db
       .select()
       .from(reports)
-      .where(eq(reports.targetValue, number))
+      .where(and(
+        eq(reports.targetValue, number),
+        sql`${reports.status} IN ('pending', 'verified')`,
+      ))
       .orderBy(desc(reports.createdAt));
 
     if (data.length === 0) return { data: { reports: [], linked: [] } };
