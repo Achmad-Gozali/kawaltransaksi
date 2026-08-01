@@ -1,10 +1,8 @@
-import fs from "fs";
-import path from "path";
 import { db } from "./db.js";
 import { reports, users } from "./schema.js";
+import { getFileSizeFromR2 } from "./storage.js";
 import { and, eq, gte, sql } from "drizzle-orm";
 
-const UPLOADS_DIR        = path.resolve(process.cwd(), "uploads");
 const MIN_FILE_SIZE_BYTES = 50 * 1024; // 50KB
 
 // ── Helpers ────────────────────────────────────────────────────────────────
@@ -93,17 +91,6 @@ function isSuspiciousNumber(targetType: string, targetValue: string): boolean {
   );
   if (isAscending && digits.length >= 6) return true;
   return false;
-}
-
-function getFileSizeBytes(url: string): number {
-  try {
-    const filename = path.basename(url);
-    const filepath = path.join(UPLOADS_DIR, filename);
-    if (!fs.existsSync(filepath)) return 0;
-    return fs.statSync(filepath).size;
-  } catch {
-    return 0;
-  }
 }
 
 // ── Spam Check ─────────────────────────────────────────────────────────────
@@ -233,8 +220,10 @@ export async function checkCompleteness(input: CompletenessInput): Promise<Repor
   // 2. Harus ada minimal 1 evidence
   if (!evidenceUrls || evidenceUrls.length === 0) return "pending";
 
-  // 3. Evidence minimal 50KB
-  const hasValidFile = evidenceUrls.some(url => getFileSizeBytes(url) >= MIN_FILE_SIZE_BYTES);
+  // 3. Evidence minimal 50KB (dicek langsung dari R2 -- evidence baru selalu
+  // disimpan di R2 sejak migrasi 14 Juli 2026, bukan lagi di disk lokal)
+  const evidenceSizes = await Promise.all(evidenceUrls.map(url => getFileSizeFromR2(url)));
+  const hasValidFile  = evidenceSizes.some(size => size >= MIN_FILE_SIZE_BYTES);
   if (!hasValidFile) return "pending";
 
   // 4. Deskripsi minimal 20 karakter (setelah strip)

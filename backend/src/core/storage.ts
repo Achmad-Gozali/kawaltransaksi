@@ -1,4 +1,4 @@
-import { S3Client, PutObjectCommand, DeleteObjectCommand } from "@aws-sdk/client-s3";
+import { S3Client, PutObjectCommand, DeleteObjectCommand, HeadObjectCommand } from "@aws-sdk/client-s3";
 import { createId } from "@paralleldrive/cuid2";
 
 export type UploadFolder = "reports" | "articles";
@@ -103,5 +103,24 @@ export async function deleteFile(url: string | null | undefined): Promise<void> 
   } catch (err: any) {
     // Kalau object memang sudah tidak ada, jangan sampai bikin request gagal
     if (err.name !== "NoSuchKey") throw err;
+  }
+}
+
+/**
+ * Ambil ukuran file (bytes) dari R2 berdasarkan URL publiknya.
+ * Return 0 kalau URL bukan URL R2 (misal path lama era filesystem) atau
+ * objectnya tidak ditemukan, supaya pemanggil bisa langsung memperlakukannya
+ * sebagai "tidak valid" tanpa perlu try/catch sendiri.
+ */
+export async function getFileSizeFromR2(url: string): Promise<number> {
+  if (!url.startsWith(R2_PUBLIC_URL)) return 0;
+
+  const key = url.slice(R2_PUBLIC_URL.length + 1); // +1 buang leading slash
+
+  try {
+    const res = await r2.send(new HeadObjectCommand({ Bucket: R2_BUCKET, Key: key }));
+    return res.ContentLength ?? 0;
+  } catch {
+    return 0;
   }
 }
