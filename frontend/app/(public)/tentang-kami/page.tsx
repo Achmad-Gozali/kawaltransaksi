@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import Link from "next/link";
 import Image from "next/image";
-import { Gift, Users, Globe, ArrowRight } from "lucide-react";
+import { ArrowRight } from "lucide-react";
 import * as motion from "motion/react-client";
 
 export const metadata: Metadata = {
@@ -10,51 +10,22 @@ export const metadata: Metadata = {
     "KawalTransaksi adalah platform komunitas anti-penipuan digital Indonesia. Kenali cerita dan misi di balik layanan verifikasi nomor HP, rekening bank, dan e-wallet.",
 };
 
-const NILAI = [
-  {
-    icon: Gift,
-    title: "Gratis",
-    desc: "Verifikasi nomor HP, rekening bank, dan e-wallet tidak pernah dipungut biaya. Keamanan transaksi adalah hak semua orang, bukan fitur premium.",
-  },
-  {
-    icon: Globe,
-    title: "Terbuka",
-    desc: "Setiap laporan yang terverifikasi dapat diakses publik secara real-time. Tidak ada data yang disembunyikan dari pengguna yang berhak tahu.",
-  },
-  {
-    icon: Users,
-    title: "Berbasis Komunitas",
-    desc: "Data berasal dari laporan nyata masyarakat, ditinjau moderator sebelum dipublikasikan — bukan asumsi sepihak, bukan opini tanpa bukti.",
-  },
-];
-
 export default function AboutPage() {
   return (
     <main className="bg-white text-slate-900 font-sans overflow-x-hidden">
       {/* HERO */}
       <section className="relative bg-slate-100 pt-24 sm:pt-32 pb-16 sm:pb-24 overflow-hidden">
         <div className="max-w-3xl mx-auto px-4 sm:px-6 text-center">
-          <p className="text-xs sm:text-sm text-slate-400 font-medium mb-3">
-            www.kawaltransaksi.com
-          </p>
-          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-slate-900 mb-4 leading-snug">
-            Tentang Kami
+          <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-slate-900 mb-5 leading-snug">
+            Berkomitmen Melawan
+            <br className="hidden sm:block" /> Penipuan Digital
           </h1>
-          <p className="text-slate-500 text-sm sm:text-base leading-relaxed">
-            Platform{" "}
-            <span className="text-emerald-600 font-semibold">
-              Verifikasi Anti-Penipuan
-            </span>{" "}
-            berbasis <span className="text-slate-900 font-semibold">Komunitas</span>
+          <p className="text-slate-500 text-sm sm:text-base leading-relaxed max-w-xl mx-auto">
+            KawalTransaksi membantu masyarakat memverifikasi nomor HP,
+            rekening bank, dan e-wallet sebelum bertransaksi, sehingga
+            kepercayaan tidak lagi menjadi celah yang dimanfaatkan pelaku
+            penipuan.
           </p>
-          <div className="mt-8">
-            <Link
-              href="/report"
-              className="inline-flex items-center gap-2 px-6 py-3 bg-emerald-600 text-white font-bold text-sm tracking-wide rounded-xl hover:bg-emerald-700 transition-colors"
-            >
-              Buat Laporan <ArrowRight className="w-4 h-4" />
-            </Link>
-          </div>
         </div>
         <svg
           viewBox="0 0 1440 80"
@@ -67,9 +38,9 @@ export default function AboutPage() {
       </section>
 
       {/* ABOUT KAWALTRANSAKSI */}
-      <section className="relative bg-white pt-12 pb-12 sm:pt-20 sm:pb-20 overflow-hidden">
+      <section className="relative bg-white pt-14 pb-14 sm:pt-24 sm:pb-24 overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
             <motion.div
               initial={{ opacity: 0, x: -16 }}
               whileInView={{ opacity: 1, x: 0 }}
@@ -77,18 +48,18 @@ export default function AboutPage() {
               transition={{ duration: 0.4 }}
             >
               <h2 className="text-3xl sm:text-4xl font-bold text-slate-900 mb-2">
-                About <span className="text-emerald-600">KawalTransaksi</span>
+                Tentang <span className="text-emerald-600">KawalTransaksi</span>
               </h2>
               <p className="text-slate-500 font-medium mb-6">
                 Dibangun dari Kepedulian
               </p>
-              <div className="flex items-center gap-2 mb-8">
+              <div className="flex items-center gap-2 mb-10">
                 <span className="w-8 h-1 rounded-full bg-emerald-500" />
                 <span className="w-4 h-1 rounded-full bg-slate-300" />
               </div>
               <div className="flex items-center justify-center">
                 <Image
-                  src="/ilustrasi-hero.png"
+                  src="/hero-tentang-kami.png"
                   alt="Ilustrasi keamanan transaksi digital"
                   width={384}
                   height={384}
@@ -106,27 +77,27 @@ export default function AboutPage() {
               className="flex flex-col justify-center space-y-6 text-gray-600 leading-relaxed"
             >
               <p className="text-justify text-base sm:text-lg">
-                <strong className="text-slate-900">
-                  kawaltransaksi.com
-                </strong>{" "}
+                <strong className="text-slate-900">kawaltransaksi.com</strong>{" "}
                 adalah platform komunitas anti-penipuan digital Indonesia
-                yang membantu siapa saja memverifikasi nomor HP, rekening
-                bank, dan e-wallet sebelum bertransaksi. Kami hadir sebagai
-                garis pertahanan pertama sebelum uang terlanjur berpindah
-                tangan ke pihak yang tidak bertanggung jawab.
+                yang membantu masyarakat memverifikasi nomor HP, rekening
+                bank, dan e-wallet sebelum bertransaksi. Kami berperan
+                sebagai garis pertahanan pertama sebelum dana berpindah
+                tangan kepada pihak yang tidak bertanggung jawab.
               </p>
               <p className="text-justify text-base sm:text-lg">
-                Kami percaya penipuan digital hanya bisa dilawan secara
-                kolektif. Setiap laporan yang masuk dari pengguna, lengkap
-                dengan bukti pendukung, kami tinjau melalui proses verifikasi
-                sebelum dipublikasikan — sehingga data yang ditampilkan dapat
-                dipertanggungjawabkan, bukan sekadar tuduhan sepihak.
+                Kami percaya bahwa penipuan digital hanya dapat dilawan
+                secara kolektif. Setiap laporan yang masuk dari pengguna,
+                lengkap dengan bukti pendukung, ditinjau melalui proses
+                verifikasi sebelum dipublikasikan. Dengan begitu, data yang
+                ditampilkan dapat dipertanggungjawabkan dan bukan sekadar
+                tuduhan sepihak.
               </p>
               <p className="text-justify text-base sm:text-lg">
-                Setiap proses kami dilandasi oleh keterbukaan: laporan
-                terverifikasi dapat diakses publik secara gratis dan
-                real-time, tanpa biaya tersembunyi dan tanpa batasan akses
-                bagi siapa pun yang ingin memeriksa sebelum bertransaksi.
+                Seluruh proses kami dilandasi oleh prinsip keterbukaan.
+                Laporan yang telah terverifikasi dapat diakses publik secara
+                gratis dan real-time, tanpa biaya tersembunyi dan tanpa
+                batasan bagi siapa pun yang ingin memeriksa sebelum
+                bertransaksi.
               </p>
             </motion.div>
           </div>
@@ -141,10 +112,72 @@ export default function AboutPage() {
         </svg>
       </section>
 
+      {/* SEJARAH + VISI MISI */}
+      <section className="relative bg-slate-100 py-16 sm:py-28 overflow-hidden">
+        <div className="relative max-w-5xl mx-auto px-4 sm:px-6 lg:px-8">
+          <motion.div
+            initial={{ opacity: 0, y: 16 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+          >
+            <h2 className="text-2xl sm:text-4xl font-bold text-slate-900 mb-10">
+              Sejarah
+            </h2>
+            <div className="space-y-6 text-slate-600 text-base sm:text-lg leading-relaxed">
+              <p className="text-justify">
+                KawalTransaksi didirikan pada tahun 2026 di Jakarta Utara,
+                lahir dari kegelisahan yang sama dirasakan banyak orang:
+                sulitnya memastikan keamanan sebuah transaksi sebelum dana
+                benar-benar berpindah tangan. Nomor HP asing yang meminta
+                transfer, rekening baru yang belum pernah terdengar, atau
+                e-wallet yang tiba-tiba meminta kepercayaan menjadi celah
+                yang kerap dimanfaatkan pelaku penipuan.
+              </p>
+              <p className="text-justify">
+                Dari kegelisahan tersebut, KawalTransaksi dibangun sebagai
+                tempat pertama yang dapat diakses sebelum transaksi
+                dilakukan, bukan sesudahnya. Setiap fitur yang kami
+                kembangkan selalu berangkat dari satu tujuan yang sama:
+                menjadikan proses verifikasi sebagai kebiasaan yang cepat,
+                gratis, dan dapat diandalkan oleh siapa saja, baik pengguna
+                perorangan maupun pelaku usaha.
+              </p>
+            </div>
+
+            <div className="mt-14 grid grid-cols-1 sm:grid-cols-[140px_1fr] gap-x-8 gap-y-10">
+              <p className="text-emerald-600 font-semibold text-base sm:text-lg">
+                Visi
+              </p>
+              <p className="text-slate-900 text-xl sm:text-2xl font-semibold leading-snug">
+                Menciptakan ekosistem transaksi digital yang aman bagi
+                seluruh masyarakat Indonesia.
+              </p>
+
+              <p className="text-emerald-600 font-semibold text-base sm:text-lg">
+                Misi
+              </p>
+              <p className="text-slate-900 text-xl sm:text-2xl font-semibold leading-snug">
+                Membantu masyarakat terhindar dari penipuan melalui layanan
+                verifikasi yang mudah, gratis, dan terbuka bagi siapa saja.
+              </p>
+            </div>
+          </motion.div>
+        </div>
+        <svg
+          viewBox="0 0 1440 60"
+          xmlns="http://www.w3.org/2000/svg"
+          preserveAspectRatio="none"
+          className="absolute bottom-0 left-0 w-full h-8 sm:h-14 block pointer-events-none"
+        >
+          <path d="M0,40 C360,0 1080,60 1440,20 L1440,60 L0,60 Z" fill="#ffffff" />
+        </svg>
+      </section>
+
       {/* KENALAN DENGAN FOUNDER */}
-      <section className="relative bg-slate-100 py-12 sm:py-20 overflow-hidden">
+      <section className="relative bg-white py-14 sm:py-24 overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-10 sm:mb-16">
+          <div className="text-center mb-12 sm:mb-16">
             <h2 className="text-2xl sm:text-4xl font-bold text-slate-900 mb-3">
               Kenalan dengan Pendiri Kami
             </h2>
@@ -160,7 +193,7 @@ export default function AboutPage() {
             whileInView={{ opacity: 1, y: 0 }}
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
-            className="relative rounded-3xl bg-white overflow-hidden p-6 sm:p-16"
+            className="relative rounded-3xl bg-slate-50 overflow-hidden p-6 sm:p-16 border border-slate-200"
           >
             {/* Blob dekoratif */}
             <div className="absolute -top-16 -right-16 w-56 h-56 rounded-full bg-emerald-200/40 blur-3xl pointer-events-none" />
@@ -182,8 +215,8 @@ export default function AboutPage() {
               <div className="text-center sm:text-left">
                 <p className="text-xl sm:text-2xl font-semibold text-slate-800 leading-snug mb-8">
                   &ldquo;Setiap laporan yang kami verifikasi bukan sekadar
-                  data, tapi satu potensi kerugian yang berhasil dicegah
-                  sebelum terjadi.&rdquo;
+                  data, melainkan satu potensi kerugian yang berhasil
+                  dicegah sebelum terjadi.&rdquo;
                 </p>
 
                 <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
@@ -204,60 +237,33 @@ export default function AboutPage() {
                 </div>
 
                 <p className="mt-8 text-slate-600 text-base sm:text-lg leading-relaxed text-justify">
-                  Berangkat dari keresahan pribadi melihat banyak orang di
-                  sekitarnya menjadi korban penipuan digital, Achmad
-                  membangun dan mengelola KawalTransaksi seorang diri — mulai
-                  dari sistem verifikasi laporan, basis data komunitas,
-                  hingga infrastruktur yang menjaga situs ini tetap aman dan
-                  bisa diakses kapan saja. Baginya, keamanan digital
-                  seharusnya bisa diakses semua orang, bukan hanya yang paham
-                  teknologi.
+                  Berawal dari keresahan pribadi setelah melihat banyak
+                  orang di sekitarnya menjadi korban penipuan digital,
+                  Achmad membangun dan mengelola KawalTransaksi secara
+                  mandiri, mulai dari sistem verifikasi laporan, basis data
+                  komunitas, hingga infrastruktur yang menjaga situs ini
+                  tetap aman dan dapat diakses kapan saja. Baginya, keamanan
+                  digital seharusnya dapat diakses oleh semua orang, bukan
+                  hanya mereka yang memahami teknologi.
                 </p>
               </div>
             </div>
           </motion.div>
         </div>
-      </section>
-
-      {/* NILAI */}
-      <section className="bg-white py-12 sm:py-20">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="text-center mb-10 sm:mb-16">
-            <h2 className="text-2xl sm:text-4xl font-bold text-slate-900">
-              Yang Kami Pegang Teguh
-            </h2>
-          </div>
-          <motion.div
-            initial={{ opacity: 0, y: 16 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.5 }}
-            className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5 sm:gap-6"
-          >
-            {NILAI.map((item) => (
-              <div
-                key={item.title}
-                className="bg-slate-50 rounded-2xl border border-slate-200 p-6 sm:p-8 hover:shadow-md transition-shadow"
-              >
-                <div className="w-10 h-10 rounded-xl bg-emerald-50 border border-emerald-200 flex items-center justify-center mb-4">
-                  <item.icon className="w-5 h-5 text-emerald-600" />
-                </div>
-                <h3 className="font-bold text-slate-900 text-lg sm:text-xl mb-3 uppercase tracking-tight">
-                  {item.title}
-                </h3>
-                <p className="text-slate-600 text-sm sm:text-base leading-relaxed">
-                  {item.desc}
-                </p>
-              </div>
-            ))}
-          </motion.div>
-        </div>
+        <svg
+          viewBox="0 0 1440 60"
+          xmlns="http://www.w3.org/2000/svg"
+          preserveAspectRatio="none"
+          className="absolute bottom-0 left-0 w-full h-8 sm:h-14 block pointer-events-none"
+        >
+          <path d="M0,20 C360,60 1080,0 1440,50 L1440,60 L0,60 Z" fill="#f1f5f9" />
+        </svg>
       </section>
 
       {/* CLOSING */}
-      <section className="relative bg-slate-100 py-12 sm:py-20 overflow-hidden">
+      <section className="relative bg-slate-100 py-14 sm:py-24 overflow-hidden">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-center">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-10 lg:gap-16 items-center">
             <motion.p
               initial={{ opacity: 0, y: 16 }}
               whileInView={{ opacity: 1, y: 0 }}
@@ -265,13 +271,13 @@ export default function AboutPage() {
               transition={{ duration: 0.4 }}
               className="order-2 lg:order-1 text-slate-600 text-base sm:text-lg leading-relaxed text-justify"
             >
-              KawalTransaksi bukan sekadar basis data, melainkan usaha
+              KawalTransaksi bukan sekadar basis data, melainkan upaya
               bersama komunitas untuk membangun ekosistem transaksi digital
               yang lebih aman di Indonesia. Kami terus mengembangkan sistem
-              verifikasi dan memperkuat infrastruktur, agar setiap laporan
-              yang masuk dapat ditindaklanjuti secara cepat dan akurat —
-              menjadikan proses cek sebelum transaksi sebagai kebiasaan yang
-              mudah bagi siapa saja.
+              verifikasi dan memperkuat infrastruktur, sehingga setiap
+              laporan yang masuk dapat ditindaklanjuti secara cepat dan
+              akurat, menjadikan proses pemeriksaan sebelum transaksi
+              sebagai kebiasaan yang mudah bagi siapa saja.
             </motion.p>
             <div className="order-1 lg:order-2 flex items-center justify-center">
               <Image
@@ -285,18 +291,26 @@ export default function AboutPage() {
             </div>
           </div>
         </div>
+        <svg
+          viewBox="0 0 1440 60"
+          xmlns="http://www.w3.org/2000/svg"
+          preserveAspectRatio="none"
+          className="absolute bottom-0 left-0 w-full h-8 sm:h-14 block pointer-events-none"
+        >
+          <path d="M0,20 C360,60 1080,0 1440,50 L1440,60 L0,60 Z" fill="#ffffff" />
+        </svg>
       </section>
 
       {/* CTA */}
-      <section className="bg-white py-14 sm:py-20">
+      <section className="bg-white py-16 sm:py-24">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 text-center">
           <h2 className="text-2xl sm:text-3xl md:text-4xl font-bold text-slate-900 mb-4">
-            Ikut Menjaga Ekosistem Digital yang Lebih Aman
+            Bergabunglah Menjaga Ekosistem Digital yang Lebih Aman
           </h2>
-          <p className="text-slate-500 text-sm sm:text-base max-w-lg mx-auto mb-8 leading-relaxed">
-            Laporkan nomor mencurigakan yang Anda temui, atau periksa dulu
-            sebelum bertransaksi. Setiap kontribusi membantu pengguna lain
-            terhindar dari kerugian.
+          <p className="text-slate-500 text-sm sm:text-base max-w-lg mx-auto mb-9 leading-relaxed">
+            Laporkan nomor mencurigakan yang Anda temui, atau periksa
+            terlebih dahulu sebelum bertransaksi. Setiap kontribusi
+            membantu pengguna lain terhindar dari kerugian.
           </p>
           <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
             <Link
