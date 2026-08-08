@@ -5,6 +5,7 @@ import type { Metadata } from 'next';
 
 const BASE    = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
+const SITE_URL = 'https://kawaltransaksi.com';
 
 function formatDateID(d: string) {
   try { return new Date(d).toLocaleDateString('id-ID', { day: 'numeric', month: 'long', year: 'numeric' }); }
@@ -38,12 +39,43 @@ async function getRecentArticles(excludeSlug: string) {
 export async function generateMetadata({ params }: { params: Promise<{ slug: string }> }): Promise<Metadata> {
   const { slug } = await params;
   const article  = await getArticle(slug);
-  if (!article) return { title: 'Artikel tidak ditemukan' };
+
+  if (!article) {
+    return {
+      title: 'Artikel tidak ditemukan — KawalTransaksi',
+      robots: { index: false, follow: false },
+    };
+  }
+
   const thumbUrl = article.thumbnail;
+  const url = `${SITE_URL}/artikel/${slug}`;
+  const title = `${article.title} — KawalTransaksi`;
+  const description = article.excerpt ?? undefined;
+
   return {
-    title:       `${article.title} — KawalTransaksi`,
-    description: article.excerpt ?? undefined,
-    openGraph:   { images: thumbUrl ? [thumbUrl] : [] },
+    title,
+    description,
+    alternates: {
+      canonical: url,
+    },
+    openGraph: {
+      type: 'article',
+      title,
+      description,
+      url,
+      siteName: 'KawalTransaksi',
+      locale: 'id_ID',
+      images: thumbUrl ? [{ url: thumbUrl }] : undefined,
+      publishedTime: article.published_at ?? article.publishedAt ?? undefined,
+      modifiedTime: article.updated_at ?? article.updatedAt ?? undefined,
+    },
+    twitter: {
+      card: 'summary_large_image',
+      title,
+      description,
+      images: thumbUrl ? [thumbUrl] : undefined,
+    },
+    robots: { index: true, follow: true },
   };
 }
 
