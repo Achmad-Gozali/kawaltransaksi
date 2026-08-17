@@ -1,6 +1,7 @@
 'use client';
 
 import { useState, useCallback, useMemo, useRef, useEffect } from 'react';
+import Image from 'next/image';
 import { useEditor, EditorContent } from '@tiptap/react';
 import StarterKit from '@tiptap/starter-kit';
 import Placeholder from '@tiptap/extension-placeholder';
@@ -251,7 +252,7 @@ export default function ArtikelTab({ token }: { token: string }) {
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Thumbnail</label>
               {thumbnailPreview ? (
                 <div className="relative w-full h-10 rounded-xl overflow-hidden border border-slate-200 bg-slate-50 flex items-center px-3 gap-3">
-                  <img src={thumbnailPreview} alt="preview" className="h-7 w-12 object-cover rounded-lg shrink-0" />
+                  <Image src={thumbnailPreview} alt="preview" width={48} height={28} unoptimized className="h-7 w-12 object-cover rounded-lg shrink-0" />
                   <span className="text-xs text-slate-500 truncate flex-1">Thumbnail terpilih</span>
                   <button type="button" onClick={() => { setThumbnailPreview(null); setForm(f => ({ ...f, thumbnail: '' })); }} className="shrink-0 text-slate-400 hover:text-red-500 transition-colors">
                     <X className="w-4 h-4" />
@@ -344,7 +345,7 @@ export default function ArtikelTab({ token }: { token: string }) {
                       <td className="px-4 py-3">
                         <div className="flex items-center gap-3">
                           {a.thumbnail ? (
-                            <div className="w-12 h-12 rounded-lg overflow-hidden shrink-0 bg-slate-100"><img src={a.thumbnail} alt={a.title} className="w-full h-full object-cover" /></div>
+                            <div className="relative w-12 h-12 rounded-lg overflow-hidden shrink-0 bg-slate-100"><Image src={a.thumbnail} alt={a.title} fill unoptimized className="object-cover" /></div>
                           ) : (
                             <div className="w-12 h-12 rounded-lg shrink-0 bg-slate-50 border border-slate-100 flex items-center justify-center"><FileText className="w-4 h-4 text-slate-300" /></div>
                           )}

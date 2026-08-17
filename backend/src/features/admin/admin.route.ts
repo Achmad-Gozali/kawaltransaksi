@@ -1,9 +1,19 @@
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { db } from "../../core/db.js";
 import { reports, users, evidence, articles } from "../../core/schema.js";
 import { eq, desc, count, sql, gte } from "drizzle-orm";
 import { requireAdmin } from "../../core/auth.middleware.js";
 import { deleteFile } from "../../core/storage.js";
+import { sanitizeArticleHtml, sanitizePlainText } from "../../core/sanitize.js";
+
+// Sama seperti reports.route.ts/search.route.ts: endpoint publik read-only,
+// cache pendek biar Cloudflare bisa menyerap traffic berulang tanpa
+// membebani DB. HANYA dipasang di endpoint /articles/public* di bawah --
+// jangan dipasang di endpoint admin (butuh preHandler: requireAdmin).
+function withPublicCache(_req: FastifyRequest, reply: FastifyReply, payload: unknown, done: (err: Error | null, payload?: unknown) => void) {
+  reply.header("Cache-Control", "public, max-age=30, stale-while-revalidate=60");
+  done(null, payload);
+}
 
 function slugify(text: string) {
   return text.toLowerCase().trim()
@@ -117,7 +127,13 @@ export async function adminRoutes(app: FastifyInstance) {
   // ── REPORTS ────────────────────────────────────────────────────────────────
   app.get("/reports", { preHandler: requireAdmin }, async (req) => {
     const { status, targetType, page = "1", limit = "20", q = "" } = req.query as any;
-    const offset       = (Number(page) - 1) * Number(limit);
+    // Clamp: nilai non-numerik bikin LIMIT/OFFSET jadi NaN (query gagal -> 500),
+    // dan limit tak terbatas memungkinkan satu request menarik seluruh tabel.
+    const parsedPage  = Number.parseInt(String(page), 10);
+    const parsedLimit = Number.parseInt(String(limit), 10);
+    const pageNum     = Number.isFinite(parsedPage)  ? Math.min(Math.max(1, parsedPage), 10000) : 1;
+    const limitNum    = Number.isFinite(parsedLimit) ? Math.min(Math.max(1, parsedLimit), 100)  : 20;
+    const offset      = (pageNum - 1) * limitNum;
     const statusFilter = status ? sql`AND r.status = ${status}` : sql``;
     const typeFilter   = targetType ? sql`AND r.target_type = ${targetType}` : sql``;
     const searchFilter = q.trim()
@@ -135,7 +151,7 @@ export async function adminRoutes(app: FastifyInstance) {
       WHERE 1=1 ${statusFilter} ${typeFilter} ${searchFilter}
       GROUP BY r.id, u.name, u.email
       ORDER BY r.created_at DESC
-      LIMIT ${Number(limit)} OFFSET ${offset}
+      LIMIT ${limitNum} OFFSET ${offset}
     `);
     return { data: rows };
   });
@@ -214,9 +230,12 @@ export async function adminRoutes(app: FastifyInstance) {
     return { data };
   });
 
-  app.get("/articles/public", async (req) => {
+  app.get("/articles/public", { onSend: withPublicCache }, async (req) => {
     const { category, q = "", page = "1" } = req.query as any;
-    const offset = (Number(page) - 1) * 12;
+    // Number("abc") -> NaN membuat OFFSET NaN dan endpoint publik ini balas 500.
+    const parsedPage = Number.parseInt(String(page), 10);
+    const pageNum = Number.isFinite(parsedPage) ? Math.min(Math.max(1, parsedPage), 1000) : 1;
+    const offset = (pageNum - 1) * 12;
 
     const catFilter = category ? sql`AND category = ${category}` : sql``;
     const qFilter   = q.trim() ? sql`AND (title ILIKE ${"%" + q.trim() + "%"} OR excerpt ILIKE ${"%" + q.trim() + "%"})` : sql``;
@@ -231,7 +250,7 @@ export async function adminRoutes(app: FastifyInstance) {
     return { data: rows };
   });
 
-  app.get("/articles/public/:slug", async (req, reply) => {
+  app.get("/articles/public/:slug", { onSend: withPublicCache }, async (req, reply) => {
     const { slug } = req.params as { slug: string };
     const [article] = await db.select().from(articles)
       .where(eq(articles.slug, slug)).limit(1);
@@ -240,7 +259,7 @@ export async function adminRoutes(app: FastifyInstance) {
     return { data: article };
   });
 
-  app.get("/articles/sitemap", async () => {
+  app.get("/articles/sitemap", { onSend: withPublicCache }, async () => {
     const rows = await db.execute(sql`
       SELECT slug, updated_at
       FROM articles
@@ -257,11 +276,23 @@ export async function adminRoutes(app: FastifyInstance) {
     return { data: article };
   });
 
-  app.post("/articles", { preHandler: requireAdmin }, async (req) => {
+  app.post("/articles", { preHandler: requireAdmin }, async (req, reply) => {
     const { title, excerpt, content, thumbnail, category, status } = req.body as any;
-    const slug = slugify(title);
+
+    // Judul & excerpt jadi teks polos; konten disanitasi tapi tetap HTML.
+    const cleanTitle   = sanitizePlainText(title);
+    const cleanExcerpt = excerpt != null ? sanitizePlainText(excerpt) : null;
+    const cleanContent = sanitizeArticleHtml(content);
+
+    if (!cleanTitle)
+      return reply.status(400).send({ error: "Judul artikel wajib diisi." });
+
+    const slug = slugify(cleanTitle);
+    if (!slug)
+      return reply.status(400).send({ error: "Judul artikel harus mengandung huruf atau angka." });
+
     const [article] = await db.insert(articles).values({
-      title, slug, excerpt: excerpt ?? null, content: content ?? "",
+      title: cleanTitle, slug, excerpt: cleanExcerpt, content: cleanContent,
       thumbnail: thumbnail ?? null, category: category ?? "tips",
       status:      status ?? "draft",
       authorId:    req.user!.userId,
@@ -282,11 +313,20 @@ export async function adminRoutes(app: FastifyInstance) {
       await deleteFile(existing.thumbnail);
     }
 
+    // Sanitasi hanya untuk field yang benar-benar dikirim; field yang tidak
+    // dikirim tetap memakai nilai lama apa adanya (perilaku PATCH sebelumnya).
+    const cleanTitle   = title   != null ? sanitizePlainText(title)      : null;
+    const cleanExcerpt = excerpt != null ? sanitizePlainText(excerpt)    : null;
+    const cleanContent = content != null ? sanitizeArticleHtml(content)  : null;
+
+    if (title != null && !cleanTitle)
+      return reply.status(400).send({ error: "Judul artikel tidak boleh kosong." });
+
     const [updated] = await db.update(articles).set({
-      title:       title       ?? existing.title,
-      slug:        title       ? slugify(title) : existing.slug,
-      excerpt:     excerpt     ?? existing.excerpt,
-      content:     content     ?? existing.content,
+      title:       cleanTitle   ?? existing.title,
+      slug:        cleanTitle   ? slugify(cleanTitle) : existing.slug,
+      excerpt:     cleanExcerpt ?? existing.excerpt,
+      content:     cleanContent ?? existing.content,
       thumbnail:   thumbnail   ?? existing.thumbnail,
       category:    category    ?? existing.category,
       status:      status      ?? existing.status,

@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { ArrowRight, TrendingUp } from "lucide-react";
 import type { Metadata } from "next";
 import RekeningSearchForm from "@/features/check/RekeningSearchForm";
-import { formatRupiah, encodeSlug, maskNumber } from "@/core/utils";
+import { formatRupiah, encodeSlug, maskNumber, safeJsonLd } from "@/core/utils";
 
 export const metadata: Metadata = {
   title: "Cek Rekening - KawalTransaksi",
@@ -238,7 +238,7 @@ export default async function CekRekeningPage() {
         </div>
       </section>
 
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(schema) }} />
     </div>
   );
 }

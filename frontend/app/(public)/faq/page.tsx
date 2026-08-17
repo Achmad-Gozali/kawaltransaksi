@@ -1,4 +1,5 @@
 import type { Metadata } from 'next';
+import { safeJsonLd } from "@/core/utils";
 
 export const metadata: Metadata = {
   title: 'FAQ — KawalTransaksi',
@@ -56,7 +57,7 @@ const structuredData = {
 export default function FaqPage() {
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(structuredData) }} />
       <div className="min-h-screen bg-white">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-28 pb-16">
           <div className="mb-10">

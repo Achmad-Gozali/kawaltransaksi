@@ -2,6 +2,7 @@ import Link from 'next/link';
 import Image from 'next/image';
 import { notFound } from 'next/navigation';
 import type { Metadata } from 'next';
+import { safeJsonLd } from "@/core/utils";
 
 const BASE    = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
@@ -21,7 +22,7 @@ function readingTime(content?: string) {
 
 async function getArticle(slug: string) {
   try {
-    const res = await fetch(`${BASE}/api/admin/articles/public/${slug}`, { cache: 'no-store' });
+    const res = await fetch(`${BASE}/api/admin/articles/public/${slug}`, { next: { revalidate: 300 } });
     if (!res.ok) return null;
     return (await res.json()).data ?? null;
   } catch { return null; }
@@ -29,7 +30,7 @@ async function getArticle(slug: string) {
 
 async function getRecentArticles(excludeSlug: string) {
   try {
-    const res = await fetch(`${BASE}/api/admin/articles/public`, { cache: 'no-store' });
+    const res = await fetch(`${BASE}/api/admin/articles/public`, { next: { revalidate: 300 } });
     if (!res.ok) return [];
     const data = (await res.json()).data ?? [];
     return data.filter((a: any) => a.slug !== excludeSlug).slice(0, 4);
@@ -114,7 +115,7 @@ export default async function ArtikelDetailPage({ params }: { params: Promise<{ 
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(structuredData) }} />
       <div className="min-h-screen bg-white">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 pt-24 pb-16">
           <div className="flex gap-12 items-start">

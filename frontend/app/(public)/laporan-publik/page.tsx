@@ -1,10 +1,27 @@
 import Link from "next/link";
 import Image from "next/image";
 import { cookies } from "next/headers";
+import type { Metadata } from "next";
 import { Phone, Building2, Wallet, ArrowRight } from "lucide-react";
 import { formatDateID, encodeSlug, maskName, maskNumber } from "@/core/utils";
 import StatsChart from "./StatsChart";
 import SearchBar from "./SearchBar";
+
+export const metadata: Metadata = {
+  title: "Database Laporan Publik Penipuan | KawalTransaksi",
+  description: "Lihat seluruh laporan nomor HP, rekening bank, dan e-wallet terindikasi penipuan yang masuk ke sistem KawalTransaksi, lengkap dengan status verifikasi.",
+  alternates: {
+    canonical: "https://kawaltransaksi.com/laporan-publik",
+  },
+  openGraph: {
+    title: "Database Laporan Publik Penipuan | KawalTransaksi",
+    description: "Lihat seluruh laporan nomor HP, rekening bank, dan e-wallet terindikasi penipuan yang masuk ke sistem KawalTransaksi.",
+    url: "https://kawaltransaksi.com/laporan-publik",
+    siteName: "KawalTransaksi",
+    locale: "id_ID",
+    type: "website",
+  },
+};
 
 export const dynamic = "force-dynamic";
 

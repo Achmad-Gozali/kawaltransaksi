@@ -4,7 +4,7 @@ import { cookies } from "next/headers";
 import { ArrowRight, TrendingUp } from "lucide-react";
 import type { Metadata } from "next";
 import NomorSearchForm from "@/features/check/NomorSearchForm";
-import { formatRupiah, encodeSlug, maskNumber } from "@/core/utils";
+import { formatRupiah, encodeSlug, maskNumber, safeJsonLd } from "@/core/utils";
 
 export const metadata: Metadata = {
   title: "Cek Nomor HP - KawalTransaksi",
@@ -232,7 +232,7 @@ export default async function CekNomorPage() {
         </div>
       </section>
 
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(schema) }} />
     </div>
   );
 }

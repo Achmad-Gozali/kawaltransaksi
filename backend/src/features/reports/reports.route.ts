@@ -1,18 +1,31 @@
-import type { FastifyInstance } from "fastify";
+import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { db } from "../../core/db.js";
-import { reports, evidence } from "../../core/schema.js";
+import { reports, evidence, publicReportColumns } from "../../core/schema.js";
 import { eq, desc, count, and, sql } from "drizzle-orm";
 import { requireAuth } from "../../core/auth.middleware.js";
-import { saveFile, validateImageBuffer } from "../../core/storage.js";
+import { saveFile, validateImageBuffer, isOwnStorageUrl } from "../../core/storage.js";
 import { checkSpam, checkCompleteness } from "../../core/robot.js";
 import { verifyTurnstile } from "../../core/turnstile.js";
 
 const MAX_FILES_PER_REQUEST = 10;
 
+// Endpoint publik di bawah ini (read-only, tidak butuh auth, tidak
+// personalized) dipanggil berulang oleh frontend (halaman cek nomor/rekening
+// di-hit banyak pengunjung + bot/crawler) padahal datanya baru berubah kalau
+// admin memverifikasi laporan (hitungan jam/hari, bukan detik). Cache publik
+// singkat ini membiarkan Cloudflare menyerap sebagian besar traffic berulang
+// tanpa membebani DB, sementara data tetap terasa real-time untuk keperluan
+// cek sebelum transaksi.
+const PUBLIC_CACHE = "public, max-age=30, stale-while-revalidate=60";
+function withPublicCache(_req: FastifyRequest, reply: FastifyReply, payload: unknown, done: (err: Error | null, payload?: unknown) => void) {
+  reply.header("Cache-Control", PUBLIC_CACHE);
+  done(null, payload);
+}
+
 export async function reportsRoutes(app: FastifyInstance) {
-  app.get("/public/recent", async () => {
+  app.get("/public/recent", { onSend: withPublicCache }, async () => {
     const data = await db
-      .select()
+      .select(publicReportColumns)
       .from(reports)
       .where(sql`${reports.status} IN ('pending', 'verified')`)
       .orderBy(desc(reports.createdAt))
@@ -20,7 +33,7 @@ export async function reportsRoutes(app: FastifyInstance) {
     return { data };
   });
 
-  app.get("/public/stats", async () => {
+  app.get("/public/stats", { onSend: withPublicCache }, async () => {
     const [total] = await db.select({ count: count() }).from(reports);
     const [verified] = await db
       .select({ count: count() })
@@ -39,7 +52,7 @@ export async function reportsRoutes(app: FastifyInstance) {
     };
   });
 
-  app.get("/public/stats-nomor", async () => {
+  app.get("/public/stats-nomor", { onSend: withPublicCache }, async () => {
     const [total] = await db
       .select({ count: count() })
       .from(reports)
@@ -63,7 +76,7 @@ export async function reportsRoutes(app: FastifyInstance) {
     };
   });
 
-  app.get("/public/stats-rekening", async () => {
+  app.get("/public/stats-rekening", { onSend: withPublicCache }, async () => {
     const [total] = await db
       .select({ count: count() })
       .from(reports)
@@ -90,7 +103,7 @@ export async function reportsRoutes(app: FastifyInstance) {
     };
   });
 
-  app.get("/public/leaderboard-nomor", async () => {
+  app.get("/public/leaderboard-nomor", { onSend: withPublicCache }, async () => {
     const rows = await db.execute(sql`
       SELECT
         target_value AS target_number,
@@ -107,7 +120,7 @@ export async function reportsRoutes(app: FastifyInstance) {
     return { data: rows };
   });
 
-  app.get("/public/leaderboard-rekening", async () => {
+  app.get("/public/leaderboard-rekening", { onSend: withPublicCache }, async () => {
     const rows = await db.execute(sql`
       SELECT
         target_value AS target_number,
@@ -124,10 +137,10 @@ export async function reportsRoutes(app: FastifyInstance) {
     return { data: rows };
   });
 
-  app.get("/public/bank/:name", async (req) => {
+  app.get("/public/bank/:name", { onSend: withPublicCache }, async (req) => {
     const { name } = req.params as { name: string };
     const data = await db
-      .select()
+      .select(publicReportColumns)
       .from(reports)
       .where(
         and(
@@ -141,10 +154,10 @@ export async function reportsRoutes(app: FastifyInstance) {
     return { data: { primary: data, linked: [] } };
   });
 
-  app.get("/public/ewallet/:name", async (req) => {
+  app.get("/public/ewallet/:name", { onSend: withPublicCache }, async (req) => {
     const { name } = req.params as { name: string };
     const data = await db
-      .select()
+      .select(publicReportColumns)
       .from(reports)
       .where(
         and(
@@ -158,10 +171,10 @@ export async function reportsRoutes(app: FastifyInstance) {
     return { data: { primary: data, linked: [] } };
   });
 
-  app.get("/public/check/:number", async (req) => {
+  app.get("/public/check/:number", { onSend: withPublicCache }, async (req) => {
     const { number } = req.params as { number: string };
     const data = await db
-      .select()
+      .select(publicReportColumns)
       .from(reports)
       .where(and(
         eq(reports.targetValue, number),
@@ -176,7 +189,7 @@ export async function reportsRoutes(app: FastifyInstance) {
       .from(evidence)
       .where(
         sql`${evidence.reportId} IN (${sql.join(
-          data.map((r: typeof reports.$inferSelect) => sql`${r.id}`),
+          data.map((r) => sql`${r.id}`),
           sql`, `,
         )})`,
       );
@@ -187,7 +200,7 @@ export async function reportsRoutes(app: FastifyInstance) {
       evidenceMap.get(e.reportId)!.push(e.url);
     });
 
-    const reportsWithEvidence = data.map((r: typeof reports.$inferSelect) => ({
+    const reportsWithEvidence = data.map((r) => ({
       ...r,
       evidenceUrls: evidenceMap.get(r.id) ?? [],
     }));
@@ -195,7 +208,7 @@ export async function reportsRoutes(app: FastifyInstance) {
     return { data: { reports: reportsWithEvidence, linked: [] } };
   });
 
-  app.get("/public/blacklist/:number", async (req) => {
+  app.get("/public/blacklist/:number", { onSend: withPublicCache }, async (req) => {
     const { number } = req.params as { number: string };
     const verified = await db
       .select()
@@ -219,7 +232,7 @@ export async function reportsRoutes(app: FastifyInstance) {
     };
   });
 
-  app.get("/public/sitemap-targets", async () => {
+  app.get("/public/sitemap-targets", { onSend: withPublicCache }, async () => {
     const rows = await db.execute(sql`
       SELECT
         target_value,
@@ -232,7 +245,7 @@ export async function reportsRoutes(app: FastifyInstance) {
     return { data: rows };
   });
 
-  app.get("/laporan-stats", async () => {
+  app.get("/laporan-stats", { onSend: withPublicCache }, async () => {
     const data = await db
       .select({
         bank_name: sql<string | null>`COALESCE(${reports.bankName}, ${reports.walletName})`,
@@ -247,7 +260,7 @@ export async function reportsRoutes(app: FastifyInstance) {
     return { data };
   });
 
-  app.get("/laporan-publik", async (req) => {
+  app.get("/laporan-publik", { onSend: withPublicCache }, async (req) => {
     const {
       type = "all",
       sort = "latest",
@@ -260,7 +273,12 @@ export async function reportsRoutes(app: FastifyInstance) {
       page?: string;
     };
 
-    const pageNum = Math.max(1, parseInt(page));
+    // parseInt("abc") -> NaN, dan Math.max(1, NaN) tetap NaN, sehingga OFFSET
+    // NaN membuat query gagal dan endpoint publik ini balas 500. Batasi juga
+    // batas atasnya supaya ?page=99999999 tidak jadi OFFSET raksasa yang
+    // memaksa Postgres scan lalu buang jutaan baris.
+    const parsedPage = Number.parseInt(page, 10);
+    const pageNum = Number.isFinite(parsedPage) ? Math.min(Math.max(1, parsedPage), 1000) : 1;
     const perPage = 12;
     const offset = (pageNum - 1) * perPage;
     const sortDir = sort === "oldest" ? sql`ASC` : sql`DESC`;
@@ -346,6 +364,21 @@ export async function reportsRoutes(app: FastifyInstance) {
     if (!cleanTargetValue)
       return reply.status(400).send({ error: "Nomor tujuan wajib diisi dan hanya boleh berisi angka." });
 
+    // Bukti hanya boleh berupa file yang memang di-upload lewat endpoint upload
+    // kita (URL R2 sendiri). URL eksternal ditolak -- lihat isOwnStorageUrl().
+    const rawEvidenceUrls: unknown = evidenceUrls;
+    const cleanEvidenceUrls: string[] = Array.isArray(rawEvidenceUrls)
+      ? rawEvidenceUrls.filter(isOwnStorageUrl)
+      : [];
+    if (Array.isArray(rawEvidenceUrls) && cleanEvidenceUrls.length !== rawEvidenceUrls.length)
+      return reply.status(400).send({ error: "Bukti tidak valid. Silakan unggah ulang lampiran Anda." });
+    if (cleanEvidenceUrls.length > MAX_FILES_PER_REQUEST)
+      return reply.status(400).send({ error: `Maksimal ${MAX_FILES_PER_REQUEST} bukti per laporan.` });
+
+    // suspectPhotoUrl juga dirender di halaman publik -- berlaku aturan sama.
+    if (suspectPhotoUrl != null && !isOwnStorageUrl(suspectPhotoUrl))
+      return reply.status(400).send({ error: "Foto terduga pelaku tidak valid. Silakan unggah ulang." });
+
     const spamResult = await checkSpam({
       userId: req.user!.userId,
       targetType,
@@ -365,7 +398,7 @@ export async function reportsRoutes(app: FastifyInstance) {
       amount,
       targetType,
       targetValue: cleanTargetValue,
-      evidenceUrls: evidenceUrls ?? [],
+      evidenceUrls: cleanEvidenceUrls,
     });
 
     const report = await db.transaction(async (tx) => {
@@ -395,11 +428,11 @@ export async function reportsRoutes(app: FastifyInstance) {
         })
         .returning();
 
-      if (evidenceUrls?.length) {
+      if (cleanEvidenceUrls.length) {
         await tx
           .insert(evidence)
           .values(
-            evidenceUrls.map((url: string) => ({ reportId: inserted.id, url })),
+            cleanEvidenceUrls.map((url: string) => ({ reportId: inserted.id, url })),
           );
       }
 

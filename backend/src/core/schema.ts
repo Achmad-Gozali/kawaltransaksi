@@ -23,7 +23,11 @@ export const sessions = pgTable("sessions", {
   refreshToken: text("refresh_token").notNull().unique(),
   expiresAt:    timestamp("expires_at").notNull(),
   createdAt:    timestamp("created_at").notNull().defaultNow(),
-});
+}, (table) => [
+  // Dipakai saat reset-password (hapus semua sesi milik user) -- FK tidak
+  // otomatis diberi index oleh Postgres.
+  index("sessions_user_id_idx").on(table.userId),
+]);
 
 export const reports = pgTable("reports", {
   id:                  text("id").primaryKey().$defaultFn(() => createId()),
@@ -54,6 +58,16 @@ export const reports = pgTable("reports", {
   // robot.ts, sekaligus mempercepat query per-user lain di checkSpam()
   // (cek duplikat & rate limit harian) yang sebelumnya full table scan.
   index("reports_user_id_status_idx").on(table.userId, table.status),
+  // Dipakai oleh endpoint publik yang filter by status lalu ORDER BY
+  // created_at DESC (public/recent, laporan-stats, laporan-publik, dll) --
+  // sebelumnya full scan + sort di memori untuk tabel yang terus bertambah.
+  index("reports_status_created_at_idx").on(table.status, table.createdAt),
+  // Dipakai oleh search.route.ts (lookup nomor/rekening/ewallet persis) dan
+  // beberapa endpoint publik lain yang filter by target_type.
+  index("reports_target_type_value_idx").on(table.targetType, table.targetValue),
+  // Dipakai oleh public/check/:number dan public/blacklist/:number yang
+  // lookup langsung by target_value tanpa filter target_type.
+  index("reports_target_value_idx").on(table.targetValue),
 ]);
 
 export const evidence = pgTable("evidence", {
@@ -61,7 +75,11 @@ export const evidence = pgTable("evidence", {
   reportId:  text("report_id").notNull().references(() => reports.id, { onDelete: "cascade" }),
   url:       text("url").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+}, (table) => [
+  // Kolom FK tidak otomatis diberi index oleh Postgres -- dibutuhkan untuk
+  // JOIN/IN lookup di admin.route.ts dan reports.route.ts (public/check).
+  index("evidence_report_id_idx").on(table.reportId),
+]);
 
 export const passwordResetTokens = pgTable("password_reset_tokens", {
   id:        text("id").primaryKey().$defaultFn(() => createId()),
@@ -69,7 +87,9 @@ export const passwordResetTokens = pgTable("password_reset_tokens", {
   token:     text("token").notNull().unique(),
   expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+}, (table) => [
+  index("password_reset_tokens_user_id_idx").on(table.userId),
+]);
 
 export const otpTokens = pgTable("otp_tokens", {
   id:        text("id").primaryKey().$defaultFn(() => createId()),
@@ -78,7 +98,9 @@ export const otpTokens = pgTable("otp_tokens", {
   attempts:  integer("attempts").notNull().default(0),
   expiresAt: timestamp("expires_at").notNull(),
   createdAt: timestamp("created_at").notNull().defaultNow(),
-});
+}, (table) => [
+  index("otp_tokens_user_id_idx").on(table.userId),
+]);
 
 export const articles = pgTable("articles", {
   id:          text("id").primaryKey().$defaultFn(() => createId()),
@@ -93,7 +115,49 @@ export const articles = pgTable("articles", {
   publishedAt: timestamp("published_at"),
   createdAt:   timestamp("created_at").notNull().defaultNow(),
   updatedAt:   timestamp("updated_at").notNull().defaultNow(),
-});
+}, (table) => [
+  // Dipakai oleh /admin/articles/public (listing publik ORDER BY published_at DESC).
+  index("articles_status_published_at_idx").on(table.status, table.publishedAt),
+]);
+
+/**
+ * Kolom laporan yang boleh dilihat publik -- SEMUA kolom KECUALI userId.
+ *
+ * Sebelumnya endpoint publik memakai db.select() polos (SELECT *), sehingga
+ * user_id si pelapor ikut terkirim ke browser siapa pun. Padahal frontend
+ * sengaja menyamarkan identitas pelapor (maskName/maskNumber) -- membocorkan
+ * user_id membatalkan penyamaran itu: satu ID tetap bisa dipakai untuk
+ * mengelompokkan seluruh laporan milik orang yang sama, dan di situs
+ * anti-penipuan itu berisiko dipakai pelaku untuk balas dendam ke pelapor.
+ *
+ * Ditulis eksplisit (bukan spread/omit) supaya kolom sensitif yang ditambahkan
+ * ke schema di masa depan TIDAK otomatis ikut bocor -- harus didaftarkan sadar
+ * ke sini dulu. Dipakai bareng oleh reports.route.ts dan search.route.ts.
+ */
+export const publicReportColumns = {
+  id:                  reports.id,
+  targetType:          reports.targetType,
+  targetValue:         reports.targetValue,
+  bankName:            reports.bankName,
+  walletName:          reports.walletName,
+  targetName:          reports.targetName,
+  amount:              reports.amount,
+  description:         reports.description,
+  chronology:          reports.chronology,
+  category:            reports.category,
+  platform:            reports.platform,
+  incidentDate:        reports.incidentDate,
+  hasOtherVictims:     reports.hasOtherVictims,
+  storeName:           reports.storeName,
+  suspectCity:         reports.suspectCity,
+  suspectPhotoUrl:     reports.suspectPhotoUrl,
+  socialMediaAccounts: reports.socialMediaAccounts,
+  linkUrl:             reports.linkUrl,
+  reportedTo:          reports.reportedTo,
+  status:              reports.status,
+  createdAt:           reports.createdAt,
+  updatedAt:           reports.updatedAt,
+} as const;
 
 export type User                = typeof users.$inferSelect;
 export type Session             = typeof sessions.$inferSelect;

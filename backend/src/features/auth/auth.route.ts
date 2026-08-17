@@ -162,7 +162,14 @@ export async function authRoutes(app: FastifyInstance) {
     };
   });
 
-  app.post("/verify-otp", async (req, reply) => {
+  // Endpoint ini tidak butuh login dan userId-nya dikirim client, jadi siapa
+  // pun yang tahu/menebak userId orang lain bisa memanggilnya berulang kali.
+  // Counter `attempts` memang sudah mengunci per-OTP setelah 3 kali salah,
+  // tapi tanpa rate limit sendiri penyerang tetap bisa membakar jatah
+  // percobaan korban berkali-kali (korban jadi harus minta kode baru terus).
+  app.post("/verify-otp", {
+    config: { rateLimit: { max: 10, timeWindow: "15 minutes" } },
+  }, async (req, reply) => {
     const { userId, otp } = req.body as { userId: string; otp: string };
     if (!userId || !otp) return reply.status(400).send({ error: "Kode verifikasi wajib diisi." });
 
@@ -420,39 +427,22 @@ export async function authRoutes(app: FastifyInstance) {
       return reply.redirect(`${frontendUrl}/login?error=google_failed`);
 
     try {
-      const { execFile } = await import("child_process");
-      const { promisify } = await import("util");
-      const execFileAsync = promisify(execFile);
+      // Tukar authorization code -> token & ambil profil user lewat SDK
+      // googleapis (sudah jadi dependency untuk generateAuthUrl di /google)
+      // alih-alih shell out ke `curl` lewat child_process -- lebih ringan
+      // (tidak spawn proses baru per request) dan tidak butuh binary curl
+      // di image Docker.
+      const oauth2Client = getOAuthClient();
+      const { tokens } = await oauth2Client.getToken(code);
 
-      const tokenParams = new URLSearchParams({
-        code,
-        client_id: process.env.GOOGLE_CLIENT_ID!,
-        client_secret: process.env.GOOGLE_CLIENT_SECRET!,
-        redirect_uri: process.env.GOOGLE_REDIRECT_URI!,
-        grant_type: "authorization_code",
-      });
-
-      const { stdout: tokenStdout } = await execFileAsync("curl", [
-        "-sS", "-X", "POST",
-        "https://oauth2.googleapis.com/token",
-        "--max-time", "10",
-        "-d", tokenParams.toString(),
-      ]);
-
-      const tokenData = JSON.parse(tokenStdout);
-      if (!tokenData.access_token) {
-        app.log.error({ tokenData }, "Google token exchange failed");
+      if (!tokens.access_token) {
+        app.log.error({ tokens }, "Google token exchange failed");
         return reply.redirect(`${frontendUrl}/login?error=google_failed`);
       }
 
-      const { stdout: userStdout } = await execFileAsync("curl", [
-        "-sS", "-X", "GET",
-        "https://www.googleapis.com/oauth2/v2/userinfo",
-        "--max-time", "10",
-        "-H", `Authorization: Bearer ${tokenData.access_token}`,
-      ]);
-
-      const userData = JSON.parse(userStdout);
+      oauth2Client.setCredentials(tokens);
+      const oauth2 = google.oauth2({ version: "v2", auth: oauth2Client });
+      const { data: userData } = await oauth2.userinfo.get();
 
       if (!userData.email || !userData.name)
         return reply.redirect(`${frontendUrl}/login?error=google_no_email`);

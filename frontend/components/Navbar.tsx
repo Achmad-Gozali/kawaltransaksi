@@ -86,6 +86,7 @@ export default function Navbar() {
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
           <div className="flex items-center h-16">
             <button onClick={() => { setIsMenuOpen(true); setIsProfileOpen(false); }}
+              aria-label="Buka menu navigasi" aria-expanded={isMenuOpen} aria-haspopup="true"
               className="lg:hidden p-2 text-slate-700 hover:bg-slate-50 rounded-lg transition-colors mr-2">
               <Menu className="w-5 h-5" />
             </button>
@@ -116,6 +117,7 @@ export default function Navbar() {
               ) : user ? (
                 <div className="relative" ref={dropdownRef}>
                   <button onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+                    aria-label="Buka menu akun" aria-expanded={isDropdownOpen} aria-haspopup="true"
                     className="flex items-center gap-2.5 px-3 py-2 rounded-xl hover:bg-slate-50 transition-colors">
                     <div className="w-10 h-10 rounded-full bg-emerald-700 flex items-center justify-center shrink-0">
                       <span className="text-white text-sm font-black">{initials}</span>
@@ -163,6 +165,7 @@ export default function Navbar() {
                 <div className="w-8 h-8 bg-slate-100 rounded-full animate-pulse" />
               ) : user ? (
                 <button onClick={() => { setIsProfileOpen(true); setIsMenuOpen(false); }}
+                  aria-label="Buka menu akun" aria-expanded={isProfileOpen} aria-haspopup="true"
                   className="w-8 h-8 rounded-full bg-emerald-700 flex items-center justify-center">
                   <span className="text-white text-xs font-black">{initials}</span>
                 </button>
@@ -188,7 +191,7 @@ export default function Navbar() {
                   Kawal<span className="text-emerald-700">Transaksi</span>
                 </span>
               </Link>
-              <button onClick={() => setIsMenuOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100">
+              <button onClick={() => setIsMenuOpen(false)} aria-label="Tutup menu navigasi" className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100">
                 <X className="w-4 h-4 text-slate-600" />
               </button>
             </div>
@@ -223,7 +226,7 @@ export default function Navbar() {
           <div className="relative w-72 bg-white h-full shadow-2xl flex flex-col">
             <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100">
               <span className="text-base font-black text-slate-900">Akun</span>
-              <button onClick={() => setIsProfileOpen(false)} className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100">
+              <button onClick={() => setIsProfileOpen(false)} aria-label="Tutup menu akun" className="w-8 h-8 flex items-center justify-center rounded-full bg-slate-100">
                 <X className="w-4 h-4 text-slate-600" />
               </button>
             </div>

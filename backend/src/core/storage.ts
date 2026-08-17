@@ -132,6 +132,25 @@ export async function deleteFile(url: string | null | undefined): Promise<void> 
 }
 
 /**
+ * Cek apakah sebuah URL benar-benar menunjuk ke storage R2 milik kita.
+ *
+ * Dipakai untuk memvalidasi `evidenceUrls` yang dikirim client saat membuat
+ * laporan. Tanpa ini, penyerang bisa mengirim URL sembarangan (misal ke server
+ * miliknya sendiri) dan URL itu akan tersimpan sebagai "bukti" lalu dirender
+ * di halaman publik -- artinya halaman kita memuat aset pihak ketiga yang bisa
+ * dipakai untuk melacak pengunjung (IP/User-Agent) atau menampilkan gambar
+ * yang menyesatkan. Bukti HARUS berasal dari file yang benar-benar di-upload
+ * lewat endpoint upload kita sendiri.
+ */
+export function isOwnStorageUrl(url: unknown): url is string {
+  if (typeof url !== "string" || !url) return false;
+  const { publicUrl } = getR2();
+  // Harus tepat di bawah origin R2 kita, bukan sekadar mengandung string-nya
+  // (mencegah https://evil.com/?x=https://img.kawaltransaksi.com lolos).
+  return url.startsWith(publicUrl + "/");
+}
+
+/**
  * Ambil ukuran file (bytes) dari R2 berdasarkan URL publiknya.
  * Return 0 kalau URL bukan URL R2 (misal path lama era filesystem) atau
  * objectnya tidak ditemukan, supaya pemanggil bisa langsung memperlakukannya

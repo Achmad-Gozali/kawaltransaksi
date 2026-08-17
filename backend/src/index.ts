@@ -1,7 +1,7 @@
 import { configDotenv } from "dotenv";
 configDotenv();
 
-import Fastify from "fastify";
+import Fastify, { type FastifyError } from "fastify";
 import cors from "@fastify/cors";
 import cookie from "@fastify/cookie";
 import multipart from "@fastify/multipart";
@@ -75,5 +75,25 @@ await app.register(adminRoutes, { prefix: "/api/admin" });
 await app.register(uploadRoutes, { prefix: "/api/upload" });
 
 app.get("/health", async () => ({ status: "ok" }));
+
+// ── Error handler global ──────────────────────────────────────────────────
+// Fastify secara default menyertakan `error.message` mentah di body respons
+// untuk error yang tidak terduga (mis. error driver Postgres, exception dari
+// dependency internal) -- ini bisa membocorkan detail implementasi (nama
+// kolom/constraint, dsb) ke klien. Untuk error dengan statusCode >= 500 (atau
+// tanpa statusCode sama sekali, yaitu exception yang tidak sengaja terlempar
+// dari handler), log detail lengkapnya di server tapi balas klien dengan
+// pesan generik. Error yang sudah punya statusCode < 500 (mis. dari
+// @fastify/rate-limit atau validasi bawaan Fastify) tetap diteruskan apa
+// adanya karena pesannya memang ditujukan untuk klien.
+app.setErrorHandler((error: FastifyError, req, reply) => {
+  const statusCode = error.statusCode ?? 500;
+  if (statusCode >= 500) {
+    req.log.error(error);
+    reply.status(statusCode).send({ error: "Terjadi kesalahan pada server. Silakan coba lagi nanti." });
+    return;
+  }
+  reply.status(statusCode).send({ error: error.message });
+});
 
 await app.listen({ port: Number(process.env.PORT) || 4000, host: "0.0.0.0" });

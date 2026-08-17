@@ -18,7 +18,7 @@ export const metadata: Metadata = {
   },
 };
 
-export const dynamic = 'force-dynamic';
+export const revalidate = 300;
 
 const BASE    = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
 const API_URL = process.env.NEXT_PUBLIC_API_URL ?? 'http://localhost:4000';
@@ -37,7 +37,7 @@ function readingTime(content?: string) {
 
 async function getArticles() {
   try {
-    const res = await fetch(`${BASE}/api/admin/articles/public`, { cache: 'no-store' });
+    const res = await fetch(`${BASE}/api/admin/articles/public`, { next: { revalidate: 300 } });
     if (!res.ok) return [];
     return (await res.json()).data ?? [];
   } catch { return []; }

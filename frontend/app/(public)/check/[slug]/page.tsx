@@ -6,7 +6,7 @@ import {
   ArrowLeft, PlusCircle, AlertTriangle, Clock, Lock,
   ShieldAlert, ShieldX,
 } from "lucide-react";
-import { formatNum, decodeSlug } from "@/core/utils";
+import { formatNum, decodeSlug, safeJsonLd } from "@/core/utils";
 import ShareButtons from "@/features/check/ShareButtons";
 import NumberCard from "@/features/check/components/NumberCard";
 import ReportList from "@/features/check/components/ReportList";
@@ -75,9 +75,14 @@ export async function generateMetadata({ params }: CheckPageProps): Promise<Meta
 
   return {
     title, description,
-    openGraph: { title, description, type: "website", locale: "id_ID", siteName: "KawalTransaksi", url: `https://kawaltransaksi.com/check/${slug}` },
+    // Selalu pakai realNumber (sudah dinormalisasi jadi digit saja), BUKAN slug
+    // mentah dari URL. Slug mentah bisa berisi karakter apa pun, sehingga URL
+    // sampah seperti /check/0812xxx-promo akan menghasilkan canonical yang
+    // menunjuk ke dirinya sendiri (canonical poisoning / duplicate content).
+    // Untuk traffic normal nilainya identik karena slug memang nomor itu sendiri.
+    openGraph: { title, description, type: "website", locale: "id_ID", siteName: "KawalTransaksi", url: `https://kawaltransaksi.com/check/${realNumber}` },
     twitter: { card: "summary_large_image", title, description },
-    alternates: { canonical: `https://kawaltransaksi.com/check/${slug}` },
+    alternates: { canonical: `https://kawaltransaksi.com/check/${realNumber}` },
   };
 }
 
@@ -392,14 +397,14 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
     itemListElement: [
       { "@type": "ListItem", position: 1, name: "Beranda", item: "https://kawaltransaksi.com" },
       { "@type": "ListItem", position: 2, name: "Cek Nomor", item: "https://kawaltransaksi.com/cek-nomor" },
-      { "@type": "ListItem", position: 3, name: `Nomor ${formatNum(realNumber)}`, item: `https://kawaltransaksi.com/check/${slug}` },
+      { "@type": "ListItem", position: 3, name: `Nomor ${formatNum(realNumber)}`, item: `https://kawaltransaksi.com/check/${realNumber}` },
     ],
   };
 
   return (
     <>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }} />
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbData) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(structuredData) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(breadcrumbData) }} />
       <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
 
         <div className="sm:hidden bg-white border-b border-slate-100 sticky top-16 z-10">
