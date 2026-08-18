@@ -4,7 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import Link from "next/link";
 import { Lock, Signal, MapPin, Store, UserRound } from "lucide-react";
-import { formatNum, maskNumber } from "@/core/utils";
+import { formatNum } from "@/core/utils";
 
 function formatSosmed(acc: string) {
   const cleaned = acc.trim();
@@ -77,8 +77,7 @@ export default function NumberCard({
 
   const suspectPhotoUrl  = canSeeIdentity ? (reports.find(r => r.suspectPhotoUrl)?.suspectPhotoUrl ?? null) : null;
   const hasPhotoButGated = hasVerified && !isLoggedIn && !!reports.find(r => r.suspectPhotoUrl)?.suspectPhotoUrl;
-  const targetName       = canSeeIdentity ? (reports[0]?.targetName ?? null) : null;
-  const hasNameButGated  = hasVerified && !isLoggedIn && !!reports[0]?.targetName;
+  const targetName       = reports[0]?.targetName ?? null;
 
   const dangerLink  = reports.find(r => r.linkUrl)?.linkUrl ?? null;
   const category    = reports[0]?.category ?? null;
@@ -95,10 +94,7 @@ export default function NumberCard({
   const hasContext   = reports.length > 0 || defaultBankName !== null || defaultWalletName !== null || hasTypeParam;
   const showLabel    = hasContext && displayLabel !== null;
 
-  // Nomor disensor untuk pengunjung yang belum login (standar 4 depan + 4
-  // belakang kelihatan, tengah disensor). formatNum menambahkan spasi tiap
-  // 4 digit supaya tetap mudah dibaca, baik versi asli maupun tersensor.
-  const displayNumber = isLoggedIn ? formatNum(realNumber) : formatNum(maskNumber(realNumber));
+  const displayNumber = formatNum(realNumber);
 
   const infoGrid = [
     category    ? { label: "Kategori",   value: category,    className: "text-slate-800" } : null,
@@ -123,11 +119,6 @@ export default function NumberCard({
                   <span className={`text-[11px] px-2.5 py-1 rounded-md font-medium border ${config.nameBadgeBg} ${config.nameBadgeText} ${config.nameBadgeBorder}`}>
                     a.n. {targetName}
                   </span>
-                )}
-                {hasNameButGated && (
-                  <Link href="/login" className="inline-flex items-center gap-1 text-[11px] px-2.5 py-1 rounded-md font-medium border border-slate-200 bg-slate-50 text-slate-400 hover:bg-slate-100 transition-colors">
-                    <Lock className="w-3 h-3" /> a.n. ••••••••
-                  </Link>
                 )}
                 {!hasVerified && reports.length > 0 && (
                   <span className="text-[11px] px-2.5 py-1 rounded-md font-medium border border-amber-200 bg-amber-50 text-amber-700">

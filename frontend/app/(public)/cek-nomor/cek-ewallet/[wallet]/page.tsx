@@ -1,7 +1,7 @@
 import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
 import type { Metadata } from "next";
-import { maskNumber, formatDateID, safeJsonLd } from "@/core/utils";
+import { formatDateID, safeJsonLd } from "@/core/utils";
 import EwalletPageClient from "./EwalletPageClient";
 
 const BACKEND_URL = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
@@ -58,14 +58,11 @@ export default async function EwalletDetailPage({ params }: PageProps) {
   const totalCount    = allRows.length;
   const verifiedCount = allRows.filter(r => r.status === "verified").length;
   const pendingCount  = allRows.filter(r => r.status === "pending").length;
-  // Nomor tersensor untuk pengunjung, nomor asli untuk yang sudah login.
-  // Keputusan sensor dilakukan di server agar nomor asli tidak pernah
-  // terkirim ke browser pengunjung yang belum login sama sekali.
   const reports = allRows.slice(0, 6).map(r => ({
     target_number: r.targetValue,
     target_name:   r.targetName,
     status:        r.status,
-    displayNumber: isLoggedIn ? r.targetValue : maskNumber(r.targetValue),
+    displayNumber: r.targetValue,
     dateFormatted: formatDateID(r.createdAt),
   }));
 

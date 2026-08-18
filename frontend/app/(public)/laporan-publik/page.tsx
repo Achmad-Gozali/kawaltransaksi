@@ -1,9 +1,8 @@
 import Link from "next/link";
 import Image from "next/image";
-import { cookies } from "next/headers";
 import type { Metadata } from "next";
 import { Phone, Building2, Wallet, ArrowRight } from "lucide-react";
-import { formatDateID, encodeSlug, maskName, maskNumber } from "@/core/utils";
+import { formatDateID, encodeSlug } from "@/core/utils";
 import StatsChart from "./StatsChart";
 import SearchBar from "./SearchBar";
 
@@ -121,12 +120,10 @@ export default async function LaporanPublikPage({
   const page = Math.max(1, parseInt(params.page ?? "1"));
   const perPage = 12;
 
-  const [laporanData, allReportsForStats, cookieStore] = await Promise.all([
+  const [laporanData, allReportsForStats] = await Promise.all([
     getLaporanPublik({ type, sort, q, page }),
     getLaporanStats(),
-    cookies(),
   ]);
-  const isLoggedIn = !!cookieStore.get("refresh_token")?.value;
 
   const paginatedReports: any[] = laporanData.data ?? [];
   const totalUniqueNumbers: number = laporanData.total_unique ?? 0;
@@ -241,9 +238,8 @@ export default async function LaporanPublikPage({
                 const logoSrc = getPlatformLogo(report.target_type, report.bank_name);
                 const aggStatus = getAggregateStatus(Number(report.verified_count), Number(report.pending_count));
                 const badge = getStatusBadge(aggStatus, Number(report.verified_count));
-                const isVerified = Number(report.verified_count) > 0;
-                const displayName = isVerified ? (report.target_name ?? "Anonymous") : maskName(report.target_name);
-                const displayNumber = isLoggedIn ? report.target_number : maskNumber(report.target_number);
+                const displayName = report.target_name ?? "Anonymous";
+                const displayNumber = report.target_number;
 
                 return (
                   <Link key={report.target_number} href={`/check/${encodeSlug(report.target_number)}`}

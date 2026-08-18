@@ -1,9 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
-import { cookies } from "next/headers";
 import { Phone, Landmark, Wallet, ArrowRight } from "lucide-react";
 import * as motion from "motion/react-client";
-import { maskName, maskNumber } from "@/core/utils";
 
 export const dynamic = "force-dynamic";
 
@@ -139,8 +137,7 @@ function StatsCard({ stats }: { stats: Stats }) {
 }
 
 export default async function HomePage() {
-  const [recentReports, stats, cookieStore] = await Promise.all([getRecentReports(), getStats(), cookies()]);
-  const isLoggedIn = !!cookieStore.get("refresh_token")?.value;
+  const [recentReports, stats] = await Promise.all([getRecentReports(), getStats()]);
 
   return (
     <main className="bg-white text-slate-900 font-sans overflow-x-hidden">
@@ -257,14 +254,13 @@ export default async function HomePage() {
               {recentReports.map((report, i) => {
                 const meta = getTargetMeta(report.targetType, report.bankName, report.walletName);
                 const logoSrc = getPlatformLogo(report.targetType, report.bankName, report.walletName);
-                const isVerified = report.status === "verified";
                 const statusMap: Record<string, { label: string; className: string }> = {
                   verified: { label: "Terverifikasi", className: "bg-emerald-50 text-emerald-700 border-emerald-200" },
                   pending:  { label: "Pending",        className: "bg-amber-50 text-amber-700 border-amber-200" },
                 };
                 const statusStyle = statusMap[report.status] ?? statusMap.pending;
-                const displayName = isVerified ? (report.targetName ?? "Anonymous") : maskName(report.targetName);
-                const displayNumber = isLoggedIn ? report.targetValue : maskNumber(report.targetValue);
+                const displayName = report.targetName ?? "Anonymous";
+                const displayNumber = report.targetValue;
 
                 return (
                   <motion.div

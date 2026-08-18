@@ -1,10 +1,9 @@
 import Link from "next/link";
 import Image from "next/image";
-import { cookies } from "next/headers";
 import { ArrowRight, TrendingUp } from "lucide-react";
 import type { Metadata } from "next";
 import NomorSearchForm from "@/features/check/NomorSearchForm";
-import { formatRupiah, encodeSlug, maskNumber, safeJsonLd } from "@/core/utils";
+import { formatRupiah, encodeSlug, safeJsonLd } from "@/core/utils";
 
 export const metadata: Metadata = {
   title: "Cek Nomor HP - KawalTransaksi",
@@ -73,8 +72,7 @@ async function getLeaderboard() {
 }
 
 export default async function CekNomorPage() {
-  const [{ totalLaporan, totalNomor, totalKerugian }, leaderboard, cookieStore] = await Promise.all([getStats(), getLeaderboard(), cookies()]);
-  const isLoggedIn = !!cookieStore.get("refresh_token")?.value;
+  const [{ totalLaporan, totalNomor, totalKerugian }, leaderboard] = await Promise.all([getStats(), getLeaderboard()]);
 
   const stats = [
     { icon: (<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>), value: totalLaporan > 0 ? `${totalLaporan.toLocaleString("id-ID")}+` : "0", desc: "Kasus penipuan yang telah dilaporkan pengguna" },
@@ -161,7 +159,7 @@ export default async function CekNomorPage() {
                 const number = entry.targetValue ?? entry.target_number ?? entry.targetvalue;
                 if (!number) return null;
                 const reportCount = entry.reportCount ?? entry.report_count ?? 1;
-                const displayNumber = isLoggedIn ? number : maskNumber(number);
+                const displayNumber = number;
                 return (
                   <Link key={number} href={`/check/${encodeSlug(number)}`} className="flex items-center gap-4 px-4 sm:px-6 py-3.5 sm:py-4 hover:bg-slate-50 transition-colors group">
                     <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 font-black text-sm ${RANK_STYLE[i] ?? "bg-slate-100 text-slate-500"}`}>{i + 1}</div>
