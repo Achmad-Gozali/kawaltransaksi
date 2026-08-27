@@ -1,6 +1,6 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Phone, Landmark, Wallet, ArrowRight } from "lucide-react";
+import { Phone, Landmark, Wallet, ArrowRight, ScanLine } from "lucide-react";
 import * as motion from "motion/react-client";
 
 export const dynamic = "force-dynamic";
@@ -153,7 +153,7 @@ export default async function HomePage() {
               <p className="text-slate-500 text-sm sm:text-base mb-8 leading-relaxed max-w-md">
                 Verifikasi nomor HP, rekening bank, dan e-wallet dalam hitungan detik. Bersama komunitas, kami berkomitmen untuk mewujudkan ekosistem transaksi digital yang lebih aman di Indonesia.
               </p>
-              <div className="flex flex-col sm:flex-row gap-3">
+              <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3">
                 <Link
                   href="/cek-nomor"
                   className="px-6 py-3 bg-slate-900 text-white font-bold text-sm tracking-wide rounded-xl flex items-center justify-center gap-2 hover:bg-emerald-700 transition-colors"
@@ -165,6 +165,12 @@ export default async function HomePage() {
                   className="px-6 py-3 border-2 border-slate-300 text-slate-900 font-bold text-sm tracking-wide rounded-xl flex items-center justify-center gap-2 hover:border-slate-900 transition-colors bg-white"
                 >
                   <Landmark className="w-4 h-4" /> Cek Rekening
+                </Link>
+                <Link
+                  href="/cek-qris"
+                  className="px-6 py-3 border-2 border-slate-300 text-slate-900 font-bold text-sm tracking-wide rounded-xl flex items-center justify-center gap-2 hover:border-slate-900 transition-colors bg-white"
+                >
+                  <ScanLine className="w-4 h-4" /> Cek QRIS
                 </Link>
               </div>
             </div>

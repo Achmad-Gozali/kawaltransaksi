@@ -2,9 +2,10 @@ import Link from 'next/link';
 import Image from 'next/image';
 
 const layananUtama = [
-  { label: 'Cek Nomor',      href: '/cek-nomor' },
-  { label: 'Cek Rekening',   href: '/cek-rekening' },
-  { label: 'Lapor Penipuan', href: '/report' },
+  { label: 'Cek Nomor',         href: '/cek-nomor' },
+  { label: 'Cek Rekening',      href: '/cek-rekening' },
+  { label: 'Cek QRIS',          href: '/cek-qris' },
+  { label: 'Laporkan Penipuan', href: '/report' },
 ];
 
 const bantuanLegal = [
@@ -34,7 +35,7 @@ export default function Footer() {
               </span>
             </Link>
             <p className="text-sm text-slate-400 leading-relaxed max-w-xs">
-              Membangun pertahanan komunitas terhadap penipuan digital di Indonesia. Cepat, Terbuka, dan Terpercaya.
+              Melindungi masyarakat Indonesia dari penipuan digital melalui kekuatan komunitas. Cepat, terbuka, dan terpercaya.
             </p>
           </div>
 
@@ -65,7 +66,7 @@ export default function Footer() {
           </div>
 
           <div className="col-span-2 md:col-span-2">
-            <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-4">Social</h2>
+            <h2 className="text-[11px] font-black text-slate-400 uppercase tracking-widest mb-4">Media Sosial</h2>
             <div className="flex md:flex-col gap-3">
               <a href="https://www.tiktok.com/@alieee27_" target="_blank" rel="noopener noreferrer"
                 className="flex items-center gap-2.5 text-xs font-bold text-slate-300 hover:text-white transition-colors">
