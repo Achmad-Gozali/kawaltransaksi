@@ -127,9 +127,9 @@ function AuthFormInner({ type }: AuthFormProps) {
 
   const oauthError = searchParams.get('error');
   const oauthErrorMap: Record<string, string> = {
-    google_cancelled: 'Login Google dibatalkan.',
+    google_cancelled: 'Proses masuk dengan Google dibatalkan.',
     google_no_email:  'Akun Google tidak memiliki email yang dapat digunakan.',
-    google_failed:    'Login Google gagal. Coba lagi.',
+    google_failed:    'Proses masuk dengan Google gagal. Silakan coba lagi.',
   };
 
   const strength        = type === 'register' ? getPasswordStrength(password) : { label: '', color: '', width: '0%' };

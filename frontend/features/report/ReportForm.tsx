@@ -173,7 +173,7 @@ export default function ReportForm() {
     try {
       const freshToken = await authClient.refresh();
       if (!freshToken) {
-        setError('Sesi habis. Silakan login ulang.');
+        setError('Sesi Anda telah berakhir. Silakan masuk kembali.');
         setIsLoading(false);
         return;
       }
@@ -323,7 +323,7 @@ export default function ReportForm() {
             }}
             onError={() => {
               setTurnstileToken(null);
-              setError('Verifikasi keamanan gagal dimuat. Coba muat ulang halaman atau periksa koneksi internet kamu.');
+              setError('Verifikasi keamanan gagal dimuat. Silakan muat ulang halaman atau periksa koneksi internet Anda.');
             }}
             options={{ theme: 'light' }}
           />

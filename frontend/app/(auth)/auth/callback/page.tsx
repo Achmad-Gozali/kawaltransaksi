@@ -37,7 +37,7 @@ export default function AuthCallbackPage() {
     <div className="min-h-screen flex items-center justify-center">
       <div className="flex flex-col items-center gap-3 text-slate-400">
         <Loader2 className="w-6 h-6 animate-spin" />
-        <p className="text-sm font-medium">Menyelesaikan login...</p>
+        <p className="text-sm font-medium">Menyelesaikan proses masuk...</p>
         <Suspense>
           <CallbackHandler />
         </Suspense>

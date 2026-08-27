@@ -109,7 +109,7 @@ export async function generateMetadata({ params, searchParams }: CheckPageProps)
     description = `${label} sedang dalam proses verifikasi dengan ${pendingCount} laporan masuk. Tetap waspada sebelum melakukan transaksi.`;
   } else {
     title = `Cek ${label} - Tidak Ada Laporan | KawalTransaksi`;
-    description = `${label} belum memiliki laporan penipuan di database KawalTransaksi. Tetap waspada dan laporkan jika kamu menemukan aktivitas mencurigakan.`;
+    description = `${label} belum memiliki laporan penipuan di database KawalTransaksi. Tetap waspada dan laporkan apabila Anda menemukan aktivitas mencurigakan.`;
   }
 
   return {
@@ -254,7 +254,7 @@ function GatedContent({ isLoggedIn, label, children, minHeight }: { isLoggedIn: 
           </div>
           <p className="text-sm font-semibold text-slate-800">{label}</p>
           <Link href="/login" className="mt-1 inline-flex items-center gap-1.5 px-5 py-2.5 bg-slate-900 hover:bg-slate-700 text-white text-xs font-semibold rounded-lg transition-colors shadow-sm">
-            Login untuk melihat
+            Masuk untuk melihat
           </Link>
         </div>
       </div>
@@ -266,8 +266,8 @@ function CtaShareCard({ slug, shareText }: { slug: string; shareText: string }) 
   return (
     <div className="rounded-xl border border-slate-200 overflow-hidden">
       <div className="bg-slate-900 px-5 py-5 sm:px-6 sm:py-6">
-        <p className="text-sm font-semibold text-white mb-1">Pernah kena tipu nomor ini?</p>
-        <p className="text-xs text-slate-400 mb-4 leading-relaxed">Satu laporan dari kamu bisa melindungi ribuan orang.</p>
+        <p className="text-sm font-semibold text-white mb-1">Pernah menjadi korban penipuan nomor ini?</p>
+        <p className="text-xs text-slate-400 mb-4 leading-relaxed">Satu laporan dari Anda dapat melindungi ribuan orang.</p>
         <Link href="/report" className="flex items-center justify-center gap-2 w-full py-3 bg-white hover:bg-slate-100 text-slate-900 text-xs font-semibold rounded-lg transition-colors">
           <PlusCircle className="w-3.5 h-3.5" /> Buat laporan
         </Link>
@@ -375,7 +375,7 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
     mainEntity: [
       { "@type": "Question", name: `Apakah ${displayNumTitle} penipu?`, acceptedAnswer: { "@type": "Answer", text: status === "danger" ? `Ya, ${displayNumTitle} terindikasi penipu. Terdapat ${verifiedCount} laporan terverifikasi. Hindari bertransaksi.` : status === "warning" ? `${displayNumTitle} sedang dalam proses investigasi. Tetap waspada.` : `${displayNumTitle} belum memiliki laporan penipuan terverifikasi di database KawalTransaksi.` } },
       { "@type": "Question", name: `Berapa laporan untuk ${displayNumTitle}?`, acceptedAnswer: { "@type": "Answer", text: reports.length > 0 ? `${displayNumTitle} memiliki ${reports.length} laporan masuk, dengan ${verifiedCount} laporan terverifikasi.` : `${displayNumTitle} belum memiliki laporan penipuan.` } },
-      { "@type": "Question", name: "Bagaimana cara melaporkan nomor penipu?", acceptedAnswer: { "@type": "Answer", text: "Kamu bisa melaporkan nomor penipu secara gratis di KawalTransaksi. Kunjungi kawaltransaksi.com/report, isi data nomor penipu, kronologi kejadian, dan bukti transfer." } },
+      { "@type": "Question", name: "Bagaimana cara melaporkan nomor penipu?", acceptedAnswer: { "@type": "Answer", text: "Anda dapat melaporkan nomor penipu secara gratis di KawalTransaksi. Kunjungi kawaltransaksi.com/report, lalu lengkapi data nomor penipu, kronologi kejadian, dan bukti transfer." } },
     ],
   };
 
@@ -486,7 +486,7 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
             )}
 
             {reports.length > 0 && (
-              <GatedContent isLoggedIn={isLoggedIn} label="Login untuk lihat kronologi & bukti lengkap" minHeight="200px">
+              <GatedContent isLoggedIn={isLoggedIn} label="Masuk untuk melihat kronologi & bukti lengkap" minHeight="200px">
                 <ReportList reports={reports} />
               </GatedContent>
             )}

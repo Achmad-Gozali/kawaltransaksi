@@ -105,7 +105,7 @@ export default function Navbar() {
     <>
       <nav className="bg-white sticky top-0 z-50 border-b border-slate-200 font-sans">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="flex items-center h-16">
+          <div className="flex items-center h-16 lg:h-[4.75rem]">
             <button onClick={() => { setIsMenuOpen(true); setIsProfileOpen(false); }}
               aria-label="Buka menu navigasi" aria-expanded={isMenuOpen} aria-haspopup="true"
               className="lg:hidden p-2 text-slate-700 hover:bg-slate-50 rounded-lg transition-colors mr-2">

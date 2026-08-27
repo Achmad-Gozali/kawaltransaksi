@@ -155,7 +155,7 @@ export default async function LaporanPublikPage({
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 max-w-xl leading-relaxed">
             Semua laporan yang masuk ke sistem KawalTransaksi. Nomor dengan status{" "}
-            <span className="font-bold text-emerald-600">VERIFIED</span> telah dikonfirmasi oleh tim auditor kami.
+            <span className="font-bold text-emerald-600">TERVERIFIKASI</span> telah dikonfirmasi oleh tim auditor kami.
           </p>
         </div>
       </section>
@@ -243,7 +243,7 @@ export default async function LaporanPublikPage({
                 const logoSrc = getPlatformLogo(report.target_type, report.bank_name);
                 const aggStatus = getAggregateStatus(Number(report.verified_count), Number(report.pending_count));
                 const badge = getStatusBadge(aggStatus, Number(report.verified_count));
-                const displayName = report.target_name ?? "Anonymous";
+                const displayName = report.target_name ?? "Anonim";
                 const displayNumber = report.target_number;
 
                 return (

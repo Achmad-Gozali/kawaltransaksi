@@ -25,7 +25,7 @@ const banks = [
 ];
 
 const articles = [
-  { title: "Cek Rekening Penjual Online",        desc: "Jadilah smart shopper dengan melakukan pengecekan apakah seorang penjual berpotensi melakukan penipuan atau tidak sebelum berbelanja online." },
+  { title: "Cek Rekening Penjual Online",        desc: "Jadilah pembeli yang cermat dengan memeriksa apakah seorang penjual berpotensi melakukan penipuan sebelum Anda berbelanja online." },
   { title: "Rekening Bank Mencurigakan",          desc: "Temukan riwayat laporan dari rekening bank yang mencurigakan. Kunjungi halaman database kami untuk mengetahui kredibilitas sebuah rekening." },
   { title: "Cek Rekening Bank Terlengkap",        desc: "KawalTransaksi merupakan platform pengecekan rekening penipu terlengkap. Cek nomor rekening BCA, BRI, BNI, Mandiri, CIMB Niaga, BSI, dan lainnya." },
   { title: "Cara Cek Nomor Rekening",             desc: "Masukkan nomor rekening yang ingin dicek pada kolom pencarian di atas untuk mendapatkan hasil pengecekan." },
@@ -100,10 +100,10 @@ export default async function CekRekeningPage() {
         <div className="max-w-5xl mx-auto px-4 sm:px-6 -mt-6 sm:-mt-14 relative z-10">
           <div className="grid grid-cols-3 sm:hidden bg-white border border-slate-200 rounded-xl shadow-md overflow-hidden divide-x divide-slate-100">
             {stats.map((s, i) => (
-              <div key={i} className="flex flex-col items-center py-4 px-2 text-center">
+              <div key={i} className="flex flex-col items-center py-4 px-2.5 text-center">
                 <div className="text-emerald-600 mb-1.5">{s.icon}</div>
-                <p className="text-sm font-black text-emerald-600 leading-none mb-1">{s.value}</p>
-                <p className="text-[8px] text-slate-400 leading-tight">{s.desc}</p>
+                <p className="text-base font-black text-emerald-600 leading-none mb-1">{s.value}</p>
+                <p className="text-[10px] text-slate-500 leading-tight">{s.desc}</p>
               </div>
             ))}
           </div>

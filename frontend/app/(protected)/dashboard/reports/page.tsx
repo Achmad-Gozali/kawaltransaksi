@@ -11,7 +11,7 @@ import AppealButton from '@/features/report/AppealButton';
 
 export const metadata: Metadata = {
   title: 'Laporan Saya — KawalTransaksi',
-  description: 'Lihat laporan yang pernah kamu buat di KawalTransaksi.',
+  description: 'Lihat laporan yang pernah Anda buat di KawalTransaksi.',
 };
 
 export const dynamic = 'force-dynamic';

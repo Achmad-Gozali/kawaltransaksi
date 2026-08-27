@@ -27,7 +27,7 @@ export default function RegisterPage() {
           <p className="text-sm text-gray-500">
             Sudah punya akun?{' '}
             <Link href="/login" className="font-semibold text-emerald-600 hover:text-emerald-700 transition-colors inline-flex items-center gap-1">
-              Login di sini <ArrowRight className="w-3.5 h-3.5" />
+              Masuk di sini <ArrowRight className="w-3.5 h-3.5" />
             </Link>
           </p>
         </div>

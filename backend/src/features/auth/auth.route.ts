@@ -436,7 +436,9 @@ export async function authRoutes(app: FastifyInstance) {
       const { tokens } = await oauth2Client.getToken(code);
 
       if (!tokens.access_token) {
-        app.log.error({ tokens }, "Google token exchange failed");
+        // Jangan log objek `tokens` -- bisa memuat access/refresh token Google
+        // milik user di log server. Cukup catat bahwa pertukaran kode gagal.
+        app.log.error("Google token exchange failed: no access_token in response");
         return reply.redirect(`${frontendUrl}/login?error=google_failed`);
       }
 

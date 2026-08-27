@@ -57,7 +57,7 @@ export async function uploadToStorage(
   let token = authClient.getToken();
   if (!token) {
     token = await authClient.refresh();
-    if (!token) throw new Error("Sesi habis. Silakan login ulang.");
+    if (!token) throw new Error("Sesi Anda telah berakhir. Silakan masuk kembali.");
   }
 
   const formData = new FormData();
@@ -71,7 +71,7 @@ export async function uploadToStorage(
   });
 
   const result = await res.json();
-  if (!res.ok) throw new Error(result.error ?? "Gagal mengupload file.");
+  if (!res.ok) throw new Error(result.error ?? "Gagal mengunggah berkas.");
   return result.data.url;
 }
 

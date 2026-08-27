@@ -64,7 +64,7 @@ export default function QrisSearchForm() {
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-bold text-slate-800">
-            {isDecoding ? 'Membaca kode QRIS...' : merchantName ? `Ditemukan: ${merchantName}` : 'Upload atau scan foto QRIS'}
+            {isDecoding ? 'Membaca kode QRIS...' : merchantName ? `Ditemukan: ${merchantName}` : 'Unggah atau pindai foto QRIS'}
           </p>
           <p className="text-xs text-slate-400">JPG, PNG - maks 5MB</p>
         </div>

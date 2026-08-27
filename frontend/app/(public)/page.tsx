@@ -265,7 +265,7 @@ export default async function HomePage() {
                   pending:  { label: "Pending",        className: "bg-amber-50 text-amber-700 border-amber-200" },
                 };
                 const statusStyle = statusMap[report.status] ?? statusMap.pending;
-                const displayName = report.targetName ?? "Anonymous";
+                const displayName = report.targetName ?? "Anonim";
                 const displayNumber = report.targetValue;
 
                 return (

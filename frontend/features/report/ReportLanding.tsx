@@ -10,37 +10,37 @@ import { UserRound, UserRoundPlus, LogIn, FileText, Send } from 'lucide-react';
 const steps = [
   {
     icon: LogIn,
-    title: 'Login Untuk Melapor',
-    desc: 'Sebelum melapor, pastikan kamu sudah login ke akun KawalTransaksi. Belum punya akun? Daftar sekarang, gratis!',
+    title: 'Masuk untuk Melapor',
+    desc: 'Sebelum melapor, pastikan Anda telah masuk ke akun KawalTransaksi. Belum memiliki akun? Daftar sekarang, gratis.',
   },
   {
     icon: FileText,
-    title: 'Isi Form Laporan',
-    desc: 'Laporkan nomor rekening atau nomor telepon terduga pelaku penipuan. Isi formulir dengan informasi sebenar-benarnya.',
+    title: 'Isi Formulir Laporan',
+    desc: 'Laporkan nomor rekening atau nomor telepon yang diduga digunakan pelaku penipuan. Lengkapi formulir dengan informasi yang sebenar-benarnya.',
   },
   {
     icon: Send,
     title: 'Kirim Laporan',
-    desc: 'Setelah semua bidang dalam formulir kamu isi, klik tombol "Kirim Laporan" untuk mengirimkan laporan ke tim moderator.',
+    desc: 'Setelah seluruh kolom pada formulir terisi, tekan tombol "Kirim Laporan" untuk meneruskan laporan kepada tim moderator.',
   },
 ];
 
 const explanations = [
   {
     title: 'Lapor Penipuan Online',
-    desc: 'Pernah tertipu ketika berbelanja online? Laporkan saja di KawalTransaksi agar tidak ada lagi korban yang tertipu oleh penjual yang sama. Dengan melaporkan penipuan, kamu turut membantu sesama pengguna online terhindar dari ancaman yang sama.',
+    desc: 'Pernah tertipu saat berbelanja online? Laporkan melalui KawalTransaksi agar tidak ada lagi korban dari penjual yang sama. Dengan melaporkan penipuan, Anda turut membantu sesama pengguna terhindar dari ancaman serupa.',
   },
   {
     title: 'Laporkan Rekening Penipu',
-    desc: 'Kamu dapat melaporkan nomor rekening bank milik seseorang yang pernah disalahgunakan oleh pemiliknya untuk penipuan, baik online maupun offline. Laporan yang masuk akan kami tinjau dan nomor rekening terbukti penipu akan diblacklist di sistem kami.',
+    desc: 'Anda dapat melaporkan nomor rekening bank yang pernah disalahgunakan pemiliknya untuk penipuan, baik online maupun offline. Setiap laporan yang masuk akan kami tinjau, dan rekening yang terbukti digunakan untuk penipuan akan dimasukkan ke daftar hitam pada sistem kami.',
   },
   {
     title: 'Melaporkan Nomor HP Penipu',
-    desc: 'Untuk dapat melaporkan seseorang terkait penipuan online, kamu hanya perlu mengisi form yang ada pada halaman ini. Setelah laporan dikirim dan ditinjau oleh tim kami, nomor HP terduga penipu akan diblacklist dan bisa dicek oleh seluruh pengguna.',
+    desc: 'Untuk melaporkan seseorang terkait penipuan online, Anda cukup melengkapi formulir pada halaman ini. Setelah laporan dikirim dan ditinjau oleh tim kami, nomor HP yang diduga digunakan untuk penipuan akan dimasukkan ke daftar hitam dan dapat diperiksa oleh seluruh pengguna.',
   },
   {
     title: 'Lapor Penipuan Transaksi Online',
-    desc: 'Jika kamu telah menjadi korban penipuan ketika bertransaksi secara online, kamu dapat melaporkan kejadian tersebut di KawalTransaksi agar tidak ada lagi korban selanjutnya oleh penipu yang sama.',
+    desc: 'Apabila Anda telah menjadi korban penipuan saat bertransaksi secara online, Anda dapat melaporkan kejadian tersebut melalui KawalTransaksi agar tidak ada korban berikutnya dari pelaku yang sama.',
   },
 ];
 
@@ -60,7 +60,7 @@ export default function ReportLanding() {
                   Laporkan Nomor Rekening Atau<br className="hidden sm:block" /> Nomor Telepon Penipuan
                 </h1>
                 <p className="text-slate-500 text-sm leading-relaxed max-w-md">
-                  Laporan kamu sangat berarti untuk mencegah terjadinya penipuan di masa mendatang oleh pelaku yang sama. Bersama kita bisa melindungi lebih banyak orang.
+                  Laporan Anda sangat berarti untuk mencegah penipuan berikutnya oleh pelaku yang sama. Bersama, kita dapat melindungi lebih banyak orang.
                 </p>
               </div>
 
@@ -86,9 +86,9 @@ export default function ReportLanding() {
             <div className="lg:sticky lg:top-8">
               <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden">
                 <div className="px-6 py-5 border-b border-slate-100 text-center">
-                  <p className="text-base font-semibold text-slate-900">Masuk Akun Dulu!</p>
+                  <p className="text-base font-semibold text-slate-900">Masuk ke Akun Terlebih Dahulu</p>
                   <p className="text-sm text-slate-400 mt-1">
-                    Kamu perlu login ke akun KawalTransaksi terlebih dahulu untuk mulai membuat laporan.
+                    Anda perlu masuk ke akun KawalTransaksi sebelum dapat membuat laporan.
                   </p>
                 </div>
 
@@ -98,13 +98,13 @@ export default function ReportLanding() {
                       <div className="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center mx-auto mb-3">
                         <UserRound className="w-5 h-5 text-slate-500" />
                       </div>
-                      <p className="text-sm font-semibold text-slate-900 mb-0.5">Login</p>
-                      <p className="text-[11px] text-slate-400 leading-snug mb-3">Login ke akun KawalTransaksi yang kamu miliki.</p>
+                      <p className="text-sm font-semibold text-slate-900 mb-0.5">Masuk</p>
+                      <p className="text-[11px] text-slate-400 leading-snug mb-3">Masuk ke akun KawalTransaksi yang Anda miliki.</p>
                       <Link
                         href="/login?redirectTo=/report"
                         className="w-full inline-flex items-center justify-center py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold rounded-lg transition-colors"
                       >
-                        Login
+                        Masuk
                       </Link>
                     </div>
                     <div className="border border-slate-200 rounded-xl p-4 text-center hover:border-slate-300 transition-colors">
@@ -112,7 +112,7 @@ export default function ReportLanding() {
                         <UserRoundPlus className="w-5 h-5 text-slate-500" />
                       </div>
                       <p className="text-sm font-semibold text-slate-900 mb-0.5">Daftar</p>
-                      <p className="text-[11px] text-slate-400 leading-snug mb-3">Buat akun KawalTransaksi kamu sekarang, gratis!</p>
+                      <p className="text-[11px] text-slate-400 leading-snug mb-3">Buat akun KawalTransaksi Anda sekarang, gratis.</p>
                       <Link
                         href="/register?redirectTo=/report"
                         className="w-full inline-flex items-center justify-center py-2 bg-white hover:bg-slate-50 text-slate-700 text-xs font-semibold rounded-lg border border-slate-200 hover:border-slate-300 transition-colors"
@@ -144,7 +144,7 @@ export default function ReportLanding() {
 
                 <div className="px-6 pb-5 text-center">
                   <p className="text-[11px] text-slate-400">
-                    Dengan melaporkan, kamu menyetujui{' '}
+                    Dengan mengirim laporan, Anda menyetujui{' '}
                     <Link href="/syarat-ketentuan" className="text-emerald-600 hover:underline font-medium">Syarat & Ketentuan</Link>
                     {' '}dan{' '}
                     <Link href="/kebijakan-privasi" className="text-emerald-600 hover:underline font-medium">Kebijakan Privasi</Link>

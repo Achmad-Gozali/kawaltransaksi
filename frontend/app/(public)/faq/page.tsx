@@ -13,11 +13,11 @@ const faqs = [
   },
   {
     q: 'Apakah KawalTransaksi gratis?',
-    a: 'Ya, pengecekan nomor dan rekening sepenuhnya gratis. Kamu bisa cek sebanyak yang kamu mau tanpa perlu mendaftar atau membayar.',
+    a: 'Ya, pengecekan nomor dan rekening sepenuhnya gratis. Anda dapat melakukan pengecekan sebanyak yang Anda butuhkan tanpa perlu mendaftar atau membayar.',
   },
   {
     q: 'Bagaimana cara melaporkan penipu?',
-    a: 'Klik menu "Laporkan" di navbar, lalu isi formulir 3 langkah: data penipu, kronologi kejadian, dan bukti pendukung. Laporan akan ditinjau oleh tim moderator sebelum ditampilkan secara publik.',
+    a: 'Pilih menu "Laporkan" pada bilah navigasi, lalu lengkapi formulir tiga langkah: data penipu, kronologi kejadian, dan bukti pendukung. Laporan akan ditinjau oleh tim moderator sebelum ditampilkan secara publik.',
   },
   {
     q: 'Berapa lama laporan diproses?',
@@ -33,7 +33,7 @@ const faqs = [
   },
   {
     q: 'Bagaimana jika nomor saya dilaporkan secara tidak benar?',
-    a: 'Kamu bisa mengajukan banding melalui halaman detail laporan dengan mengklik tombol "Ajukan Banding". Tim kami akan meninjau ulang laporan tersebut.',
+    a: 'Anda dapat mengajukan banding melalui halaman detail laporan dengan menekan tombol "Ajukan Banding". Tim kami akan meninjau ulang laporan tersebut.',
   },
   {
     q: 'Apakah KawalTransaksi tersedia sebagai aplikasi mobile?',
