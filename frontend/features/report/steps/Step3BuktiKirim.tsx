@@ -33,7 +33,7 @@ export function Step3BuktiKirim({ evidenceFiles, onEvidenceFileChange, onRemoveE
                       <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     </button>
                     <span className="absolute top-2.5 left-2.5 px-2 py-1 bg-black/50 text-white text-xs font-semibold rounded-lg backdrop-blur-sm">
-                      Foto {index + 1}
+                      {item.isQrisSource ? 'Foto QRIS (wajib)' : `Foto ${index + 1}`}
                     </span>
                   </div>
                   <div className="px-3 py-2.5 sm:px-4 sm:py-3">

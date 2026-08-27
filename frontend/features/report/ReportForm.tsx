@@ -116,11 +116,26 @@ export default function ReportForm() {
     for (const file of files) await handlePhotoChange(file, 'evidence', e);
   }, [evidenceFiles.length, handlePhotoChange]);
 
+  // Foto QRIS asli WAJIB jadi evidence (mengikuti pola evidence yang sudah
+  // ada) -- didorong otomatis ke evidenceFiles begitu berhasil didecode di
+  // TargetEntryCard, ditandai isQrisSource supaya kalau user scan ulang
+  // foto QRIS-nya, yang lama diganti bukan menumpuk jadi 2 bukti.
+  const handleQrisEvidenceFile = useCallback((file: File, preview: string) => {
+    setEvidenceFiles(prev => [
+      ...prev.filter(item => !item.isQrisSource),
+      { file, preview, isQrisSource: true },
+    ]);
+  }, []);
+
   const navigate = (dir: 'next' | 'prev') => {
     setError(null);
     if (dir === 'next') {
       if (currentStep === 1 && !target.number.trim())
-        return setError('Nomor HP, rekening, atau e-wallet wajib diisi.');
+        return setError(
+          target.type === 'qris'
+            ? 'Upload foto QRIS asli dan tunggu hingga berhasil dibaca.'
+            : 'Nomor HP, rekening, atau e-wallet wajib diisi.'
+        );
       if (currentStep === 1 && !formData.category)
         return setError('Kategori penipuan wajib dipilih.');
       if (currentStep === 2 && formData.chronology.trim().length < 20)
@@ -138,9 +153,19 @@ export default function ReportForm() {
       return;
     }
 
-    const cleanNumber = target.number.replace(/\D/g, '');
+    // NMID QRIS alfanumerik -- JANGAN di-strip jadi digit saja seperti
+    // nomor HP/rekening/ewallet.
+    const cleanNumber = target.type === 'qris' ? target.number : target.number.replace(/\D/g, '');
     if (!cleanNumber) {
-      setError('Nomor HP, rekening, atau e-wallet wajib diisi.');
+      setError(target.type === 'qris' ? 'Upload foto QRIS asli terlebih dahulu.' : 'Nomor HP, rekening, atau e-wallet wajib diisi.');
+      return;
+    }
+    if (target.type === 'qris' && !target.qris_payload) {
+      setError('Data QRIS tidak lengkap. Silakan unggah ulang foto QRIS.');
+      return;
+    }
+    if (target.type === 'qris' && !evidenceFiles.some(f => f.isQrisSource)) {
+      setError('Foto QRIS asli wajib diunggah sebagai bukti. Silakan upload ulang di Data Penipu.');
       return;
     }
 
@@ -206,6 +231,9 @@ export default function ReportForm() {
           suspectPhotoUrl,
           storeName:           formData.store_name || null,
           suspectCity:         formData.suspect_city || null,
+          // Server (bukan field lain manapun) yang menjadi sumber kebenaran
+          // untuk NMID/nama/kota merchant qris -- lihat backend core/qris.ts.
+          qrisPayload:         target.type === 'qris' ? target.qris_payload : undefined,
           turnstileToken,
         }),
       });
@@ -245,6 +273,7 @@ export default function ReportForm() {
       suspectPhotoPreview={suspectPhotoPreview}
       customCategory={customCategory} customPlatform={customPlatform}
       onUpdateTarget={setTarget}
+      onQrisEvidenceFile={handleQrisEvidenceFile}
       onFormDataChange={setFormData}
       onSuspectPhotoChange={(e) => handlePhotoChange(e.target.files?.[0] || null, 'suspect')}
       onRemoveSuspectPhoto={() => { setSuspectPhoto(null); setSuspectPhotoPreview(null); }}

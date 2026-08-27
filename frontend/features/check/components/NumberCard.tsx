@@ -35,6 +35,7 @@ interface ReportItem {
   status?: string | null;
   storeName?: string | null;
   suspectCity?: string | null;
+  merchantCity?: string | null;
 }
 
 interface Props {
@@ -54,7 +55,7 @@ const reportedToLabel: Record<string, string> = {
 };
 
 const targetTypeLabel: Record<string, string> = {
-  phone: "Nomor HP", bank_account: "Rekening Bank", ewallet: "E-Wallet",
+  phone: "Nomor HP", bank_account: "Rekening Bank", ewallet: "E-Wallet", qris: "QRIS",
 };
 
 export default function NumberCard({
@@ -89,33 +90,44 @@ export default function NumberCard({
   const bankNameFromDB   = reports[0]?.bankName ?? null;
   const walletNameFromDB = reports[0]?.walletName ?? null;
   const targetType       = reports[0]?.targetType ?? defaultType;
+  const isQris            = targetType === "qris";
+  const merchantCity     = reports.find(r => r.merchantCity)?.merchantCity ?? null;
 
   const displayLabel = bankNameFromDB ?? walletNameFromDB ?? defaultBankName ?? defaultWalletName ?? (targetTypeLabel[targetType] ?? null);
   const hasContext   = reports.length > 0 || defaultBankName !== null || defaultWalletName !== null || hasTypeParam;
   const showLabel    = hasContext && displayLabel !== null;
 
-  const displayNumber = formatNum(realNumber);
+  // NMID QRIS bukan angka murni -- jangan diformat gaya nomor telepon.
+  // Untuk qris, headline utamanya nama merchant (kalau sudah ada laporan),
+  // fallback ke NMID mentah kalau belum ada laporan sama sekali.
+  const displayNumber = isQris ? (targetName ?? realNumber) : formatNum(realNumber);
 
   const infoGrid = [
-    category    ? { label: "Kategori",   value: category,    className: "text-slate-800" } : null,
-    platform    ? { label: "Platform",   value: platform,    className: "text-slate-800" } : null,
-    totalLoss > 0 ? { label: "Kerugian", value: new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(totalLoss), className: "text-red-600", sub: !hasVerified ? "belum dikonfirmasi" : null } : null,
-    storeName   ? { label: "Nama Toko",  value: storeName,   className: "text-slate-800" } : null,
-    suspectCity ? { label: "Provinsi",   value: suspectCity, className: "text-slate-800" } : null,
+    category      ? { label: "Kategori",      value: category,      className: "text-slate-800" } : null,
+    platform      ? { label: "Platform",      value: platform,      className: "text-slate-800" } : null,
+    totalLoss > 0 ? { label: "Kerugian",      value: new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", maximumFractionDigits: 0 }).format(totalLoss), className: "text-red-600", sub: !hasVerified ? "belum dikonfirmasi" : null } : null,
+    storeName     ? { label: "Nama Toko",     value: storeName,     className: "text-slate-800" } : null,
+    suspectCity   ? { label: "Provinsi",      value: suspectCity,   className: "text-slate-800" } : null,
+    merchantCity  ? { label: "Kota Merchant", value: merchantCity,  className: "text-slate-800" } : null,
   ].filter(Boolean) as { label: string; value: string; className: string; sub?: string | null }[];
 
   return (
     <div>
-      <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-2 font-medium px-0.5">Nomor terperiksa</p>
+      <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-2 font-medium px-0.5">{isQris ? "QRIS terperiksa" : "Nomor terperiksa"}</p>
       <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
         <div className="p-4 sm:p-6">
           <div className="flex justify-between items-start gap-3">
             <div className="flex-1 min-w-0">
-              <p className="text-[28px] sm:text-5xl font-semibold text-slate-900 tracking-tight break-all leading-none font-mono mb-3">
+              <p className={`text-[28px] sm:text-5xl font-semibold text-slate-900 tracking-tight break-all leading-none mb-3 ${isQris && targetName ? '' : 'font-mono'}`}>
                 {displayNumber}
               </p>
               <div className="flex flex-wrap items-center gap-1.5">
-                {targetName && (
+                {isQris && (
+                  <span className="text-[11px] px-2.5 py-1 rounded-md font-mono font-medium border border-slate-200 bg-slate-50 text-slate-500">
+                    NMID {realNumber}
+                  </span>
+                )}
+                {targetName && !isQris && (
                   <span className={`text-[11px] px-2.5 py-1 rounded-md font-medium border ${config.nameBadgeBg} ${config.nameBadgeText} ${config.nameBadgeBorder}`}>
                     a.n. {targetName}
                   </span>

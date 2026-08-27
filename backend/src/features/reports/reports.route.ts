@@ -6,6 +6,7 @@ import { requireAuth } from "../../core/auth.middleware.js";
 import { saveFile, validateImageBuffer, isOwnStorageUrl } from "../../core/storage.js";
 import { checkSpam, checkCompleteness } from "../../core/robot.js";
 import { verifyTurnstile } from "../../core/turnstile.js";
+import { parseQrisPayload } from "../../core/qris.js";
 
 const MAX_FILES_PER_REQUEST = 10;
 
@@ -354,15 +355,12 @@ export async function reportsRoutes(app: FastifyInstance) {
       reportedTo,
       evidenceUrls,
       turnstileToken,
+      qrisPayload,
     } = req.body as any;
 
     const turnstileValid = await verifyTurnstile(turnstileToken, req.ip);
     if (!turnstileValid)
       return reply.status(400).send({ error: "Verifikasi keamanan tidak berhasil. Silakan coba kembali." });
-
-    const cleanTargetValue = typeof targetValue === "string" ? targetValue.replace(/\D/g, "") : "";
-    if (!cleanTargetValue)
-      return reply.status(400).send({ error: "Nomor tujuan wajib diisi dan hanya boleh berisi angka." });
 
     // Bukti hanya boleh berupa file yang memang di-upload lewat endpoint upload
     // kita (URL R2 sendiri). URL eksternal ditolak -- lihat isOwnStorageUrl().
@@ -378,6 +376,33 @@ export async function reportsRoutes(app: FastifyInstance) {
     // suspectPhotoUrl juga dirender di halaman publik -- berlaku aturan sama.
     if (suspectPhotoUrl != null && !isOwnStorageUrl(suspectPhotoUrl))
       return reply.status(400).send({ error: "Foto terduga pelaku tidak valid. Silakan unggah ulang." });
+
+    // ── QRIS: server adalah satu-satunya sumber kebenaran ──────────────────
+    // targetValue/targetName yang dikirim client (kalau ada) diabaikan total.
+    // NMID/nama merchant/kota merchant SELALU berasal dari parseQrisPayload()
+    // atas payload EMV mentah -- lihat core/qris.ts untuk alasannya. Foto QRIS
+    // asli wajib jadi evidence (tidak ada jalur manual tanpa foto untuk tipe ini).
+    let cleanTargetValue: string;
+    let resolvedTargetName: string | null;
+    let resolvedMerchantCity: string | null = null;
+
+    if (targetType === "qris") {
+      if (cleanEvidenceUrls.length === 0)
+        return reply.status(400).send({ error: "Foto QRIS asli wajib diunggah sebagai bukti." });
+
+      const parsed = parseQrisPayload(qrisPayload);
+      if (!parsed.valid)
+        return reply.status(400).send({ error: parsed.error ?? "Payload QRIS tidak valid." });
+
+      cleanTargetValue = parsed.nmid!;
+      resolvedTargetName = parsed.merchantName!;
+      resolvedMerchantCity = parsed.merchantCity!;
+    } else {
+      cleanTargetValue = typeof targetValue === "string" ? targetValue.replace(/\D/g, "") : "";
+      if (!cleanTargetValue)
+        return reply.status(400).send({ error: "Nomor tujuan wajib diisi dan hanya boleh berisi angka." });
+      resolvedTargetName = targetName ?? null;
+    }
 
     const spamResult = await checkSpam({
       userId: req.user!.userId,
@@ -408,7 +433,7 @@ export async function reportsRoutes(app: FastifyInstance) {
           userId: req.user!.userId,
           targetType,
           targetValue: cleanTargetValue,
-          targetName: targetName ?? null,
+          targetName: resolvedTargetName,
           bankName: bankName ?? null,
           walletName: walletName ?? null,
           amount: amount ?? null,
@@ -420,6 +445,7 @@ export async function reportsRoutes(app: FastifyInstance) {
           hasOtherVictims: hasOtherVictims ?? null,
           storeName: storeName ?? null,
           suspectCity: suspectCity ?? null,
+          merchantCity: resolvedMerchantCity,
           suspectPhotoUrl: suspectPhotoUrl ?? null,
           socialMediaAccounts: socialMediaAccounts ?? null,
           linkUrl: linkUrl ?? null,

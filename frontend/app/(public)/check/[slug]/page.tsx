@@ -20,6 +20,21 @@ interface CheckPageProps {
   searchParams: Promise<{ type?: string; bank?: string; wallet?: string }>;
 }
 
+/**
+ * NMID QRIS alfanumerik (mis. "ID1021125405972") -- TIDAK BOLEH di-strip
+ * jadi digit saja seperti nomor HP/rekening/ewallet, atau NMID-nya rusak.
+ * Auto-detect: ?type=qris ATAU slug mengandung huruf (satu-satunya target
+ * type yang bisa punya huruf -- phone/bank_account/ewallet submit selalu
+ * di-strip jadi digit murni sebelum disimpan).
+ */
+function resolveRealNumber(decodedSlug: string, type?: string): { realNumber: string; isQris: boolean } {
+  const isQris = type === "qris" || /[A-Za-z]/.test(decodedSlug);
+  const realNumber = isQris
+    ? decodedSlug.toUpperCase().replace(/[^A-Z0-9]/g, "")
+    : decodedSlug.replace(/\D/g, "");
+  return { realNumber, isQris };
+}
+
 async function fetchCheckPageData(number: string) {
   try {
     const res = await fetch(`${BACKEND_URL}/api/reports/public/check/${number}`);
@@ -36,9 +51,10 @@ async function fetchBlacklistData(number: string) {
   } catch { return { blacklist: null, trend: null }; }
 }
 
-export async function generateMetadata({ params }: CheckPageProps): Promise<Metadata> {
+export async function generateMetadata({ params, searchParams }: CheckPageProps): Promise<Metadata> {
   const { slug } = await params;
-  const realNumber = decodeSlug(slug).replace(/\D/g, "");
+  const { type }  = await searchParams;
+  const { realNumber, isQris } = resolveRealNumber(decodeSlug(slug), type);
   if (!realNumber) return { title: "Halaman tidak ditemukan - KawalTransaksi" };
 
   const pageData = await fetchCheckPageData(realNumber);
@@ -56,21 +72,26 @@ export async function generateMetadata({ params }: CheckPageProps): Promise<Meta
     return `Rp ${n}`;
   };
 
-  const formattedNumber = realNumber.replace(/(\d{4})(?=\d)/g, "$1 ");
+  // NMID QRIS tidak diformat gaya nomor telepon (grouping per 4 digit) --
+  // itu cuma masuk akal untuk string angka murni.
+  const merchantName = isQris ? (reports[0]?.targetName as string | undefined) : undefined;
+  const label = isQris
+    ? (merchantName ? `QRIS ${merchantName} (${realNumber})` : `QRIS ${realNumber}`)
+    : `Nomor ${realNumber.replace(/(\d{4})(?=\d)/g, "$1 ")}`;
   let title: string;
   let description: string;
 
   if (verifiedCount > 0) {
-    title = `Nomor ${formattedNumber} - Terindikasi Penipuan (${verifiedCount} Laporan Terverifikasi) | KawalTransaksi`;
+    title = `${label} - Terindikasi Penipuan (${verifiedCount} Laporan Terverifikasi) | KawalTransaksi`;
     description = totalLoss > 0
-      ? `Nomor ${formattedNumber} dilaporkan ${totalReports}x sebagai penipu dengan ${verifiedCount} laporan terverifikasi dan total kerugian ${formatLoss(totalLoss)}. Cek detail laporan sebelum bertransaksi.`
-      : `Nomor ${formattedNumber} dilaporkan ${totalReports}x sebagai penipu dengan ${verifiedCount} laporan terverifikasi. Jangan bertransaksi dengan nomor ini.`;
+      ? `${label} dilaporkan ${totalReports}x sebagai penipu dengan ${verifiedCount} laporan terverifikasi dan total kerugian ${formatLoss(totalLoss)}. Cek detail laporan sebelum bertransaksi.`
+      : `${label} dilaporkan ${totalReports}x sebagai penipu dengan ${verifiedCount} laporan terverifikasi. Jangan bertransaksi dengan nomor ini.`;
   } else if (pendingCount > 0) {
-    title = `Nomor ${formattedNumber} - Pending (${pendingCount} Laporan Masuk) | KawalTransaksi`;
-    description = `Nomor ${formattedNumber} sedang dalam proses verifikasi dengan ${pendingCount} laporan masuk. Tetap waspada sebelum melakukan transaksi.`;
+    title = `${label} - Pending (${pendingCount} Laporan Masuk) | KawalTransaksi`;
+    description = `${label} sedang dalam proses verifikasi dengan ${pendingCount} laporan masuk. Tetap waspada sebelum melakukan transaksi.`;
   } else {
-    title = `Cek Nomor ${formattedNumber} - Tidak Ada Laporan | KawalTransaksi`;
-    description = `Nomor ${formattedNumber} belum memiliki laporan penipuan di database KawalTransaksi. Tetap waspada dan laporkan jika kamu menemukan aktivitas mencurigakan.`;
+    title = `Cek ${label} - Tidak Ada Laporan | KawalTransaksi`;
+    description = `${label} belum memiliki laporan penipuan di database KawalTransaksi. Tetap waspada dan laporkan jika kamu menemukan aktivitas mencurigakan.`;
   }
 
   return {
@@ -247,10 +268,10 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
 
   if (!slug || slug.length > 50) notFound();
 
-  const realNumber = decodeSlug(slug).replace(/\D/g, "");
+  const { realNumber, isQris } = resolveRealNumber(decodeSlug(slug), type);
   if (!realNumber) notFound();
 
-  const defaultType       = type === "bank" ? "bank_account" : type === "ewallet" ? "ewallet" : "phone";
+  const defaultType       = isQris ? "qris" : type === "bank" ? "bank_account" : type === "ewallet" ? "ewallet" : "phone";
   const hasTypeParam      = !!type;
   const defaultBankName   = bank   ? (bankNameMap[bank]    ?? null) : null;
   const defaultWalletName = wallet ? (walletNameMap[wallet] ?? null) : null;
@@ -314,11 +335,15 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
 
   const config = statusConfig[status];
 
+  // NMID QRIS tidak diformat gaya nomor telepon (grouping per 4 digit).
+  const displayNumLower = isQris ? `QRIS ${realNumber}` : `nomor ${formatNum(realNumber)}`;
+  const displayNumTitle = isQris ? `QRIS ${realNumber}` : `Nomor ${formatNum(realNumber)}`;
+
   const shareText = status === "danger"
-    ? `[!] waspada! nomor ${formatNum(realNumber)} terindikasi penipu dengan ${verifiedCount} laporan terverifikasi. cek di kawaltransaksi:`
+    ? `[!] waspada! ${displayNumLower} terindikasi penipu dengan ${verifiedCount} laporan terverifikasi. cek di kawaltransaksi:`
     : status === "warning"
-      ? `[!] nomor ${formatNum(realNumber)} sedang dalam proses verifikasi laporan penipuan. cek di kawaltransaksi:`
-      : `[OK] nomor ${formatNum(realNumber)} aman -- belum ada laporan penipuan di kawaltransaksi:`;
+      ? `[!] ${displayNumLower} sedang dalam proses verifikasi laporan penipuan. cek di kawaltransaksi:`
+      : `[OK] ${displayNumLower} aman -- belum ada laporan penipuan di kawaltransaksi:`;
 
   const verificationSteps = [
     { label: "Laporan diterima",       done: allReports.length > 0 },
@@ -329,8 +354,8 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
   const structuredData = {
     "@context": "https://schema.org", "@type": "FAQPage",
     mainEntity: [
-      { "@type": "Question", name: `Apakah nomor ${formatNum(realNumber)} penipu?`, acceptedAnswer: { "@type": "Answer", text: status === "danger" ? `Ya, nomor ${formatNum(realNumber)} terindikasi penipu. Terdapat ${verifiedCount} laporan terverifikasi. Hindari bertransaksi.` : status === "warning" ? `Nomor ${formatNum(realNumber)} sedang dalam proses investigasi. Tetap waspada.` : `Nomor ${formatNum(realNumber)} belum memiliki laporan penipuan terverifikasi di database KawalTransaksi.` } },
-      { "@type": "Question", name: `Berapa laporan untuk nomor ${formatNum(realNumber)}?`, acceptedAnswer: { "@type": "Answer", text: reports.length > 0 ? `Nomor ${formatNum(realNumber)} memiliki ${reports.length} laporan masuk, dengan ${verifiedCount} laporan terverifikasi.` : `Nomor ${formatNum(realNumber)} belum memiliki laporan penipuan.` } },
+      { "@type": "Question", name: `Apakah ${displayNumTitle} penipu?`, acceptedAnswer: { "@type": "Answer", text: status === "danger" ? `Ya, ${displayNumTitle} terindikasi penipu. Terdapat ${verifiedCount} laporan terverifikasi. Hindari bertransaksi.` : status === "warning" ? `${displayNumTitle} sedang dalam proses investigasi. Tetap waspada.` : `${displayNumTitle} belum memiliki laporan penipuan terverifikasi di database KawalTransaksi.` } },
+      { "@type": "Question", name: `Berapa laporan untuk ${displayNumTitle}?`, acceptedAnswer: { "@type": "Answer", text: reports.length > 0 ? `${displayNumTitle} memiliki ${reports.length} laporan masuk, dengan ${verifiedCount} laporan terverifikasi.` : `${displayNumTitle} belum memiliki laporan penipuan.` } },
       { "@type": "Question", name: "Bagaimana cara melaporkan nomor penipu?", acceptedAnswer: { "@type": "Answer", text: "Kamu bisa melaporkan nomor penipu secara gratis di KawalTransaksi. Kunjungi kawaltransaksi.com/report, isi data nomor penipu, kronologi kejadian, dan bukti transfer." } },
     ],
   };
@@ -339,8 +364,8 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
     "@context": "https://schema.org", "@type": "BreadcrumbList",
     itemListElement: [
       { "@type": "ListItem", position: 1, name: "Beranda", item: "https://kawaltransaksi.com" },
-      { "@type": "ListItem", position: 2, name: "Cek Nomor", item: "https://kawaltransaksi.com/cek-nomor" },
-      { "@type": "ListItem", position: 3, name: `Nomor ${formatNum(realNumber)}`, item: `https://kawaltransaksi.com/check/${realNumber}` },
+      { "@type": "ListItem", position: 2, name: isQris ? "Cek QRIS" : "Cek Nomor", item: `https://kawaltransaksi.com/${isQris ? "cek-qris" : "cek-nomor"}` },
+      { "@type": "ListItem", position: 3, name: displayNumTitle, item: `https://kawaltransaksi.com/check/${realNumber}` },
     ],
   };
 
