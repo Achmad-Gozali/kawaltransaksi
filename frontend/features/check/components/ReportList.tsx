@@ -2,7 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import Image from 'next/image';
-import { ShieldCheck, Clock, CheckCircle2, AlertCircle, ShieldAlert, X, ChevronLeft, ChevronRight, Info, FileX2 } from 'lucide-react';
+import { ShieldCheck, CheckCircle2, AlertCircle, X, ChevronLeft, ChevronRight, Info, FileX2 } from 'lucide-react';
 
 
 function cleanChronology(text: string) {
@@ -30,9 +30,6 @@ interface ReportItem {
 
 interface Props {
   reports: ReportItem[];
-  hasWithdrawn?: boolean;
-  hasLinkedReports?: boolean;
-  linkedHasVerified?: boolean;
 }
 
 function getAllEvidenceUrls(reports: ReportItem[]) {
@@ -153,7 +150,7 @@ function EvidenceGallery({ urls }: { urls: string[] }) {
   );
 }
 
-export default function ReportList({ reports, hasWithdrawn = false, hasLinkedReports = false, linkedHasVerified = false }: Props) {
+export default function ReportList({ reports }: Props) {
   const allEvidenceUrls = getAllEvidenceUrls(reports);
   const hasVerified = reports.some(r => r.status === 'verified');
   const allPending  = reports.length > 0 && !hasVerified;
@@ -201,31 +198,6 @@ export default function ReportList({ reports, hasWithdrawn = false, hasLinkedRep
                 </div>
               );
             })}
-          </div>
-        ) : hasWithdrawn ? (
-          <div className="bg-amber-50 rounded-xl border border-amber-200 p-8 text-center">
-            <Clock className="w-6 h-6 text-amber-400 mx-auto mb-2.5" />
-            <p className="text-sm font-semibold text-amber-800 mb-1">Laporan sedang diperbarui</p>
-            <p className="text-xs text-amber-600 max-w-xs mx-auto leading-relaxed">Pelapor sedang merevisi laporannya. Detail akan kembali muncul setelah disetujui moderator.</p>
-          </div>
-        ) : hasLinkedReports ? (
-          <div className={`bg-white rounded-xl border overflow-hidden ${linkedHasVerified ? 'border-red-200' : 'border-amber-200'}`}>
-            <div className="flex items-start gap-3 px-4 py-4">
-              <div className={`w-9 h-9 rounded-xl flex items-center justify-center shrink-0 mt-0.5 ${linkedHasVerified ? 'bg-red-50 border border-red-100' : 'bg-amber-50 border border-amber-100'}`}>
-                <ShieldAlert className={`w-4 h-4 ${linkedHasVerified ? 'text-red-500' : 'text-amber-500'}`} />
-              </div>
-              <div>
-                <p className="text-sm font-semibold text-slate-800 mb-1">Belum ada laporan langsung untuk nomor ini</p>
-                <p className="text-xs text-slate-500 leading-relaxed">
-                  {linkedHasVerified
-                    ? 'Nomor ini disebutkan dalam laporan yang sudah diverifikasi oleh tim moderator. Pelaku yang sama terbukti menggunakan beberapa nomor berbeda.'
-                    : 'Nomor ini belum pernah dilaporkan secara langsung. Namun berdasarkan laporan komunitas, nomor ini disebutkan sebagai salah satu nomor yang digunakan oleh pelaku yang sama.'}
-                </p>
-                <div className={`mt-2.5 inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-lg border ${linkedHasVerified ? 'text-red-700 bg-red-50 border-red-200' : 'text-amber-700 bg-amber-50 border-amber-200'}`}>
-                  {linkedHasVerified ? 'Pelaku terbukti, tetap waspada' : '[!] Tetap waspada dengan nomor ini'}
-                </div>
-              </div>
-            </div>
           </div>
         ) : (
           <div className="bg-white rounded-xl border border-slate-200 p-12 text-center">

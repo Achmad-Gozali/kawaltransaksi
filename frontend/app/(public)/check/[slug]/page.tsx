@@ -42,7 +42,7 @@ export async function generateMetadata({ params }: CheckPageProps): Promise<Meta
   if (!realNumber) return { title: "Halaman tidak ditemukan - KawalTransaksi" };
 
   const pageData = await fetchCheckPageData(realNumber);
-  const reports  = (pageData.reports as any[]).filter((r: any) => r.status !== "withdrawn");
+  const reports  = pageData.reports as any[];
 
   const verifiedCount = reports.filter((r: any) => r.status === "verified").length;
   const pendingCount  = reports.filter((r: any) => r.status === "pending").length;
@@ -266,15 +266,9 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
   ]);
 
   const blacklist  = blacklistTrendData.blacklist ?? null;
-  const isViral    = blacklistTrendData.trend?.is_viral ?? false;
-  const viralCount = blacklistTrendData.trend?.report_count ?? 0;
-  const allReports    = (pageData?.reports as any[]) ?? [];
-  const linkedReports = (pageData?.linked  as any[]) ?? [];
+  const allReports = (pageData?.reports as any[]) ?? [];
 
-  const linkedHasVerified = linkedReports.some((r: any) => r.status === "verified");
-  const reports           = allReports.filter(r => r.status !== "withdrawn" && r.status !== "rejected");
-  const withdrawnReports  = allReports.filter(r => r.status === "withdrawn");
-  const hasWithdrawn      = withdrawnReports.length > 0;
+  const reports = allReports.filter(r => r.status !== "rejected");
 
   const verifiedReports = reports.filter(r => r.status === "verified");
   const pendingReports  = reports.filter(r => r.status === "pending");
@@ -296,14 +290,9 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
     riskBadges.push({ label: `Kerugian besar -- ${new Intl.NumberFormat("id-ID", { notation: "compact", maximumFractionDigits: 1 }).format(totalLoss)}`, color: "bg-orange-50 text-orange-700 border-orange-200" });
   if (multiVictimCount >= 2)
     riskBadges.push({ label: `${multiVictimCount} laporan sebut ada korban lain`, color: "bg-amber-50 text-amber-700 border-amber-200" });
-  if (isViral)
-    riskBadges.push({ label: `Sedang viral -- ${viralCount} laporan dalam 24 jam`, color: "bg-red-50 text-red-700 border-red-200" });
-
   let status: "safe" | "warning" | "danger" = "safe";
   if (verifiedCount > 0)              status = "danger";
   else if (pendingReports.length > 0) status = "warning";
-  else if (hasWithdrawn)              status = "warning";
-  else if (linkedReports.length > 0)  status = "warning";
 
   const statusConfig = {
     danger: {
@@ -312,20 +301,9 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
       verdict: "Terindikasi penipuan", verdictSub: `${verifiedCount} laporan telah diverifikasi oleh sistem & komunitas.`,
     },
     warning: {
-      barBg: linkedHasVerified ? "bg-red-50 border-b border-red-100" : "bg-amber-50 border-b border-amber-100",
-      barLabel: linkedHasVerified ? "text-red-800" : "text-amber-900",
-      barDesc: linkedHasVerified ? "text-red-600" : "text-amber-700",
-      dotBg: linkedHasVerified ? "bg-red-500" : "bg-amber-500",
-      nameBadgeBg: linkedHasVerified ? "bg-red-50" : "bg-amber-50",
-      nameBadgeText: linkedHasVerified ? "text-red-800" : "text-amber-800",
-      nameBadgeBorder: linkedHasVerified ? "border-red-200" : "border-amber-200",
-      verdict: hasWithdrawn && pendingReports.length === 0 && verifiedCount === 0
-        ? "Ada riwayat laporan" : linkedHasVerified ? "Terkait pelaku terverifikasi" : "Pending",
-      verdictSub: hasWithdrawn && pendingReports.length === 0 && verifiedCount === 0
-        ? "Laporan untuk nomor ini sedang dalam proses revisi oleh pelapor."
-        : linkedHasVerified
-          ? "Nomor ini terbukti terkait pelaku yang sudah diverifikasi. Hindari bertransaksi."
-          : `${pendingReports.length} laporan masuk sedang diverifikasi moderator.`,
+      barBg: "bg-amber-50 border-b border-amber-100", barLabel: "text-amber-900", barDesc: "text-amber-700",
+      dotBg: "bg-amber-500", nameBadgeBg: "bg-amber-50", nameBadgeText: "text-amber-800", nameBadgeBorder: "border-amber-200",
+      verdict: "Pending", verdictSub: `${pendingReports.length} laporan masuk sedang diverifikasi moderator.`,
     },
     safe: {
       barBg: "bg-emerald-50 border-b border-emerald-100", barLabel: "text-emerald-900", barDesc: "text-emerald-700",
@@ -342,46 +320,11 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
       ? `[!] nomor ${formatNum(realNumber)} sedang dalam proses verifikasi laporan penipuan. cek di kawaltransaksi:`
       : `[OK] nomor ${formatNum(realNumber)} aman -- belum ada laporan penipuan di kawaltransaksi:`;
 
-  const verificationSteps = linkedHasVerified && reports.length > 0 && verifiedCount === 0
-    ? [{ label: "Nomor ditemukan", done: true }, { label: "Terkait laporan terverifikasi", done: true }, { label: "Laporan langsung menunggu review", done: false }]
-    : linkedHasVerified && reports.length === 0
-      ? [{ label: "Nomor ditemukan", done: true }, { label: "Terkait laporan terverifikasi", done: true }, { label: "Belum ada laporan langsung", done: false }]
-      : [
-          { label: "Laporan diterima",       done: allReports.length > 0 },
-          { label: "Dalam review moderator", done: status === "warning" || status === "danger" },
-          { label: "Terverifikasi",          done: status === "danger" },
-        ];
-
-  const relatedEntries: { number: string; type: string; bank: string | null; name: string | null }[] = [];
-  const seenNumbers = new Set<string>();
-  allReports.forEach((r: any) => {
-    if (!Array.isArray(r.targetNumbers)) return;
-    r.targetNumbers.forEach((item: any) => {
-      if (typeof item === "object" && item !== null && item.number) {
-        if (item.number !== realNumber && !seenNumbers.has(item.number)) {
-          seenNumbers.add(item.number);
-          relatedEntries.push({ number: item.number, type: item.type ?? "phone", bank: item.bank ?? null, name: item.name ?? null });
-        }
-      } else if (typeof item === "string" && item !== realNumber && !seenNumbers.has(item)) {
-        seenNumbers.add(item);
-        relatedEntries.push({ number: item, type: "phone", bank: null, name: null });
-      }
-    });
-  });
-
-  const buildTypeParam = (type: string, bank: string | null) => {
-    if (type === "bank_account") {
-      const bankKey = bank ? bank.toLowerCase().replace(/\s/g, "").replace(/[^a-z]/g, "") : "";
-      return `?type=bank${bankKey ? `&bank=${bankKey}` : ""}`;
-    }
-    if (type === "ewallet") {
-      const walletKey = bank ? bank.toLowerCase().replace(/\s/g, "").replace(/[^a-z]/g, "") : "";
-      return `?type=ewallet${walletKey ? `&wallet=${walletKey}` : ""}`;
-    }
-    return "?type=phone";
-  };
-
-  const typeLabel: Record<string, string> = { phone: "Nomor HP", bank_account: "Rekening Bank", ewallet: "E-Wallet" };
+  const verificationSteps = [
+    { label: "Laporan diterima",       done: allReports.length > 0 },
+    { label: "Dalam review moderator", done: status === "warning" || status === "danger" },
+    { label: "Terverifikasi",          done: status === "danger" },
+  ];
 
   const structuredData = {
     "@context": "https://schema.org", "@type": "FAQPage",
@@ -469,41 +412,7 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
               </div>
             )}
 
-            {linkedReports.length > 0 && reports.length === 0 && (
-              <div className={`rounded-xl overflow-hidden border ${linkedHasVerified ? "bg-red-50 border-red-200" : "bg-amber-50 border-amber-200"}`}>
-                <div className={`px-4 sm:px-5 py-4 border-b ${linkedHasVerified ? "border-red-100" : "border-amber-100"}`}>
-                  <p className={`text-xs leading-relaxed ${linkedHasVerified ? "text-red-700" : "text-amber-700"}`}>
-                    {linkedHasVerified
-                      ? "Nomor ini disebutkan dalam laporan yang telah diverifikasi. Berdasarkan bukti yang ada, pelaku diketahui menggunakan beberapa nomor secara bergantian. Kami menyarankan untuk tidak melanjutkan transaksi."
-                      : "Meski belum ada laporan langsung untuk nomor ini, nomor ini disebutkan sebagai nomor milik pelaku yang sudah dilaporkan."}
-                  </p>
-                </div>
-                <div className={`divide-y ${linkedHasVerified ? "divide-red-100" : "divide-amber-100"}`}>
-                  {linkedReports.map((r: any, i: number) => (
-                    <a key={i} href={`/check/${r.targetValue}`} className={`flex items-center justify-between px-4 sm:px-5 py-3.5 transition-colors group ${linkedHasVerified ? "hover:bg-red-100/40" : "hover:bg-amber-100/40"}`}>
-                      <div>
-                        <p className={`text-sm font-mono font-semibold tracking-wide ${linkedHasVerified ? "text-red-900" : "text-amber-900"}`}>
-                          {r.targetValue?.replace(/(\d{4})(?=\d)/g, "$1 ")}
-                        </p>
-                        <p className={`text-xs mt-0.5 ${linkedHasVerified ? "text-red-600" : "text-amber-600"}`}>
-                          {r.status === "verified" ? "Laporan terverifikasi" : "Laporan dalam investigasi"}
-                        </p>
-                      </div>
-                      <span className={`text-xs font-semibold whitespace-nowrap ${linkedHasVerified ? "text-red-600 group-hover:text-red-800" : "text-amber-700 group-hover:text-amber-900"}`}>
-                        Lihat &rarr;
-                      </span>
-                    </a>
-                  ))}
-                </div>
-                <div className={`px-4 sm:px-5 py-3 ${linkedHasVerified ? "bg-red-100/30" : "bg-amber-100/30"}`}>
-                  <p className={`text-xs ${linkedHasVerified ? "text-red-600" : "text-amber-600"}`}>
-                    {linkedHasVerified ? "Perhatian: Pelaku diketahui menggunakan beberapa nomor secara bergantian." : "Waspada! Penipu sering berganti nomor untuk menghindari deteksi."}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {status === "safe" && linkedReports.length === 0 && (
+            {status === "safe" && (
               <div>
                 <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-2 font-medium px-0.5">Tetap waspada</p>
                 <div className="bg-amber-50 rounded-xl border border-amber-200 overflow-hidden">
@@ -532,45 +441,15 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
 
             {reports.length > 0 && (
               <GatedContent isLoggedIn={isLoggedIn} label="Login untuk lihat kronologi & bukti lengkap" minHeight="200px">
-                <ReportList reports={reports} hasWithdrawn={hasWithdrawn}
-                  hasLinkedReports={linkedReports.length > 0 && reports.length === 0}
-                  linkedHasVerified={linkedHasVerified} />
+                <ReportList reports={reports} />
               </GatedContent>
             )}
 
             {reports.length === 0 && (
-              <ReportList reports={reports} hasWithdrawn={hasWithdrawn}
-                hasLinkedReports={linkedReports.length > 0 && reports.length === 0}
-                linkedHasVerified={linkedHasVerified} />
+              <ReportList reports={reports} />
             )}
 
-            {relatedEntries.length > 0 && (
-              <GatedContent isLoggedIn={isLoggedIn} label="Login untuk lihat nomor lain terkait pelaku" minHeight="160px">
-                <div>
-                  <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-2 font-medium px-0.5">Nomor lain terkait pelaku ini</p>
-                  <div className="bg-white rounded-xl border border-slate-200 overflow-hidden">
-                    <div className="px-4 py-3 border-b border-slate-100 bg-slate-50/80">
-                      <p className="text-xs text-slate-500 leading-relaxed">Pelapor menyebutkan bahwa pelaku yang sama juga menggunakan nomor-nomor berikut.</p>
-                    </div>
-                    <div className="divide-y divide-slate-100">
-                      {relatedEntries.map((entry, i) => (
-                        <a key={i} href={`/check/${entry.number}${buildTypeParam(entry.type, entry.bank)}`} className="flex items-center justify-between px-4 py-3.5 hover:bg-slate-50 transition-colors group">
-                          <div>
-                            <span className="text-sm font-mono font-semibold text-slate-700 tracking-wide">{entry.number.replace(/(\d{4})(?=\d)/g, "$1 ")}</span>
-                            <p className="text-[10px] text-slate-400 mt-0.5">
-                              {[entry.bank ? entry.bank : (typeLabel[entry.type] ?? "Nomor HP"), entry.name ? `a.n. ${entry.name}` : null].filter(Boolean).join(" - ")}
-                            </p>
-                          </div>
-                          <span className="text-xs text-emerald-600 font-semibold group-hover:underline whitespace-nowrap">Cek &rarr;</span>
-                        </a>
-                      ))}
-                    </div>
-                  </div>
-                </div>
-              </GatedContent>
-            )}
-
-            {(allReports.length > 0 || linkedHasVerified) && !(hasWithdrawn && reports.length === 0) && (
+            {allReports.length > 0 && (
               <div>
                 <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 mb-2 font-medium px-0.5">Status verifikasi</p>
                 <div className="bg-white rounded-xl border border-slate-200 px-4 sm:px-6 py-4 sm:py-5">

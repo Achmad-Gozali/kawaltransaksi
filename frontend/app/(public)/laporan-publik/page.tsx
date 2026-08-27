@@ -57,17 +57,22 @@ function getTargetMeta(type: string, bankName: string | null) {
   return { icon: Phone, label: "Nomor HP", color: "text-slate-600", bg: "bg-slate-50", border: "border-slate-200" };
 }
 
+// verifiedCount === 0 && pendingCount === 0 hanya bisa terjadi kalau semua
+// laporan untuk target ini berstatus "rejected" (target selalu punya >=1
+// laporan karena hasil dari GROUP BY reports). Label ini HARUS jujur --
+// laporan ditolak moderator, bukan sedang direvisi pelapor (belum ada
+// mekanisme revisi/withdraw apapun di backend).
 function getAggregateStatus(verifiedCount: number, pendingCount: number): string {
   if (verifiedCount > 0) return "verified";
   if (pendingCount > 0) return "pending";
-  return "withdrawn";
+  return "rejected";
 }
 
 function getStatusBadge(status: string, reportCount: number) {
   switch (status) {
     case "verified": return { label: reportCount > 1 ? `${reportCount}x Terverifikasi` : "Terverifikasi", className: "bg-emerald-50 text-emerald-700 border-emerald-200" };
     case "pending": return { label: "Pending", className: "bg-amber-50 text-amber-700 border-amber-200" };
-    case "withdrawn": return { label: "Sedang Direvisi", className: "bg-slate-100 text-slate-500 border-slate-200" };
+    case "rejected": return { label: "Ditolak Moderator", className: "bg-slate-100 text-slate-500 border-slate-200" };
     default: return { label: status, className: "bg-slate-50 text-slate-500 border-slate-200" };
   }
 }
