@@ -20,13 +20,17 @@ const AI_TRAINING_CRAWLERS = [
 export default function robots(): MetadataRoute.Robots {
   const disallowPaths = [
     "/dashboard/",
-    "/admin/",
+    // Tanpa trailing slash (beda dari /dashboard/ di atas) -- robots.txt
+    // pakai prefix match literal, "/admin/" TIDAK menutup "/admin" itu
+    // sendiri (bare page, app/admin/page.tsx), cuma subpath-nya.
+    "/admin",
     "/login",
     "/register",
     "/lupa-kata-sandi",
     "/reset-kata-sandi/",
     "/verifikasi-email",
     "/auth/callback",
+    "/maintenance",
   ];
 
   return {

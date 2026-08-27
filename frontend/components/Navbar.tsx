@@ -4,11 +4,10 @@ import React, { useState, useEffect, useRef, startTransition } from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import { useRouter, usePathname } from 'next/navigation';
-import { LogOut, Menu, X, User, FileText, ChevronDown, Home, Phone, Building2, Flag, Database, Newspaper, ScanLine } from 'lucide-react';
+import { LogOut, Menu, X, User, FileText, ChevronDown, Phone, Building2, Flag, Database, Newspaper, ScanLine } from 'lucide-react';
 import { authClient, type AuthUser } from '@/core/auth/client';
 
 const publicMenuItems = [
-  { href: '/',              label: 'Beranda',      icon: Home      },
   { href: '/cek-nomor',    label: 'Cek Nomor',    icon: Phone     },
   { href: '/cek-rekening', label: 'Cek Rekening', icon: Building2 },
   { href: '/cek-qris',     label: 'Cek QRIS',     icon: ScanLine  },
@@ -17,7 +16,6 @@ const publicMenuItems = [
 ];
 
 const privateMenuItems = [
-  { href: '/',               label: 'Beranda',        icon: Home      },
   { href: '/cek-nomor',     label: 'Cek Nomor',      icon: Phone     },
   { href: '/cek-rekening',  label: 'Cek Rekening',   icon: Building2 },
   { href: '/cek-qris',      label: 'Cek QRIS',       icon: ScanLine  },

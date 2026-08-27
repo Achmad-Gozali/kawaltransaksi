@@ -78,6 +78,12 @@ await app.register(qrisRoutes, { prefix: "/api/qris" });
 
 app.get("/health", async () => ({ status: "ok" }));
 
+// api.kawaltransaksi.com murni API, tidak ada konten untuk diindeks --
+// tutup total dari crawler, jangan cuma andalkan "tidak ada yang link ke sini".
+app.get("/robots.txt", async (_req, reply) => {
+  reply.type("text/plain").send("User-agent: *\nDisallow: /\n");
+});
+
 // ── Error handler global ──────────────────────────────────────────────────
 // Fastify secara default menyertakan `error.message` mentah di body respons
 // untuk error yang tidak terduga (mis. error driver Postgres, exception dari
