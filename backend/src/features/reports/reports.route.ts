@@ -104,6 +104,30 @@ export async function reportsRoutes(app: FastifyInstance) {
     };
   });
 
+  app.get("/public/stats-qris", { onSend: withPublicCache }, async () => {
+    const [total] = await db
+      .select({ count: count() })
+      .from(reports)
+      .where(eq(reports.targetType, "qris"));
+    const [verified] = await db
+      .select({ count: count() })
+      .from(reports)
+      .where(
+        and(eq(reports.targetType, "qris"), eq(reports.status, "verified")),
+      );
+    const [lossRow] = await db.execute(sql`
+      SELECT COALESCE(SUM(amount), 0)::bigint AS total_loss
+      FROM reports WHERE target_type = 'qris' AND status = 'verified' AND amount IS NOT NULL
+    `);
+    return {
+      data: {
+        totalLaporan: total.count,
+        totalQris: verified.count,
+        totalKerugian: Number((lossRow as any).total_loss ?? 0),
+      },
+    };
+  });
+
   app.get("/public/leaderboard-nomor", { onSend: withPublicCache }, async () => {
     const rows = await db.execute(sql`
       SELECT
