@@ -1,6 +1,7 @@
 import { db } from "./db.js";
 import { reports, users } from "./schema.js";
 import { getFileSizeFromR2 } from "./storage.js";
+import { isValidNmidFormat } from "./qris.js";
 import { and, eq, gte, sql } from "drizzle-orm";
 
 const MIN_FILE_SIZE_BYTES = 50 * 1024; // 50KB
@@ -76,12 +77,22 @@ function isValidTargetFormat(targetType: string, targetValue: string): boolean {
     case "phone":        return isValidPhone(targetValue);
     case "bank_account": return isValidBankAccount(targetValue);
     case "ewallet":      return isValidEwallet(targetValue);
+    // Untuk qris, targetValue di titik ini adalah NMID yang SUDAH lolos
+    // parseQrisPayload() (CRC + struktur TLV tervalidasi penuh) di route
+    // handler sebelum checkSpam() dipanggil -- ini cuma sanity check
+    // ringan atas bentuknya, bukan validasi berat kedua.
+    case "qris":          return isValidNmidFormat(targetValue);
     default:             return false;
   }
 }
 
 function isSuspiciousNumber(targetType: string, targetValue: string): boolean {
-  if (targetType === "bank_account") return false;
+  // bank_account: nomor rekening tidak punya pola "berurutan/sama semua"
+  // yang bermakna. qris: targetValue (NMID) tidak pernah diketik user --
+  // ia hasil decode mesin dari foto QR, jadi heuristik "diketik asal"
+  // (dirancang untuk menangkap nomor HP/rekening ketikan iseng) tidak
+  // relevan untuknya.
+  if (targetType === "bank_account" || targetType === "qris") return false;
   const digits = targetValue.replace(/\D/g, '');
   // Semua digit sama: 088888888888
   if (new Set(digits).size === 1) return true;

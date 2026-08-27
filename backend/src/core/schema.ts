@@ -3,7 +3,7 @@ import { createId } from "@paralleldrive/cuid2";
 
 export const roleEnum         = pgEnum("role",           ["user", "admin"]);
 export const reportStatusEnum = pgEnum("report_status",  ["pending", "verified", "rejected"]);
-export const targetTypeEnum   = pgEnum("target_type",    ["phone", "bank_account", "ewallet"]);
+export const targetTypeEnum   = pgEnum("target_type",    ["phone", "bank_account", "ewallet", "qris"]);
 export const articleStatusEnum = pgEnum("article_status", ["draft", "published"]);
 
 export const users = pgTable("users", {
@@ -46,6 +46,11 @@ export const reports = pgTable("reports", {
   hasOtherVictims:     text("has_other_victims").default("no"),
   storeName:           text("store_name"),
   suspectCity:         text("suspect_city"),
+  // Kota merchant hasil decode payload EMV-QRIS (tag 60), khusus targetType
+  // "qris" -- BUKAN sama dengan suspectCity (dugaan lokasi pelaku yang
+  // diisi manual pelapor untuk phone/bank_account/ewallet). Diisi oleh
+  // parseQrisPayload() di server, bukan input pengguna. Lihat core/qris.ts.
+  merchantCity:        text("merchant_city"),
   suspectPhotoUrl:     text("suspect_photo_url"),
   socialMediaAccounts: text("social_media_accounts").array(),
   linkUrl:             text("link_url"),
@@ -150,6 +155,7 @@ export const publicReportColumns = {
   hasOtherVictims:     reports.hasOtherVictims,
   storeName:           reports.storeName,
   suspectCity:         reports.suspectCity,
+  merchantCity:        reports.merchantCity,
   suspectPhotoUrl:     reports.suspectPhotoUrl,
   socialMediaAccounts: reports.socialMediaAccounts,
   linkUrl:             reports.linkUrl,
