@@ -13,6 +13,7 @@ import { reportsRoutes } from "./features/reports/reports.route.js";
 import { searchRoutes } from "./features/search/search.route.js";
 import { adminRoutes } from "./features/admin/admin.route.js";
 import { uploadRoutes } from "./features/upload/upload.route.js";
+import { qrisRoutes } from "./features/qris/qris.route.js";
 
 const app = Fastify({ logger: true, trustProxy: true });
 
@@ -73,6 +74,7 @@ await app.register(reportsRoutes, { prefix: "/api/reports" });
 await app.register(searchRoutes, { prefix: "/api/search" });
 await app.register(adminRoutes, { prefix: "/api/admin" });
 await app.register(uploadRoutes, { prefix: "/api/upload" });
+await app.register(qrisRoutes, { prefix: "/api/qris" });
 
 app.get("/health", async () => ({ status: "ok" }));
 

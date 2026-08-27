@@ -48,6 +48,12 @@ interface Props {
   isLoggedIn?: boolean;
   carrierInfo?: CarrierInfo | null;
   config: { nameBadgeBg: string; nameBadgeText: string; nameBadgeBorder: string };
+  // Hasil decode QR yang baru saja di-scan user (lewat token preview
+  // server-verified) -- SUMBERNYA TERPISAH dari targetName/merchantCity di
+  // database (yang berasal dari laporan). Selalu ada walau belum ada
+  // satupun laporan untuk NMID ini.
+  qrDecodedName?: string | null;
+  qrDecodedCity?: string | null;
 }
 
 const reportedToLabel: Record<string, string> = {
@@ -62,6 +68,7 @@ export default function NumberCard({
   reports, realNumber, config,
   defaultType = "phone", defaultBankName = null, defaultWalletName = null,
   hasTypeParam = false, isLoggedIn = false, carrierInfo = null,
+  qrDecodedName = null, qrDecodedCity = null,
 }: Props) {
   const [photoFailed, setPhotoFailed] = useState(false);
 
@@ -91,16 +98,25 @@ export default function NumberCard({
   const walletNameFromDB = reports[0]?.walletName ?? null;
   const targetType       = reports[0]?.targetType ?? defaultType;
   const isQris            = targetType === "qris";
-  const merchantCity     = reports.find(r => r.merchantCity)?.merchantCity ?? null;
+  const merchantCityFromDB = reports.find(r => r.merchantCity)?.merchantCity ?? null;
+
+  // Dua sumber BEDA secara teknis: qrDecoded* dari hasil scan barusan
+  // (server-verified lewat token preview, tidak butuh laporan apapun),
+  // targetName/merchantCityFromDB dari laporan yang sudah tersimpan di
+  // database. qrDecoded diprioritaskan (lebih baru & pasti akurat untuk
+  // QR yang baru discan), fallback ke data laporan lama kalau user buka
+  // link tanpa token (mis. link lama/dibagikan tanpa scan ulang).
+  const merchantName = qrDecodedName ?? targetName;
+  const merchantCity = qrDecodedCity ?? merchantCityFromDB;
 
   const displayLabel = bankNameFromDB ?? walletNameFromDB ?? defaultBankName ?? defaultWalletName ?? (targetTypeLabel[targetType] ?? null);
   const hasContext   = reports.length > 0 || defaultBankName !== null || defaultWalletName !== null || hasTypeParam;
   const showLabel    = hasContext && displayLabel !== null;
 
   // NMID QRIS bukan angka murni -- jangan diformat gaya nomor telepon.
-  // Untuk qris, headline utamanya nama merchant (kalau sudah ada laporan),
-  // fallback ke NMID mentah kalau belum ada laporan sama sekali.
-  const displayNumber = isQris ? (targetName ?? realNumber) : formatNum(realNumber);
+  // Untuk qris, headline utamanya nama merchant (dari scan ATAU laporan),
+  // fallback ke NMID mentah kalau memang tidak ada nama sama sekali.
+  const displayNumber = isQris ? (merchantName ?? realNumber) : formatNum(realNumber);
 
   const infoGrid = [
     category      ? { label: "Kategori",      value: category,      className: "text-slate-800" } : null,
@@ -148,7 +164,13 @@ export default function NumberCard({
                   </span>
                 )}
               </div>
-              {reports.length > 0 && (
+              {isQris && qrDecodedName && (
+                <p className="text-[11px] text-slate-400 mt-2">Data merchant dibaca dari QR yang kamu scan -- bukan klaim yang sudah diverifikasi sebagai laporan resmi.</p>
+              )}
+              {isQris && !qrDecodedName && merchantName && (
+                <p className="text-[11px] text-slate-400 mt-2">Data merchant dari laporan komunitas sebelumnya.</p>
+              )}
+              {!isQris && reports.length > 0 && (
                 <p className="text-[11px] text-slate-400 mt-2">Data dikumpulkan dari laporan komunitas</p>
               )}
             </div>

@@ -3,6 +3,7 @@ import Image from "next/image";
 import { ArrowRight, TrendingUp } from "lucide-react";
 import type { Metadata } from "next";
 import NomorSearchForm from "@/features/check/NomorSearchForm";
+import SearchHero from "@/features/check/SearchHero";
 import { formatRupiah, encodeSlug, safeJsonLd } from "@/core/utils";
 
 export const metadata: Metadata = {
@@ -82,26 +83,13 @@ export default async function CekNomorPage() {
 
   return (
     <div className="min-h-screen bg-white text-slate-900 font-sans">
-      <section className="relative bg-slate-100 pt-28 sm:pt-36 pb-0 overflow-hidden">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-8 pb-16 sm:pb-24">
-            <div className="flex-1 min-w-0">
-              <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-3 leading-snug">Cek Nomor Telepon Penipu Online</h1>
-              <p className="text-slate-500 text-sm sm:text-base mb-8 leading-relaxed max-w-md">Identifikasi apakah seseorang berpotensi melakukan penipuan dengan mengecek nomor HP atau WhatsApp sebelum bertransaksi.</p>
-              <NomorSearchForm />
-              <p className="text-xs text-slate-400 mt-3">Contoh: <span className="text-emerald-600 font-medium">081234567890</span></p>
-            </div>
-            <div className="hidden md:flex flex-shrink-0 items-end justify-start -ml-6 lg:-ml-10">
-              <div className="relative w-[420px] h-[310px] lg:w-[500px] lg:h-[370px]">
-                <Image src="/ilustrasi-hero.png" alt="Ilustrasi cek nomor HP" fill className="object-contain" priority />
-              </div>
-            </div>
-          </div>
-        </div>
-        <svg viewBox="0 0 1440 80" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" className="w-full h-10 sm:h-20 block">
-          <path d="M0,20 C360,80 1080,0 1440,60 L1440,80 L0,80 Z" fill="#ffffff" />
-        </svg>
-      </section>
+      <SearchHero
+        title="Cek Nomor Telepon Penipu Online"
+        description="Identifikasi apakah seseorang berpotensi melakukan penipuan dengan mengecek nomor HP atau WhatsApp sebelum bertransaksi."
+        hint={<>Contoh: <span className="text-emerald-600 font-medium">081234567890</span></>}
+      >
+        <NomorSearchForm />
+      </SearchHero>
 
       <section className="bg-white pb-10 sm:pb-16">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 -mt-6 sm:-mt-14 relative z-10">

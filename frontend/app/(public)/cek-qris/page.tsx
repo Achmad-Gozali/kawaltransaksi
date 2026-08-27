@@ -1,8 +1,8 @@
-import Image from "next/image";
 import Link from "next/link";
 import { ShieldCheck, ScanLine, Store } from "lucide-react";
 import type { Metadata } from "next";
 import QrisSearchForm from "@/features/check/QrisSearchForm";
+import SearchHero from "@/features/check/SearchHero";
 import { safeJsonLd } from "@/core/utils";
 
 export const metadata: Metadata = {
@@ -51,26 +51,13 @@ const schema = {
 export default function CekQrisPage() {
   return (
     <div className="min-h-screen bg-white text-slate-900 font-sans">
-      <section className="relative bg-slate-100 pt-28 sm:pt-36 pb-0 overflow-hidden">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6">
-          <div className="flex flex-col md:flex-row md:items-center gap-4 md:gap-8 pb-16 sm:pb-24">
-            <div className="flex-1 min-w-0">
-              <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 mb-3 leading-snug">Cek Keaslian QRIS Sebelum Bayar</h1>
-              <p className="text-slate-500 text-sm sm:text-base mb-8 leading-relaxed max-w-md">Foto atau scan kode QRIS untuk memverifikasi data merchant dan riwayat laporan penipuan -- sebelum kamu scan untuk bayar sungguhan.</p>
-              <QrisSearchForm />
-              <p className="text-xs text-slate-400 mt-3">Data merchant dibaca otomatis dari foto, tidak perlu input manual.</p>
-            </div>
-            <div className="hidden md:flex flex-shrink-0 items-end justify-start -ml-6 lg:-ml-10">
-              <div className="relative w-[420px] h-[310px] lg:w-[500px] lg:h-[370px]">
-                <Image src="/ilustrasi-hero.png" alt="Ilustrasi cek QRIS" fill className="object-contain" priority />
-              </div>
-            </div>
-          </div>
-        </div>
-        <svg viewBox="0 0 1440 80" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" className="w-full h-10 sm:h-20 block">
-          <path d="M0,20 C360,80 1080,0 1440,60 L1440,80 L0,80 Z" fill="#ffffff" />
-        </svg>
-      </section>
+      <SearchHero
+        title="Cek Keaslian QRIS Sebelum Bayar"
+        description="Foto atau scan kode QRIS untuk memverifikasi data merchant dan riwayat laporan penipuan -- sebelum kamu scan untuk bayar sungguhan."
+        hint="Data merchant dibaca otomatis dari foto, tidak perlu input manual."
+      >
+        <QrisSearchForm />
+      </SearchHero>
 
       <section className="bg-white py-10 sm:py-16">
         <div className="max-w-5xl mx-auto px-4 sm:px-6">

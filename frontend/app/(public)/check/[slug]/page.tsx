@@ -17,7 +17,7 @@ const BACKEND_URL = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_
 
 interface CheckPageProps {
   params: Promise<{ slug: string }>;
-  searchParams: Promise<{ type?: string; bank?: string; wallet?: string }>;
+  searchParams: Promise<{ type?: string; bank?: string; wallet?: string; token?: string }>;
 }
 
 /**
@@ -49,6 +49,24 @@ async function fetchBlacklistData(number: string) {
     if (!res.ok) return { blacklist: null, trend: null };
     return (await res.json()).data ?? { blacklist: null, trend: null };
   } catch { return { blacklist: null, trend: null }; }
+}
+
+interface QrisPreviewData {
+  nmid: string;
+  merchantName: string;
+  merchantCity: string;
+}
+
+// Token dari /cek-qris, sudah divalidasi server (CRC + struktur EMV-QRIS)
+// saat dibuat -- 404/expired diperlakukan sebagai "tidak ada preview", BUKAN
+// error keras. Halaman tetap render normal, cuma fallback ke data database.
+async function fetchQrisPreview(token: string | undefined): Promise<QrisPreviewData | null> {
+  if (!token) return null;
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/qris/preview/${encodeURIComponent(token)}`);
+    if (!res.ok) return null;
+    return (await res.json()).data ?? null;
+  } catch { return null; }
 }
 
 export async function generateMetadata({ params, searchParams }: CheckPageProps): Promise<Metadata> {
@@ -263,8 +281,8 @@ function CtaShareCard({ slug, shareText }: { slug: string; shareText: string }) 
 }
 
 export default async function CheckPage({ params, searchParams }: CheckPageProps) {
-  const { slug }               = await params;
-  const { type, bank, wallet } = await searchParams;
+  const { slug }                       = await params;
+  const { type, bank, wallet, token }  = await searchParams;
 
   if (!slug || slug.length > 50) notFound();
 
@@ -281,9 +299,10 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
   const sessionToken = cookieStore.get("refresh_token")?.value;
   const isLoggedIn   = !!sessionToken;
 
-  const [pageData, blacklistTrendData] = await Promise.all([
+  const [pageData, blacklistTrendData, qrisPreview] = await Promise.all([
     fetchCheckPageData(realNumber),
     fetchBlacklistData(realNumber),
+    isQris ? fetchQrisPreview(token) : Promise.resolve(null),
   ]);
 
   const blacklist  = blacklistTrendData.blacklist ?? null;
@@ -426,6 +445,8 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
               defaultType={defaultType} defaultBankName={defaultBankName}
               defaultWalletName={defaultWalletName} hasTypeParam={hasTypeParam}
               isLoggedIn={isLoggedIn} carrierInfo={carrierInfo}
+              qrDecodedName={qrisPreview?.merchantName ?? null}
+              qrDecodedCity={qrisPreview?.merchantCity ?? null}
             />
 
             {(riskBadges.length > 0 || blacklist) && (

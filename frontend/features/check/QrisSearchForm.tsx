@@ -22,14 +22,36 @@ export default function QrisSearchForm() {
 
     const result = await decodeQrisFromFile(file);
 
-    if (!result.valid || !result.nmid) {
+    if (!result.valid || !result.nmid || !result.payload) {
       setIsDecoding(false);
       setError(result.error ?? 'Gagal membaca QRIS dari foto ini.');
       return;
     }
 
     setMerchantName(result.merchantName ?? null);
-    router.push(`/check/${encodeSlug(result.nmid)}?type=qris`);
+
+    // Nama/kota merchant TIDAK dikirim mentah lewat query param -- siapa
+    // pun bisa mengarang URL manual kalau begitu. Payload mentah divalidasi
+    // ulang di server (parseQrisPayload()) dan hasilnya disimpan singkat di
+    // balik token acak, jadi data yang muncul di halaman hasil dijamin
+    // berasal dari QR yang matematis valid, bukan string bebas.
+    try {
+      const res = await fetch(`${process.env.NEXT_PUBLIC_API_URL}/api/qris/preview`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ payload: result.payload }),
+      });
+      const body = await res.json();
+      if (!res.ok || !body?.data?.token) {
+        setIsDecoding(false);
+        setError(body?.error ?? 'Gagal memverifikasi QRIS ke server.');
+        return;
+      }
+      router.push(`/check/${encodeSlug(result.nmid)}?type=qris&token=${encodeURIComponent(body.data.token)}`);
+    } catch {
+      setIsDecoding(false);
+      setError('Gagal terhubung ke server. Periksa koneksi dan coba lagi.');
+    }
   };
 
   return (
