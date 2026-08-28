@@ -14,8 +14,16 @@ import { searchRoutes } from "./features/search/search.route.js";
 import { adminRoutes } from "./features/admin/admin.route.js";
 import { uploadRoutes } from "./features/upload/upload.route.js";
 import { qrisRoutes } from "./features/qris/qris.route.js";
+import { initRealtime, closeRealtime } from "./core/realtime.js";
 
 const app = Fastify({ logger: true, trustProxy: true });
+
+// SSE stream realtime: koneksi hidup lama + reconnect otomatis dari klien.
+// Dikecualikan dari kedua rate limiter global supaya badai reconnect
+// (jaringan mobile tidak stabil) tidak menutup akses. Lihat juga
+// `config: { rateLimit: false }` di route-nya dan `limit_req off` di nginx.
+const isStreamPath = (req: { url: string }) =>
+  req.url.split("?")[0] === "/api/reports/stream";
 
 await app.register(helmet, {
   contentSecurityPolicy: false,
@@ -42,6 +50,7 @@ await app.register(rateLimit, {
   max: 20,
   timeWindow: "5 seconds",
   nameSpace: "burst-",
+  allowList: isStreamPath,
   errorResponseBuilder: (_req, context) => ({
     statusCode: 429,
     error: `Terlalu banyak permintaan dalam waktu singkat. Coba lagi dalam ${Math.ceil(context.ttl / 1000)} detik.`,
@@ -57,6 +66,7 @@ await app.register(rateLimit, {
   max: 50,
   timeWindow: "1 minute",
   nameSpace: "general-",
+  allowList: isStreamPath,
   errorResponseBuilder: (_req, context) => ({
     statusCode: 429,
     error: `Terlalu banyak permintaan. Coba lagi dalam ${Math.ceil(context.ttl / 1000)} detik.`,
@@ -101,5 +111,28 @@ app.setErrorHandler((error: FastifyError, req, reply) => {
   }
   reply.status(statusCode).send({ error: error.message });
 });
+
+// Realtime (LISTEN Postgres + broadcast SSE). Setelah semua route terdaftar.
+await initRealtime(app);
+
+// Tutup semua koneksi SSE saat server ditutup, kalau tidak `app.close()`
+// menggantung menunggu socket yang tidak akan pernah selesai sendiri --
+// bikin `docker compose restart` macet sampai timeout.
+app.addHook("onClose", async () => {
+  await closeRealtime();
+});
+
+for (const signal of ["SIGTERM", "SIGINT"] as const) {
+  process.once(signal, () => {
+    app.log.info(`${signal} diterima, menutup server...`);
+    app
+      .close()
+      .then(() => process.exit(0))
+      .catch((err) => {
+        app.log.error({ err }, "gagal menutup server dengan rapi");
+        process.exit(1);
+      });
+  });
+}
 
 await app.listen({ port: Number(process.env.PORT) || 4000, host: "0.0.0.0" });

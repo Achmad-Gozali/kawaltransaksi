@@ -5,6 +5,7 @@ import { eq, desc, count, sql, gte } from "drizzle-orm";
 import { requireAdmin } from "../../core/auth.middleware.js";
 import { deleteFile } from "../../core/storage.js";
 import { sanitizeArticleHtml, sanitizePlainText } from "../../core/sanitize.js";
+import { notifyReportVerified, toLiveReport } from "../../core/realtime.js";
 
 // Sama seperti reports.route.ts/search.route.ts: endpoint publik read-only,
 // cache pendek biar Cloudflare bisa menyerap traffic berulang tanpa
@@ -42,6 +43,74 @@ export async function adminRoutes(app: FastifyInstance) {
         verified:     verified.count,
         rejected:     rejected.count,
         newUsers:     newUsers.count,
+      },
+    };
+  });
+
+  // Agregat untuk tab Statistik -- semua GROUP BY dikerjakan di SQL, bukan
+  // dengan menarik ribuan baris mentah ke browser lalu di-reduce di sana.
+  // Bucket harian pakai zona Asia/Jakarta (WIB) supaya "hari ini" konsisten
+  // dengan sisa aplikasi, bukan bergantung timezone browser admin.
+  app.get("/analytics", { preHandler: requireAdmin }, async () => {
+    const [typeRows, categoryRows, platformRows, trendRows, lossRows] = await Promise.all([
+      db.execute(sql`
+        SELECT target_type AS "targetType", COUNT(*)::int AS count
+        FROM reports GROUP BY target_type
+      `),
+      db.execute(sql`
+        SELECT COALESCE(NULLIF(category, ''), 'Lainnya') AS category, COUNT(*)::int AS count
+        FROM reports GROUP BY COALESCE(NULLIF(category, ''), 'Lainnya')
+      `),
+      db.execute(sql`
+        SELECT platform, COUNT(*)::int AS count
+        FROM reports
+        WHERE platform IS NOT NULL AND platform <> ''
+        GROUP BY platform
+      `),
+      db.execute(sql`
+        WITH days AS (
+          SELECT generate_series(
+            (now() AT TIME ZONE 'Asia/Jakarta')::date - INTERVAL '29 days',
+            (now() AT TIME ZONE 'Asia/Jakarta')::date,
+            INTERVAL '1 day'
+          )::date AS d
+        )
+        SELECT
+          to_char(days.d, 'YYYY-MM-DD')                                        AS date,
+          COUNT(r.id)::int                                                     AS total,
+          COUNT(r.id) FILTER (WHERE r.status = 'verified')::int                AS verified,
+          COUNT(r.id) FILTER (WHERE r.status = 'pending')::int                 AS pending,
+          COALESCE(SUM(r.amount) FILTER (WHERE r.amount IS NOT NULL), 0)::bigint AS loss
+        FROM days
+        LEFT JOIN reports r
+          ON (r.created_at AT TIME ZONE 'Asia/Jakarta')::date = days.d
+        GROUP BY days.d
+        ORDER BY days.d
+      `),
+      db.execute(sql`
+        SELECT
+          COALESCE(SUM(amount), 0)::bigint                             AS "lossTotal",
+          COUNT(*) FILTER (WHERE amount IS NOT NULL AND amount > 0)::int AS "lossReportCount"
+        FROM reports
+      `),
+    ]);
+
+    const lossAgg = (lossRows as any[])[0] ?? { lossTotal: 0, lossReportCount: 0 };
+
+    return {
+      data: {
+        typeCounts: (typeRows as any[]).map((r) => ({ targetType: r.targetType, count: Number(r.count) })),
+        categoryCounts: (categoryRows as any[]).map((r) => ({ category: r.category, count: Number(r.count) })),
+        platformCounts: (platformRows as any[]).map((r) => ({ platform: r.platform, count: Number(r.count) })),
+        dailyTrend: (trendRows as any[]).map((r) => ({
+          date: r.date,
+          total: Number(r.total),
+          verified: Number(r.verified),
+          pending: Number(r.pending),
+          loss: Number(r.loss),
+        })),
+        lossTotal: Number(lossAgg.lossTotal),
+        lossReportCount: Number(lossAgg.lossReportCount),
       },
     };
   });
@@ -159,11 +228,28 @@ export async function adminRoutes(app: FastifyInstance) {
   app.patch("/reports/:id/status", { preHandler: requireAdmin }, async (req, reply) => {
     const { id }     = req.params as { id: string };
     const { status } = req.body as { status: "verified" | "rejected" };
+
+    // Ambil status lama dulu -- guard supaya report_verified tidak double-fire
+    // kalau admin men-set 'verified' pada laporan yang memang sudah 'verified'.
+    const [before] = await db
+      .select({ status: reports.status })
+      .from(reports)
+      .where(eq(reports.id, id))
+      .limit(1);
+    if (!before) return reply.status(404).send({ error: "Laporan tidak ditemukan." });
+
     const [updated]  = await db.update(reports)
       .set({ status, updatedAt: new Date() })
       .where(eq(reports.id, id))
       .returning();
     if (!updated) return reply.status(404).send({ error: "Laporan tidak ditemukan." });
+
+    if (status === "verified" && before.status !== "verified") {
+      notifyReportVerified(toLiveReport(updated)).catch((err) =>
+        req.log.error({ err }, "realtime: gagal NOTIFY report_verified (admin)"),
+      );
+    }
+
     return { data: updated };
   });
 

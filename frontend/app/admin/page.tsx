@@ -1,6 +1,7 @@
 import { Suspense } from 'react';
 import AdminDashboard from '@/app/admin/AdminDashboard';
 import type { FeedbackItem } from '@/features/admin/tabs/FeedbackTab';
+import { EMPTY_ANALYTICS } from '@/features/admin/types';
 import { requireAdminSession } from '@/core/auth/adminSession';
 
 export const dynamic = 'force-dynamic';
@@ -18,10 +19,11 @@ async function adminFetch(path: string, token: string) {
 export default async function AdminPage() {
   const { token } = await requireAdminSession();
 
-  const [statsRes, reportsRes, usersRes] = await Promise.all([
+  const [statsRes, reportsRes, usersRes, analyticsRes] = await Promise.all([
     adminFetch('/api/admin/stats', token),
     adminFetch('/api/admin/reports?limit=1000', token),
     adminFetch('/api/admin/users', token),
+    adminFetch('/api/admin/analytics', token),
   ]);
 
   const stats = {
@@ -46,6 +48,7 @@ export default async function AdminPage() {
         stats={stats}
         reports={(reportsRes.data ?? []) as any[]}
         users={(usersRes.data ?? []) as any[]}
+        analytics={analyticsRes?.data ?? EMPTY_ANALYTICS}
         feedbacks={[] as FeedbackItem[]}
         token={token}
       />

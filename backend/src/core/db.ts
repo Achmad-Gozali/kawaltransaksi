@@ -14,4 +14,8 @@ if (!connectionString) {
 
 const client = postgres(connectionString, { max: 10 });
 
+// Instance postgres.js mentah -- dibutuhkan core/realtime.ts untuk LISTEN/NOTIFY
+// (butuh koneksi dedicated yang dikelola driver, di luar pool query biasa).
+export { client as pg };
+
 export const db = drizzle(client, { schema });

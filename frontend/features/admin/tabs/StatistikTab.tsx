@@ -8,7 +8,7 @@ import {
   CreditCard, Smartphone, MessageCircle, Users, Camera,
   MoreHorizontal, ChevronRight, Sparkles, CheckCircle2,
 } from 'lucide-react';
-import type { Stats, Report } from '@/features/admin/types';
+import type { Stats, AdminAnalytics } from '@/features/admin/types';
 
 const AXIS_TEXT  = '#94938d';
 const GRID_COLOR = '#ecebe5';
@@ -31,9 +31,11 @@ function TikTokIcon({ className }: { className?: string }) {
   );
 }
 
-function getField(r: Report, camel: keyof Report, snake: keyof Report) {
-  return (r[camel] ?? r[snake]) as string | null | undefined;
-}
+const TYPE_LABEL: Record<string, string> = {
+  phone: 'Nomor HP',
+  bank_account: 'Rekening Bank',
+  ewallet: 'E-Wallet',
+};
 
 function calcTrend(series: number[]): number | null {
   if (series.length < 4) return null;
@@ -162,7 +164,7 @@ function platformMeta(name: string) {
   return PLATFORM_ICON[key] ?? { icon: MoreHorizontal, color: 'text-slate-500' };
 }
 
-export default function StatistikTab({ stats, reports }: { stats: Stats; reports: Report[] }) {
+export default function StatistikTab({ stats, analytics }: { stats: Stats; analytics: AdminAnalytics }) {
   const trendRef    = useRef<HTMLCanvasElement>(null);
   const statusRef   = useRef<HTMLCanvasElement>(null);
   const categoryRef = useRef<HTMLCanvasElement>(null);
@@ -175,72 +177,35 @@ export default function StatistikTab({ stats, reports }: { stats: Stats; reports
       { name: 'Ditolak',       value: stats.rejected, color: BRAND.rose },
     ].filter(d => d.value > 0);
 
-    const typeCount: Record<string, number> = {};
-    reports.forEach(r => {
-      const t = getField(r, 'targetType', 'target_type') ?? 'unknown';
-      const label = t === 'phone' ? 'Nomor HP' : t === 'bank_account' ? 'Rekening Bank' : t === 'ewallet' ? 'E-Wallet' : t;
-      typeCount[label] = (typeCount[label] ?? 0) + 1;
-    });
-    const typeData = Object.entries(typeCount)
-      .sort((a, b) => b[1] - a[1])
-      .map(([name, value]) => ({ name, value }));
+    const typeData = analytics.typeCounts
+      .map(t => ({ name: TYPE_LABEL[t.targetType] ?? t.targetType, value: t.count }))
+      .sort((a, b) => b.value - a.value);
 
-    const catCount: Record<string, number> = {};
-    reports.forEach(r => {
-      const cat = r.category ?? 'Lainnya';
-      catCount[cat] = (catCount[cat] ?? 0) + 1;
-    });
-    const categoryData = Object.entries(catCount)
-      .sort((a, b) => b[1] - a[1])
+    const categoryData = [...analytics.categoryCounts]
+      .sort((a, b) => b.count - a.count)
       .slice(0, 8)
-      .map(([name, value]) => ({ name, value }));
+      .map(c => ({ name: c.category, value: c.count }));
 
-    const platformCount: Record<string, number> = {};
-    reports.forEach(r => {
-      if (r.platform) platformCount[r.platform] = (platformCount[r.platform] ?? 0) + 1;
-    });
-    const platformData = Object.entries(platformCount)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
-      .map(([name, value]) => ({ name, value }));
-    const platformOthers = Object.entries(platformCount)
-      .sort((a, b) => b[1] - a[1])
-      .slice(5)
-      .reduce((sum, [, v]) => sum + v, 0);
+    const sortedPlatforms = [...analytics.platformCounts].sort((a, b) => b.count - a.count);
+    const platformData = sortedPlatforms.slice(0, 5).map(p => ({ name: p.platform, value: p.count }));
+    const platformOthers = sortedPlatforms.slice(5).reduce((sum, p) => sum + p.count, 0);
 
-    const trendMap: Record<string, {
-      date: string; total: number; verified: number; pending: number; loss: number; sortKey: number;
-    }> = {};
-    const now   = Date.now();
-    const day30 = 30 * 24 * 60 * 60 * 1000;
-
-    reports.forEach(r => {
-      const dateStr = getField(r, 'createdAt', 'created_at') ?? '';
-      const date    = new Date(dateStr);
-      if (!dateStr || now - date.getTime() > day30) return;
-      const key = date.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
-      if (!trendMap[key]) trendMap[key] = { date: key, total: 0, verified: 0, pending: 0, loss: 0, sortKey: date.getTime() };
-      trendMap[key].total++;
-      if (r.status === 'verified') trendMap[key].verified++;
-      if (r.status === 'pending')  trendMap[key].pending++;
-      trendMap[key].loss += r.amount ?? 0;
+    // dailyTrend dari server sudah zero-filled & terurut (30 hari, WIB). Label
+    // sumbu-x diformat di sini supaya konsisten dengan tampilan sebelumnya.
+    const trendData = analytics.dailyTrend.map(d => {
+      const dt = new Date(d.date + 'T00:00:00');
+      return {
+        date: dt.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' }),
+        total: d.total,
+        verified: d.verified,
+        pending: d.pending,
+        loss: d.loss,
+        sortKey: dt.getTime(),
+      };
     });
 
-    // Isi setiap hari dalam rentang 30 hari terakhir, termasuk yang gak ada laporannya (diisi 0).
-    // Ini murni soal representasi sumbu-x — jumlah laporan asli tetap sama persis, gak ada data dummy ditambahkan.
-    const filledTrendData: typeof trendMap[string][] = [];
-    for (let i = 29; i >= 0; i--) {
-      const d = new Date(now - i * 24 * 60 * 60 * 1000);
-      const key = d.toLocaleDateString('id-ID', { day: 'numeric', month: 'short' });
-      filledTrendData.push(
-        trendMap[key] ?? { date: key, total: 0, verified: 0, pending: 0, loss: 0, sortKey: d.getTime() }
-      );
-    }
-    const trendData = filledTrendData;
-
-    const withAmount = reports.filter(r => r.amount);
-    const totalLoss  = reports.reduce((sum, r) => sum + (r.amount ?? 0), 0);
-    const avgLoss    = withAmount.length > 0 ? Math.round(totalLoss / withAmount.length) : 0;
+    const totalLoss = analytics.lossTotal;
+    const avgLoss   = analytics.lossReportCount > 0 ? Math.round(totalLoss / analytics.lossReportCount) : 0;
 
     const totalSeries    = trendData.map(d => d.total);
     const pendingSeries  = trendData.map(d => d.pending);
@@ -259,7 +224,7 @@ export default function StatistikTab({ stats, reports }: { stats: Stats; reports
       totalSeries, pendingSeries, verifiedSeries, lossSeries,
       spike, verifiedRate,
     };
-  }, [stats, reports]);
+  }, [stats, analytics]);
 
   const formatRupiah = (n: number) => {
     if (n >= 1_000_000_000) return `Rp${(n / 1_000_000_000).toFixed(1)} M`;

@@ -8,13 +8,13 @@ import StatistikTab from '@/features/admin/tabs/StatistikTab';
 import PenggunaTab  from '@/features/admin/tabs/PenggunaTab';
 import ArtikelTab   from '@/features/admin/tabs/ArtikelTab';
 import FeedbackTab  from '@/features/admin/tabs/FeedbackTab';
-import type { Stats, Report, AdminUser, Tab } from '@/features/admin/types';
+import type { Stats, Report, AdminUser, AdminAnalytics, Tab } from '@/features/admin/types';
 import type { FeedbackItem } from '@/features/admin/tabs/FeedbackTab';
 
 function DashboardInner({
-  stats, reports, users, feedbacks, token,
+  stats, reports, users, analytics, feedbacks, token,
 }: {
-  stats: Stats; reports: Report[]; users: AdminUser[];
+  stats: Stats; reports: Report[]; users: AdminUser[]; analytics: AdminAnalytics;
   feedbacks: FeedbackItem[]; token: string;
 }) {
   const searchParams  = useSearchParams();
@@ -24,7 +24,7 @@ function DashboardInner({
   switch (currentTab) {
     case 'dashboard': return <DashboardTab stats={stats} reports={reports} />;
     case 'laporan':   return <LaporanTab reports={reports} token={token} initialSearch={initialSearch} />;
-    case 'statistik': return <StatistikTab stats={stats} reports={reports} />;
+    case 'statistik': return <StatistikTab stats={stats} analytics={analytics} />;
     case 'pengguna':  return <PenggunaTab users={users} />;
     case 'artikel':   return <ArtikelTab token={token} />;
     case 'feedback':  return <FeedbackTab feedbacks={feedbacks} token={token} />;
@@ -46,7 +46,7 @@ function DashboardSkeleton() {
 }
 
 export default function AdminDashboard(props: {
-  stats: Stats; reports: Report[]; users: AdminUser[];
+  stats: Stats; reports: Report[]; users: AdminUser[]; analytics: AdminAnalytics;
   feedbacks: FeedbackItem[]; token: string;
 }) {
   return (
