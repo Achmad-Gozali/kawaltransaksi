@@ -72,6 +72,22 @@ function isValidEwallet(value: string): boolean {
   return isValidPhone(value);
 }
 
+/**
+ * Nilai berbentuk NMID QRIS ("ID" + deret digit) yang dikirim dengan
+ * targetType SELAIN "qris" -- hampir selalu pelapor salah pilih kategori,
+ * menempel NMID merchant ke field nomor HP/rekening. Dipakai route handler
+ * untuk menolak lebih awal dengan pesan spesifik (arahkan ke kategori QRIS),
+ * bukan dibiarkan jatuh ke pesan generik "Format nomor tidak valid".
+ *
+ * Sengaja dicek atas nilai MENTAH (sebelum \D di-strip di route) -- setelah
+ * di-strip, prefix "ID" hilang dan sinyalnya ikut hilang. Lebih longgar dari
+ * NMID_PATTERN qris.ts (15 char persis): di sini cukup "ID"+>=6 digit supaya
+ * NMID yang kepotong/typo tetap ketangkap sebagai "ini QRIS, salah kategori".
+ */
+export function looksLikeQrisNmid(rawValue: unknown): boolean {
+  return typeof rawValue === "string" && /^ID[0-9]{6,}$/i.test(rawValue.trim());
+}
+
 function isValidTargetFormat(targetType: string, targetValue: string): boolean {
   switch (targetType) {
     case "phone":        return isValidPhone(targetValue);

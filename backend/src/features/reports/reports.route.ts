@@ -4,7 +4,7 @@ import { reports, evidence, publicReportColumns } from "../../core/schema.js";
 import { eq, desc, count, and, sql } from "drizzle-orm";
 import { requireAuth } from "../../core/auth.middleware.js";
 import { saveFile, validateImageBuffer, isOwnStorageUrl } from "../../core/storage.js";
-import { checkSpam, checkCompleteness } from "../../core/robot.js";
+import { checkSpam, checkCompleteness, looksLikeQrisNmid } from "../../core/robot.js";
 import { verifyTurnstile } from "../../core/turnstile.js";
 import { parseQrisPayload } from "../../core/qris.js";
 import {
@@ -492,6 +492,14 @@ export async function reportsRoutes(app: FastifyInstance) {
       resolvedTargetName = parsed.merchantName!;
       resolvedMerchantCity = parsed.merchantCity!;
     } else {
+      // Dicek atas nilai MENTAH sebelum \D di-strip: NMID QRIS ("IDxxxxxxxx")
+      // yang dikirim sebagai phone/bank/ewallet = pelapor salah pilih kategori.
+      // Tolak dengan arahan spesifik, bukan pesan generik "Format tidak valid".
+      if (looksLikeQrisNmid(targetValue))
+        return reply.status(400).send({
+          error: "Ini sepertinya kode QRIS (NMID). Pilih kategori 'QRIS' dan unggah foto QRIS-nya.",
+        });
+
       cleanTargetValue = typeof targetValue === "string" ? targetValue.replace(/\D/g, "") : "";
       if (!cleanTargetValue)
         return reply.status(400).send({ error: "Nomor tujuan wajib diisi dan hanya boleh berupa angka." });
