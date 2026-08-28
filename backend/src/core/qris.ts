@@ -83,41 +83,41 @@ export interface QrisParseResult {
  */
 export function parseQrisPayload(rawPayload: unknown): QrisParseResult {
   if (typeof rawPayload !== "string" || rawPayload.length === 0) {
-    return { valid: false, error: "Payload QRIS kosong atau tidak valid." };
+    return { valid: false, error: "Kode QRIS tidak terbaca. Coba foto ulang dengan lebih jelas." };
   }
   if (rawPayload.length > MAX_PAYLOAD_LENGTH) {
-    return { valid: false, error: "Payload QRIS terlalu panjang." };
+    return { valid: false, error: "Kode QRIS tidak terbaca dengan benar. Coba foto ulang." };
   }
 
   // ── 1. Validasi CRC (tag 63, selalu 4 karakter, selalu di akhir payload) ──
   // Diambil dari 8 karakter terakhir (bukan indexOf("6304")) supaya tidak
   // salah kalau ada value field lain yang kebetulan mengandung "6304".
   if (rawPayload.length < 8) {
-    return { valid: false, error: "Payload QRIS terlalu pendek." };
+    return { valid: false, error: "Kode QRIS tidak terbaca dengan benar. Coba foto ulang." };
   }
   const crcTagAndLen = rawPayload.slice(-8, -4);
   if (crcTagAndLen !== "6304") {
-    return { valid: false, error: "Payload tidak diakhiri tag CRC (63) yang valid." };
+    return { valid: false, error: "Kode QRIS tidak terbaca dengan benar. Pastikan seluruh kode QR terfoto dengan jelas." };
   }
   const expectedCrc = rawPayload.slice(-4).toUpperCase();
   const dataForCrc = rawPayload.slice(0, -4); // sampai & termasuk "6304", tanpa 4 hex value CRC
   const actualCrc = calculateCrc16(dataForCrc);
   if (expectedCrc !== actualCrc) {
-    return { valid: false, error: "Checksum QRIS tidak valid. Foto mungkin rusak, buram, atau bukan QRIS asli." };
+    return { valid: false, error: "Kode QRIS tidak valid. Fotonya mungkin buram, terpotong, atau bukan QRIS asli." };
   }
 
   // ── 2. Parse struktur TLV level atas ──
   const tags = parseTlv(rawPayload);
   if (!tags) {
-    return { valid: false, error: "Struktur payload QRIS tidak dapat dibaca." };
+    return { valid: false, error: "Struktur kode QRIS tidak bisa dibaca. Coba foto ulang." };
   }
 
   // ── 3. Validasi tag wajib yang menandakan ini QRIS domestik Indonesia ──
   if (tags.get("00") !== "01") {
-    return { valid: false, error: "Format payload QR tidak dikenali sebagai QRIS." };
+    return { valid: false, error: "Kode QR ini sepertinya bukan QRIS." };
   }
   if (tags.get("58") !== "ID") {
-    return { valid: false, error: "QR ini bukan QRIS domestik Indonesia." };
+    return { valid: false, error: "Kode QRIS ini bukan QRIS domestik Indonesia." };
   }
   if (tags.get("53") !== "360") {
     return { valid: false, error: "Mata uang pada QRIS ini bukan Rupiah." };
@@ -126,24 +126,24 @@ export function parseQrisPayload(rawPayload: unknown): QrisParseResult {
   const merchantName = tags.get("59")?.trim();
   const merchantCity = tags.get("60")?.trim();
   if (!merchantName) {
-    return { valid: false, error: "Nama merchant tidak ditemukan pada QRIS ini." };
+    return { valid: false, error: "Nama merchant tidak ada di kode QRIS ini." };
   }
   if (!merchantCity) {
-    return { valid: false, error: "Kota merchant tidak ditemukan pada QRIS ini." };
+    return { valid: false, error: "Kota merchant tidak ada di kode QRIS ini." };
   }
 
   // ── 4. Ekstrak NMID dari tag 51 (Merchant Account Information -- Domestik) ──
   const merchantAccountInfo = tags.get("51");
   if (!merchantAccountInfo) {
-    return { valid: false, error: "Data akun merchant domestik (NMID) tidak ditemukan pada QRIS ini." };
+    return { valid: false, error: "Nomor identitas merchant (NMID) tidak ada di kode QRIS ini." };
   }
   const subTags = parseTlv(merchantAccountInfo);
   if (!subTags) {
-    return { valid: false, error: "Data akun merchant domestik pada QRIS ini rusak." };
+    return { valid: false, error: "Data merchant pada kode QRIS ini rusak." };
   }
   const nmid = subTags.get("02");
   if (!nmid || !NMID_PATTERN.test(nmid)) {
-    return { valid: false, error: "NMID pada QRIS ini tidak sesuai format (harus 15 karakter alfanumerik)." };
+    return { valid: false, error: "Format NMID pada kode QRIS ini tidak sesuai." };
   }
 
   return {

@@ -29,7 +29,7 @@ export async function qrisRoutes(app: FastifyInstance) {
   app.get("/preview/:token", async (req, reply) => {
     const { token } = req.params as { token: string };
     const entry = getPreviewToken(token);
-    if (!entry) return reply.status(404).send({ error: "Data preview tidak ditemukan atau sudah kedaluwarsa." });
+    if (!entry) return reply.status(404).send({ error: "Data pratinjau tidak ditemukan atau sudah kedaluwarsa." });
     return { data: entry };
   });
 }

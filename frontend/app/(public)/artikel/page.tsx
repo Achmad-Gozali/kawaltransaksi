@@ -3,13 +3,13 @@ import Image from 'next/image';
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Artikel — KawalTransaksi',
+  title: 'Artikel - KawalTransaksi',
   description: 'Tips keamanan, modus penipuan terbaru, dan panduan bertransaksi aman dari KawalTransaksi.',
   alternates: {
     canonical: 'https://kawaltransaksi.com/artikel',
   },
   openGraph: {
-    title: 'Artikel — KawalTransaksi',
+    title: 'Artikel - KawalTransaksi',
     description: 'Tips keamanan, modus penipuan terbaru, dan panduan bertransaksi aman dari KawalTransaksi.',
     url: 'https://kawaltransaksi.com/artikel',
     siteName: 'KawalTransaksi',

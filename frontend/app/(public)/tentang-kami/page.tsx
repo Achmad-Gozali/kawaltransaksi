@@ -5,7 +5,7 @@ import { ArrowRight } from "lucide-react";
 import * as motion from "motion/react-client";
 
 export const metadata: Metadata = {
-  title: "Tentang Kami | KawalTransaksi",
+  title: "Tentang Kami - KawalTransaksi",
   description:
     "KawalTransaksi adalah platform komunitas anti-penipuan digital Indonesia. Kenali cerita dan misi di balik layanan verifikasi nomor HP, rekening bank, dan e-wallet.",
 };

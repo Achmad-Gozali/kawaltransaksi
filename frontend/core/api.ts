@@ -76,9 +76,9 @@ async function request<T>(path: string, opts: RequestOptions = {}): Promise<T> {
       }
     }
 
-    const err = await res.json().catch(() => ({ error: "Request failed" }));
+    const err = await res.json().catch(() => ({ error: "Permintaan gagal diproses. Coba lagi." }));
     const retryAfter = res.status === 429 ? parseRetryAfter(res) : null;
-    throw new ApiError(err.error ?? "Request failed", res.status, retryAfter);
+    throw new ApiError(err.error ?? "Permintaan gagal diproses. Coba lagi.", res.status, retryAfter);
   }
 
   return res.json();

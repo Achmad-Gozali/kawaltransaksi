@@ -22,7 +22,7 @@ export function Step2Kronologi({ chronology, onChronologyChange }: Step2Props) {
           rows={10}
           value={chronology}
           onChange={(e) => onChronologyChange(e.target.value)}
-          placeholder="Ceritakan bagaimana penipuan terjadi. Sertakan nominal kerugian, tanggal kejadian, cara komunikasi, dan detail identitas pelaku yang kamu ketahui..."
+          placeholder="Ceritakan bagaimana penipuan terjadi. Sertakan nominal kerugian, tanggal kejadian, cara komunikasi, dan detail identitas pelaku yang Anda ketahui..."
           className="w-full mt-4 px-4 py-3 sm:py-4 bg-slate-50 border border-slate-200 rounded-xl text-sm sm:text-base text-slate-800 placeholder:text-slate-300 leading-relaxed focus:bg-white focus:border-emerald-400 focus:ring-2 focus:ring-emerald-50 outline-none transition-all resize-none"
         />
 

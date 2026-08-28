@@ -14,7 +14,7 @@ export default function QrisSearchForm() {
 
   const handleFile = async (file: File | null) => {
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { setError('Ukuran file melebihi 5MB.'); return; }
+    if (file.size > 5 * 1024 * 1024) { setError('Ukuran file melebihi 5 MB.'); return; }
 
     setIsDecoding(true);
     setError(null);
@@ -24,7 +24,7 @@ export default function QrisSearchForm() {
 
     if (!result.valid || !result.nmid || !result.payload) {
       setIsDecoding(false);
-      setError(result.error ?? 'Gagal membaca QRIS dari foto ini.');
+      setError(result.error ?? 'Gagal membaca kode QRIS dari foto ini. Coba foto ulang dengan lebih jelas.');
       return;
     }
 
@@ -44,13 +44,13 @@ export default function QrisSearchForm() {
       const body = await res.json();
       if (!res.ok || !body?.data?.token) {
         setIsDecoding(false);
-        setError(body?.error ?? 'Gagal memverifikasi QRIS ke server.');
+        setError(body?.error ?? 'Gagal memverifikasi QRIS ke server. Coba lagi sebentar lagi.');
         return;
       }
       router.push(`/check/${encodeSlug(result.nmid)}?type=qris&token=${encodeURIComponent(body.data.token)}`);
     } catch {
       setIsDecoding(false);
-      setError('Gagal terhubung ke server. Periksa koneksi dan coba lagi.');
+      setError('Tidak bisa terhubung ke server. Coba periksa koneksi internet Anda, lalu ulangi.');
     }
   };
 
@@ -64,7 +64,7 @@ export default function QrisSearchForm() {
         </div>
         <div className="flex-1 min-w-0">
           <p className="text-sm font-bold text-slate-800">
-            {isDecoding ? 'Membaca kode QRIS...' : merchantName ? `Ditemukan: ${merchantName}` : 'Upload atau scan foto QRIS'}
+            {isDecoding ? 'Membaca kode QRIS...' : merchantName ? `Ditemukan: ${merchantName}` : 'Unggah atau pindai foto QRIS'}
           </p>
           <p className="text-xs text-slate-400">JPG, PNG - maks 5MB</p>
         </div>

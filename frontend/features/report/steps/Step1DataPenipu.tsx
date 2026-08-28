@@ -117,7 +117,7 @@ export function Step1DataPenipu({
                 ))}
               </Sel>
               <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
-                Isi jika kamu mengetahui lokasi penipu dari percakapan atau profilnya.
+                Isi kalau Anda tahu lokasi penipu dari percakapan atau profilnya.
               </p>
             </div>
           </div>
@@ -173,7 +173,7 @@ export function Step1DataPenipu({
         <div className="p-4 sm:p-5">
           <SectionTitle
             title="Foto Profil Penipu"
-            subtitle="Upload foto identitas visual pelaku jika tersedia"
+            subtitle="Unggah foto wajah atau identitas pelaku kalau ada"
           />
           {!suspectPhotoPreview ? (
             <label className="border-2 border-dashed border-slate-200 rounded-xl p-6 sm:p-8 flex flex-col items-center gap-3 hover:border-emerald-300 hover:bg-emerald-50/20 transition-all cursor-pointer group">
@@ -182,7 +182,7 @@ export function Step1DataPenipu({
               </div>
               <div className="text-center">
                 <p className="text-sm font-semibold text-slate-500 group-hover:text-slate-700 transition-colors">
-                  Klik untuk upload foto penipu
+                  Pilih untuk mengunggah foto penipu
                 </p>
                 <p className="text-xs text-slate-300 mt-1">JPG, PNG - maks 5MB</p>
               </div>
@@ -207,7 +207,7 @@ export function Step1DataPenipu({
                 </button>
               </div>
               <p className="text-xs text-slate-400 leading-relaxed">
-                Foto berhasil dipilih. Klik di sini untuk mengganti.
+                Foto berhasil dipilih. Tekan di sini untuk mengganti.
               </p>
             </div>
           )}
@@ -319,7 +319,7 @@ export function Step1DataPenipu({
           )}
 
           <div>
-            <Label optional>Ada korban lain yang kamu ketahui?</Label>
+            <Label optional>Ada korban lain yang Anda ketahui?</Label>
             <div className="flex gap-3 mt-1.5">
               {[
                 { val: 'yes', label: 'Ya, ada korban lain' },

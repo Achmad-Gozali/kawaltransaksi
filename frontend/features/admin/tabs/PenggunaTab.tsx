@@ -241,7 +241,7 @@ export default function PenggunaTab({ users: initial }: { users: AdminUser[] }) 
               {paginated.length === 0 ? (
                 <tr>
                   <td colSpan={5} className="px-4 py-10 text-center text-sm text-slate-400">
-                    Tidak ada pengguna ditemukan.
+                    Pengguna tidak ditemukan.
                   </td>
                 </tr>
               ) : paginated.map(u => {

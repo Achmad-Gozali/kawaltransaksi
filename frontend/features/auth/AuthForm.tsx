@@ -127,9 +127,9 @@ function AuthFormInner({ type }: AuthFormProps) {
 
   const oauthError = searchParams.get('error');
   const oauthErrorMap: Record<string, string> = {
-    google_cancelled: 'Login Google dibatalkan.',
+    google_cancelled: 'Proses masuk dengan Google dibatalkan.',
     google_no_email:  'Akun Google tidak memiliki email yang dapat digunakan.',
-    google_failed:    'Login Google gagal. Coba lagi.',
+    google_failed:    'Proses masuk dengan Google gagal. Silakan coba lagi.',
   };
 
   const strength        = type === 'register' ? getPasswordStrength(password) : { label: '', color: '', width: '0%' };
@@ -178,7 +178,7 @@ function AuthFormInner({ type }: AuthFormProps) {
     }
 
     if (!turnstileToken) {
-      setError('Selesaikan verifikasi keamanan terlebih dahulu.');
+      setError('Selesaikan dulu verifikasi keamanannya.');
       return;
     }
 
@@ -189,8 +189,8 @@ function AuthFormInner({ type }: AuthFormProps) {
       if (sanitizedFullName.length < 2) { setError('Nama lengkap minimal 2 karakter.'); return; }
       const ec = validateEmail(sanitizedEmail);
       if (!ec.valid) { setError(ec.message); return; }
-      if (!isPasswordValid(password)) { setError('Kata sandi tidak memenuhi persyaratan keamanan.'); return; }
-      if (password !== confirmPassword) { setError('Kata sandi dan konfirmasi tidak cocok.'); return; }
+      if (!isPasswordValid(password)) { setError('Kata sandi belum memenuhi syarat keamanan.'); return; }
+      if (password !== confirmPassword) { setError('Kata sandi dan konfirmasinya tidak sama.'); return; }
     }
 
     setIsLoading(true);
@@ -221,7 +221,7 @@ function AuthFormInner({ type }: AuthFormProps) {
         setCooldownUntil(until);
         if (type === 'login') writeStoredCooldown(until);
       } else {
-        setError(err instanceof Error ? err.message : 'Terjadi kesalahan sistem.');
+        setError(err instanceof Error ? err.message : 'Terjadi kesalahan pada sistem. Coba lagi sebentar lagi.');
       }
       turnstileRef.current?.reset();
       setTurnstileToken(null);
@@ -237,7 +237,7 @@ function AuthFormInner({ type }: AuthFormProps) {
 
   const isDisabled = isLoading || isGoogleLoading || !turnstileToken || remainingSeconds > 0;
   const cooldownMessage = remainingSeconds > 0
-    ? `Terlalu banyak percobaan. Coba lagi jam ${formatClockTime(cooldownUntil)} (${formatRemaining(remainingSeconds)}).`
+    ? `Terlalu banyak percobaan. Coba lagi pukul ${formatClockTime(cooldownUntil)} (${formatRemaining(remainingSeconds)}).`
     : null;
 
   return (
@@ -392,7 +392,7 @@ function AuthFormInner({ type }: AuthFormProps) {
             type === 'login' ? 'bg-slate-900 hover:bg-slate-800' : 'bg-emerald-600 hover:bg-emerald-700'
           }`}>
           {remainingSeconds > 0
-            ? <><Clock className="w-4 h-4" /> Coba lagi jam {formatClockTime(cooldownUntil)}</>
+            ? <><Clock className="w-4 h-4" /> Coba lagi pukul {formatClockTime(cooldownUntil)}</>
             : isLoading
             ? <><Loader2 className="w-4 h-4 animate-spin" /> {type === 'login' ? 'Sedang Masuk...' : 'Membuat Akun...'}</>
             : <>{type === 'login' ? 'Masuk' : 'Buat Akun'}<ArrowRight className="w-4 h-4 opacity-70" /></>

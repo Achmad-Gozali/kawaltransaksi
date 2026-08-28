@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Kontak — KawalTransaksi',
+  title: 'Kontak - KawalTransaksi',
   description: 'Hubungi tim KawalTransaksi untuk pertanyaan, laporan, atau kerja sama.',
 };
 
@@ -63,18 +63,18 @@ export default function KontakPage() {
             </div>
           </a>
 
-          <a href="https://instagram.com/kawaltransaksi" target="_blank" rel="noopener noreferrer"
+          <a href="https://www.instagram.com/achmadgozali27_/" target="_blank" rel="noopener noreferrer"
             className="flex items-center gap-4 p-5 bg-white border border-slate-200 rounded-xl hover:border-slate-300 hover:bg-slate-50 transition-all group">
             <div className="w-10 h-10 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center shrink-0">
               <IconInstagram />
             </div>
             <div>
               <p className="text-sm font-bold text-slate-900">Instagram</p>
-              <p className="text-sm text-slate-500">@kawaltransaksi</p>
+              <p className="text-sm text-slate-500">@achmadgozali27_</p>
             </div>
           </a>
 
-          <a href="https://wa.me/6281234567890" target="_blank" rel="noopener noreferrer"
+          <a href="https://wa.me/6282249244647" target="_blank" rel="noopener noreferrer"
             className="flex items-center gap-4 p-5 bg-white border border-slate-200 rounded-xl hover:border-slate-300 hover:bg-slate-50 transition-all group">
             <div className="w-10 h-10 bg-slate-50 border border-slate-200 rounded-xl flex items-center justify-center shrink-0">
               <IconWhatsApp />

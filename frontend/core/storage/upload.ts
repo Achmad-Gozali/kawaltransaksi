@@ -45,11 +45,11 @@ export async function uploadToStorage(
   file: File,
   folder: "reports" | "articles"
 ): Promise<string> {
-  if (file.size > MAX_FILE_SIZE) throw new Error("Ukuran file melebihi batas 5MB.");
-  if (!ALLOWED_MIME_TYPES.includes(file.type)) throw new Error("Tipe file tidak didukung. Hanya JPEG dan PNG.");
+  if (file.size > MAX_FILE_SIZE) throw new Error("Ukuran file melebihi batas 5 MB.");
+  if (!ALLOWED_MIME_TYPES.includes(file.type)) throw new Error("Tipe file tidak didukung. Gunakan format JPEG atau PNG.");
 
   const isValid = await validateFileSignature(file);
-  if (!isValid) throw new Error("File tidak valid atau telah dimanipulasi.");
+  if (!isValid) throw new Error("File ini tidak valid atau sudah diubah.");
 
   const cleanFile = await stripExif(file);
 
@@ -57,7 +57,7 @@ export async function uploadToStorage(
   let token = authClient.getToken();
   if (!token) {
     token = await authClient.refresh();
-    if (!token) throw new Error("Sesi habis. Silakan login ulang.");
+    if (!token) throw new Error("Sesi Anda sudah berakhir. Silakan masuk kembali.");
   }
 
   const formData = new FormData();
@@ -71,7 +71,7 @@ export async function uploadToStorage(
   });
 
   const result = await res.json();
-  if (!res.ok) throw new Error(result.error ?? "Gagal mengupload file.");
+  if (!res.ok) throw new Error(result.error ?? "Gagal mengunggah berkas.");
   return result.data.url;
 }
 

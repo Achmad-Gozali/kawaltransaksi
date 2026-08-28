@@ -160,14 +160,14 @@ export default function BankPageClient({ bankData: data, bankId, reports, totalC
             <div className="bg-white rounded-[8px] border border-slate-200/80 shadow-sm p-14 text-center">
               <ShieldCheck className="w-8 h-8 text-emerald-500 mx-auto mb-3" />
               <p className="text-sm font-semibold text-slate-900 mb-1">Belum ada laporan</p>
-              <p className="text-xs text-slate-400 leading-relaxed">Tidak ada rekening {data.name} yang dilaporkan saat ini.</p>
+              <p className="text-xs text-slate-400 leading-relaxed">Sampai sekarang belum ada rekening {data.name} yang dilaporkan. Tetap hati-hati saat bertransaksi.</p>
             </div>
           )}
         </div>
 
         <div className="bg-slate-900 rounded-[8px] p-7 sm:p-10 text-center shadow-sm">
           <p className="text-xl sm:text-2xl font-bold text-white mb-2 leading-tight" style={{ fontFamily: "'Syne', sans-serif" }}>Cek rekening {data.name} sebelum transfer</p>
-          <p className="text-sm text-slate-400 max-w-md mx-auto mb-6 leading-relaxed">Verifikasi nomor rekening untuk memastikan keamanan transaksi kamu.</p>
+          <p className="text-sm text-slate-400 max-w-md mx-auto mb-6 leading-relaxed">Verifikasi nomor rekening untuk memastikan keamanan transaksi Anda.</p>
           <Link href="/cek-rekening" className="inline-flex items-center gap-2 px-6 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-semibold rounded-[8px] transition-colors">
             Cek rekening sekarang <ArrowRight className="w-3.5 h-3.5" />
           </Link>

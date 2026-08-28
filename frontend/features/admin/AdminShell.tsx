@@ -122,7 +122,7 @@ function NavContent({ onNavClick, collapsed, activeTab, email, initial, onLogout
               <p className="text-[12px] font-medium text-slate-700 truncate">{email}</p>
               <button onClick={onLogout}
                 className="text-[11px] text-slate-400 hover:text-red-500 flex items-center gap-1 transition-colors">
-                <LogOut className="w-3 h-3" /> Logout
+                <LogOut className="w-3 h-3" /> Keluar
               </button>
             </div>
           )}

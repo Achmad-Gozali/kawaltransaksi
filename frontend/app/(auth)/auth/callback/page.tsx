@@ -10,22 +10,22 @@ function CallbackHandler() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    const token = searchParams.get("token");
     const error = searchParams.get("error");
 
-    if (error || !token) {
-      router.replace(`/login?error=${error ?? "unknown"}`);
+    if (error) {
+      router.replace(`/login?error=${error}`);
       return;
     }
 
-    authClient.setToken(token);
-
+    // Access token tidak lagi dikirim lewat URL. Backend sudah menyetel
+    // cookie refresh_token (httpOnly) pada redirect ini; authClient.me()
+    // otomatis menukarnya jadi access token via /api/auth/refresh.
     authClient.me().then(user => {
-      if (user?.role === "admin") {
-        router.replace("/admin");
-      } else {
-        router.replace("/");
+      if (!user) {
+        router.replace("/login?error=google_failed");
+        return;
       }
+      router.replace(user.role === "admin" ? "/admin" : "/");
     });
   }, [searchParams, router]);
 
@@ -37,7 +37,7 @@ export default function AuthCallbackPage() {
     <div className="min-h-screen flex items-center justify-center">
       <div className="flex flex-col items-center gap-3 text-slate-400">
         <Loader2 className="w-6 h-6 animate-spin" />
-        <p className="text-sm font-medium">Menyelesaikan login...</p>
+        <p className="text-sm font-medium">Menyelesaikan proses masuk...</p>
         <Suspense>
           <CallbackHandler />
         </Suspense>

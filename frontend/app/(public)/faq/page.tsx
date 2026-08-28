@@ -2,7 +2,7 @@ import type { Metadata } from 'next';
 import { safeJsonLd } from "@/core/utils";
 
 export const metadata: Metadata = {
-  title: 'FAQ — KawalTransaksi',
+  title: 'FAQ - KawalTransaksi',
   description: 'Pertanyaan yang sering ditanyakan seputar KawalTransaksi.',
 };
 
@@ -13,11 +13,11 @@ const faqs = [
   },
   {
     q: 'Apakah KawalTransaksi gratis?',
-    a: 'Ya, pengecekan nomor dan rekening sepenuhnya gratis. Kamu bisa cek sebanyak yang kamu mau tanpa perlu mendaftar atau membayar.',
+    a: 'Ya, pengecekan nomor dan rekening sepenuhnya gratis. Anda bisa mengecek sebanyak yang Anda butuhkan tanpa perlu mendaftar atau membayar.',
   },
   {
     q: 'Bagaimana cara melaporkan penipu?',
-    a: 'Klik menu "Laporkan" di navbar, lalu isi formulir 3 langkah: data penipu, kronologi kejadian, dan bukti pendukung. Laporan akan ditinjau oleh tim moderator sebelum ditampilkan secara publik.',
+    a: 'Buka menu "Laporkan" di bagian atas halaman, lalu isi formulir tiga langkah: data penipu, kronologi kejadian, dan bukti pendukung. Laporan akan ditinjau tim moderator sebelum ditampilkan ke publik.',
   },
   {
     q: 'Berapa lama laporan diproses?',
@@ -29,11 +29,11 @@ const faqs = [
   },
   {
     q: 'Nomor yang saya cek tidak ada datanya. Apakah aman?',
-    a: 'Tidak ada data bukan berarti 100% aman — bisa saja nomor tersebut belum pernah dilaporkan. Selalu tetap waspada dan lakukan verifikasi lebih lanjut sebelum bertransaksi.',
+    a: 'Tidak ada data bukan berarti 100% aman. Bisa jadi nomor itu memang belum pernah dilaporkan. Tetap waspada dan lakukan pengecekan lain sebelum bertransaksi.',
   },
   {
     q: 'Bagaimana jika nomor saya dilaporkan secara tidak benar?',
-    a: 'Kamu bisa mengajukan banding melalui halaman detail laporan dengan mengklik tombol "Ajukan Banding". Tim kami akan meninjau ulang laporan tersebut.',
+    a: 'Anda bisa mengajukan banding lewat halaman detail laporan, lalu klik tombol "Ajukan Banding". Laporan itu akan ditinjau ulang oleh tim kami.',
   },
   {
     q: 'Apakah KawalTransaksi tersedia sebagai aplikasi mobile?',

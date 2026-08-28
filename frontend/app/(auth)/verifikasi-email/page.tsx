@@ -84,7 +84,7 @@ function VerifikasiEmailInner() {
         inputRefs.current[0]?.focus();
       }
     } catch {
-      setError("Gagal menghubungi server. Silakan periksa koneksi Anda.");
+      setError("Tidak bisa terhubung ke server. Coba periksa koneksi internet Anda, lalu ulangi.");
     } finally {
       setLoading(false);
     }
@@ -107,10 +107,10 @@ function VerifikasiEmailInner() {
         setOtp(["", "", "", "", "", ""]);
         inputRefs.current[0]?.focus();
       } else {
-        setError(data.error || "Gagal mengirim ulang kode verifikasi.");
+        setError(data.error || "Gagal mengirim ulang kode verifikasi. Coba lagi sebentar lagi.");
       }
     } catch {
-      setError("Gagal menghubungi server. Silakan periksa koneksi Anda.");
+      setError("Tidak bisa terhubung ke server. Coba periksa koneksi internet Anda, lalu ulangi.");
     } finally {
       setResending(false);
     }

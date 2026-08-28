@@ -54,33 +54,33 @@ export interface QrisPreview {
 }
 
 function parseQrisPayloadPreview(rawPayload: string): QrisPreview {
-  if (rawPayload.length < 8) return { valid: false, error: "Payload QRIS terlalu pendek." };
+  if (rawPayload.length < 8) return { valid: false, error: "Kode QRIS tidak terbaca dengan benar. Coba foto ulang." };
 
   const crcTagAndLen = rawPayload.slice(-8, -4);
-  if (crcTagAndLen !== "6304") return { valid: false, error: "QR ini bukan format QRIS yang dikenali." };
+  if (crcTagAndLen !== "6304") return { valid: false, error: "Kode QR ini bukan format QRIS yang dikenali." };
   const expectedCrc = rawPayload.slice(-4).toUpperCase();
   const dataForCrc = rawPayload.slice(0, -4);
   if (calculateCrc16(dataForCrc) !== expectedCrc) {
-    return { valid: false, error: "Checksum QRIS tidak valid. Coba foto ulang dengan pencahayaan lebih baik." };
+    return { valid: false, error: "Kode QRIS tidak valid. Fotonya mungkin buram atau kurang cahaya. Coba foto ulang." };
   }
 
   const tags = parseTlv(rawPayload);
-  if (!tags) return { valid: false, error: "Struktur payload QRIS tidak dapat dibaca." };
-  if (tags.get("00") !== "01") return { valid: false, error: "Format QR tidak dikenali sebagai QRIS." };
-  if (tags.get("58") !== "ID") return { valid: false, error: "QR ini bukan QRIS domestik Indonesia." };
+  if (!tags) return { valid: false, error: "Struktur kode QRIS tidak bisa dibaca. Coba foto ulang." };
+  if (tags.get("00") !== "01") return { valid: false, error: "Kode QR ini sepertinya bukan QRIS." };
+  if (tags.get("58") !== "ID") return { valid: false, error: "Kode QRIS ini bukan QRIS domestik Indonesia." };
   if (tags.get("53") !== "360") return { valid: false, error: "Mata uang pada QRIS ini bukan Rupiah." };
 
   const merchantName = tags.get("59")?.trim();
   const merchantCity = tags.get("60")?.trim();
   if (!merchantName || !merchantCity) {
-    return { valid: false, error: "Data merchant tidak lengkap pada QRIS ini." };
+    return { valid: false, error: "Data merchant pada kode QRIS ini tidak lengkap." };
   }
 
   const merchantAccountInfo = tags.get("51");
   const subTags = merchantAccountInfo ? parseTlv(merchantAccountInfo) : null;
   const nmid = subTags?.get("02");
   if (!nmid || !NMID_PATTERN.test(nmid)) {
-    return { valid: false, error: "NMID tidak ditemukan atau formatnya tidak sesuai." };
+    return { valid: false, error: "Nomor identitas merchant (NMID) tidak ditemukan atau formatnya tidak sesuai." };
   }
 
   return {

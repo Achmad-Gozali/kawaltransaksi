@@ -19,7 +19,7 @@ export function Step3BuktiKirim({ evidenceFiles, onEvidenceFileChange, onRemoveE
         <div className="p-4 sm:p-5">
           <SectionTitle
             title="Bukti Foto"
-            subtitle={`Upload hingga ${MAX_EVIDENCE_FILES} foto - Screenshot, struk transfer - JPG, PNG - maks 5MB`}
+            subtitle={`Unggah maksimal ${MAX_EVIDENCE_FILES} foto. Screenshot atau struk transfer, format JPG atau PNG, maksimal 5 MB`}
           />
 
           {evidenceFiles.length > 0 && (
@@ -51,7 +51,7 @@ export function Step3BuktiKirim({ evidenceFiles, onEvidenceFileChange, onRemoveE
               </div>
               <div className="text-center">
                 <p className="text-sm font-semibold text-slate-500 group-hover:text-slate-700 transition-colors">
-                  {evidenceFiles.length === 0 ? 'Klik untuk upload foto bukti' : `Tambah foto (${evidenceFiles.length}/${MAX_EVIDENCE_FILES})`}
+                  {evidenceFiles.length === 0 ? 'Pilih untuk mengunggah foto bukti' : `Tambah foto (${evidenceFiles.length}/${MAX_EVIDENCE_FILES})`}
                 </p>
                 <p className="text-xs text-slate-300 mt-1">JPG, PNG - maks 5MB per file</p>
               </div>

@@ -46,7 +46,7 @@ function QrisTargetInput({ entry, onChange, onQrisEvidenceFile }: Required<Pick<
     setIsDecoding(false);
 
     if (!result.valid || !result.payload) {
-      setDecodeError(result.error ?? 'Gagal membaca QRIS dari foto ini.');
+      setDecodeError(result.error ?? 'Gagal membaca kode QRIS dari foto ini. Coba foto ulang dengan lebih jelas.');
       onChange({ ...entry, number: '', name: '', qris_payload: undefined, qris_merchant_city: undefined });
       return;
     }
@@ -89,7 +89,7 @@ function QrisTargetInput({ entry, onChange, onQrisEvidenceFile }: Required<Pick<
           </button>
         </div>
         <p className="text-[11px] text-slate-400 leading-relaxed">
-          Data merchant di atas dibaca otomatis dari QR -- tidak bisa diedit manual. Kalau salah/beda merchant, klik ikon ganti foto.
+          Data merchant di atas dibaca otomatis dari kode QR dan tidak bisa diubah manual. Kalau keliru atau merchant-nya berbeda, klik ikon ganti foto.
         </p>
       </div>
     );
@@ -105,7 +105,7 @@ function QrisTargetInput({ entry, onChange, onQrisEvidenceFile }: Required<Pick<
         </div>
         <div className="text-center">
           <p className="text-sm font-semibold text-slate-500 group-hover:text-slate-700 transition-colors">
-            {isDecoding ? 'Membaca kode QRIS...' : 'Upload atau scan foto QRIS asli'}
+            {isDecoding ? 'Membaca kode QRIS...' : 'Unggah atau pindai foto QRIS asli'}
           </p>
           <p className="text-xs text-slate-300 mt-1">Foto harus menampilkan kode QR utuh dan jelas - JPG, PNG, maks 5MB</p>
         </div>

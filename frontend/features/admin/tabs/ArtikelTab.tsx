@@ -261,7 +261,7 @@ export default function ArtikelTab({ token }: { token: string }) {
               ) : (
                 <label className={`${inputCls} flex items-center gap-2 cursor-pointer ${uploading ? 'opacity-60 pointer-events-none' : ''}`}>
                   <Upload className="w-4 h-4 text-slate-400 shrink-0" />
-                  <span className="text-slate-400 text-sm">{uploading ? 'Mengupload...' : 'Upload gambar...'}</span>
+                  <span className="text-slate-400 text-sm">{uploading ? 'Mengunggah...' : 'Unggah gambar...'}</span>
                   <input type="file" accept="image/jpeg,image/png" className="hidden" onChange={e => { const f = e.target.files?.[0]; if (f) handleThumbnailUpload(f); }} />
                 </label>
               )}
@@ -320,7 +320,7 @@ export default function ArtikelTab({ token }: { token: string }) {
       <div className="bg-white border border-slate-200 rounded-2xl overflow-hidden">
         {paginated.length === 0 ? (
           <div className="py-16 text-center">
-            <p className="text-sm text-slate-400 mb-3">{articles.length === 0 ? 'Belum ada artikel.' : 'Tidak ada artikel ditemukan.'}</p>
+            <p className="text-sm text-slate-400 mb-3">{articles.length === 0 ? 'Belum ada artikel.' : 'Artikel tidak ditemukan.'}</p>
             {articles.length === 0 && (
               <button onClick={openNew} className="text-sm font-semibold text-emerald-600 hover:text-emerald-700 transition-colors">Buat artikel pertama →</button>
             )}

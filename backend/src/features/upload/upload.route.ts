@@ -22,6 +22,13 @@ export async function uploadRoutes(app: FastifyInstance) {
 
     const folder = folderValue as UploadFolder;
 
+    // Folder "articles" hanya dipakai editor artikel di panel admin. Batasi ke
+    // admin supaya user biasa tidak bisa menitipkan file ke ruang penyimpanan
+    // artikel (folder "reports" tetap terbuka untuk semua user terautentikasi
+    // karena dipakai alur lapor).
+    if (folder === "articles" && req.user?.role !== "admin")
+      return reply.code(403).send({ error: "Anda tidak memiliki akses untuk kategori upload ini." });
+
     const chunks: Buffer[] = [];
     let size = 0;
     const MAX_SIZE = 5 * 1024 * 1024;

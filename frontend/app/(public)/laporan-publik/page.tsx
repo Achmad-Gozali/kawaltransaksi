@@ -7,13 +7,13 @@ import StatsChart from "./StatsChart";
 import SearchBar from "./SearchBar";
 
 export const metadata: Metadata = {
-  title: "Database Laporan Publik Penipuan | KawalTransaksi",
+  title: "Database Laporan Publik Penipuan - KawalTransaksi",
   description: "Lihat seluruh laporan nomor HP, rekening bank, dan e-wallet terindikasi penipuan yang masuk ke sistem KawalTransaksi, lengkap dengan status verifikasi.",
   alternates: {
     canonical: "https://kawaltransaksi.com/laporan-publik",
   },
   openGraph: {
-    title: "Database Laporan Publik Penipuan | KawalTransaksi",
+    title: "Database Laporan Publik Penipuan - KawalTransaksi",
     description: "Lihat seluruh laporan nomor HP, rekening bank, dan e-wallet terindikasi penipuan yang masuk ke sistem KawalTransaksi.",
     url: "https://kawaltransaksi.com/laporan-publik",
     siteName: "KawalTransaksi",
@@ -155,7 +155,7 @@ export default async function LaporanPublikPage({
           </h1>
           <p className="text-xs sm:text-sm text-slate-500 max-w-xl leading-relaxed">
             Semua laporan yang masuk ke sistem KawalTransaksi. Nomor dengan status{" "}
-            <span className="font-bold text-emerald-600">VERIFIED</span> telah dikonfirmasi oleh tim auditor kami.
+            <span className="font-bold text-emerald-600">TERVERIFIKASI</span> telah dikonfirmasi oleh tim auditor kami.
           </p>
         </div>
       </section>
@@ -232,7 +232,7 @@ export default async function LaporanPublikPage({
               <p className="text-sm font-black text-slate-400 uppercase tracking-widest mb-2">
                 {q ? `Tidak ada hasil untuk "${q}"` : "Tidak ada laporan ditemukan"}
               </p>
-              <p className="text-xs text-slate-400 mb-4">Coba ubah filter atau kata kunci pencarian</p>
+              <p className="text-xs text-slate-400 mb-4">Coba ubah filter atau kata kunci pencariannya</p>
               <Link href="/laporan-publik" className="text-xs font-bold text-emerald-600 hover:underline">Reset filter</Link>
             </div>
           ) : (
@@ -243,7 +243,7 @@ export default async function LaporanPublikPage({
                 const logoSrc = getPlatformLogo(report.target_type, report.bank_name);
                 const aggStatus = getAggregateStatus(Number(report.verified_count), Number(report.pending_count));
                 const badge = getStatusBadge(aggStatus, Number(report.verified_count));
-                const displayName = report.target_name ?? "Anonymous";
+                const displayName = report.target_name ?? "Anonim";
                 const displayNumber = report.target_number;
 
                 return (
@@ -297,7 +297,7 @@ export default async function LaporanPublikPage({
                 )}
                 {paginationPages.map((p, i) =>
                   p === "..." ? (
-                    <span key={`dots-${i}`} className="px-2 py-2 text-xs text-slate-300 font-bold">---</span>
+                    <span key={`dots-${i}`} className="px-2 py-2 text-xs text-slate-300 font-bold">…</span>
                   ) : (
                     <Link key={p} href={buildUrl({ page: String(p) })} scroll={false}
                       className={`w-9 h-9 flex items-center justify-center text-xs font-bold rounded-lg border transition-all ${

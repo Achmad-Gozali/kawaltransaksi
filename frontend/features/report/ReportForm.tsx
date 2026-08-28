@@ -97,7 +97,7 @@ export default function ReportForm() {
     file: File | null, type: 'suspect' | 'evidence', e?: React.ChangeEvent<HTMLInputElement>
   ) => {
     if (!file) return;
-    if (file.size > 5 * 1024 * 1024) { setError('Ukuran file melebihi 5MB.'); return; }
+    if (file.size > 5 * 1024 * 1024) { setError('Ukuran file melebihi 5 MB.'); return; }
     if (type === 'suspect') {
       setSuspectPhoto(file);
       setSuspectPhotoPreview(await readFileAsDataUrl(file));
@@ -112,7 +112,7 @@ export default function ReportForm() {
   const handleEvidenceFileChange = useCallback(async (e: React.ChangeEvent<HTMLInputElement>) => {
     const files     = Array.from(e.target.files || []).slice(0, MAX_EVIDENCE_FILES - evidenceFiles.length);
     const oversized = files.filter(f => f.size > 5 * 1024 * 1024);
-    if (oversized.length) { setError(`${oversized.length} file melebihi batas 5MB.`); return; }
+    if (oversized.length) { setError(`${oversized.length} file melebihi batas 5 MB.`); return; }
     for (const file of files) await handlePhotoChange(file, 'evidence', e);
   }, [evidenceFiles.length, handlePhotoChange]);
 
@@ -133,13 +133,13 @@ export default function ReportForm() {
       if (currentStep === 1 && !target.number.trim())
         return setError(
           target.type === 'qris'
-            ? 'Upload foto QRIS asli dan tunggu hingga berhasil dibaca.'
+            ? 'Unggah dulu foto QRIS aslinya dan tunggu sampai berhasil terbaca.'
             : 'Nomor HP, rekening, atau e-wallet wajib diisi.'
         );
       if (currentStep === 1 && !formData.category)
-        return setError('Kategori penipuan wajib dipilih.');
+        return setError('Pilih dulu kategori penipuannya.');
       if (currentStep === 2 && formData.chronology.trim().length < 20)
-        return setError('Kronologi minimal 20 karakter.');
+        return setError('Kronologi kejadian minimal 20 karakter.');
       setCurrentStep(s => Math.min(s + 1, 3));
     } else {
       setCurrentStep(s => Math.max(s - 1, 1));
@@ -149,7 +149,7 @@ export default function ReportForm() {
 
   const handleSubmit = async () => {
     if (!turnstileToken) {
-      setError('Selesaikan verifikasi keamanan terlebih dahulu.');
+      setError('Selesaikan dulu verifikasi keamanannya.');
       return;
     }
 
@@ -157,15 +157,15 @@ export default function ReportForm() {
     // nomor HP/rekening/ewallet.
     const cleanNumber = target.type === 'qris' ? target.number : target.number.replace(/\D/g, '');
     if (!cleanNumber) {
-      setError(target.type === 'qris' ? 'Upload foto QRIS asli terlebih dahulu.' : 'Nomor HP, rekening, atau e-wallet wajib diisi.');
+      setError(target.type === 'qris' ? 'Unggah dulu foto QRIS aslinya.' : 'Nomor HP, rekening, atau e-wallet wajib diisi.');
       return;
     }
     if (target.type === 'qris' && !target.qris_payload) {
-      setError('Data QRIS tidak lengkap. Silakan unggah ulang foto QRIS.');
+      setError('Data QRIS belum lengkap. Coba unggah ulang foto QRIS-nya.');
       return;
     }
     if (target.type === 'qris' && !evidenceFiles.some(f => f.isQrisSource)) {
-      setError('Foto QRIS asli wajib diunggah sebagai bukti. Silakan upload ulang di Data Penipu.');
+      setError('Foto QRIS asli wajib dilampirkan sebagai bukti. Unggah ulang di bagian Data Penipu.');
       return;
     }
 
@@ -173,24 +173,24 @@ export default function ReportForm() {
     try {
       const freshToken = await authClient.refresh();
       if (!freshToken) {
-        setError('Sesi habis. Silakan login ulang.');
+        setError('Sesi Anda telah berakhir. Silakan masuk kembali.');
         setIsLoading(false);
         return;
       }
 
       const uploadedUrls: string[] = [];
       for (let i = 0; i < evidenceFiles.length; i++) {
-        setUploadProgress(`Mengupload foto ${i + 1} dari ${evidenceFiles.length}...`);
+        setUploadProgress(`Mengunggah foto ${i + 1} dari ${evidenceFiles.length}...`);
         uploadedUrls.push(await uploadToStorage(evidenceFiles[i].file, "reports").catch(err => {
-          throw new Error(err instanceof Error ? err.message : 'Gagal upload foto.');
+          throw new Error(err instanceof Error ? err.message : 'Gagal mengunggah foto.');
         }));
       }
 
       let suspectPhotoUrl: string | null = null;
       if (suspectPhoto) {
-        setUploadProgress('Mengupload foto profil penipu...');
+        setUploadProgress('Mengunggah foto profil penipu...');
         suspectPhotoUrl = await uploadToStorage(suspectPhoto, "reports").catch(err => {
-          throw new Error(err instanceof Error ? err.message : 'Gagal upload foto profil.');
+          throw new Error(err instanceof Error ? err.message : 'Gagal mengunggah foto profil.');
         });
       }
 
@@ -243,12 +243,12 @@ export default function ReportForm() {
         setIsSuccess(true);
         setTimeout(() => router.push(`/check/${encodeURIComponent(cleanNumber)}`), 1500);
       } else {
-        setError(result.error || 'Gagal mengirim laporan.');
+        setError(result.error || 'Gagal mengirim laporan. Coba lagi sebentar lagi.');
         turnstileRef.current?.reset();
         setTurnstileToken(null);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Terjadi kesalahan. Periksa koneksi dan coba lagi.');
+      setError(err instanceof Error ? err.message : 'Terjadi kesalahan. Coba periksa koneksi internet Anda, lalu ulangi.');
       turnstileRef.current?.reset();
       setTurnstileToken(null);
     } finally {
@@ -319,11 +319,11 @@ export default function ReportForm() {
             onSuccess={setTurnstileToken}
             onExpire={() => {
               setTurnstileToken(null);
-              setError('Verifikasi keamanan kedaluwarsa. Silakan selesaikan ulang di bawah.');
+              setError('Verifikasi keamanan sudah kedaluwarsa. Selesaikan ulang di bawah ini.');
             }}
             onError={() => {
               setTurnstileToken(null);
-              setError('Verifikasi keamanan gagal dimuat. Coba muat ulang halaman atau periksa koneksi internet kamu.');
+              setError('Verifikasi keamanan gagal dimuat. Silakan muat ulang halaman atau periksa koneksi internet Anda.');
             }}
             options={{ theme: 'light' }}
           />

@@ -34,8 +34,8 @@ export default function ResetKataSandiPage({ params }: { params: Promise<{ token
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
-    if (!allPassed) return setError("Kata sandi tidak memenuhi persyaratan.");
-    if (password !== confirmPassword) return setError("Konfirmasi kata sandi tidak cocok.");
+    if (!allPassed) return setError("Kata sandi belum memenuhi syarat.");
+    if (password !== confirmPassword) return setError("Konfirmasi kata sandi tidak sama.");
 
     setLoading(true);
     try {
@@ -49,10 +49,10 @@ export default function ResetKataSandiPage({ params }: { params: Promise<{ token
         setSuccess(true);
         setTimeout(() => router.push("/login"), 2500);
       } else {
-        setError(data.error || "Terjadi kesalahan.");
+        setError(data.error || "Terjadi kesalahan. Coba lagi sebentar lagi.");
       }
     } catch {
-      setError("Gagal menghubungi server. Periksa koneksi.");
+      setError("Tidak bisa terhubung ke server. Coba periksa koneksi internet Anda, lalu ulangi.");
     } finally {
       setLoading(false);
     }

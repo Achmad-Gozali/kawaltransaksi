@@ -8,20 +8,41 @@ import { LogOut, Menu, X, User, FileText, ChevronDown, Phone, Building2, Flag, D
 import { authClient, type AuthUser } from '@/core/auth/client';
 
 const publicMenuItems = [
-  { href: '/cek-nomor',    label: 'Cek Nomor',    icon: Phone     },
-  { href: '/cek-rekening', label: 'Cek Rekening', icon: Building2 },
-  { href: '/cek-qris',     label: 'Cek QRIS',     icon: ScanLine  },
-  { href: '/report',       label: 'Laporkan',     icon: Flag      },
-  { href: '/artikel',      label: 'Artikel',      icon: Newspaper },
+  { href: '/cek-nomor',    label: 'Cek Nomor',         icon: Phone     },
+  { href: '/cek-rekening', label: 'Cek Rekening',      icon: Building2 },
+  { href: '/cek-qris',     label: 'Cek QRIS',          icon: ScanLine  },
+  { href: '/report',       label: 'Laporkan Penipuan', icon: Flag      },
+  { href: '/artikel',      label: 'Artikel',           icon: Newspaper },
 ];
 
 const privateMenuItems = [
-  { href: '/cek-nomor',     label: 'Cek Nomor',      icon: Phone     },
-  { href: '/cek-rekening',  label: 'Cek Rekening',   icon: Building2 },
-  { href: '/cek-qris',      label: 'Cek QRIS',       icon: ScanLine  },
-  { href: '/laporan-publik', label: 'Laporan Publik', icon: Database  },
-  { href: '/report',         label: 'Laporkan',       icon: Flag      },
-  { href: '/artikel',        label: 'Artikel',        icon: Newspaper },
+  { href: '/cek-nomor',      label: 'Cek Nomor',         icon: Phone     },
+  { href: '/cek-rekening',   label: 'Cek Rekening',      icon: Building2 },
+  { href: '/cek-qris',       label: 'Cek QRIS',          icon: ScanLine  },
+  { href: '/laporan-publik', label: 'Laporan Publik',    icon: Database  },
+  { href: '/report',         label: 'Laporkan Penipuan', icon: Flag      },
+  { href: '/artikel',        label: 'Artikel',           icon: Newspaper },
+];
+
+// Section-based navigation for the mobile drawer (kept separate from the
+// desktop nav data so drawer grouping changes don't affect desktop).
+const drawerLayananUtama = [
+  { href: '/cek-nomor',    label: 'Cek Nomor',         icon: Phone     },
+  { href: '/cek-rekening', label: 'Cek Rekening',      icon: Building2 },
+  { href: '/cek-qris',     label: 'Cek QRIS',          icon: ScanLine  },
+  { href: '/report',       label: 'Laporkan Penipuan', icon: Flag      },
+];
+
+const drawerEdukasi = [
+  { href: '/artikel', label: 'Artikel', icon: Newspaper },
+];
+
+const bantuanLegalItems = [
+  { href: '/tentang-kami',      label: 'Tentang Kami'      },
+  { href: '/faq',               label: 'FAQ'              },
+  { href: '/kontak',            label: 'Kontak Kami'       },
+  { href: '/syarat-ketentuan',  label: 'Syarat Ketentuan'  },
+  { href: '/kebijakan-privasi', label: 'Kebijakan Privasi' },
 ];
 
 export default function Navbar() {
@@ -84,7 +105,7 @@ export default function Navbar() {
     <>
       <nav className="bg-white sticky top-0 z-50 border-b border-slate-200 font-sans">
         <div className="max-w-7xl mx-auto px-4 sm:px-6">
-          <div className="flex items-center h-16">
+          <div className="flex items-center h-16 lg:h-[4.75rem]">
             <button onClick={() => { setIsMenuOpen(true); setIsProfileOpen(false); }}
               aria-label="Buka menu navigasi" aria-expanded={isMenuOpen} aria-haspopup="true"
               className="lg:hidden p-2 text-slate-700 hover:bg-slate-50 rounded-lg transition-colors mr-2">
@@ -123,7 +144,7 @@ export default function Navbar() {
                       <span className="text-white text-sm font-black">{initials}</span>
                     </div>
                     <span className="text-base text-slate-700">
-                      Hi, <span className="font-bold text-slate-900">{firstName}</span>
+                      Halo, <span className="font-bold text-slate-900">{firstName}</span>
                     </span>
                     <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform duration-200 ${isDropdownOpen ? 'rotate-180' : ''}`} />
                   </button>
@@ -195,16 +216,50 @@ export default function Navbar() {
                 <X className="w-4 h-4 text-slate-600" />
               </button>
             </div>
-            <div className="flex-1 px-3 py-4 space-y-1 overflow-y-auto">
-              {menuItems.map(({ href, label, icon: Icon }) => (
-                <Link key={href} href={href}
-                  className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
-                    isActive(href) ? 'bg-emerald-50 text-emerald-700' : 'text-slate-700 hover:bg-slate-50'
-                  }`}>
-                  <Icon className="w-4 h-4 shrink-0" />
-                  <span className="text-sm font-bold">{label}</span>
-                </Link>
-              ))}
+            <div className="flex-1 px-3 py-4 overflow-y-auto">
+              <p className="px-4 pt-1 pb-2 text-[11px] font-black text-slate-400 uppercase tracking-widest">
+                Layanan Utama
+              </p>
+              <div className="space-y-1 mb-5">
+                {drawerLayananUtama.map(({ href, label, icon: Icon }) => (
+                  <Link key={href} href={href}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
+                      isActive(href) ? 'bg-emerald-50 text-emerald-700' : 'text-slate-700 hover:bg-slate-50'
+                    }`}>
+                    <Icon className="w-4 h-4 shrink-0" />
+                    <span className="text-sm font-bold">{label}</span>
+                  </Link>
+                ))}
+              </div>
+
+              <p className="px-4 pt-3 pb-2 text-[11px] font-black text-slate-400 uppercase tracking-widest border-t border-slate-100">
+                Edukasi
+              </p>
+              <div className="space-y-1 mb-5">
+                {drawerEdukasi.map(({ href, label, icon: Icon }) => (
+                  <Link key={href} href={href}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
+                      isActive(href) ? 'bg-emerald-50 text-emerald-700' : 'text-slate-700 hover:bg-slate-50'
+                    }`}>
+                    <Icon className="w-4 h-4 shrink-0" />
+                    <span className="text-sm font-bold">{label}</span>
+                  </Link>
+                ))}
+              </div>
+
+              <p className="px-4 pt-3 pb-2 text-[11px] font-black text-slate-400 uppercase tracking-widest border-t border-slate-100">
+                Bantuan &amp; Legal
+              </p>
+              <div className="space-y-1">
+                {bantuanLegalItems.map(({ href, label }) => (
+                  <Link key={href} href={href}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
+                      isActive(href) ? 'bg-emerald-50 text-emerald-700' : 'text-slate-700 hover:bg-slate-50'
+                    }`}>
+                    <span className="text-sm font-bold">{label}</span>
+                  </Link>
+                ))}
+              </div>
             </div>
             {!user && (
               <div className="px-3 pb-8 pt-1 border-t border-slate-100 space-y-2">

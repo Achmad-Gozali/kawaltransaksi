@@ -411,7 +411,7 @@ export default function LaporanTab({ reports: initial, token, initialSearch = ''
             </thead>
             <tbody className="divide-y divide-slate-100">
               {!paginated.length ? (
-                <tr><td colSpan={8} className="px-4 py-10 text-center text-sm text-slate-400">Tidak ada laporan ditemukan.</td></tr>
+                <tr><td colSpan={8} className="px-4 py-10 text-center text-sm text-slate-400">Laporan tidak ditemukan.</td></tr>
               ) : paginated.map(r => {
                 const isSelected  = selected.has(r.id);
                 const status      = STATUS_MAP[r.status] ?? STATUS_MAP.pending;

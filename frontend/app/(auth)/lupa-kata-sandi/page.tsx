@@ -27,10 +27,10 @@ export default function LupaKataSandiPage() {
         setSuccess(true);
       } else {
         const data = await res.json();
-        setError(data.error || "Terjadi kesalahan.");
+        setError(data.error || "Terjadi kesalahan. Coba lagi sebentar lagi.");
       }
     } catch {
-      setError("Gagal menghubungi server. Periksa koneksi.");
+      setError("Tidak bisa terhubung ke server. Coba periksa koneksi internet Anda, lalu ulangi.");
     } finally {
       setLoading(false);
     }
@@ -53,11 +53,11 @@ export default function LupaKataSandiPage() {
               <div className="w-14 h-14 bg-emerald-50 border border-emerald-100 rounded-2xl flex items-center justify-center mx-auto mb-4">
                 <CheckCircle2 className="w-7 h-7 text-emerald-500" />
               </div>
-              <h2 className="text-lg font-bold text-slate-900 mb-2">Cek Email Kamu</h2>
+              <h2 className="text-lg font-bold text-slate-900 mb-2">Periksa Email Anda</h2>
               <p className="text-sm text-slate-500 leading-relaxed mb-6">
-                Jika email <span className="font-semibold text-slate-700">{email}</span> terdaftar, kami akan mengirimkan link reset kata sandi.
+                Kalau email <span className="font-semibold text-slate-700">{email}</span> terdaftar, kami akan mengirimkan tautan untuk mengatur ulang kata sandi.
               </p>
-              <p className="text-xs text-slate-400 mb-4">Tidak menerima email? Periksa folder spam.</p>
+              <p className="text-xs text-slate-400 mb-4">Tidak menerima email? Periksa folder spam Anda.</p>
               <button
                 onClick={() => { setSuccess(false); setEmail(""); }}
                 className="text-sm font-semibold text-emerald-600 hover:text-emerald-700 transition-colors"
@@ -69,7 +69,7 @@ export default function LupaKataSandiPage() {
             <>
               <div className="mb-6">
                 <h1 className="text-2xl font-bold text-gray-900 mb-1">Lupa Kata Sandi</h1>
-                <p className="text-sm text-gray-500">Masukkan email dan kami akan kirimkan link reset.</p>
+                <p className="text-sm text-gray-500">Masukkan email Anda, nanti kami kirimkan tautan untuk mengatur ulang kata sandi.</p>
               </div>
 
               {error && (

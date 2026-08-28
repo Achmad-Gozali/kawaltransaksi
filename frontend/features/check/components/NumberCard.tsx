@@ -165,7 +165,7 @@ export default function NumberCard({
                 )}
               </div>
               {isQris && qrDecodedName && (
-                <p className="text-[11px] text-slate-400 mt-2">Data merchant dibaca dari QR yang kamu scan -- bukan klaim yang sudah diverifikasi sebagai laporan resmi.</p>
+                <p className="text-[11px] text-slate-400 mt-2">Data merchant dibaca dari kode QR yang Anda pindai, bukan klaim yang sudah diverifikasi sebagai laporan resmi.</p>
               )}
               {isQris && !qrDecodedName && merchantName && (
                 <p className="text-[11px] text-slate-400 mt-2">Data merchant dari laporan komunitas sebelumnya.</p>
@@ -258,7 +258,7 @@ export default function NumberCard({
               <span className="text-[11px] text-red-700 font-mono break-all leading-relaxed">{truncateUrl(dangerLink, 55)}</span>
               <span className="text-[10px] font-bold px-2 py-1 bg-red-600 text-white rounded-lg uppercase tracking-wider shrink-0">Berbahaya</span>
             </div>
-            <p className="text-[10px] text-red-500 mt-1.5">Jangan klik atau bagikan tautan ini kepada siapapun.</p>
+            <p className="text-[10px] text-red-500 mt-1.5">Jangan buka atau bagikan tautan ini kepada siapa pun.</p>
           </div>
         )}
 

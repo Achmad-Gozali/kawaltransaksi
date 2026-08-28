@@ -163,7 +163,7 @@ export async function adminRoutes(app: FastifyInstance) {
       .set({ status, updatedAt: new Date() })
       .where(eq(reports.id, id))
       .returning();
-    if (!updated) return reply.status(404).send({ error: "Not found" });
+    if (!updated) return reply.status(404).send({ error: "Laporan tidak ditemukan." });
     return { data: updated };
   });
 
@@ -211,7 +211,7 @@ export async function adminRoutes(app: FastifyInstance) {
       .set({ role, updatedAt: new Date() })
       .where(eq(users.id, id))
       .returning();
-    if (!updated) return reply.status(404).send({ error: "Not found" });
+    if (!updated) return reply.status(404).send({ error: "Pengguna tidak ditemukan." });
     return { data: updated };
   });
 
@@ -272,7 +272,7 @@ export async function adminRoutes(app: FastifyInstance) {
   app.get("/articles/:id", { preHandler: requireAdmin }, async (req, reply) => {
     const { id } = req.params as { id: string };
     const [article] = await db.select().from(articles).where(eq(articles.id, id)).limit(1);
-    if (!article) return reply.status(404).send({ error: "Not found" });
+    if (!article) return reply.status(404).send({ error: "Artikel tidak ditemukan." });
     return { data: article };
   });
 
@@ -306,7 +306,7 @@ export async function adminRoutes(app: FastifyInstance) {
     const { title, excerpt, content, thumbnail, category, status } = req.body as any;
 
     const [existing] = await db.select().from(articles).where(eq(articles.id, id)).limit(1);
-    if (!existing) return reply.status(404).send({ error: "Not found" });
+    if (!existing) return reply.status(404).send({ error: "Artikel tidak ditemukan." });
 
     const thumbnailChanged = thumbnail !== undefined && thumbnail !== existing.thumbnail;
     if (thumbnailChanged) {
