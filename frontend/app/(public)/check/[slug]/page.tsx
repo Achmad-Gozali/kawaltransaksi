@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
 import Link from "next/link";
@@ -36,7 +37,10 @@ function resolveRealNumber(decodedSlug: string, type?: string): { realNumber: st
   return { realNumber, isQris };
 }
 
-async function fetchCheckPageData(number: string) {
+// React cache(): dedup per-request. generateMetadata dan body render sama-sama
+// memanggil ini dengan argumen sama dalam satu request, jadi backend cuma
+// di-hit sekali. force-dynamic tetap; ini bukan cache lintas-request.
+const fetchCheckPageData = cache(async (number: string) => {
   try {
     const res = await fetch(`${BACKEND_URL}/api/reports/public/check/${number}`, {
       headers: await forwardedClientHeaders(),
@@ -44,9 +48,9 @@ async function fetchCheckPageData(number: string) {
     if (!res.ok) return { reports: [], linked: [] };
     return (await res.json()).data ?? { reports: [], linked: [] };
   } catch { return { reports: [], linked: [] }; }
-}
+});
 
-async function fetchBlacklistData(number: string) {
+const fetchBlacklistData = cache(async (number: string) => {
   try {
     const res = await fetch(`${BACKEND_URL}/api/reports/public/blacklist/${number}`, {
       headers: await forwardedClientHeaders(),
@@ -54,7 +58,7 @@ async function fetchBlacklistData(number: string) {
     if (!res.ok) return { blacklist: null, trend: null };
     return (await res.json()).data ?? { blacklist: null, trend: null };
   } catch { return { blacklist: null, trend: null }; }
-}
+});
 
 interface QrisPreviewData {
   nmid: string;
