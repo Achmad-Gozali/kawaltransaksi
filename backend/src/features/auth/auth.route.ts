@@ -456,11 +456,15 @@ export async function authRoutes(app: FastifyInstance) {
         [user] = await db.insert(users).values({ name: userData.name, email, isVerified: true }).returning();
       }
 
-      const { accessToken, refreshToken } = signTokens(user.id, user.role);
+      // Access token TIDAK dikirim lewat query string (bisa tersimpan di
+      // history browser, header Referer, dan log proxy). Cukup set refresh
+      // cookie httpOnly di sini; halaman /auth/callback akan menukarnya jadi
+      // access token via /api/auth/refresh, sama seperti alur sesi biasa.
+      const { refreshToken } = signTokens(user.id, user.role);
       await saveSession(user.id, refreshToken);
       setRefreshCookie(reply, refreshToken);
 
-      return reply.redirect(`${frontendUrl}/auth/callback?token=${accessToken}`);
+      return reply.redirect(`${frontendUrl}/auth/callback`);
     } catch (err) {
       app.log.error(err);
       return reply.redirect(`${frontendUrl}/login?error=google_failed`);

@@ -10,22 +10,22 @@ function CallbackHandler() {
   const searchParams = useSearchParams();
 
   useEffect(() => {
-    const token = searchParams.get("token");
     const error = searchParams.get("error");
 
-    if (error || !token) {
-      router.replace(`/login?error=${error ?? "unknown"}`);
+    if (error) {
+      router.replace(`/login?error=${error}`);
       return;
     }
 
-    authClient.setToken(token);
-
+    // Access token tidak lagi dikirim lewat URL. Backend sudah menyetel
+    // cookie refresh_token (httpOnly) pada redirect ini; authClient.me()
+    // otomatis menukarnya jadi access token via /api/auth/refresh.
     authClient.me().then(user => {
-      if (user?.role === "admin") {
-        router.replace("/admin");
-      } else {
-        router.replace("/");
+      if (!user) {
+        router.replace("/login?error=google_failed");
+        return;
       }
+      router.replace(user.role === "admin" ? "/admin" : "/");
     });
   }, [searchParams, router]);
 
