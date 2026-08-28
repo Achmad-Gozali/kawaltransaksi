@@ -7,6 +7,7 @@ import {
   ShieldAlert, ShieldX,
 } from "lucide-react";
 import { formatNum, decodeSlug, safeJsonLd } from "@/core/utils";
+import { forwardedClientHeaders } from "@/core/http";
 import ShareButtons from "@/features/check/ShareButtons";
 import NumberCard from "@/features/check/components/NumberCard";
 import ReportList from "@/features/check/components/ReportList";
@@ -37,7 +38,9 @@ function resolveRealNumber(decodedSlug: string, type?: string): { realNumber: st
 
 async function fetchCheckPageData(number: string) {
   try {
-    const res = await fetch(`${BACKEND_URL}/api/reports/public/check/${number}`);
+    const res = await fetch(`${BACKEND_URL}/api/reports/public/check/${number}`, {
+      headers: await forwardedClientHeaders(),
+    });
     if (!res.ok) return { reports: [], linked: [] };
     return (await res.json()).data ?? { reports: [], linked: [] };
   } catch { return { reports: [], linked: [] }; }
@@ -45,7 +48,9 @@ async function fetchCheckPageData(number: string) {
 
 async function fetchBlacklistData(number: string) {
   try {
-    const res = await fetch(`${BACKEND_URL}/api/reports/public/blacklist/${number}`);
+    const res = await fetch(`${BACKEND_URL}/api/reports/public/blacklist/${number}`, {
+      headers: await forwardedClientHeaders(),
+    });
     if (!res.ok) return { blacklist: null, trend: null };
     return (await res.json()).data ?? { blacklist: null, trend: null };
   } catch { return { blacklist: null, trend: null }; }

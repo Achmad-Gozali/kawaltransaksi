@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { cookies } from "next/headers";
 import type { Metadata } from "next";
 import { formatDateID, safeJsonLd } from "@/core/utils";
+import { forwardedClientHeaders } from "@/core/http";
 import BankPageClient from "./BankPageClient";
 
 const BACKEND_URL = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
@@ -52,7 +53,9 @@ export default async function BankDetailPage({ params }: PageProps) {
   let allRows: ApiReportRow[] = [];
 
   try {
-    const res = await fetch(`${BACKEND_URL}/api/reports/public/bank/${encodeURIComponent(data.dbName)}`);
+    const res = await fetch(`${BACKEND_URL}/api/reports/public/bank/${encodeURIComponent(data.dbName)}`, {
+      headers: await forwardedClientHeaders(),
+    });
     if (res.ok) allRows = (await res.json()).data?.primary ?? [];
   } catch {}
 
