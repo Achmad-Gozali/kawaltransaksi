@@ -24,7 +24,7 @@ interface Props {
 
 export default function BankPageClient({ bankData: data, bankId, reports, totalCount, verifiedCount, pendingCount, isLoggedIn }: Props) {
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 pb-16" style={{ fontFamily: "'Inter', sans-serif" }}>
+    <div className="min-h-screen bg-slate-50 text-slate-900 pb-16">
       <div className="sm:hidden bg-white border-b border-slate-100">
         <div className="px-4 py-3 flex items-center justify-between">
           <Link href="/cek-rekening" className="inline-flex items-center gap-2 text-slate-500 hover:text-slate-900 text-sm transition-colors">
@@ -56,7 +56,7 @@ export default function BankPageClient({ bankData: data, bankId, reports, totalC
                   <Image src={data.logo} alt={`Logo ${data.fullName}`} fill className="object-contain object-left" />
                 </div>
                 <div>
-                  <h1 className="text-xl sm:text-2xl font-bold text-slate-900 leading-tight" style={{ fontFamily: "'Syne', sans-serif" }}>Cek Rekening {data.name} Penipu</h1>
+                  <h1 className="text-xl sm:text-2xl font-bold text-slate-900 leading-tight" style={{ fontFamily: 'var(--font-syne), sans-serif' }}>Cek Rekening {data.name} Penipu</h1>
                   <p className="text-[10px] text-slate-400 uppercase tracking-[0.15em] mt-0.5 font-medium">{data.fullName} - Verifikasi nomor rekening</p>
                 </div>
               </div>
@@ -79,7 +79,7 @@ export default function BankPageClient({ bankData: data, bankId, reports, totalC
                   </div>
                   <div>
                     <p className="text-[10px] text-slate-400 uppercase tracking-[0.12em] font-medium mb-0.5">Kode bank</p>
-                    <span className="text-lg font-bold text-slate-900" style={{ fontFamily: "'DM Mono', monospace" }}>{data.kodeBank}</span>
+                    <span className="text-lg font-bold text-slate-900" style={{ fontFamily: 'var(--font-dm-mono), monospace' }}>{data.kodeBank}</span>
                   </div>
                 </div>
                 <div className="flex items-start gap-3 px-4 py-4">
@@ -88,7 +88,7 @@ export default function BankPageClient({ bankData: data, bankId, reports, totalC
                   </div>
                   <div>
                     <p className="text-[10px] text-slate-400 uppercase tracking-[0.12em] font-medium mb-0.5">Call center</p>
-                    <a href={`tel:${data.callCenter}`} className="text-lg font-bold text-slate-900 hover:text-emerald-600 transition-colors" style={{ fontFamily: "'DM Mono', monospace" }}>{data.callCenter}</a>
+                    <a href={`tel:${data.callCenter}`} className="text-lg font-bold text-slate-900 hover:text-emerald-600 transition-colors" style={{ fontFamily: 'var(--font-dm-mono), monospace' }}>{data.callCenter}</a>
                   </div>
                 </div>
               </div>
@@ -105,7 +105,7 @@ export default function BankPageClient({ bankData: data, bankId, reports, totalC
             { value: pendingCount, label: "Pending", valueClass: pendingCount > 0 ? "text-amber-500" : "text-slate-300" },
           ].map((stat) => (
             <div key={stat.label} className="bg-white rounded-[8px] border border-slate-200/80 shadow-sm p-4 sm:p-5">
-              <p className={`text-3xl sm:text-4xl font-bold leading-none tabular-nums ${stat.valueClass}`} style={{ fontFamily: "'Syne', sans-serif" }}>{stat.value}</p>
+              <p className={`text-3xl sm:text-4xl font-bold leading-none tabular-nums ${stat.valueClass}`} style={{ fontFamily: 'var(--font-syne), sans-serif' }}>{stat.value}</p>
               <p className="text-[10px] text-slate-400 mt-2 uppercase tracking-[0.12em]">{stat.label}</p>
             </div>
           ))}
@@ -134,7 +134,7 @@ export default function BankPageClient({ bankData: data, bankId, reports, totalC
                   {reports.map((report, i) => (
                     <tr key={i} className="group hover:bg-slate-50/60 transition-colors">
                       <td className="px-5 py-4">
-                        <p className="text-sm font-medium text-slate-900 tracking-wider" style={{ fontFamily: "'DM Mono', monospace" }}>{report.displayNumber}</p>
+                        <p className="text-sm font-medium text-slate-900 tracking-wider" style={{ fontFamily: 'var(--font-dm-mono), monospace' }}>{report.displayNumber}</p>
                         <p className="text-[10px] text-slate-400 mt-0.5">a.n. {report.target_name || "Tidak diketahui"}</p>
                       </td>
                       <td className="px-5 py-4">
@@ -156,7 +156,7 @@ export default function BankPageClient({ bankData: data, bankId, reports, totalC
                 {reports.map((report, i) => (
                   <Link key={i} href={`/check/${encodeSlug(report.target_number)}?type=bank&bank=${bankId}`} className="flex items-center justify-between px-4 py-3.5 hover:bg-slate-50/60 transition-colors">
                     <div>
-                      <p className="text-sm font-medium text-slate-900 tracking-wider" style={{ fontFamily: "'DM Mono', monospace" }}>{report.displayNumber}</p>
+                      <p className="text-sm font-medium text-slate-900 tracking-wider" style={{ fontFamily: 'var(--font-dm-mono), monospace' }}>{report.displayNumber}</p>
                       <p className="text-[10px] text-slate-400 mt-0.5">a.n. {report.target_name || "Tidak diketahui"}</p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -179,7 +179,7 @@ export default function BankPageClient({ bankData: data, bankId, reports, totalC
         </div>
 
         <div className="bg-slate-900 rounded-[8px] p-7 sm:p-10 text-center shadow-sm">
-          <h2 className="text-xl sm:text-2xl font-bold text-white mb-2 leading-tight" style={{ fontFamily: "'Syne', sans-serif" }}>Cek rekening {data.name} sebelum transfer</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-white mb-2 leading-tight" style={{ fontFamily: 'var(--font-syne), sans-serif' }}>Cek rekening {data.name} sebelum transfer</h2>
           <p className="text-sm text-slate-400 max-w-md mx-auto mb-6 leading-relaxed">Verifikasi nomor rekening untuk memastikan keamanan transaksi Anda.</p>
           <Link href="/cek-rekening" className="inline-flex items-center gap-2 px-6 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-semibold rounded-[8px] transition-colors">
             Cek rekening sekarang <ArrowRight className="w-3.5 h-3.5" />

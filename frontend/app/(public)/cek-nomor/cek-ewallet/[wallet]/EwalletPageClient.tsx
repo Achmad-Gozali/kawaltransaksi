@@ -51,7 +51,7 @@ export default function EwalletPageClient({ walletData: data, walletId, reports,
   const hasSocials = socials.instagram || socials.tiktok;
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 pb-16" style={{ fontFamily: "'Inter', sans-serif" }}>
+    <div className="min-h-screen bg-slate-50 text-slate-900 pb-16">
       <div className="sm:hidden bg-white border-b border-slate-100">
         <div className="px-4 py-3 flex items-center justify-between">
           <Link href="/cek-nomor" className="inline-flex items-center gap-2 text-slate-500 hover:text-slate-900 text-sm transition-colors">
@@ -83,7 +83,7 @@ export default function EwalletPageClient({ walletData: data, walletId, reports,
                   <Image src={data.logo} alt={`Logo ${data.fullName}`} fill className="object-contain object-left" />
                 </div>
                 <div>
-                  <h1 className="text-xl sm:text-2xl font-bold text-slate-900 leading-tight" style={{ fontFamily: "'Syne', sans-serif" }}>Cek {data.name} Penipu</h1>
+                  <h1 className="text-xl sm:text-2xl font-bold text-slate-900 leading-tight" style={{ fontFamily: 'var(--font-syne), sans-serif' }}>Cek {data.name} Penipu</h1>
                   <p className="text-[10px] text-slate-400 uppercase tracking-[0.15em] mt-0.5 font-medium">{data.fullName} - Verifikasi nomor e-wallet</p>
                 </div>
               </div>
@@ -146,7 +146,7 @@ export default function EwalletPageClient({ walletData: data, walletId, reports,
             { value: pendingCount, label: "Pending", valueClass: pendingCount > 0 ? "text-amber-500" : "text-slate-300" },
           ].map((stat) => (
             <div key={stat.label} className="bg-white rounded-[8px] border border-slate-200/80 shadow-sm p-4 sm:p-5">
-              <p className={`text-3xl sm:text-4xl font-bold leading-none tabular-nums ${stat.valueClass}`} style={{ fontFamily: "'Syne', sans-serif" }}>{stat.value}</p>
+              <p className={`text-3xl sm:text-4xl font-bold leading-none tabular-nums ${stat.valueClass}`} style={{ fontFamily: 'var(--font-syne), sans-serif' }}>{stat.value}</p>
               <p className="text-[10px] text-slate-400 mt-2 uppercase tracking-[0.12em]">{stat.label}</p>
             </div>
           ))}
@@ -175,7 +175,7 @@ export default function EwalletPageClient({ walletData: data, walletId, reports,
                   {reports.map((report, i) => (
                     <tr key={i} className="group hover:bg-slate-50/60 transition-colors">
                       <td className="px-5 py-4">
-                        <p className="text-sm font-medium text-slate-900 tracking-wider" style={{ fontFamily: "'DM Mono', monospace" }}>{report.displayNumber}</p>
+                        <p className="text-sm font-medium text-slate-900 tracking-wider" style={{ fontFamily: 'var(--font-dm-mono), monospace' }}>{report.displayNumber}</p>
                         <p className="text-[10px] text-slate-400 mt-0.5">a.n. {report.target_name || "Tidak diketahui"}</p>
                       </td>
                       <td className="px-5 py-4">
@@ -197,7 +197,7 @@ export default function EwalletPageClient({ walletData: data, walletId, reports,
                 {reports.map((report, i) => (
                   <Link key={i} href={`/check/${encodeSlug(report.target_number)}?type=ewallet&wallet=${walletId}`} className="flex items-center justify-between px-4 py-3.5 hover:bg-slate-50/60 transition-colors">
                     <div>
-                      <p className="text-sm font-medium text-slate-900 tracking-wider" style={{ fontFamily: "'DM Mono', monospace" }}>{report.displayNumber}</p>
+                      <p className="text-sm font-medium text-slate-900 tracking-wider" style={{ fontFamily: 'var(--font-dm-mono), monospace' }}>{report.displayNumber}</p>
                       <p className="text-[10px] text-slate-400 mt-0.5">a.n. {report.target_name || "Tidak diketahui"}</p>
                     </div>
                     <div className="flex items-center gap-2">
@@ -220,7 +220,7 @@ export default function EwalletPageClient({ walletData: data, walletId, reports,
         </div>
 
         <div className="bg-slate-900 rounded-[8px] p-7 sm:p-10 text-center shadow-sm">
-          <h2 className="text-xl sm:text-2xl font-bold text-white mb-2 leading-tight uppercase tracking-tight" style={{ fontFamily: "'Syne', sans-serif" }}>ragu sama nomor rekening tujuan?</h2>
+          <h2 className="text-xl sm:text-2xl font-bold text-white mb-2 leading-tight uppercase tracking-tight" style={{ fontFamily: 'var(--font-syne), sans-serif' }}>ragu sama nomor rekening tujuan?</h2>
           <p className="text-sm text-slate-400 max-w-md mx-auto mb-6 leading-relaxed">jangan asal transfer. pastikan nomor rekening tujuan aman dan tidak memiliki riwayat penipuan di database kami.</p>
           <Link href="/cek-rekening" className="inline-flex items-center gap-2 px-6 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-semibold rounded-[8px] transition-colors uppercase tracking-wider">
             cek rekening sekarang <ArrowRight className="w-3.5 h-3.5" />

@@ -1,5 +1,5 @@
 import type { Metadata, Viewport } from 'next';
-import { Inter } from 'next/font/google';
+import { Inter, Syne, DM_Mono } from 'next/font/google';
 import './globals.css';
 import Script from 'next/script';
 import IdleLogoutWatcher from '@/components/IdleLogoutWatcher';
@@ -12,6 +12,23 @@ const inter = Inter({
   display:  'swap',
   variable: '--font-inter',
   weight:   ['400', '500', '600', '700'],
+});
+
+// Dipakai untuk heading tebal di halaman detail bank/e-wallet (--font-syne)
+// dan angka/nomor gaya monospace (--font-dm-mono). Sebelumnya cuma ditulis
+// di `style={{ fontFamily: "'Syne'..." }}` tanpa pernah di-load.
+const syne = Syne({
+  subsets:  ['latin'],
+  display:  'swap',
+  variable: '--font-syne',
+  weight:   ['600', '700'],
+});
+
+const dmMono = DM_Mono({
+  subsets:  ['latin'],
+  display:  'swap',
+  variable: '--font-dm-mono',
+  weight:   ['400', '500'],
 });
 
 export const metadata: Metadata = {
@@ -95,7 +112,12 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="id" className={`scroll-smooth ${inter.variable}`}>
+    <html lang="id" className={`scroll-smooth ${inter.variable} ${syne.variable} ${dmMono.variable}`}>
+      <head>
+        <link rel="preconnect" href="https://www.googletagmanager.com" />
+        <link rel="preconnect" href="https://api.kawaltransaksi.com" />
+        <link rel="dns-prefetch" href="https://www.google-analytics.com" />
+      </head>
       <body
         className={`${inter.className} bg-zinc-50 text-zinc-900 min-h-screen flex flex-col selection:bg-red-100 selection:text-red-900`}
         suppressHydrationWarning

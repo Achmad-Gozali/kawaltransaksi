@@ -42,6 +42,10 @@ async function fetchArticles(): Promise<SitemapArticle[]> {
   }
 }
 
+// Halaman legal jarang berubah -- pakai tanggal revisi tetap, bukan `now`,
+// supaya tidak mengirim sinyal "berubah tiap hari" ke crawler setiap build.
+const LEGAL_LAST_MODIFIED = new Date("2026-08-28");
+
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const now = new Date();
 
@@ -56,8 +60,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE_URL}/tentang-kami`,    lastModified: now, changeFrequency: "monthly", priority: 0.5 },
     { url: `${BASE_URL}/faq`,             lastModified: now, changeFrequency: "monthly", priority: 0.5 },
     { url: `${BASE_URL}/kontak`,          lastModified: now, changeFrequency: "monthly", priority: 0.4 },
-    { url: `${BASE_URL}/kebijakan-privasi`, lastModified: now, changeFrequency: "yearly", priority: 0.3 },
-    { url: `${BASE_URL}/syarat-ketentuan`,  lastModified: now, changeFrequency: "yearly", priority: 0.3 },
+    { url: `${BASE_URL}/kebijakan-privasi`, lastModified: LEGAL_LAST_MODIFIED, changeFrequency: "yearly", priority: 0.3 },
+    { url: `${BASE_URL}/syarat-ketentuan`,  lastModified: LEGAL_LAST_MODIFIED, changeFrequency: "yearly", priority: 0.3 },
   ];
 
   const bankPages: MetadataRoute.Sitemap = BANKS.map((bank) => ({
