@@ -109,10 +109,11 @@ function QrisTargetInput({ entry, onChange, onQrisEvidenceFile }: Required<Pick<
           </p>
           <p className="text-xs text-slate-300 mt-1">Foto harus menampilkan kode QR utuh dan jelas - JPG, PNG, maks 5MB</p>
         </div>
+        {/* Tanpa atribut `capture`: di HP, tap akan memunculkan pilihan
+            Kamera ATAU Galeri (dgn `capture` browser langsung buka kamera). */}
         <input
           type="file"
           accept="image/*"
-          capture="environment"
           disabled={isDecoding}
           onChange={e => handleFile(e.target.files?.[0] ?? null)}
           className="hidden"

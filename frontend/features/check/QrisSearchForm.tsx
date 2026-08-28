@@ -69,10 +69,11 @@ export default function QrisSearchForm() {
           <p className="text-xs text-slate-400">JPG, PNG - maks 5MB</p>
         </div>
         {merchantName && !isDecoding && <CheckCircle2 className="w-5 h-5 text-emerald-500 shrink-0" />}
+        {/* Tanpa atribut `capture`: di HP, tap akan memunculkan pilihan
+            Kamera ATAU Galeri (dgn `capture` browser langsung buka kamera). */}
         <input
           type="file"
           accept="image/*"
-          capture="environment"
           disabled={isDecoding}
           onChange={e => handleFile(e.target.files?.[0] ?? null)}
           className="hidden"
