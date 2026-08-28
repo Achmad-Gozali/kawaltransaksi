@@ -7,30 +7,47 @@ import { useRouter, usePathname } from 'next/navigation';
 import { LogOut, Menu, X, User, FileText, ChevronDown, Phone, Building2, Flag, Database, Newspaper, ScanLine } from 'lucide-react';
 import { authClient, type AuthUser } from '@/core/auth/client';
 
-const publicMenuItems = [
-  { href: '/cek-nomor',    label: 'Cek Nomor',         icon: Phone     },
-  { href: '/cek-rekening', label: 'Cek Rekening',      icon: Building2 },
-  { href: '/cek-qris',     label: 'Cek QRIS',          icon: ScanLine  },
-  { href: '/report',       label: 'Laporkan Penipuan', icon: Flag      },
-  { href: '/artikel',      label: 'Artikel',           icon: Newspaper },
+// ── Navbar desktop ────────────────────────────────────────────────────────
+// Sebuah entri bisa berupa link tunggal atau grup dropdown.
+type NavLink  = { kind: 'link'; href: string; label: string };
+type NavGroup = { kind: 'group'; label: string; items: { href: string; label: string }[] };
+type NavEntry = NavLink | NavGroup;
+
+const publicDesktopNav: NavEntry[] = [
+  { kind: 'link', href: '/cek-nomor',    label: 'Cek Nomor'         },
+  { kind: 'link', href: '/cek-rekening', label: 'Cek Rekening'      },
+  { kind: 'link', href: '/cek-qris',     label: 'Cek QRIS'          },
+  { kind: 'link', href: '/report',       label: 'Laporkan Penipuan' },
+  { kind: 'link', href: '/artikel',      label: 'Artikel'           },
 ];
 
-const privateMenuItems = [
-  { href: '/cek-nomor',      label: 'Cek Nomor',         icon: Phone     },
-  { href: '/cek-rekening',   label: 'Cek Rekening',      icon: Building2 },
-  { href: '/cek-qris',       label: 'Cek QRIS',          icon: ScanLine  },
-  { href: '/laporan-publik', label: 'Laporan Publik',    icon: Database  },
-  { href: '/report',         label: 'Laporkan Penipuan', icon: Flag      },
-  { href: '/artikel',        label: 'Artikel',           icon: Newspaper },
+// User login punya dua entri laporan (Laporan Publik + Buat Laporan) -- keduanya
+// digabung ke satu dropdown "Laporan" supaya navbar tidak terlalu padat.
+const privateDesktopNav: NavEntry[] = [
+  { kind: 'link',  href: '/cek-nomor',    label: 'Cek Nomor'    },
+  { kind: 'link',  href: '/cek-rekening', label: 'Cek Rekening' },
+  { kind: 'link',  href: '/cek-qris',     label: 'Cek QRIS'     },
+  { kind: 'group', label: 'Laporan', items: [
+    { href: '/laporan-publik', label: 'Lihat Laporan Publik' },
+    { href: '/report',         label: 'Buat Laporan Baru'    },
+  ]},
+  { kind: 'link',  href: '/artikel',      label: 'Artikel' },
 ];
 
-// Section-based navigation for the mobile drawer (kept separate from the
-// desktop nav data so drawer grouping changes don't affect desktop).
-const drawerLayananUtama = [
-  { href: '/cek-nomor',    label: 'Cek Nomor',         icon: Phone     },
-  { href: '/cek-rekening', label: 'Cek Rekening',      icon: Building2 },
-  { href: '/cek-qris',     label: 'Cek QRIS',          icon: ScanLine  },
-  { href: '/report',       label: 'Laporkan Penipuan', icon: Flag      },
+// ── Mobile drawer ─────────────────────────────────────────────────────────
+const drawerCekItems = [
+  { href: '/cek-nomor',    label: 'Cek Nomor',    icon: Phone     },
+  { href: '/cek-rekening', label: 'Cek Rekening', icon: Building2 },
+  { href: '/cek-qris',     label: 'Cek QRIS',     icon: ScanLine  },
+];
+
+// Hanya ditampilkan saat user BELUM login (saat login, dipindah ke section "Laporan").
+const drawerLaporkanItem = { href: '/report', label: 'Laporkan Penipuan', icon: Flag };
+
+// Section "Laporan" -- hanya untuk user yang sudah login (konsisten dgn dropdown desktop).
+const drawerLaporanItems = [
+  { href: '/laporan-publik', label: 'Lihat Laporan Publik', icon: Database },
+  { href: '/report',         label: 'Buat Laporan Baru',    icon: Flag     },
 ];
 
 const drawerEdukasi = [
@@ -50,10 +67,12 @@ export default function Navbar() {
   const [isMenuOpen, setIsMenuOpen]         = useState(false);
   const [isProfileOpen, setIsProfileOpen]   = useState(false);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [openNavGroup, setOpenNavGroup]     = useState<string | null>(null);
   const [isLoading, setIsLoading]           = useState(true);
   const router      = useRouter();
   const pathname    = usePathname();
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const navGroupRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -68,13 +87,17 @@ export default function Navbar() {
       setIsMenuOpen(false);
       setIsProfileOpen(false);
       setIsDropdownOpen(false);
+      setOpenNavGroup(null);
     });
   }, [pathname]);
 
   useEffect(() => {
     const handleClickOutside = (e: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node))
+      const target = e.target as Node;
+      if (dropdownRef.current && !dropdownRef.current.contains(target))
         setIsDropdownOpen(false);
+      if (navGroupRef.current && !navGroupRef.current.contains(target))
+        setOpenNavGroup(null);
     };
     document.addEventListener('mousedown', handleClickOutside);
     return () => document.removeEventListener('mousedown', handleClickOutside);
@@ -91,12 +114,20 @@ export default function Navbar() {
     setIsMenuOpen(false);
     setIsProfileOpen(false);
     setIsDropdownOpen(false);
+    setOpenNavGroup(null);
     router.push('/');
     router.refresh();
   };
 
-  const isActive  = (path: string) => pathname === path;
-  const menuItems = user ? privateMenuItems : publicMenuItems;
+  const isActive   = (path: string) => pathname === path;
+  const desktopNav = user ? privateDesktopNav : publicDesktopNav;
+
+  const navItemClass = (active: boolean) =>
+    `flex items-center gap-2 px-4 h-full text-sm font-bold uppercase tracking-wider transition-colors border-b-2 ${
+      active
+        ? 'text-emerald-700 border-emerald-700'
+        : 'text-slate-500 border-transparent hover:text-slate-900 hover:border-slate-300'
+    }`;
   const fullName  = user?.name || 'Pengguna';
   const firstName = fullName.split(' ')[0];
   const initials  = fullName.split(' ').slice(0, 2).map((n: string) => n[0]).join('').toUpperCase();
@@ -119,17 +150,50 @@ export default function Navbar() {
               </span>
             </Link>
 
-            <div className="hidden lg:flex flex-1 items-center justify-center gap-0 h-16">
-              {menuItems.map((item) => (
-                <Link key={item.href} href={item.href}
-                  className={`flex items-center gap-2 px-4 h-full text-sm font-bold uppercase tracking-wider transition-colors border-b-2 ${
-                    isActive(item.href)
-                      ? 'text-emerald-700 border-emerald-700'
-                      : 'text-slate-500 border-transparent hover:text-slate-900 hover:border-slate-300'
-                  }`}>
-                  {item.label}
-                </Link>
-              ))}
+            <div ref={navGroupRef} className="hidden lg:flex flex-1 items-center justify-center gap-0 h-16">
+              {desktopNav.map((entry) => {
+                if (entry.kind === 'link') {
+                  return (
+                    <Link key={entry.href} href={entry.href} className={navItemClass(isActive(entry.href))}>
+                      {entry.label}
+                    </Link>
+                  );
+                }
+
+                const groupActive = entry.items.some((i) => isActive(i.href));
+                const isOpen = openNavGroup === entry.label;
+                return (
+                  <div key={entry.label} className="relative h-full">
+                    <button
+                      type="button"
+                      onClick={() => setOpenNavGroup(isOpen ? null : entry.label)}
+                      aria-haspopup="true"
+                      aria-expanded={isOpen}
+                      className={`${navItemClass(groupActive || isOpen)} gap-1.5`}
+                    >
+                      {entry.label}
+                      <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                    {isOpen && (
+                      <div className="absolute left-1/2 -translate-x-1/2 top-full w-56 bg-white border border-slate-100 rounded-2xl shadow-xl py-2 z-50">
+                        {entry.items.map((item) => (
+                          <Link
+                            key={item.href}
+                            href={item.href}
+                            className={`block px-4 py-2.5 text-sm font-semibold normal-case tracking-normal transition-colors ${
+                              isActive(item.href)
+                                ? 'text-emerald-700 bg-emerald-50'
+                                : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                            }`}
+                          >
+                            {item.label}
+                          </Link>
+                        ))}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
             </div>
 
             <div className="hidden lg:flex items-center gap-2 shrink-0 ml-auto">
@@ -221,7 +285,7 @@ export default function Navbar() {
                 Layanan Utama
               </p>
               <div className="space-y-1 mb-5">
-                {drawerLayananUtama.map(({ href, label, icon: Icon }) => (
+                {drawerCekItems.map(({ href, label, icon: Icon }) => (
                   <Link key={href} href={href}
                     className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
                       isActive(href) ? 'bg-emerald-50 text-emerald-700' : 'text-slate-700 hover:bg-slate-50'
@@ -230,7 +294,35 @@ export default function Navbar() {
                     <span className="text-sm font-bold">{label}</span>
                   </Link>
                 ))}
+                {!user && (
+                  <Link href={drawerLaporkanItem.href}
+                    className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
+                      isActive(drawerLaporkanItem.href) ? 'bg-emerald-50 text-emerald-700' : 'text-slate-700 hover:bg-slate-50'
+                    }`}>
+                    <drawerLaporkanItem.icon className="w-4 h-4 shrink-0" />
+                    <span className="text-sm font-bold">{drawerLaporkanItem.label}</span>
+                  </Link>
+                )}
               </div>
+
+              {user && (
+                <>
+                  <p className="px-4 pt-3 pb-2 text-[11px] font-black text-slate-400 uppercase tracking-widest border-t border-slate-100">
+                    Laporan
+                  </p>
+                  <div className="space-y-1 mb-5">
+                    {drawerLaporanItems.map(({ href, label, icon: Icon }) => (
+                      <Link key={label} href={href}
+                        className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
+                          isActive(href) ? 'bg-emerald-50 text-emerald-700' : 'text-slate-700 hover:bg-slate-50'
+                        }`}>
+                        <Icon className="w-4 h-4 shrink-0" />
+                        <span className="text-sm font-bold">{label}</span>
+                      </Link>
+                    ))}
+                  </div>
+                </>
+              )}
 
               <p className="px-4 pt-3 pb-2 text-[11px] font-black text-slate-400 uppercase tracking-widest border-t border-slate-100">
                 Edukasi
