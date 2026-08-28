@@ -63,6 +63,27 @@ export interface Stats {
   rejected: number;
 }
 
+// Agregat dari GET /api/admin/analytics -- dihitung di SQL, dipakai StatistikTab
+// alih-alih menarik seluruh daftar laporan mentah lalu di-reduce di browser.
+export interface AdminAnalytics {
+  typeCounts: { targetType: string; count: number }[];
+  categoryCounts: { category: string; count: number }[];
+  platformCounts: { platform: string; count: number }[];
+  /** 30 hari terakhir, sudah zero-filled & terurut (WIB). date = 'YYYY-MM-DD'. */
+  dailyTrend: { date: string; total: number; verified: number; pending: number; loss: number }[];
+  lossTotal: number;
+  lossReportCount: number;
+}
+
+export const EMPTY_ANALYTICS: AdminAnalytics = {
+  typeCounts: [],
+  categoryCounts: [],
+  platformCounts: [],
+  dailyTrend: [],
+  lossTotal: 0,
+  lossReportCount: 0,
+};
+
 export type Tab =
   | 'dashboard'
   | 'laporan'
