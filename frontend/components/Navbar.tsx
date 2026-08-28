@@ -9,7 +9,14 @@ import { authClient, type AuthUser } from '@/core/auth/client';
 
 // ── Navbar desktop ────────────────────────────────────────────────────────
 // Sebuah entri bisa berupa link tunggal atau grup dropdown.
-type NavLink  = { kind: 'link'; href: string; label: string };
+//
+// `prefetch: false` mematikan prefetch-saat-masuk-viewport (hover tetap
+// prefetch). Next App Router memprefetch SEMUA <Link> yang terlihat begitu
+// halaman dibuka -- navbar + footer + isi halaman bisa jadi 20-30 request RSC
+// serentak dari 1 IP dan menabrak rate limit nginx. Jadi hanya fitur inti
+// (Cek Nomor/Rekening/QRIS) yang diprefetch instan; sisanya (Artikel, Login,
+// Register) menunggu hover/klik -- toh jarang jadi tujuan pertama pengunjung.
+type NavLink  = { kind: 'link'; href: string; label: string; prefetch?: false };
 type NavGroup = { kind: 'group'; label: string; items: { href: string; label: string }[] };
 type NavEntry = NavLink | NavGroup;
 
@@ -18,7 +25,7 @@ const publicDesktopNav: NavEntry[] = [
   { kind: 'link', href: '/cek-rekening', label: 'Cek Rekening'      },
   { kind: 'link', href: '/cek-qris',     label: 'Cek QRIS'          },
   { kind: 'link', href: '/report',       label: 'Laporkan Penipuan' },
-  { kind: 'link', href: '/artikel',      label: 'Artikel'           },
+  { kind: 'link', href: '/artikel',      label: 'Artikel', prefetch: false },
 ];
 
 // User login punya dua entri laporan (Laporan Publik + Buat Laporan) -- keduanya
@@ -31,7 +38,7 @@ const privateDesktopNav: NavEntry[] = [
     { href: '/laporan-publik', label: 'Lihat Laporan Publik' },
     { href: '/report',         label: 'Buat Laporan Baru'    },
   ]},
-  { kind: 'link',  href: '/artikel',      label: 'Artikel' },
+  { kind: 'link',  href: '/artikel',      label: 'Artikel', prefetch: false },
 ];
 
 // ── Mobile drawer ─────────────────────────────────────────────────────────
@@ -50,6 +57,9 @@ const drawerLaporanItems = [
   { href: '/report',         label: 'Buat Laporan Baru',    icon: Flag     },
 ];
 
+// Artikel + halaman legal: bukan tujuan pertama pengunjung, dan di drawer mobile
+// mereka semua ter-render sekaligus saat drawer dibuka -> prefetch dimatikan
+// biar tap hamburger tidak memicu belasan request RSC serentak.
 const drawerEdukasi = [
   { href: '/artikel', label: 'Artikel', icon: Newspaper },
 ];
@@ -154,7 +164,7 @@ export default function Navbar() {
               {desktopNav.map((entry) => {
                 if (entry.kind === 'link') {
                   return (
-                    <Link key={entry.href} href={entry.href} className={navItemClass(isActive(entry.href))}>
+                    <Link key={entry.href} href={entry.href} prefetch={entry.prefetch} className={navItemClass(isActive(entry.href))}>
                       {entry.label}
                     </Link>
                   );
@@ -235,10 +245,10 @@ export default function Navbar() {
                 </div>
               ) : (
                 <div className="flex items-center gap-2">
-                  <Link href="/login" className="px-5 py-2.5 border border-slate-300 text-slate-700 text-xs font-bold uppercase tracking-widest rounded-lg hover:bg-slate-50 transition-colors">
+                  <Link href="/login" prefetch={false} className="px-5 py-2.5 border border-slate-300 text-slate-700 text-xs font-bold uppercase tracking-widest rounded-lg hover:bg-slate-50 transition-colors">
                     Masuk
                   </Link>
-                  <Link href="/register" className="px-5 py-2.5 bg-emerald-700 text-white text-xs font-bold uppercase tracking-widest rounded-lg hover:bg-emerald-800 transition-colors">
+                  <Link href="/register" prefetch={false} className="px-5 py-2.5 bg-emerald-700 text-white text-xs font-bold uppercase tracking-widest rounded-lg hover:bg-emerald-800 transition-colors">
                     Daftar
                   </Link>
                 </div>
@@ -256,8 +266,8 @@ export default function Navbar() {
                 </button>
               ) : (
                 <div className="flex items-center gap-1.5">
-                  <Link href="/login" className="text-xs font-bold text-slate-700 px-3 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">Masuk</Link>
-                  <Link href="/register" className="text-xs font-bold text-white px-3 py-2 bg-emerald-700 rounded-lg hover:bg-emerald-800 transition-colors">Daftar</Link>
+                  <Link href="/login" prefetch={false} className="text-xs font-bold text-slate-700 px-3 py-2 border border-slate-300 rounded-lg hover:bg-slate-50 transition-colors">Masuk</Link>
+                  <Link href="/register" prefetch={false} className="text-xs font-bold text-white px-3 py-2 bg-emerald-700 rounded-lg hover:bg-emerald-800 transition-colors">Daftar</Link>
                 </div>
               )}
             </div>
@@ -329,7 +339,7 @@ export default function Navbar() {
               </p>
               <div className="space-y-1 mb-5">
                 {drawerEdukasi.map(({ href, label, icon: Icon }) => (
-                  <Link key={href} href={href}
+                  <Link key={href} href={href} prefetch={false}
                     className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
                       isActive(href) ? 'bg-emerald-50 text-emerald-700' : 'text-slate-700 hover:bg-slate-50'
                     }`}>
@@ -344,7 +354,7 @@ export default function Navbar() {
               </p>
               <div className="space-y-1">
                 {bantuanLegalItems.map(({ href, label }) => (
-                  <Link key={href} href={href}
+                  <Link key={href} href={href} prefetch={false}
                     className={`flex items-center gap-3 px-4 py-3 rounded-xl transition-colors ${
                       isActive(href) ? 'bg-emerald-50 text-emerald-700' : 'text-slate-700 hover:bg-slate-50'
                     }`}>
@@ -355,10 +365,10 @@ export default function Navbar() {
             </div>
             {!user && (
               <div className="px-3 pb-8 pt-1 border-t border-slate-100 space-y-2">
-                <Link href="/register" className="w-full flex items-center justify-center px-4 py-3 bg-emerald-700 text-white text-sm font-bold rounded-xl hover:bg-emerald-800 transition-colors">
+                <Link href="/register" prefetch={false} className="w-full flex items-center justify-center px-4 py-3 bg-emerald-700 text-white text-sm font-bold rounded-xl hover:bg-emerald-800 transition-colors">
                   Daftar Sekarang
                 </Link>
-                <Link href="/login" className="w-full flex items-center justify-center px-4 py-3 border border-slate-200 text-slate-700 text-sm font-bold rounded-xl hover:bg-slate-50 transition-colors">
+                <Link href="/login" prefetch={false} className="w-full flex items-center justify-center px-4 py-3 border border-slate-200 text-slate-700 text-sm font-bold rounded-xl hover:bg-slate-50 transition-colors">
                   Masuk
                 </Link>
               </div>

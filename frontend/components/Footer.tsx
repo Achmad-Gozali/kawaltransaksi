@@ -8,6 +8,11 @@ const layananUtama = [
   { label: 'Laporkan Penipuan', href: '/report' },
 ];
 
+// Footer ada di SETIAP halaman dan sering ikut viewport awal -> semua <Link>-nya
+// diprefetch begitu halaman render. Halaman legal (tentang/faq/kontak/S&K/privasi)
+// nyaris tidak pernah jadi tujuan pertama, jadi prefetch-viewport-nya dimatikan
+// untuk mengurangi badai request RSC dari satu IP. Layanan utama dibiarkan
+// default (sudah dedup dengan link yang sama di navbar).
 const bantuanLegal = [
   { label: 'Tentang Kami',      href: '/tentang-kami' },
   { label: 'FAQ',               href: '/faq' },
@@ -57,7 +62,7 @@ export default function Footer() {
             <ul className="space-y-3">
               {bantuanLegal.map((item) => (
                 <li key={item.href}>
-                  <Link href={item.href} className="text-xs font-bold text-slate-300 hover:text-emerald-400 uppercase tracking-wider transition-colors">
+                  <Link href={item.href} prefetch={false} className="text-xs font-bold text-slate-300 hover:text-emerald-400 uppercase tracking-wider transition-colors">
                     {item.label}
                   </Link>
                 </li>
