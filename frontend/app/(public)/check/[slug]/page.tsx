@@ -160,7 +160,7 @@ const bankNameMap: Record<string, string> = {
 
 const walletNameMap: Record<string, string> = {
   gopay: "GoPay", dana: "DANA", ovo: "OVO",
-  shopeepay: "ShopeePay", shopee: "ShopeePay",
+  shopeepay: "ShopeePay",
   linkaja: "LinkAja", lainnya: "E-Wallet Lainnya",
 };
 
@@ -359,6 +359,14 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
 
   const config = statusConfig[status];
 
+  // H1 SEO: judul halaman berbasis frasa pencarian ("cek nomor 0812... penipu"),
+  // bukan sekadar nomornya. sr-only supaya tidak menduplikasi verdict bar yang
+  // sudah tampil, tapi tetap jadi satu-satunya <h1> di halaman.
+  const verdictLabel =
+    status === "danger" ? "Terindikasi Penipuan"
+    : status === "warning" ? "Pending Verifikasi"
+    : "Tidak Ada Laporan";
+
   // NMID QRIS tidak diformat gaya nomor telepon (grouping per 4 digit).
   const displayNumLower = isQris ? `QRIS ${realNumber}` : `nomor ${formatNum(realNumber)}`;
   const displayNumTitle = isQris ? `QRIS ${realNumber}` : `Nomor ${formatNum(realNumber)}`;
@@ -398,6 +406,9 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(structuredData) }} />
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(breadcrumbData) }} />
       <div className="min-h-screen bg-slate-50 text-slate-900 font-sans">
+        <h1 className="sr-only">
+          Cek {displayNumTitle}{isQris ? "" : " Penipu"} — {verdictLabel} | KawalTransaksi
+        </h1>
 
         <div className="sm:hidden bg-white border-b border-slate-100 sticky top-16 z-10">
           <div className="px-4 py-3 flex items-center justify-between">

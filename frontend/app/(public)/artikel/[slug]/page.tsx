@@ -20,6 +20,26 @@ function readingTime(content?: string) {
   return `${mins} menit baca`;
 }
 
+function stripHtml(html?: string) {
+  return (html ?? '').replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+}
+
+// excerpt boleh kosong/undefined dari DB -> pakai 155 karakter pertama konten
+// (tanpa tag HTML) sebagai fallback untuk <meta description> & JSON-LD.
+function deriveExcerpt(article: { excerpt?: string | null; content?: string | null }): string | undefined {
+  const raw = article.excerpt?.trim();
+  if (raw) return raw;
+  const text = stripHtml(article.content ?? '');
+  if (!text) return undefined;
+  return text.length > 155 ? `${text.slice(0, 155).trimEnd()}…` : text;
+}
+
+// Gambar di konten TipTap (dangerouslySetInnerHTML) tidak lazy secara default.
+// Sisipkan loading="lazy" + decoding="async" pada <img> yang belum punya.
+function lazyifyContentImages(html?: string): string {
+  return (html ?? '').replace(/<img\b(?![^>]*\bloading=)/gi, '<img loading="lazy" decoding="async"');
+}
+
 async function getArticle(slug: string) {
   try {
     const res = await fetch(`${BASE}/api/admin/articles/public/${slug}`, { next: { revalidate: 300 } });
@@ -51,7 +71,7 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
   const thumbUrl = article.thumbnail;
   const url = `${SITE_URL}/artikel/${slug}`;
   const title = `${article.title} - KawalTransaksi`;
-  const description = article.excerpt ?? undefined;
+  const description = deriveExcerpt(article);
 
   return {
     title,
@@ -89,16 +109,25 @@ export default async function ArtikelDetailPage({ params }: { params: Promise<{ 
   const updatedAt   = article.updated_at ?? article.updatedAt ?? publishedAt;
   const rt          = readingTime(article.content);
   const thumbUrl    = article.thumbnail;
+  const excerpt     = deriveExcerpt(article);
+  const contentHtml = lazyifyContentImages(article.content);
 
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "Article",
     headline: article.title,
-    description: article.excerpt ?? undefined,
+    description: excerpt,
     image: thumbUrl ? [thumbUrl] : undefined,
     datePublished: publishedAt ?? undefined,
     dateModified: updatedAt ?? undefined,
     articleSection: article.category ?? undefined,
+    // DB punya kolom author_id, tapi endpoint publik tidak mengekspos nama
+    // penulis individual -> atribusi ke Organization.
+    author: {
+      "@type": "Organization",
+      name: "KawalTransaksi",
+      url: "https://kawaltransaksi.com",
+    },
     publisher: {
       "@type": "Organization",
       name: "KawalTransaksi",
@@ -143,8 +172,8 @@ export default async function ArtikelDetailPage({ params }: { params: Promise<{ 
                     src={thumbUrl}
                     alt={article.title}
                     fill
+                    sizes="(max-width: 768px) 100vw, 720px"
                     className="object-cover"
-                    unoptimized
                     priority
                   />
                 </div>
@@ -158,7 +187,7 @@ export default async function ArtikelDetailPage({ params }: { params: Promise<{ 
 
               <div
                 className="prose prose-slate max-w-none prose-headings:font-bold prose-headings:text-slate-900 prose-p:text-slate-700 prose-p:leading-relaxed prose-a:text-emerald-600 prose-a:no-underline hover:prose-a:underline prose-blockquote:border-l-4 prose-blockquote:border-slate-200 prose-blockquote:text-slate-500 prose-blockquote:not-italic prose-strong:text-slate-900 prose-li:text-slate-700"
-                dangerouslySetInnerHTML={{ __html: article.content }}
+                dangerouslySetInnerHTML={{ __html: contentHtml }}
               />
 
               {/* Artikel Lainnya */}
@@ -175,7 +204,7 @@ export default async function ArtikelDetailPage({ params }: { params: Promise<{ 
                           className="group flex flex-col bg-white border border-slate-200 rounded-lg overflow-hidden hover:shadow-md transition-all duration-200">
                           {rThumbUrl ? (
                             <div className="relative w-full h-36 bg-slate-100 overflow-hidden">
-                              <Image src={rThumbUrl} alt={a.title} fill className="object-cover group-hover:scale-105 transition-transform duration-300" unoptimized />
+                              <Image src={rThumbUrl} alt={a.title} fill sizes="(max-width: 640px) 100vw, 240px" className="object-cover group-hover:scale-105 transition-transform duration-300" />
                             </div>
                           ) : (
                             <div className="w-full h-36 bg-slate-100 flex items-center justify-center">
@@ -217,7 +246,7 @@ export default async function ArtikelDetailPage({ params }: { params: Promise<{ 
                       <Link key={a.slug} href={`/artikel/${a.slug}`} className="flex gap-3 group">
                         {sThumbUrl ? (
                           <div className="relative w-16 h-14 rounded-lg overflow-hidden bg-slate-100 shrink-0">
-                            <Image src={sThumbUrl} alt={a.title} fill className="object-cover" unoptimized />
+                            <Image src={sThumbUrl} alt={a.title} fill sizes="64px" className="object-cover" />
                           </div>
                         ) : (
                           <div className="w-16 h-14 rounded-lg bg-slate-100 shrink-0 flex items-center justify-center">

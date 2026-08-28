@@ -3,7 +3,7 @@ import Image from "next/image";
 import { Phone, Landmark, Wallet, ArrowRight, ScanLine } from "lucide-react";
 import * as motion from "motion/react-client";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 const BACKEND_URL = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
@@ -90,7 +90,7 @@ async function getRecentReports(): Promise<ReportItem[]> {
   try {
     const res = await fetch(`${BACKEND_URL}/api/reports/public/recent`, {
       signal: AbortSignal.timeout(5000),
-      cache: "no-store",
+      next: { revalidate: 60 },
     });
     if (!res.ok) return [];
     const json = await res.json();
@@ -102,7 +102,7 @@ async function getStats(): Promise<Stats> {
   try {
     const res = await fetch(`${BACKEND_URL}/api/reports/public/stats`, {
       signal: AbortSignal.timeout(5000),
-      cache: "no-store",
+      next: { revalidate: 60 },
     });
     if (!res.ok) return { total: 0, verified: 0, totalLoss: 0 };
     const json = await res.json();

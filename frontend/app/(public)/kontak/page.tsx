@@ -2,7 +2,8 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Kontak - KawalTransaksi',
-  description: 'Hubungi tim KawalTransaksi untuk pertanyaan, laporan, atau kerja sama.',
+  description: 'Hubungi tim KawalTransaksi untuk pertanyaan seputar cek rekening penipu, cek nomor penipu, laporan penipuan, atau kerja sama.',
+  alternates: { canonical: 'https://kawaltransaksi.com/kontak' },
 };
 
 function IconGmail() {

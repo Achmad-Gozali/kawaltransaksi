@@ -6,12 +6,31 @@ import RekeningSearchForm from "@/features/check/RekeningSearchForm";
 import SearchHero from "@/features/check/SearchHero";
 import { formatRupiah, encodeSlug, safeJsonLd } from "@/core/utils";
 
+const PAGE_TITLE = "Cek Rekening Penipu Online Gratis & Real-Time | KawalTransaksi";
+const PAGE_DESC =
+  "Cek rekening penipu dan cek nomor rekening penipu online secara gratis dan real-time. Verifikasi nomor rekening bank tujuan sebelum transfer lewat database laporan komunitas KawalTransaksi.";
+const PAGE_URL = "https://kawaltransaksi.com/cek-rekening";
+
 export const metadata: Metadata = {
-  title: "Cek Rekening - KawalTransaksi",
-  description: "Verifikasi keamanan nomor rekening bank secara real-time.",
+  title: PAGE_TITLE,
+  description: PAGE_DESC,
+  alternates: { canonical: PAGE_URL },
+  openGraph: {
+    title: PAGE_TITLE,
+    description: PAGE_DESC,
+    url: PAGE_URL,
+    type: "website",
+    locale: "id_ID",
+    siteName: "KawalTransaksi",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: PAGE_TITLE,
+    description: PAGE_DESC,
+  },
 };
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 const BACKEND_URL = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
@@ -59,7 +78,7 @@ async function getStats() {
   try {
     const res = await fetch(`${BACKEND_URL}/api/reports/public/stats-rekening`, {
       signal: AbortSignal.timeout(5000),
-      cache: "no-store",
+      next: { revalidate: 60 },
     });
     if (!res.ok) return { totalLaporan: 0, totalRekening: 0, totalKerugian: 0 };
     return (await res.json()).data ?? { totalLaporan: 0, totalRekening: 0, totalKerugian: 0 };
@@ -70,7 +89,7 @@ async function getLeaderboard() {
   try {
     const res = await fetch(`${BACKEND_URL}/api/reports/public/leaderboard-rekening`, {
       signal: AbortSignal.timeout(5000),
-      cache: "no-store",
+      next: { revalidate: 60 },
     });
     if (!res.ok) return [];
     return (await res.json()).data ?? [] as { target_number: string; bank_name: string | null; report_count: number }[];

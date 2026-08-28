@@ -6,12 +6,31 @@ import NomorSearchForm from "@/features/check/NomorSearchForm";
 import SearchHero from "@/features/check/SearchHero";
 import { formatRupiah, encodeSlug, safeJsonLd } from "@/core/utils";
 
+const PAGE_TITLE = "Cek Nomor HP & WhatsApp Penipu Gratis | KawalTransaksi";
+const PAGE_DESC =
+  "Cek nomor HP penipu, cek nomor WA penipu, dan cek nomor WhatsApp penipu secara gratis dan real-time. Database laporan komunitas anti-penipuan Indonesia terlengkap.";
+const PAGE_URL = "https://kawaltransaksi.com/cek-nomor";
+
 export const metadata: Metadata = {
-  title: "Cek Nomor HP - KawalTransaksi",
-  description: "Cek nomor HP atau WhatsApp terindikasi penipuan secara gratis.",
+  title: PAGE_TITLE,
+  description: PAGE_DESC,
+  alternates: { canonical: PAGE_URL },
+  openGraph: {
+    title: PAGE_TITLE,
+    description: PAGE_DESC,
+    url: PAGE_URL,
+    type: "website",
+    locale: "id_ID",
+    siteName: "KawalTransaksi",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: PAGE_TITLE,
+    description: PAGE_DESC,
+  },
 };
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 const BACKEND_URL = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
@@ -19,7 +38,7 @@ const ewallets = [
   { id: "gopay",   name: "GoPay",     logo: "/ewallets/gopay.png",     description: "Verifikasi akun GoPay dan identifikasi potensi penipuan sebelum transfer." },
   { id: "dana",    name: "DANA",      logo: "/ewallets/dana.png",      description: "Verifikasi akun DANA dan identifikasi potensi penipuan sebelum transfer." },
   { id: "ovo",     name: "OVO",       logo: "/ewallets/ovo.png",       description: "Verifikasi akun OVO dan identifikasi potensi penipuan sebelum transfer." },
-  { id: "shopee",  name: "ShopeePay", logo: "/ewallets/shopeepay.png", description: "Verifikasi akun ShopeePay dan identifikasi potensi penipuan sebelum transfer." },
+  { id: "shopeepay", name: "ShopeePay", logo: "/ewallets/shopeepay.png", description: "Verifikasi akun ShopeePay dan identifikasi potensi penipuan sebelum transfer." },
   { id: "linkaja", name: "LinkAja",   logo: "/ewallets/linkaja.png",   description: "Verifikasi akun LinkAja dan identifikasi potensi penipuan sebelum transfer." },
 ];
 
@@ -54,7 +73,7 @@ async function getStats() {
   try {
     const res = await fetch(`${BACKEND_URL}/api/reports/public/stats-nomor`, {
       signal: AbortSignal.timeout(5000),
-      cache: "no-store",
+      next: { revalidate: 60 },
     });
     if (!res.ok) return { totalLaporan: 0, totalNomor: 0, totalKerugian: 0 };
     return (await res.json()).data ?? { totalLaporan: 0, totalNomor: 0, totalKerugian: 0 };
@@ -65,7 +84,7 @@ async function getLeaderboard() {
   try {
     const res = await fetch(`${BACKEND_URL}/api/reports/public/leaderboard-nomor`, {
       signal: AbortSignal.timeout(5000),
-      cache: "no-store",
+      next: { revalidate: 60 },
     });
     if (!res.ok) return [];
     return (await res.json()).data ?? [];
@@ -84,8 +103,8 @@ export default async function CekNomorPage() {
   return (
     <div className="min-h-screen bg-white text-slate-900 font-sans">
       <SearchHero
-        title="Cek Nomor Telepon Penipu Online"
-        description="Identifikasi apakah seseorang berpotensi melakukan penipuan dengan mengecek nomor HP atau WhatsApp sebelum bertransaksi."
+        title="Cek Nomor HP & WhatsApp Penipu Online"
+        description="Cek nomor HP penipu dan cek nomor WA penipu sebelum bertransaksi. Identifikasi apakah sebuah nomor WhatsApp terindikasi penipuan lewat laporan komunitas."
         hint={<>Contoh: <span className="text-emerald-600 font-medium">081234567890</span></>}
       >
         <NomorSearchForm />

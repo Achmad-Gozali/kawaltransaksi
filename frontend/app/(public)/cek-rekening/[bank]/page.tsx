@@ -25,15 +25,35 @@ interface PageProps { params: Promise<{ bank: string }>; }
 
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { bank } = await params;
-  const data = bankData[bank.toLowerCase()];
-  if (!data) return { title: "Bank Tidak Ditemukan" };
+  const bankKey = bank.toLowerCase();
+  const data = bankData[bankKey];
+  if (!data) return { title: "Bank Tidak Ditemukan - KawalTransaksi", robots: { index: false, follow: false } };
+
+  const title = `Cek Rekening ${data.name} Penipu — Verifikasi Nomor Rekening | KawalTransaksi`;
+  const description = `Cek rekening ${data.name} penipu dan cek nomor rekening ${data.name} sebelum transfer. Verifikasi nomor rekening ${data.fullName} lewat database laporan penipuan komunitas KawalTransaksi.`;
+  const url = `${BASE_URL}/cek-rekening/${bankKey}`;
+
   return {
-    title: `Cek Rekening ${data.name} - KawalTransaksi`,
-    description: `Verifikasi nomor rekening ${data.fullName} sebelum transfer. Cek apakah rekening ${data.name} terindikasi penipuan di database komunitas KawalTransaksi.`,
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      title,
+      description,
+      url,
+      type: "website",
+      locale: "id_ID",
+      siteName: "KawalTransaksi",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title,
+      description,
+    },
   };
 }
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 export default async function BankDetailPage({ params }: PageProps) {
   const { bank } = await params;
@@ -55,6 +75,7 @@ export default async function BankDetailPage({ params }: PageProps) {
   try {
     const res = await fetch(`${BACKEND_URL}/api/reports/public/bank/${encodeURIComponent(data.dbName)}`, {
       headers: await forwardedClientHeaders(),
+      next: { revalidate: 60 },
     });
     if (res.ok) allRows = (await res.json()).data?.primary ?? [];
   } catch {}
@@ -72,15 +93,25 @@ export default async function BankDetailPage({ params }: PageProps) {
 
   const structuredData = {
     "@context": "https://schema.org", "@type": "WebPage",
-    name: `Cek Rekening ${data.name} - KawalTransaksi`,
-    description: `Verifikasi nomor rekening ${data.fullName} sebelum transfer. Cek apakah rekening ${data.name} terindikasi penipuan.`,
+    name: `Cek Rekening ${data.name} Penipu — Verifikasi Nomor Rekening | KawalTransaksi`,
+    description: `Cek rekening ${data.name} penipu dan cek nomor rekening ${data.name} sebelum transfer. Verifikasi nomor rekening ${data.fullName} lewat database laporan penipuan komunitas.`,
     url: `${BASE_URL}/cek-rekening/${bankKey}`,
     about: { "@type": "FinancialProduct", name: data.fullName, provider: { "@type": "BankOrCreditUnion", name: data.fullName, telephone: data.callCenter, url: data.website } },
+  };
+
+  const breadcrumbData = {
+    "@context": "https://schema.org", "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Beranda", item: BASE_URL },
+      { "@type": "ListItem", position: 2, name: "Cek Rekening", item: `${BASE_URL}/cek-rekening` },
+      { "@type": "ListItem", position: 3, name: data.name, item: `${BASE_URL}/cek-rekening/${bankKey}` },
+    ],
   };
 
   return (
     <>
       <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(structuredData) }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(breadcrumbData) }} />
       <BankPageClient bankId={bankKey} bankData={data} reports={reports} totalCount={totalCount} verifiedCount={verifiedCount} pendingCount={pendingCount} isLoggedIn={isLoggedIn} />
     </>
   );

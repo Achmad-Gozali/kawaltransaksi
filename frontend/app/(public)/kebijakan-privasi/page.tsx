@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Kebijakan Privasi - KawalTransaksi',
+  description: 'Kebijakan privasi KawalTransaksi: bagaimana kami mengumpulkan, memakai, dan melindungi data Anda saat menggunakan layanan cek rekening dan nomor penipu.',
+  alternates: { canonical: 'https://kawaltransaksi.com/kebijakan-privasi' },
 };
 
 export default function KebijakanPrivasiPage() {
