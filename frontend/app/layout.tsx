@@ -3,6 +3,9 @@ import { Inter } from 'next/font/google';
 import './globals.css';
 import Script from 'next/script';
 import IdleLogoutWatcher from '@/components/IdleLogoutWatcher';
+import { safeJsonLd } from '@/core/utils';
+
+const SITE_URL = 'https://kawaltransaksi.com';
 
 const inter = Inter({
   subsets:  ['latin'],
@@ -33,6 +36,8 @@ export const metadata: Metadata = {
     locale:      'id_ID',
     siteName:    'KawalTransaksi',
     url:         'https://kawaltransaksi.com',
+    // Gambar OG di-handle file convention app/(public)/opengraph-image.tsx
+    // (+ versi dinamis di [bank]/[wallet]); twitter:image otomatis fallback ke situ.
   },
   twitter: {
     card:        'summary_large_image',
@@ -45,6 +50,40 @@ export const metadata: Metadata = {
     capable:        true,
     statusBarStyle: 'black-translucent',
     title:          'KawalTransaksi',
+  },
+};
+
+const organizationJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'Organization',
+  '@id': `${SITE_URL}/#organization`,
+  name: 'KawalTransaksi',
+  url: SITE_URL,
+  logo: `${SITE_URL}/logo.png`,
+  description:
+    'Platform komunitas anti-penipuan digital Indonesia untuk cek nomor HP, rekening bank, e-wallet, dan QRIS terindikasi penipuan.',
+  sameAs: [
+    'https://www.tiktok.com/@alieee27_',
+    'https://www.instagram.com/achmadgozali27_/',
+    'https://www.facebook.com/ali.gntng201',
+  ],
+};
+
+const websiteJsonLd = {
+  '@context': 'https://schema.org',
+  '@type': 'WebSite',
+  '@id': `${SITE_URL}/#website`,
+  name: 'KawalTransaksi',
+  url: SITE_URL,
+  inLanguage: 'id-ID',
+  publisher: { '@id': `${SITE_URL}/#organization` },
+  potentialAction: {
+    '@type': 'SearchAction',
+    target: {
+      '@type': 'EntryPoint',
+      urlTemplate: `${SITE_URL}/check/{search_term_string}`,
+    },
+    'query-input': 'required name=search_term_string',
   },
 };
 
@@ -61,6 +100,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
         className={`${inter.className} bg-zinc-50 text-zinc-900 min-h-screen flex flex-col selection:bg-red-100 selection:text-red-900`}
         suppressHydrationWarning
       >
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(organizationJsonLd) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: safeJsonLd(websiteJsonLd) }} />
         <div className="fixed inset-0 -z-10 bg-[radial-gradient(#e5e7eb_1px,transparent_1px)] [background-size:16px_16px] [mask-image:radial-gradient(ellipse_50%_50%_at_50%_50%,#000_70%,transparent_100%)] opacity-50" />
         {children}
         <IdleLogoutWatcher />

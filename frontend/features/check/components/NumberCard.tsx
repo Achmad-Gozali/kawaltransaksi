@@ -184,7 +184,6 @@ export default function NumberCard({
                     alt="Foto profil penipu"
                     fill
                     className="object-cover rounded-xl border border-slate-200"
-                    unoptimized
                     onError={() => setPhotoFailed(true)}
                   />
                   <span className="absolute -bottom-1 -right-1 bg-red-600 text-white text-[8px] font-semibold px-1.5 py-0.5 rounded-md uppercase tracking-wide">Penipu</span>

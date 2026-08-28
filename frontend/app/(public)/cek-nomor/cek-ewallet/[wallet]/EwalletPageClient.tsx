@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { ArrowLeft, ArrowRight, Phone, ShieldCheck, Globe, ExternalLink } from "lucide-react";
+import { ArrowLeft, ArrowRight, Phone, ShieldCheck, Globe, ExternalLink, ChevronRight } from "lucide-react";
 import { encodeSlug } from "@/core/utils";
 
 interface EwalletData {
@@ -63,6 +63,19 @@ export default function EwalletPageClient({ walletData: data, walletId, reports,
 
       <section className="bg-white border-b border-slate-200/80">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 py-8 sm:py-12">
+          <nav aria-label="Breadcrumb" className="mb-5 sm:mb-6">
+            <ol className="flex flex-wrap items-center gap-1.5 text-xs text-slate-400">
+              <li>
+                <Link href="/" className="hover:text-slate-700 transition-colors">Beranda</Link>
+              </li>
+              <li aria-hidden="true"><ChevronRight className="w-3 h-3" /></li>
+              <li>
+                <Link href="/cek-nomor" className="hover:text-slate-700 transition-colors">Cek Nomor</Link>
+              </li>
+              <li aria-hidden="true"><ChevronRight className="w-3 h-3" /></li>
+              <li aria-current="page" className="font-medium text-slate-700">{data.name}</li>
+            </ol>
+          </nav>
           <div className="grid lg:grid-cols-3 gap-8 items-start">
             <div className="lg:col-span-2">
               <div className="flex items-center gap-4 mb-6">
@@ -70,8 +83,8 @@ export default function EwalletPageClient({ walletData: data, walletId, reports,
                   <Image src={data.logo} alt={`Logo ${data.fullName}`} fill className="object-contain object-left" />
                 </div>
                 <div>
-                  <h1 className="text-xl sm:text-2xl font-bold text-slate-900 leading-tight" style={{ fontFamily: "'Syne', sans-serif" }}>{data.fullName}</h1>
-                  <p className="text-[10px] text-slate-400 uppercase tracking-[0.15em] mt-0.5 font-medium">Verifikasi akun - {data.name}</p>
+                  <h1 className="text-xl sm:text-2xl font-bold text-slate-900 leading-tight" style={{ fontFamily: "'Syne', sans-serif" }}>Cek {data.name} Penipu</h1>
+                  <p className="text-[10px] text-slate-400 uppercase tracking-[0.15em] mt-0.5 font-medium">{data.fullName} - Verifikasi nomor e-wallet</p>
                 </div>
               </div>
               <p className="text-sm text-slate-500 leading-relaxed mb-5 max-w-lg">{data.description}</p>
@@ -141,7 +154,7 @@ export default function EwalletPageClient({ walletData: data, walletId, reports,
 
         <div>
           <div className="flex items-center justify-between mb-2.5 px-0.5">
-            <p className="text-[10px] uppercase tracking-[0.15em] text-slate-400 font-medium">Akun {data.name} dilaporkan</p>
+            <h2 className="text-[10px] uppercase tracking-[0.15em] text-slate-400 font-medium">Akun {data.name} yang pernah dilaporkan sebagai penipu</h2>
             <Link href="/report" className="text-[10px] font-medium text-emerald-600 hover:text-emerald-700 uppercase tracking-wider flex items-center gap-1 transition-colors">
               Lapor akun <ArrowRight className="w-3 h-3" />
             </Link>
@@ -207,7 +220,7 @@ export default function EwalletPageClient({ walletData: data, walletId, reports,
         </div>
 
         <div className="bg-slate-900 rounded-[8px] p-7 sm:p-10 text-center shadow-sm">
-          <p className="text-xl sm:text-2xl font-bold text-white mb-2 leading-tight uppercase tracking-tight" style={{ fontFamily: "'Syne', sans-serif" }}>ragu sama nomor rekening tujuan?</p>
+          <h2 className="text-xl sm:text-2xl font-bold text-white mb-2 leading-tight uppercase tracking-tight" style={{ fontFamily: "'Syne', sans-serif" }}>ragu sama nomor rekening tujuan?</h2>
           <p className="text-sm text-slate-400 max-w-md mx-auto mb-6 leading-relaxed">jangan asal transfer. pastikan nomor rekening tujuan aman dan tidak memiliki riwayat penipuan di database kami.</p>
           <Link href="/cek-rekening" className="inline-flex items-center gap-2 px-6 py-2.5 bg-emerald-500 hover:bg-emerald-400 text-white text-xs font-semibold rounded-[8px] transition-colors uppercase tracking-wider">
             cek rekening sekarang <ArrowRight className="w-3.5 h-3.5" />

@@ -5,13 +5,31 @@ import QrisSearchForm from "@/features/check/QrisSearchForm";
 import SearchHero from "@/features/check/SearchHero";
 import { formatRupiah, safeJsonLd } from "@/core/utils";
 
+const PAGE_TITLE = "Cek QRIS Palsu — Cara Cek QRIS Asli atau Palsu | KawalTransaksi";
+const PAGE_DESC =
+  "Cek QRIS palsu sebelum membayar. Pelajari cara cek QRIS asli atau palsu: unggah atau pindai foto QRIS untuk memeriksa NMID merchant dan riwayat laporan penipuannya.";
+const PAGE_URL = "https://kawaltransaksi.com/cek-qris";
+
 export const metadata: Metadata = {
-  title: "Cek QRIS - KawalTransaksi",
-  description: "Verifikasi keaslian kode QRIS sebelum bertransaksi. Unggah atau pindai foto QRIS untuk memeriksa riwayat laporan penipuan merchant.",
-  alternates: { canonical: "https://kawaltransaksi.com/cek-qris" },
+  title: PAGE_TITLE,
+  description: PAGE_DESC,
+  alternates: { canonical: PAGE_URL },
+  openGraph: {
+    title: PAGE_TITLE,
+    description: PAGE_DESC,
+    url: PAGE_URL,
+    type: "website",
+    locale: "id_ID",
+    siteName: "KawalTransaksi",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: PAGE_TITLE,
+    description: PAGE_DESC,
+  },
 };
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60;
 
 const BACKEND_URL = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
@@ -56,7 +74,7 @@ async function getStats() {
   try {
     const res = await fetch(`${BACKEND_URL}/api/reports/public/stats-qris`, {
       signal: AbortSignal.timeout(5000),
-      cache: "no-store",
+      next: { revalidate: 60 },
     });
     if (!res.ok) return { totalLaporan: 0, totalQris: 0, totalKerugian: 0 };
     return (await res.json()).data ?? { totalLaporan: 0, totalQris: 0, totalKerugian: 0 };
@@ -75,8 +93,8 @@ export default async function CekQrisPage() {
   return (
     <div className="min-h-screen bg-white text-slate-900 font-sans">
       <SearchHero
-        title="Cek Keaslian QRIS Sebelum Membayar"
-        description="Foto atau pindai kode QRIS untuk mengecek data merchant dan riwayat laporannya, sebelum Anda benar-benar membayar."
+        title="Cek QRIS Palsu Sebelum Membayar"
+        description="Cara cek QRIS asli atau palsu: foto atau pindai kode QRIS untuk mengecek NMID merchant dan riwayat laporannya sebelum Anda benar-benar membayar."
         hint="Data merchant dibaca otomatis dari foto, tanpa perlu input manual."
       >
         <QrisSearchForm />

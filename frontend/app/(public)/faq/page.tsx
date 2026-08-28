@@ -1,9 +1,28 @@
 import type { Metadata } from 'next';
 import { safeJsonLd } from "@/core/utils";
 
+const PAGE_TITLE = 'FAQ — Cara Cek Rekening & Nomor Penipu | KawalTransaksi';
+const PAGE_DESC =
+  'Pertanyaan umum seputar cara cek rekening penipu, cek nomor HP penipu, cek e-wallet dan QRIS, serta cara melaporkan penipuan online di KawalTransaksi.';
+const PAGE_URL = 'https://kawaltransaksi.com/faq';
+
 export const metadata: Metadata = {
-  title: 'FAQ - KawalTransaksi',
-  description: 'Pertanyaan yang sering ditanyakan seputar KawalTransaksi.',
+  title: PAGE_TITLE,
+  description: PAGE_DESC,
+  alternates: { canonical: PAGE_URL },
+  openGraph: {
+    title: PAGE_TITLE,
+    description: PAGE_DESC,
+    url: PAGE_URL,
+    type: 'website',
+    locale: 'id_ID',
+    siteName: 'KawalTransaksi',
+  },
+  twitter: {
+    card: 'summary_large_image',
+    title: PAGE_TITLE,
+    description: PAGE_DESC,
+  },
 };
 
 const faqs = [
@@ -61,7 +80,7 @@ export default function FaqPage() {
       <div className="min-h-screen bg-white">
         <div className="max-w-2xl mx-auto px-4 sm:px-6 pt-28 pb-16">
           <div className="mb-10">
-            <h1 className="text-3xl font-bold text-slate-900 mb-2">Pertanyaan Umum</h1>
+            <h1 className="text-3xl font-bold text-slate-900 mb-2">Pertanyaan Umum: Cara Cek Rekening &amp; Nomor Penipu</h1>
             <p className="text-slate-500 text-sm">Hal-hal yang sering ditanyakan seputar KawalTransaksi.</p>
           </div>
 

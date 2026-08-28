@@ -8,6 +8,7 @@ export const metadata: Metadata = {
   title: "Tentang Kami - KawalTransaksi",
   description:
     "KawalTransaksi adalah platform komunitas anti-penipuan digital Indonesia. Kenali cerita dan misi di balik layanan verifikasi nomor HP, rekening bank, dan e-wallet.",
+  alternates: { canonical: "https://kawaltransaksi.com/tentang-kami" },
 };
 
 export default function AboutPage() {

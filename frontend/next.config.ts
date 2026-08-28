@@ -3,6 +3,16 @@ import type { NextConfig } from "next";
 const nextConfig: NextConfig = {
   output: "standalone",
   poweredByHeader: false,
+  images: {
+    // Semua gambar user-generated (foto bukti laporan, thumbnail artikel)
+    // di-serve dari Cloudflare R2 lewat img.kawaltransaksi.com (lihat
+    // backend R2_PUBLIC_URL). Tanpa entri ini, next/image menolak optimasi
+    // domain eksternal sehingga terpaksa pakai unoptimized.
+    remotePatterns: [
+      { protocol: "https", hostname: "img.kawaltransaksi.com", pathname: "/**" },
+    ],
+    formats: ["image/avif", "image/webp"],
+  },
   async headers() {
     return [
       {

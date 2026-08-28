@@ -2,6 +2,8 @@ import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
   title: 'Syarat & Ketentuan - KawalTransaksi',
+  description: 'Syarat dan ketentuan penggunaan KawalTransaksi, platform komunitas untuk cek rekening penipu, cek nomor penipu, dan pelaporan penipuan online di Indonesia.',
+  alternates: { canonical: 'https://kawaltransaksi.com/syarat-ketentuan' },
 };
 
 export default function SyaratKetentuanPage() {

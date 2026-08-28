@@ -56,7 +56,6 @@ function EvidenceThumb({ url, alt, className }: { url: string; alt: string; clas
       alt={alt}
       fill
       className={className}
-      unoptimized
       onError={() => setFailed(true)}
     />
   );

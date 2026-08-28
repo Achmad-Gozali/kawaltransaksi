@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic';
 export const metadata: Metadata = {
   title: 'Laporkan Penipuan - KawalTransaksi',
   description: 'Laporkan nomor rekening atau nomor telepon terduga pelaku penipuan. Bantu lindungi masyarakat Indonesia dari ancaman penipuan digital.',
+  alternates: { canonical: 'https://kawaltransaksi.com/report' },
 };
 
 const ReportForm    = dynamic(() => import('@/features/report/ReportForm'));

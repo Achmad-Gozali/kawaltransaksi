@@ -280,12 +280,18 @@ export async function reportsRoutes(app: FastifyInstance) {
   });
 
   app.get("/public/sitemap-targets", { onSend: withPublicCache }, async () => {
+    // Hanya target dengan >=1 laporan TERVERIFIKASI yang masuk sitemap /check/*.
+    // Halaman /laporan-publik sengaja di-gate (perlu login), jadi /check/{slug}
+    // adalah satu-satunya jalur publik ke laporan -- dan hanya yang terverifikasi
+    // yang layak di-index (pending = tuduhan belum divalidasi).
+    // Tanpa LIMIT: seluruh target terverifikasi ikut. Google membatasi 50.000
+    // URL/sitemap; kalau mendekati itu, pindah ke sitemap index + pagination.
     const rows = await db.execute(sql`
       SELECT
         target_value,
         MAX(created_at) AS last_reported
       FROM reports
-      WHERE status IN ('verified', 'pending')
+      WHERE status = 'verified'
       GROUP BY target_value
       ORDER BY last_reported DESC
     `);
