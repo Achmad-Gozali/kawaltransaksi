@@ -23,6 +23,28 @@ function withPublicCache(_req: FastifyRequest, reply: FastifyReply, payload: unk
   done(null, payload);
 }
 
+// Rate limit per-IP untuk endpoint lookup "cek" (nomor/rekening/e-wallet/QRIS),
+// mengikuti pola di search.route.ts (10 request/menit). Mencegah scraping massal
+// database lewat hit langsung ke API publik.
+//
+// allowList: request SSR dari container frontend (fetch ke http://backend:4000)
+// TIDAK lewat nginx sehingga tidak punya header X-Forwarded-For -- itu adalah
+// trafik render halaman yang sah dan tidak boleh dibatasi per-"IP frontend".
+// Trafik dari luar (browser -> Cloudflare -> nginx -> API) selalu membawa
+// X-Forwarded-For, dan di situlah limit per-IP berlaku (req.ip sudah memakai
+// leftmost X-Forwarded-For karena trustProxy: true). Frontend meneruskan
+// X-Forwarded-For asli pengunjung saat SSR halaman /check, /cek-rekening/[bank],
+// dan /cek-nomor/cek-ewallet/[wallet] -- lihat core/http.ts.
+const publicCheckRateLimit = {
+  max: 10,
+  timeWindow: "1 minute",
+  allowList: (req: FastifyRequest) => !req.headers["x-forwarded-for"],
+  errorResponseBuilder: (_req: FastifyRequest, context: { ttl: number }) => ({
+    statusCode: 429,
+    error: `Terlalu banyak permintaan pengecekan. Coba lagi dalam ${Math.ceil(context.ttl / 1000)} detik.`,
+  }),
+};
+
 export async function reportsRoutes(app: FastifyInstance) {
   app.get("/public/recent", { onSend: withPublicCache }, async () => {
     const data = await db
@@ -162,7 +184,7 @@ export async function reportsRoutes(app: FastifyInstance) {
     return { data: rows };
   });
 
-  app.get("/public/bank/:name", { onSend: withPublicCache }, async (req) => {
+  app.get("/public/bank/:name", { config: { rateLimit: publicCheckRateLimit }, onSend: withPublicCache }, async (req) => {
     const { name } = req.params as { name: string };
     const data = await db
       .select(publicReportColumns)
@@ -179,7 +201,7 @@ export async function reportsRoutes(app: FastifyInstance) {
     return { data: { primary: data, linked: [] } };
   });
 
-  app.get("/public/ewallet/:name", { onSend: withPublicCache }, async (req) => {
+  app.get("/public/ewallet/:name", { config: { rateLimit: publicCheckRateLimit }, onSend: withPublicCache }, async (req) => {
     const { name } = req.params as { name: string };
     const data = await db
       .select(publicReportColumns)
@@ -196,7 +218,7 @@ export async function reportsRoutes(app: FastifyInstance) {
     return { data: { primary: data, linked: [] } };
   });
 
-  app.get("/public/check/:number", { onSend: withPublicCache }, async (req) => {
+  app.get("/public/check/:number", { config: { rateLimit: publicCheckRateLimit }, onSend: withPublicCache }, async (req) => {
     const { number } = req.params as { number: string };
     const data = await db
       .select(publicReportColumns)
@@ -233,7 +255,7 @@ export async function reportsRoutes(app: FastifyInstance) {
     return { data: { reports: reportsWithEvidence, linked: [] } };
   });
 
-  app.get("/public/blacklist/:number", { onSend: withPublicCache }, async (req) => {
+  app.get("/public/blacklist/:number", { config: { rateLimit: publicCheckRateLimit }, onSend: withPublicCache }, async (req) => {
     const { number } = req.params as { number: string };
     const verified = await db
       .select()
