@@ -341,18 +341,97 @@ export async function reportsRoutes(app: FastifyInstance) {
   });
 
   app.get("/laporan-stats", { onSend: withPublicCache }, async () => {
-    const data = await db
-      .select({
-        bank_name: sql<string | null>`COALESCE(${reports.bankName}, ${reports.walletName})`,
-        category: reports.category,
-        status: reports.status,
-        created_at: reports.createdAt,
-      })
-      .from(reports)
-      .where(sql`${reports.status} IN ('verified', 'pending')`)
-      .orderBy(desc(reports.createdAt))
-      .limit(1000);
-    return { data };
+    // Dulu: tarik <=1000 baris mentah tiap kunjungan lalu hitung tren/kategori/
+    // platform di JS (dan `.length` jadi salah begitu laporan >1000). Sekarang
+    // semua agregasi dikerjakan Postgres; payload turun dari ribuan baris jadi
+    // beberapa puluh. StatsChart hanya memetakan label + slice top-N.
+    //
+    // Cutoff 7/30 hari direplikasi persis dari StatsChart lama:
+    // `new Date(now); setDate(-N); setHours(0,0,0,0)` di zona server. Container
+    // frontend & Postgres sama-sama UTC, jadi pakai setUTC* di sini.
+    const nowD = new Date();
+    const cutoff = (days: number) => {
+      const d = new Date(nowD);
+      d.setUTCDate(d.getUTCDate() - days);
+      d.setUTCHours(0, 0, 0, 0);
+      return d.toISOString();
+    };
+    const c7 = cutoff(7);
+    const c30 = cutoff(30);
+
+    // Tren harian: bucket per tanggal WIB (UTC+7), seluruh riwayat. Jumlah baris
+    // = jumlah hari aktif, bukan jumlah laporan. StatsChart yang membangun
+    // deret hari (termasuk hari nol) dan melihat angka dari sini.
+    const dailyRows = await db.execute(sql`
+      SELECT to_char((created_at + interval '7 hours')::date, 'YYYY-MM-DD') AS date,
+             COUNT(*)::int AS count
+      FROM reports
+      WHERE status IN ('verified', 'pending')
+      GROUP BY 1
+      ORDER BY 1
+    `);
+
+    const [totalsRow] = await db.execute(sql`
+      SELECT
+        COUNT(*) FILTER (WHERE created_at >= ${c7})::int  AS c7,
+        COUNT(*) FILTER (WHERE created_at >= ${c30})::int AS c30,
+        COUNT(*)::int                                     AS call
+      FROM reports
+      WHERE status IN ('verified', 'pending')
+    `);
+
+    const categoryRows = await db.execute(sql`
+      SELECT category AS name,
+        COUNT(*) FILTER (WHERE created_at >= ${c7})::int  AS v7,
+        COUNT(*) FILTER (WHERE created_at >= ${c30})::int AS v30,
+        COUNT(*)::int                                     AS vall
+      FROM reports
+      WHERE status IN ('verified', 'pending') AND category IS NOT NULL
+      GROUP BY category
+    `);
+
+    const platformRows = await db.execute(sql`
+      SELECT target_type,
+        COALESCE(bank_name, wallet_name) AS bank_name,
+        COUNT(*) FILTER (WHERE created_at >= ${c7})::int  AS v7,
+        COUNT(*) FILTER (WHERE created_at >= ${c30})::int AS v30,
+        COUNT(*)::int                                     AS vall
+      FROM reports
+      WHERE status IN ('verified', 'pending')
+      GROUP BY target_type, COALESCE(bank_name, wallet_name)
+    `);
+
+    const pickCats = (key: "v7" | "v30" | "vall") =>
+      (categoryRows as unknown as Record<string, unknown>[])
+        .map((r) => ({ name: String(r.name), value: Number(r[key]) }))
+        .filter((r) => r.value > 0)
+        .sort((a, b) => b.value - a.value || a.name.localeCompare(b.name));
+
+    const pickPlatforms = (key: "v7" | "v30" | "vall") =>
+      (platformRows as unknown as Record<string, unknown>[])
+        .map((r) => ({
+          target_type: String(r.target_type),
+          bank_name: (r.bank_name as string | null) ?? null,
+          value: Number(r[key]),
+        }))
+        .filter((r) => r.value > 0)
+        .sort((a, b) => b.value - a.value);
+
+    const t = totalsRow as unknown as Record<string, unknown>;
+    return {
+      data: {
+        total: Number(t.call),
+        daily: (dailyRows as unknown as Record<string, unknown>[]).map((r) => ({
+          date: String(r.date),
+          count: Number(r.count),
+        })),
+        ranges: {
+          "7":   { total: Number(t.c7),   categories: pickCats("v7"),   platforms: pickPlatforms("v7") },
+          "30":  { total: Number(t.c30),  categories: pickCats("v30"),  platforms: pickPlatforms("v30") },
+          "all": { total: Number(t.call), categories: pickCats("vall"), platforms: pickPlatforms("vall") },
+        },
+      },
+    };
   });
 
   app.get("/laporan-publik", { onSend: withPublicCache }, async (req) => {

@@ -3,7 +3,7 @@ import Image from "next/image";
 import type { Metadata } from "next";
 import { Phone, Building2, Wallet, QrCode, ArrowRight } from "lucide-react";
 import { formatDateID, encodeSlug } from "@/core/utils";
-import StatsChart from "./StatsChart";
+import StatsChart, { type LaporanStats } from "./StatsChart";
 import SearchBar from "./SearchBar";
 
 export const metadata: Metadata = {
@@ -105,14 +105,24 @@ async function getLaporanPublik(params: { type: string; sort: string; q: string;
   }
 }
 
-async function getLaporanStats() {
+const EMPTY_STATS: LaporanStats = {
+  total: 0,
+  daily: [],
+  ranges: {
+    "7": { total: 0, categories: [], platforms: [] },
+    "30": { total: 0, categories: [], platforms: [] },
+    all: { total: 0, categories: [], platforms: [] },
+  },
+};
+
+async function getLaporanStats(): Promise<LaporanStats> {
   try {
-    const res = await fetch(`${BACKEND_URL}/api/reports/laporan-stats`, { cache: "no-store" });
-    if (!res.ok) return [];
+    const res = await fetch(`${BACKEND_URL}/api/reports/laporan-stats`, { next: { revalidate: 30 } });
+    if (!res.ok) return EMPTY_STATS;
     const json = await res.json();
-    return json.data ?? [];
+    return json.data ?? EMPTY_STATS;
   } catch {
-    return [];
+    return EMPTY_STATS;
   }
 }
 
@@ -128,14 +138,14 @@ export default async function LaporanPublikPage({
   const page = Math.max(1, parseInt(params.page ?? "1"));
   const perPage = 12;
 
-  const [laporanData, allReportsForStats] = await Promise.all([
+  const [laporanData, stats] = await Promise.all([
     getLaporanPublik({ type, sort, q, page }),
     getLaporanStats(),
   ]);
 
   const paginatedReports: any[] = laporanData.data ?? [];
   const totalUniqueNumbers: number = laporanData.total_unique ?? 0;
-  const totalReports = allReportsForStats.length;
+  const totalReports = stats.total;
   const totalPages = Math.ceil(totalUniqueNumbers / perPage);
   const safePage = Math.min(page, Math.max(1, totalPages));
   const paginationPages = buildPaginationPages(safePage, totalPages);
@@ -174,7 +184,7 @@ export default async function LaporanPublikPage({
             <div className="flex-1 h-px bg-slate-100" />
             <span className="text-xs font-bold text-emerald-600 uppercase tracking-widest">{totalReports} total laporan</span>
           </div>
-          <StatsChart rawReports={allReportsForStats} />
+          <StatsChart stats={stats} />
         </div>
       </section>
 
