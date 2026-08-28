@@ -120,23 +120,23 @@ export async function authRoutes(app: FastifyInstance) {
     };
 
     if (!name?.trim() || !email?.trim() || !password)
-      return reply.status(400).send({ error: "Mohon lengkapi seluruh kolom yang tersedia." });
+      return reply.status(400).send({ error: "Lengkapi dulu semua kolom yang tersedia." });
 
     const turnstileValid = await verifyTurnstile(turnstileToken, req.ip);
     if (!turnstileValid)
-      return reply.status(400).send({ error: "Verifikasi keamanan tidak berhasil. Silakan coba kembali." });
+      return reply.status(400).send({ error: "Verifikasi keamanan gagal. Coba lagi." });
 
     const sanitizedEmail = email.trim().toLowerCase();
 
     if (!isEmailDomainAllowed(sanitizedEmail))
-      return reply.status(400).send({ error: "Mohon gunakan alamat email dari Gmail, Yahoo, Outlook, iCloud, atau ProtonMail." });
+      return reply.status(400).send({ error: "Gunakan alamat email dari Gmail, Yahoo, Outlook, iCloud, atau ProtonMail." });
 
     if (!isPasswordStrong(password))
-      return reply.status(400).send({ error: "Kata sandi harus terdiri dari minimal 8 karakter dan mengandung huruf besar, angka, serta simbol." });
+      return reply.status(400).send({ error: "Kata sandi minimal 8 karakter dan harus memuat huruf besar, angka, dan simbol." });
 
     const breached = await isPasswordBreached(password);
     if (breached)
-      return reply.status(400).send({ error: "Kata sandi ini terdeteksi pernah muncul dalam kebocoran data. Mohon gunakan kata sandi lain yang belum pernah digunakan di layanan mana pun." });
+      return reply.status(400).send({ error: "Kata sandi ini pernah bocor di internet. Pakai kata sandi lain yang belum pernah Anda gunakan di layanan mana pun." });
 
     const [existing] = await db.select().from(users).where(eq(users.email, sanitizedEmail)).limit(1);
     if (existing) return reply.status(409).send({ error: "Alamat email ini sudah terdaftar." });
@@ -176,14 +176,14 @@ export async function authRoutes(app: FastifyInstance) {
     const [otpRecord] = await db.select().from(otpTokens)
       .where(eq(otpTokens.userId, userId)).limit(1);
 
-    if (!otpRecord) return reply.status(400).send({ error: "Kode verifikasi tidak ditemukan. Silakan minta kode baru." });
+    if (!otpRecord) return reply.status(400).send({ error: "Kode verifikasi tidak ditemukan. Minta kode baru terlebih dahulu." });
     if (otpRecord.expiresAt < new Date()) {
       await db.delete(otpTokens).where(eq(otpTokens.userId, userId));
-      return reply.status(400).send({ error: "Kode verifikasi sudah kedaluwarsa. Silakan minta kode baru." });
+      return reply.status(400).send({ error: "Kode verifikasi sudah kedaluwarsa. Minta kode baru terlebih dahulu." });
     }
     if (otpRecord.attempts >= 3) {
       await db.delete(otpTokens).where(eq(otpTokens.userId, userId));
-      return reply.status(400).send({ error: "Batas percobaan telah tercapai. Silakan minta kode verifikasi baru." });
+      return reply.status(400).send({ error: "Percobaan sudah mencapai batas. Minta kode verifikasi baru." });
     }
 
     const valid = await verify(otpRecord.otpHash, otp.replace(/\s/g, ""));
@@ -236,14 +236,14 @@ export async function authRoutes(app: FastifyInstance) {
 
     const turnstileValid = await verifyTurnstile(turnstileToken, req.ip);
     if (!turnstileValid)
-      return reply.status(400).send({ error: "Verifikasi keamanan tidak berhasil. Silakan coba kembali." });
+      return reply.status(400).send({ error: "Verifikasi keamanan gagal. Coba lagi." });
 
     const [user] = await db.select().from(users).where(eq(users.email, email.trim().toLowerCase())).limit(1);
     if (!user || !user.passwordHash)
-      return reply.status(401).send({ error: "Email atau kata sandi yang Anda masukkan tidak sesuai." });
+      return reply.status(401).send({ error: "Email atau kata sandi yang Anda masukkan salah." });
 
     const valid = await verify(user.passwordHash, password);
-    if (!valid) return reply.status(401).send({ error: "Email atau kata sandi yang Anda masukkan tidak sesuai." });
+    if (!valid) return reply.status(401).send({ error: "Email atau kata sandi yang Anda masukkan salah." });
 
     const { accessToken, refreshToken } = signTokens(user.id, user.role);
     await saveSession(user.id, refreshToken);
@@ -258,7 +258,7 @@ export async function authRoutes(app: FastifyInstance) {
 
   app.post("/refresh", async (req, reply) => {
     const token = req.cookies?.refresh_token;
-    if (!token) return reply.status(401).send({ error: "Sesi tidak ditemukan. Silakan masuk kembali." });
+    if (!token) return reply.status(401).send({ error: "Sesi Anda tidak ditemukan. Silakan masuk kembali." });
 
     try {
       const payload = jwt.verify(token, process.env.JWT_REFRESH_SECRET!) as { userId: string };
@@ -266,7 +266,7 @@ export async function authRoutes(app: FastifyInstance) {
       const [session] = await db.select().from(sessions)
         .where(eq(sessions.refreshToken, token)).limit(1);
       if (!session || session.expiresAt < new Date())
-        return reply.status(401).send({ error: "Sesi Anda telah berakhir atau tidak valid. Silakan masuk kembali." });
+        return reply.status(401).send({ error: "Sesi Anda sudah berakhir. Silakan masuk kembali." });
 
       const [user] = await db.select().from(users)
         .where(eq(users.id, payload.userId)).limit(1);
@@ -280,7 +280,7 @@ export async function authRoutes(app: FastifyInstance) {
 
       return { accessToken };
     } catch {
-      return reply.status(401).send({ error: "Sesi tidak valid. Silakan masuk kembali." });
+      return reply.status(401).send({ error: "Sesi Anda tidak valid lagi. Silakan masuk kembali." });
     }
   });
 
@@ -321,17 +321,17 @@ export async function authRoutes(app: FastifyInstance) {
     const { currentPassword, newPassword } = req.body as { currentPassword: string; newPassword: string };
 
     if (!currentPassword || !newPassword)
-      return reply.status(400).send({ error: "Mohon lengkapi seluruh kolom yang tersedia." });
+      return reply.status(400).send({ error: "Lengkapi dulu semua kolom yang tersedia." });
     if (!isPasswordStrong(newPassword))
-      return reply.status(400).send({ error: "Kata sandi baru harus terdiri dari minimal 8 karakter dan mengandung huruf besar, angka, serta simbol." });
+      return reply.status(400).send({ error: "Kata sandi baru minimal 8 karakter dan harus memuat huruf besar, angka, dan simbol." });
 
     const [user] = await db.select().from(users).where(eq(users.id, req.user!.userId)).limit(1);
     if (!user) return reply.status(404).send({ error: "Akun tidak ditemukan." });
     if (!user.passwordHash)
-      return reply.status(400).send({ error: "Akun ini menggunakan metode masuk Google sehingga kata sandi tidak dapat diubah." });
+      return reply.status(400).send({ error: "Akun ini masuk lewat Google, jadi kata sandinya tidak bisa diubah di sini." });
 
     const valid = await verify(user.passwordHash, currentPassword);
-    if (!valid) return reply.status(400).send({ error: "Kata sandi saat ini yang Anda masukkan tidak sesuai." });
+    if (!valid) return reply.status(400).send({ error: "Kata sandi saat ini yang Anda masukkan salah." });
 
     const passwordHash = await hash(newPassword);
     await db.update(users)
@@ -350,7 +350,7 @@ export async function authRoutes(app: FastifyInstance) {
     const [user] = await db.select().from(users)
       .where(eq(users.email, email.trim().toLowerCase())).limit(1);
 
-    if (!user) return { message: "Jika alamat email terdaftar, tautan pengaturan ulang kata sandi akan dikirimkan." };
+    if (!user) return { message: "Kalau email itu terdaftar, kami akan mengirimkan tautan untuk mengatur ulang kata sandi." };
 
     await db.delete(passwordResetTokens).where(eq(passwordResetTokens.userId, user.id));
 
@@ -361,7 +361,7 @@ export async function authRoutes(app: FastifyInstance) {
     const resetLink = `${process.env.FRONTEND_URL}/reset-kata-sandi/${token}`;
     await sendPasswordResetEmail(user.email, user.name, resetLink);
 
-    return { message: "Jika alamat email terdaftar, tautan pengaturan ulang kata sandi akan dikirimkan." };
+    return { message: "Kalau email itu terdaftar, kami akan mengirimkan tautan untuk mengatur ulang kata sandi." };
   });
 
   app.post("/reset-password", {
@@ -370,7 +370,7 @@ export async function authRoutes(app: FastifyInstance) {
     const { token, password } = req.body as { token: string; password: string };
     if (!token || !password) return reply.status(400).send({ error: "Tautan dan kata sandi baru wajib diisi." });
     if (!isPasswordStrong(password))
-      return reply.status(400).send({ error: "Kata sandi harus terdiri dari minimal 8 karakter dan mengandung huruf besar, angka, serta simbol." });
+      return reply.status(400).send({ error: "Kata sandi minimal 8 karakter dan harus memuat huruf besar, angka, dan simbol." });
 
     const [resetToken] = await db.select().from(passwordResetTokens)
       .where(eq(passwordResetTokens.token, token)).limit(1);
@@ -378,7 +378,7 @@ export async function authRoutes(app: FastifyInstance) {
     if (!resetToken) return reply.status(400).send({ error: "Tautan tidak valid." });
     if (resetToken.expiresAt < new Date()) {
       await db.delete(passwordResetTokens).where(eq(passwordResetTokens.token, token));
-      return reply.status(400).send({ error: "Tautan sudah kedaluwarsa. Silakan ajukan permintaan baru." });
+      return reply.status(400).send({ error: "Tautan ini sudah kedaluwarsa. Ajukan permintaan baru." });
     }
 
     const passwordHash = await hash(password);
@@ -386,7 +386,7 @@ export async function authRoutes(app: FastifyInstance) {
     await db.delete(passwordResetTokens).where(eq(passwordResetTokens.token, token));
     await db.delete(sessions).where(eq(sessions.userId, resetToken.userId));
 
-    return { message: "Kata sandi berhasil diperbarui. Silakan masuk kembali." };
+    return { message: "Kata sandi berhasil diperbarui. Silakan masuk kembali dengan kata sandi baru." };
   });
 
   app.get("/google", async (_req, reply) => {

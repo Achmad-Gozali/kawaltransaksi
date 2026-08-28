@@ -160,7 +160,7 @@ export default function BankPageClient({ bankData: data, bankId, reports, totalC
             <div className="bg-white rounded-[8px] border border-slate-200/80 shadow-sm p-14 text-center">
               <ShieldCheck className="w-8 h-8 text-emerald-500 mx-auto mb-3" />
               <p className="text-sm font-semibold text-slate-900 mb-1">Belum ada laporan</p>
-              <p className="text-xs text-slate-400 leading-relaxed">Tidak ada rekening {data.name} yang dilaporkan saat ini.</p>
+              <p className="text-xs text-slate-400 leading-relaxed">Sampai sekarang belum ada rekening {data.name} yang dilaporkan. Tetap hati-hati saat bertransaksi.</p>
             </div>
           )}
         </div>

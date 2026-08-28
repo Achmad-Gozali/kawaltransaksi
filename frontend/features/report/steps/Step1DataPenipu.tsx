@@ -117,7 +117,7 @@ export function Step1DataPenipu({
                 ))}
               </Sel>
               <p className="text-xs text-slate-400 mt-1.5 leading-relaxed">
-                Isi apabila Anda mengetahui lokasi penipu dari percakapan atau profilnya.
+                Isi kalau Anda tahu lokasi penipu dari percakapan atau profilnya.
               </p>
             </div>
           </div>
@@ -173,7 +173,7 @@ export function Step1DataPenipu({
         <div className="p-4 sm:p-5">
           <SectionTitle
             title="Foto Profil Penipu"
-            subtitle="Upload foto identitas visual pelaku jika tersedia"
+            subtitle="Unggah foto wajah atau identitas pelaku kalau ada"
           />
           {!suspectPhotoPreview ? (
             <label className="border-2 border-dashed border-slate-200 rounded-xl p-6 sm:p-8 flex flex-col items-center gap-3 hover:border-emerald-300 hover:bg-emerald-50/20 transition-all cursor-pointer group">

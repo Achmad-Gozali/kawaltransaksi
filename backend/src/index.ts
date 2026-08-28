@@ -44,8 +44,7 @@ await app.register(rateLimit, {
   nameSpace: "burst-",
   errorResponseBuilder: (_req, context) => ({
     statusCode: 429,
-    error: "Too Many Requests",
-    message: `Terlalu banyak permintaan dalam waktu singkat. Coba lagi dalam ${Math.ceil(context.ttl / 1000)} detik.`,
+    error: `Terlalu banyak permintaan dalam waktu singkat. Coba lagi dalam ${Math.ceil(context.ttl / 1000)} detik.`,
   }),
 });
 
@@ -60,8 +59,7 @@ await app.register(rateLimit, {
   nameSpace: "general-",
   errorResponseBuilder: (_req, context) => ({
     statusCode: 429,
-    error: "Too Many Requests",
-    message: `Terlalu banyak permintaan. Coba lagi dalam ${Math.ceil(context.ttl / 1000)} detik.`,
+    error: `Terlalu banyak permintaan. Coba lagi dalam ${Math.ceil(context.ttl / 1000)} detik.`,
   }),
 });
 
@@ -98,7 +96,7 @@ app.setErrorHandler((error: FastifyError, req, reply) => {
   const statusCode = error.statusCode ?? 500;
   if (statusCode >= 500) {
     req.log.error(error);
-    reply.status(statusCode).send({ error: "Terjadi kesalahan pada server. Silakan coba lagi nanti." });
+    reply.status(statusCode).send({ error: "Server kami sedang bermasalah. Coba lagi beberapa saat lagi." });
     return;
   }
   reply.status(statusCode).send({ error: error.message });

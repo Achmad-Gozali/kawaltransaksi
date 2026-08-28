@@ -12,7 +12,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'Cek Nomor Penipu Online, Rekening & E-Wallet | KawalTransaksi',
+  title: 'Cek Nomor Penipu Online, Rekening & E-Wallet - KawalTransaksi',
   description: 'Cek nomor HP, rekening bank, dan e-wallet terindikasi penipuan secara gratis. Database laporan komunitas anti-penipuan Indonesia terlengkap.',
   metadataBase: new URL('https://kawaltransaksi.com'),
   icons: {
@@ -27,7 +27,7 @@ export const metadata: Metadata = {
   creator:   'KawalTransaksi',
   publisher: 'KawalTransaksi',
   openGraph: {
-    title:       'Cek Nomor Penipu Online, Rekening & E-Wallet | KawalTransaksi',
+    title:       'Cek Nomor Penipu Online, Rekening & E-Wallet - KawalTransaksi',
     description: 'Cek nomor HP, rekening bank, dan e-wallet terindikasi penipuan secara gratis. Database laporan komunitas anti-penipuan Indonesia.',
     type:        'website',
     locale:      'id_ID',
@@ -36,7 +36,7 @@ export const metadata: Metadata = {
   },
   twitter: {
     card:        'summary_large_image',
-    title:       'Cek Nomor Penipu Online, Rekening & E-Wallet | KawalTransaksi',
+    title:       'Cek Nomor Penipu Online, Rekening & E-Wallet - KawalTransaksi',
     description: 'Cek nomor HP, rekening bank, dan e-wallet terindikasi penipuan secara gratis.',
   },
   robots:     { index: true, follow: true },

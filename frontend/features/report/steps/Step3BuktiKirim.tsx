@@ -19,7 +19,7 @@ export function Step3BuktiKirim({ evidenceFiles, onEvidenceFileChange, onRemoveE
         <div className="p-4 sm:p-5">
           <SectionTitle
             title="Bukti Foto"
-            subtitle={`Upload hingga ${MAX_EVIDENCE_FILES} foto - Screenshot, struk transfer - JPG, PNG - maks 5MB`}
+            subtitle={`Unggah maksimal ${MAX_EVIDENCE_FILES} foto. Screenshot atau struk transfer, format JPG atau PNG, maksimal 5 MB`}
           />
 
           {evidenceFiles.length > 0 && (

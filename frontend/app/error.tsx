@@ -22,7 +22,7 @@ export default function GlobalError({
       </div>
       <h1 className="text-2xl sm:text-3xl font-black text-slate-900 tracking-tight mb-2">Terjadi kesalahan</h1>
       <p className="text-slate-400 text-sm sm:text-base max-w-sm leading-relaxed mb-6">
-        Maaf, terjadi kesalahan tak terduga saat memuat halaman ini. Silakan coba lagi atau kembali ke beranda.
+        Maaf, terjadi kesalahan saat memuat halaman ini. Coba muat ulang, atau kembali ke beranda.
       </p>
       <div className="flex flex-col sm:flex-row items-center gap-3">
         <button

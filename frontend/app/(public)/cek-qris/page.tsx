@@ -24,7 +24,7 @@ const steps = [
   {
     icon: Store,
     title: "Lihat Data Merchant",
-    desc: "NMID, nama, dan kota merchant terbaca otomatis -- tidak perlu ketik manual, jadi tidak ada salah ketik.",
+    desc: "NMID, nama, dan kota merchant terbaca otomatis, jadi Anda tidak perlu mengetik apa pun dan tidak ada risiko salah ketik.",
   },
   {
     icon: ShieldCheck,
@@ -35,9 +35,9 @@ const steps = [
 
 const articles = [
   { title: "Waspada QRIS Palsu Ditempel", desc: "Modus penipuan dengan menempelkan stiker QRIS palsu di atas QRIS asli milik toko/warung semakin marak. Selalu cek NMID sebelum membayar." },
-  { title: "Apa itu NMID?", desc: "National Merchant ID (NMID) adalah nomor identitas resmi merchant QRIS yang terdaftar di sistem Bank Indonesia -- setiap merchant sah punya NMID unik." },
+  { title: "Apa itu NMID?", desc: "National Merchant ID (NMID) adalah nomor identitas resmi merchant QRIS yang terdaftar di sistem Bank Indonesia. Setiap merchant resmi punya NMID yang unik." },
   { title: "Cara Kerja Cek QRIS", desc: "KawalTransaksi membaca kode QR dari foto yang Anda unggah, lalu mencocokkan NMID-nya dengan basis data laporan penipuan dari komunitas." },
-  { title: "Laporkan QRIS Mencurigakan", desc: "Apabila Anda menemukan QRIS yang terlihat ditempel ulang, rusak, atau mencurigakan, laporkan melalui halaman Laporkan agar pengguna lain ikut terlindungi." },
+  { title: "Laporkan QRIS Mencurigakan", desc: "Kalau Anda menemukan QRIS yang terlihat ditempel ulang, rusak, atau mencurigakan, laporkan lewat halaman Laporkan supaya pengguna lain ikut terlindungi." },
 ];
 
 const schema = {
@@ -76,7 +76,7 @@ export default async function CekQrisPage() {
     <div className="min-h-screen bg-white text-slate-900 font-sans">
       <SearchHero
         title="Cek Keaslian QRIS Sebelum Membayar"
-        description="Foto atau pindai kode QRIS untuk memverifikasi data merchant dan riwayat laporan penipuan sebelum Anda benar-benar melakukan pembayaran."
+        description="Foto atau pindai kode QRIS untuk mengecek data merchant dan riwayat laporannya, sebelum Anda benar-benar membayar."
         hint="Data merchant dibaca otomatis dari foto, tanpa perlu input manual."
       >
         <QrisSearchForm />
@@ -141,7 +141,7 @@ export default async function CekQrisPage() {
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-10 items-center">
             <div>
               <h2 className="text-lg sm:text-2xl font-bold text-slate-900 mb-3">Kenapa Perlu Cek QRIS?</h2>
-              <p className="text-slate-500 text-sm leading-relaxed">Modus QRIS palsu yang ditempel di atas kode asli membuat pembayaran justru masuk ke rekening pelaku, bukan ke merchant yang sebenarnya. Memeriksa NMID sebelum melakukan pembayaran membantu memastikan dana Anda diterima oleh pihak yang tepat.</p>
+              <p className="text-slate-500 text-sm leading-relaxed">Modus QRIS palsu yang ditempel di atas kode asli membuat pembayaran justru masuk ke rekening pelaku, bukan ke merchant yang sebenarnya. Mengecek NMID sebelum membayar membantu memastikan uang Anda diterima oleh pihak yang tepat.</p>
             </div>
             <div className="bg-white border border-emerald-100 rounded-lg px-6 sm:px-8 py-6 sm:py-8">
               <p className="text-slate-700 text-sm font-medium leading-relaxed text-center">&quot;NMID resmi tidak pernah berubah untuk merchant yang sama. Kalau ragu, cek dulu sebelum bayar.&quot;</p>

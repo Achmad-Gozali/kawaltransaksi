@@ -348,9 +348,9 @@ export async function reportsRoutes(app: FastifyInstance) {
       .from(reports)
       .where(eq(reports.id, id))
       .limit(1);
-    if (!report) return reply.status(404).send({ error: "Not found" });
+    if (!report) return reply.status(404).send({ error: "Laporan tidak ditemukan." });
     if (report.userId !== req.user!.userId && req.user!.role !== "admin")
-      return reply.status(403).send({ error: "Forbidden" });
+      return reply.status(403).send({ error: "Anda tidak memiliki akses ke laporan ini." });
     return { data: report };
   });
 
@@ -384,7 +384,7 @@ export async function reportsRoutes(app: FastifyInstance) {
 
     const turnstileValid = await verifyTurnstile(turnstileToken, req.ip);
     if (!turnstileValid)
-      return reply.status(400).send({ error: "Verifikasi keamanan tidak berhasil. Silakan coba kembali." });
+      return reply.status(400).send({ error: "Verifikasi keamanan gagal. Coba lagi." });
 
     // Bukti hanya boleh berupa file yang memang di-upload lewat endpoint upload
     // kita (URL R2 sendiri). URL eksternal ditolak -- lihat isOwnStorageUrl().
@@ -393,13 +393,13 @@ export async function reportsRoutes(app: FastifyInstance) {
       ? rawEvidenceUrls.filter(isOwnStorageUrl)
       : [];
     if (Array.isArray(rawEvidenceUrls) && cleanEvidenceUrls.length !== rawEvidenceUrls.length)
-      return reply.status(400).send({ error: "Bukti tidak valid. Silakan unggah ulang lampiran Anda." });
+      return reply.status(400).send({ error: "Bukti yang dikirim tidak valid. Coba unggah ulang lampiran Anda." });
     if (cleanEvidenceUrls.length > MAX_FILES_PER_REQUEST)
       return reply.status(400).send({ error: `Maksimal ${MAX_FILES_PER_REQUEST} bukti per laporan.` });
 
     // suspectPhotoUrl juga dirender di halaman publik -- berlaku aturan sama.
     if (suspectPhotoUrl != null && !isOwnStorageUrl(suspectPhotoUrl))
-      return reply.status(400).send({ error: "Foto terduga pelaku tidak valid. Silakan unggah ulang." });
+      return reply.status(400).send({ error: "Foto terduga pelaku tidak valid. Coba unggah ulang." });
 
     // ── QRIS: server adalah satu-satunya sumber kebenaran ──────────────────
     // targetValue/targetName yang dikirim client (kalau ada) diabaikan total.
@@ -412,7 +412,7 @@ export async function reportsRoutes(app: FastifyInstance) {
 
     if (targetType === "qris") {
       if (cleanEvidenceUrls.length === 0)
-        return reply.status(400).send({ error: "Foto QRIS asli wajib diunggah sebagai bukti." });
+        return reply.status(400).send({ error: "Foto QRIS asli wajib dilampirkan sebagai bukti." });
 
       const parsed = parseQrisPayload(qrisPayload);
       if (!parsed.valid)
@@ -424,7 +424,7 @@ export async function reportsRoutes(app: FastifyInstance) {
     } else {
       cleanTargetValue = typeof targetValue === "string" ? targetValue.replace(/\D/g, "") : "";
       if (!cleanTargetValue)
-        return reply.status(400).send({ error: "Nomor tujuan wajib diisi dan hanya boleh berisi angka." });
+        return reply.status(400).send({ error: "Nomor tujuan wajib diisi dan hanya boleh berupa angka." });
       resolvedTargetName = targetName ?? null;
     }
 
@@ -502,9 +502,9 @@ export async function reportsRoutes(app: FastifyInstance) {
       .from(reports)
       .where(eq(reports.id, id))
       .limit(1);
-    if (!report) return reply.status(404).send({ error: "Report not found" });
+    if (!report) return reply.status(404).send({ error: "Laporan tidak ditemukan." });
     if (report.userId !== req.user!.userId)
-      return reply.status(403).send({ error: "Forbidden" });
+      return reply.status(403).send({ error: "Anda tidak memiliki akses ke laporan ini." });
 
     const parts = req.files();
     const saved: string[] = [];

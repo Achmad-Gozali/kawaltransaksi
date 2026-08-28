@@ -32,7 +32,7 @@ export default function RekeningSearchForm() {
     setError(null);
     if (isWrongInput) return;
     if (!cleaned || cleaned.length < 6) {
-      setError('Masukkan nomor rekening yang valid (minimal 6 digit).');
+      setError('Masukkan nomor rekening yang benar, minimal 6 digit.');
       return;
     }
     setLoading(true);

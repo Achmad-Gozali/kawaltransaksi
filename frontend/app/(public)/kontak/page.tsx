@@ -1,7 +1,7 @@
 import type { Metadata } from 'next';
 
 export const metadata: Metadata = {
-  title: 'Kontak — KawalTransaksi',
+  title: 'Kontak - KawalTransaksi',
   description: 'Hubungi tim KawalTransaksi untuk pertanyaan, laporan, atau kerja sama.',
 };
 

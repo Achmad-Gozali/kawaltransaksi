@@ -100,16 +100,16 @@ export async function generateMetadata({ params, searchParams }: CheckPageProps)
   let description: string;
 
   if (verifiedCount > 0) {
-    title = `${label} - Terindikasi Penipuan (${verifiedCount} Laporan Terverifikasi) | KawalTransaksi`;
+    title = `${label} - Terindikasi Penipuan (${verifiedCount} Laporan Terverifikasi) - KawalTransaksi`;
     description = totalLoss > 0
       ? `${label} dilaporkan ${totalReports}x sebagai penipu dengan ${verifiedCount} laporan terverifikasi dan total kerugian ${formatLoss(totalLoss)}. Cek detail laporan sebelum bertransaksi.`
       : `${label} dilaporkan ${totalReports}x sebagai penipu dengan ${verifiedCount} laporan terverifikasi. Jangan bertransaksi dengan nomor ini.`;
   } else if (pendingCount > 0) {
-    title = `${label} - Pending (${pendingCount} Laporan Masuk) | KawalTransaksi`;
+    title = `${label} - Pending (${pendingCount} Laporan Masuk) - KawalTransaksi`;
     description = `${label} sedang dalam proses verifikasi dengan ${pendingCount} laporan masuk. Tetap waspada sebelum melakukan transaksi.`;
   } else {
-    title = `Cek ${label} - Tidak Ada Laporan | KawalTransaksi`;
-    description = `${label} belum memiliki laporan penipuan di database KawalTransaksi. Tetap waspada dan laporkan apabila Anda menemukan aktivitas mencurigakan.`;
+    title = `Cek ${label} - Tidak Ada Laporan - KawalTransaksi`;
+    description = `${label} belum memiliki laporan penipuan di database KawalTransaksi. Tetap waspada dan laporkan kalau Anda menemukan aktivitas mencurigakan.`;
   }
 
   return {
@@ -327,7 +327,7 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
   if (recentReports.length >= 3)
     riskBadges.push({ label: `Dilaporkan ${recentReports.length}x dalam 30 hari`, color: "bg-red-50 text-red-700 border-red-200" });
   if (totalLoss >= 10_000_000)
-    riskBadges.push({ label: `Kerugian besar -- ${new Intl.NumberFormat("id-ID", { notation: "compact", maximumFractionDigits: 1 }).format(totalLoss)}`, color: "bg-orange-50 text-orange-700 border-orange-200" });
+    riskBadges.push({ label: `Kerugian besar: ${new Intl.NumberFormat("id-ID", { notation: "compact", maximumFractionDigits: 1 }).format(totalLoss)}`, color: "bg-orange-50 text-orange-700 border-orange-200" });
   if (multiVictimCount >= 2)
     riskBadges.push({ label: `${multiVictimCount} laporan sebut ada korban lain`, color: "bg-amber-50 text-amber-700 border-amber-200" });
   let status: "safe" | "warning" | "danger" = "safe";
@@ -348,7 +348,7 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
     safe: {
       barBg: "bg-emerald-50 border-b border-emerald-100", barLabel: "text-emerald-900", barDesc: "text-emerald-700",
       dotBg: "bg-emerald-500", nameBadgeBg: "bg-emerald-50", nameBadgeText: "text-emerald-800", nameBadgeBorder: "border-emerald-200",
-      verdict: "Tidak ada laporan", verdictSub: "Nomor ini bersih di database kami. Tetap waspada.",
+      verdict: "Tidak ada laporan", verdictSub: "Nomor ini bersih di database kami. Tetap hati-hati, ya.",
     },
   };
 
@@ -362,7 +362,7 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
     ? `[!] waspada! ${displayNumLower} terindikasi penipu dengan ${verifiedCount} laporan terverifikasi. cek di kawaltransaksi:`
     : status === "warning"
       ? `[!] ${displayNumLower} sedang dalam proses verifikasi laporan penipuan. cek di kawaltransaksi:`
-      : `[OK] ${displayNumLower} aman -- belum ada laporan penipuan di kawaltransaksi:`;
+      : `[OK] ${displayNumLower} aman, belum ada laporan penipuan di kawaltransaksi:`;
 
   const verificationSteps = [
     { label: "Laporan diterima",       done: allReports.length > 0 },
@@ -407,7 +407,7 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
           <div className="max-w-5xl mx-auto flex items-center gap-2 flex-wrap">
             <div className={`w-2 h-2 rounded-full shrink-0 animate-pulse ${config.dotBg}`} />
             <span className={`text-xs font-semibold uppercase tracking-widest ${config.barLabel}`}>{config.verdict}</span>
-            <span className={`text-xs ${config.barDesc} hidden sm:inline`}>-- {config.verdictSub}</span>
+            <span className={`text-xs ${config.barDesc} hidden sm:inline`}>&middot; {config.verdictSub}</span>
             <span className="ml-auto flex items-center gap-1 text-[10px] text-slate-400">
               <Clock className="w-3 h-3" /> {formatTimestamp(checkedAt)}
             </span>
@@ -426,13 +426,13 @@ export default async function CheckPage({ params, searchParams }: CheckPageProps
               </div>
               <div className="bg-white rounded-xl border border-slate-200 p-3 sm:p-5">
                 <p className={`text-2xl sm:text-4xl font-bold leading-none tabular-nums ${totalLoss > 0 ? "text-red-600" : "text-slate-300"}`}>
-                  {totalLoss > 0 ? new Intl.NumberFormat("id-ID", { notation: "compact", maximumFractionDigits: 1 }).format(totalLoss) : "--"}
+                  {totalLoss > 0 ? new Intl.NumberFormat("id-ID", { notation: "compact", maximumFractionDigits: 1 }).format(totalLoss) : "—"}
                 </p>
                 <p className="text-[10px] text-slate-400 mt-2 uppercase tracking-[0.1em]">Total kerugian</p>
               </div>
               <div className={`rounded-xl border p-3 sm:p-5 ${hasOtherVictims ? "bg-amber-50 border-amber-200" : "bg-white border-slate-200"}`}>
                 <p className={`text-2xl sm:text-4xl font-bold leading-none ${hasOtherVictims ? "text-amber-500" : "text-slate-300"}`}>
-                  {hasOtherVictims ? "!" : "--"}
+                  {hasOtherVictims ? "!" : "—"}
                 </p>
                 <p className="text-[10px] text-slate-400 mt-2 uppercase tracking-[0.1em]">Multi korban</p>
               </div>

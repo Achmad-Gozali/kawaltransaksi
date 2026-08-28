@@ -64,7 +64,7 @@ export function validateImageBuffer(buffer: Buffer, mimetype: string): ImageVali
     buffer[3] === 0x47;
 
   if (!isJpeg && !isPng) {
-    return { valid: false, error: "File tidak valid atau telah dimanipulasi." };
+    return { valid: false, error: "File ini tidak valid atau sudah diubah." };
   }
 
   return { valid: true, ext: mimetype === "image/png" ? ".png" : ".jpg" };

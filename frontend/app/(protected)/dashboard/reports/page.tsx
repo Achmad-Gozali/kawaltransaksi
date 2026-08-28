@@ -10,7 +10,7 @@ import { formatDateID } from '@/core/utils';
 import AppealButton from '@/features/report/AppealButton';
 
 export const metadata: Metadata = {
-  title: 'Laporan Saya — KawalTransaksi',
+  title: 'Laporan Saya - KawalTransaksi',
   description: 'Lihat laporan yang pernah Anda buat di KawalTransaksi.',
 };
 

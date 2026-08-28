@@ -27,10 +27,10 @@ export default function LupaKataSandiPage() {
         setSuccess(true);
       } else {
         const data = await res.json();
-        setError(data.error || "Terjadi kesalahan.");
+        setError(data.error || "Terjadi kesalahan. Coba lagi sebentar lagi.");
       }
     } catch {
-      setError("Gagal menghubungi server. Periksa koneksi.");
+      setError("Tidak bisa terhubung ke server. Coba periksa koneksi internet Anda, lalu ulangi.");
     } finally {
       setLoading(false);
     }
@@ -55,7 +55,7 @@ export default function LupaKataSandiPage() {
               </div>
               <h2 className="text-lg font-bold text-slate-900 mb-2">Periksa Email Anda</h2>
               <p className="text-sm text-slate-500 leading-relaxed mb-6">
-                Apabila email <span className="font-semibold text-slate-700">{email}</span> terdaftar, kami akan mengirimkan tautan pengaturan ulang kata sandi.
+                Kalau email <span className="font-semibold text-slate-700">{email}</span> terdaftar, kami akan mengirimkan tautan untuk mengatur ulang kata sandi.
               </p>
               <p className="text-xs text-slate-400 mb-4">Tidak menerima email? Periksa folder spam Anda.</p>
               <button
@@ -69,7 +69,7 @@ export default function LupaKataSandiPage() {
             <>
               <div className="mb-6">
                 <h1 className="text-2xl font-bold text-gray-900 mb-1">Lupa Kata Sandi</h1>
-                <p className="text-sm text-gray-500">Masukkan email Anda dan kami akan mengirimkan tautan untuk mengatur ulang kata sandi.</p>
+                <p className="text-sm text-gray-500">Masukkan email Anda, nanti kami kirimkan tautan untuk mengatur ulang kata sandi.</p>
               </div>
 
               {error && (

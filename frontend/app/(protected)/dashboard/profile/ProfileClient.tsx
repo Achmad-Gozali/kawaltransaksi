@@ -65,7 +65,7 @@ export default function ProfileClient() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setNameMsg({ text: data.error ?? 'Gagal memperbarui nama.', type: 'error' });
+        setNameMsg({ text: data.error ?? 'Gagal memperbarui nama. Coba lagi sebentar lagi.', type: 'error' });
       } else {
         setUser(prev => prev ? { ...prev, name: data.name } : prev);
         setNameMsg({ text: 'Nama berhasil diperbarui.', type: 'success' });
@@ -97,7 +97,7 @@ export default function ProfileClient() {
       const data = await res.json();
       if (!res.ok) {
         if (data.error?.includes('Google')) setIsGoogleUser(true);
-        setPassMsg({ text: data.error ?? 'Gagal mengubah password.', type: 'error' });
+        setPassMsg({ text: data.error ?? 'Gagal mengubah kata sandi. Coba lagi sebentar lagi.', type: 'error' });
       } else {
         setPassMsg({ text: 'Password berhasil diubah.', type: 'success' });
         setCurrentPassword('');

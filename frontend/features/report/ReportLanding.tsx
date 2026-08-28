@@ -11,36 +11,36 @@ const steps = [
   {
     icon: LogIn,
     title: 'Masuk untuk Melapor',
-    desc: 'Sebelum melapor, pastikan Anda telah masuk ke akun KawalTransaksi. Belum memiliki akun? Daftar sekarang, gratis.',
+    desc: 'Sebelum melapor, pastikan Anda sudah masuk ke akun KawalTransaksi. Belum punya akun? Daftar sekarang, gratis.',
   },
   {
     icon: FileText,
     title: 'Isi Formulir Laporan',
-    desc: 'Laporkan nomor rekening atau nomor telepon yang diduga digunakan pelaku penipuan. Lengkapi formulir dengan informasi yang sebenar-benarnya.',
+    desc: 'Laporkan nomor rekening atau nomor telepon yang diduga dipakai pelaku penipuan. Isi formulir dengan informasi yang sebenar-benarnya.',
   },
   {
     icon: Send,
     title: 'Kirim Laporan',
-    desc: 'Setelah seluruh kolom pada formulir terisi, tekan tombol "Kirim Laporan" untuk meneruskan laporan kepada tim moderator.',
+    desc: 'Setelah semua kolom pada formulir terisi, klik tombol "Kirim Laporan" untuk mengirim laporan ke tim moderator.',
   },
 ];
 
 const explanations = [
   {
     title: 'Lapor Penipuan Online',
-    desc: 'Pernah tertipu saat berbelanja online? Laporkan melalui KawalTransaksi agar tidak ada lagi korban dari penjual yang sama. Dengan melaporkan penipuan, Anda turut membantu sesama pengguna terhindar dari ancaman serupa.',
+    desc: 'Pernah tertipu saat belanja online? Laporkan lewat KawalTransaksi supaya tidak ada lagi korban dari penjual yang sama. Dengan melaporkan penipuan, Anda ikut membantu pengguna lain terhindar dari kejadian serupa.',
   },
   {
     title: 'Laporkan Rekening Penipu',
-    desc: 'Anda dapat melaporkan nomor rekening bank yang pernah disalahgunakan pemiliknya untuk penipuan, baik online maupun offline. Setiap laporan yang masuk akan kami tinjau, dan rekening yang terbukti digunakan untuk penipuan akan dimasukkan ke daftar hitam pada sistem kami.',
+    desc: 'Anda bisa melaporkan nomor rekening bank yang pernah dipakai pemiliknya untuk menipu, baik online maupun offline. Setiap laporan yang masuk akan kami tinjau, dan rekening yang terbukti dipakai menipu akan masuk daftar hitam di sistem kami.',
   },
   {
     title: 'Melaporkan Nomor HP Penipu',
-    desc: 'Untuk melaporkan seseorang terkait penipuan online, Anda cukup melengkapi formulir pada halaman ini. Setelah laporan dikirim dan ditinjau oleh tim kami, nomor HP yang diduga digunakan untuk penipuan akan dimasukkan ke daftar hitam dan dapat diperiksa oleh seluruh pengguna.',
+    desc: 'Untuk melaporkan seseorang terkait penipuan online, Anda cukup mengisi formulir di halaman ini. Setelah laporan dikirim dan ditinjau tim kami, nomor HP yang diduga dipakai menipu akan masuk daftar hitam dan bisa diperiksa oleh semua pengguna.',
   },
   {
     title: 'Lapor Penipuan Transaksi Online',
-    desc: 'Apabila Anda telah menjadi korban penipuan saat bertransaksi secara online, Anda dapat melaporkan kejadian tersebut melalui KawalTransaksi agar tidak ada korban berikutnya dari pelaku yang sama.',
+    desc: 'Kalau Anda pernah menjadi korban penipuan saat bertransaksi online, Anda bisa melaporkan kejadiannya lewat KawalTransaksi supaya tidak ada korban berikutnya dari pelaku yang sama.',
   },
 ];
 
@@ -60,7 +60,7 @@ export default function ReportLanding() {
                   Laporkan Nomor Rekening Atau<br className="hidden sm:block" /> Nomor Telepon Penipuan
                 </h1>
                 <p className="text-slate-500 text-sm leading-relaxed max-w-md">
-                  Laporan Anda sangat berarti untuk mencegah penipuan berikutnya oleh pelaku yang sama. Bersama, kita dapat melindungi lebih banyak orang.
+                  Laporan Anda sangat berarti untuk mencegah penipuan berikutnya oleh pelaku yang sama. Bersama-sama, kita bisa melindungi lebih banyak orang.
                 </p>
               </div>
 
@@ -88,7 +88,7 @@ export default function ReportLanding() {
                 <div className="px-6 py-5 border-b border-slate-100 text-center">
                   <p className="text-base font-semibold text-slate-900">Masuk ke Akun Terlebih Dahulu</p>
                   <p className="text-sm text-slate-400 mt-1">
-                    Anda perlu masuk ke akun KawalTransaksi sebelum dapat membuat laporan.
+                    Anda perlu masuk ke akun KawalTransaksi dulu sebelum bisa membuat laporan.
                   </p>
                 </div>
 

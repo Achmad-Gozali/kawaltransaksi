@@ -43,14 +43,14 @@ export async function generateMetadata({ params }: { params: Promise<{ slug: str
 
   if (!article) {
     return {
-      title: 'Artikel tidak ditemukan — KawalTransaksi',
+      title: 'Artikel tidak ditemukan - KawalTransaksi',
       robots: { index: false, follow: false },
     };
   }
 
   const thumbUrl = article.thumbnail;
   const url = `${SITE_URL}/artikel/${slug}`;
-  const title = `${article.title} — KawalTransaksi`;
+  const title = `${article.title} - KawalTransaksi`;
   const description = article.excerpt ?? undefined;
 
   return {

@@ -165,7 +165,7 @@ export default function NumberCard({
                 )}
               </div>
               {isQris && qrDecodedName && (
-                <p className="text-[11px] text-slate-400 mt-2">Data merchant dibaca dari kode QR yang Anda pindai, bukan klaim yang telah diverifikasi sebagai laporan resmi.</p>
+                <p className="text-[11px] text-slate-400 mt-2">Data merchant dibaca dari kode QR yang Anda pindai, bukan klaim yang sudah diverifikasi sebagai laporan resmi.</p>
               )}
               {isQris && !qrDecodedName && merchantName && (
                 <p className="text-[11px] text-slate-400 mt-2">Data merchant dari laporan komunitas sebelumnya.</p>
