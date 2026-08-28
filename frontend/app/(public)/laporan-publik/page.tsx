@@ -96,7 +96,7 @@ function buildPaginationPages(current: number, total: number): (number | "...")[
 async function getLaporanPublik(params: { type: string; sort: string; q: string; page: number }) {
   try {
     const search = new URLSearchParams({ type: params.type, sort: params.sort, q: params.q, page: String(params.page) });
-    const res = await fetch(`${BACKEND_URL}/api/reports/laporan-publik?${search}`, { cache: "no-store" });
+    const res = await fetch(`${BACKEND_URL}/api/reports/laporan-publik?${search}`, { next: { revalidate: 30 } });
     if (!res.ok) return { data: [], total_unique: 0 };
     const json = await res.json();
     return json.data ?? { data: [], total_unique: 0 };

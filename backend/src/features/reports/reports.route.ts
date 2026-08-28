@@ -424,22 +424,57 @@ export async function reportsRoutes(app: FastifyInstance) {
       ? sql`AND (r.target_value ILIKE ${"%" + q.trim() + "%"} OR r.bank_name ILIKE ${"%" + q.trim() + "%"} OR r.wallet_name ILIKE ${"%" + q.trim() + "%"})`
       : sql``;
 
+    // Dulu: dua subquery berkorelasi (target_name, category) di SELECT list
+    // sebuah query GROUP BY -- di-evaluasi per baris hasil. Sekarang: agregasi
+    // di CTE `grouped`, ambil satu halaman di `page`, lalu target_name/category
+    // di-resolve set-based lewat DISTINCT ON yang di-join hanya ke 12 baris
+    // halaman itu. Semantik pemilihan dipertahankan persis:
+    //  - target_name : satu target_name dari laporan verified untuk target_value
+    //    itu (tanpa ORDER BY tertentu di versi lama -> tetap "salah satu").
+    //  - category    : kategori dari laporan TERBARU untuk target_value itu.
+    // Keduanya di-key ke target_value saja (bukan grup type+bank), sama seperti
+    // subquery lama.
     const rows = await db.execute(sql`
+      WITH grouped AS (
+        SELECT
+          r.target_value                                      AS target_number,
+          r.target_type,
+          COALESCE(r.bank_name, r.wallet_name)               AS bank_name,
+          COUNT(*)::int                                      AS total,
+          COUNT(*) FILTER (WHERE r.status = 'verified')::int AS verified_count,
+          COUNT(*) FILTER (WHERE r.status = 'pending')::int  AS pending_count,
+          MAX(r.created_at)                                  AS latest_at
+        FROM reports r
+        WHERE 1=1 ${typeFilter} ${searchFilter}
+        GROUP BY r.target_value, r.target_type, COALESCE(r.bank_name, r.wallet_name)
+      ),
+      page AS (
+        SELECT * FROM grouped
+        ORDER BY latest_at ${sortDir}
+        LIMIT ${perPage} OFFSET ${offset}
+      ),
+      name_pick AS (
+        SELECT DISTINCT ON (rr.target_value) rr.target_value, rr.target_name
+        FROM reports rr
+        JOIN page p ON p.target_number = rr.target_value
+        WHERE rr.status = 'verified'
+        ORDER BY rr.target_value
+      ),
+      cat_pick AS (
+        SELECT DISTINCT ON (rr.target_value) rr.target_value, rr.category
+        FROM reports rr
+        JOIN page p ON p.target_number = rr.target_value
+        ORDER BY rr.target_value, rr.created_at DESC
+      )
       SELECT
-        r.target_value                                        AS target_number,
-        r.target_type,
-        COALESCE(r.bank_name, r.wallet_name)                 AS bank_name,
-        COUNT(*)::int                                        AS total,
-        COUNT(*) FILTER (WHERE r.status = 'verified')::int   AS verified_count,
-        COUNT(*) FILTER (WHERE r.status = 'pending')::int    AS pending_count,
-        MAX(r.created_at)                                    AS latest_at,
-        (SELECT rr.target_name FROM reports rr WHERE rr.target_value = r.target_value AND rr.status = 'verified' LIMIT 1) AS target_name,
-        (SELECT rr.category FROM reports rr WHERE rr.target_value = r.target_value ORDER BY rr.created_at DESC LIMIT 1)   AS category
-      FROM reports r
-      WHERE 1=1 ${typeFilter} ${searchFilter}
-      GROUP BY r.target_value, r.target_type, COALESCE(r.bank_name, r.wallet_name)
-      ORDER BY latest_at ${sortDir}
-      LIMIT ${perPage} OFFSET ${offset}
+        p.target_number, p.target_type, p.bank_name,
+        p.total, p.verified_count, p.pending_count, p.latest_at,
+        n.target_name,
+        c.category
+      FROM page p
+      LEFT JOIN name_pick n ON n.target_value = p.target_number
+      LEFT JOIN cat_pick  c ON c.target_value = p.target_number
+      ORDER BY p.latest_at ${sortDir}
     `);
 
     const [countRow] = await db.execute(sql`
