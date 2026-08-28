@@ -127,6 +127,26 @@ export default function ReportForm() {
     ]);
   }, []);
 
+  // Kembalikan Step 1 (kartu "QRIS berhasil dibaca") ke state belum-upload --
+  // sama efeknya dengan tombol reset (RotateCcw) di TargetEntryCard. Dipakai
+  // saat satu-satunya bukti QRIS dihapus dari Step 3, supaya kedua step konsisten.
+  const resetQrisTarget = useCallback(() => {
+    setTarget(t => ({ ...t, number: '', name: '', qris_payload: undefined, qris_merchant_city: undefined }));
+  }, []);
+
+  // Buang foto QRIS dari evidence tanpa menyentuh state target -- dipakai saat
+  // user mengganti tipe target dari "qris" ke tipe lain (target-nya sudah
+  // di-reset oleh handler ganti tipe di TargetEntryCard). Tanpa ini, foto QRIS
+  // lama ikut ter-upload sebagai bukti biasa pada laporan phone/bank/ewallet.
+  const clearQrisEvidence = useCallback(() => {
+    setEvidenceFiles(prev => prev.filter(item => !item.isQrisSource));
+  }, []);
+
+  const handleRemoveEvidenceFile = useCallback((index: number) => {
+    if (evidenceFiles[index]?.isQrisSource) resetQrisTarget();
+    setEvidenceFiles(prev => prev.filter((_, i) => i !== index));
+  }, [evidenceFiles, resetQrisTarget]);
+
   const navigate = (dir: 'next' | 'prev') => {
     setError(null);
     if (dir === 'next') {
@@ -274,6 +294,7 @@ export default function ReportForm() {
       customCategory={customCategory} customPlatform={customPlatform}
       onUpdateTarget={setTarget}
       onQrisEvidenceFile={handleQrisEvidenceFile}
+      onClearQrisEvidence={clearQrisEvidence}
       onFormDataChange={setFormData}
       onSuspectPhotoChange={(e) => handlePhotoChange(e.target.files?.[0] || null, 'suspect')}
       onRemoveSuspectPhoto={() => { setSuspectPhoto(null); setSuspectPhotoPreview(null); }}
@@ -292,7 +313,7 @@ export default function ReportForm() {
       key="step3"
       evidenceFiles={evidenceFiles}
       onEvidenceFileChange={handleEvidenceFileChange}
-      onRemoveEvidenceFile={(i) => setEvidenceFiles(prev => prev.filter((_, idx) => idx !== i))}
+      onRemoveEvidenceFile={handleRemoveEvidenceFile}
     />,
   ];
 

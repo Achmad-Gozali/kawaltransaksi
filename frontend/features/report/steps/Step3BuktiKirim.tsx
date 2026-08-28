@@ -28,7 +28,13 @@ export function Step3BuktiKirim({ evidenceFiles, onEvidenceFileChange, onRemoveE
                 <div key={index} className="rounded-xl overflow-hidden border border-slate-100 bg-slate-50">
                   <div className="relative h-40 sm:h-48 w-full">
                     <Image src={item.preview} alt={`Bukti ${index + 1}`} fill className="object-cover" unoptimized />
-                    <button type="button" onClick={() => onRemoveEvidenceFile(index)}
+                    <button type="button"
+                      onClick={() => {
+                        // Foto QRIS = bukti wajib; konfirmasi dulu supaya tidak
+                        // terhapus tak sengaja (hapusnya juga me-reset Step 1).
+                        if (item.isQrisSource && !window.confirm('Hapus foto QRIS ini? Anda perlu scan ulang di Data Penipu.')) return;
+                        onRemoveEvidenceFile(index);
+                      }}
                       className="absolute top-2.5 right-2.5 p-1.5 bg-black/50 text-white rounded-lg hover:bg-black/80 transition-colors backdrop-blur-sm">
                       <X className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
                     </button>

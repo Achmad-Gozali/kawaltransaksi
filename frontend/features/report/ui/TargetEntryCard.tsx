@@ -15,6 +15,10 @@ interface Props {
   // dari evidence laporan (mengikuti pola evidence yang sudah ada), dikelola
   // ReportForm lewat state evidenceFiles yang sama dipakai Step 3.
   onQrisEvidenceFile?: (file: File, preview: string) => void;
+  // Dipanggil saat user mengganti tipe target DARI "qris" ke tipe lain --
+  // ReportForm membuang item isQrisSource dari evidenceFiles supaya foto QRIS
+  // lama tidak nyasar jadi bukti biasa di laporan phone/bank/ewallet.
+  onClearQrisEvidence?: () => void;
 }
 
 function readFileAsDataUrl(file: File): Promise<string> {
@@ -130,14 +134,20 @@ function QrisTargetInput({ entry, onChange, onQrisEvidenceFile }: Required<Pick<
   );
 }
 
-export function TargetEntryCard({ entry, onChange, onQrisEvidenceFile }: Props) {
+export function TargetEntryCard({ entry, onChange, onQrisEvidenceFile, onClearQrisEvidence }: Props) {
   return (
     <div className="bg-slate-50 border border-slate-200 rounded-xl p-4 space-y-3">
       <div>
-        <Sel value={entry.type} onChange={e => onChange({
-          ...entry, type: e.target.value as any, bank_name: '', ewallet_name: '',
-          number: '', name: '', qris_payload: undefined, qris_merchant_city: undefined,
-        })}>
+        <Sel value={entry.type} onChange={e => {
+          const nextType = e.target.value as TargetEntry['type'];
+          // Foto QRIS yang sudah didorong ke evidence ikut dibersihkan saat
+          // pindah dari qris ke tipe lain -- target-nya di-reset di bawah.
+          if (entry.type === 'qris' && nextType !== 'qris') onClearQrisEvidence?.();
+          onChange({
+            ...entry, type: nextType, bank_name: '', ewallet_name: '',
+            number: '', name: '', qris_payload: undefined, qris_merchant_city: undefined,
+          });
+        }}>
           <option value="phone">Nomor HP / WhatsApp</option>
           <option value="bank_account">Rekening Bank</option>
           <option value="ewallet">E-Wallet / Dompet Digital</option>

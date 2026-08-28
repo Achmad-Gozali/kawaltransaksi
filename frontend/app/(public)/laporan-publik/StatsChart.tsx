@@ -137,7 +137,9 @@ export default function StatsChart({ rawReports }: StatsChartProps) {
     filteredReports.forEach(r => {
       const bankKey = r.bank_name?.toLowerCase() ?? '';
       let platform = 'HP/WA';
-      if (r.target_type === 'bank_account' && r.bank_name) {
+      if (r.target_type === 'qris') {
+        platform = 'QRIS';
+      } else if (r.target_type === 'bank_account' && r.bank_name) {
         const bankShort: Record<string, string> = {
           'bank central asia': 'BCA',
           'bank rakyat indonesia': 'BRI',

@@ -3,7 +3,7 @@
 import { useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
-import { Phone, Landmark, Wallet, ArrowRight } from "lucide-react";
+import { Phone, Landmark, Wallet, QrCode, ArrowRight } from "lucide-react";
 import * as motion from "motion/react-client";
 import { formatDateID } from "@/core/utils";
 import { useReportStream } from "@/features/realtime/useReportStream";
@@ -46,6 +46,8 @@ function getTargetMeta(type: string, bankName: string | null, walletName: string
     return { icon: Wallet, label: walletName ?? bankName ?? "E-Wallet", color: "text-violet-600", bg: "bg-violet-50", border: "border-violet-200" };
   if (type === "bank_account")
     return { icon: Landmark, label: bankName ?? "Rekening Bank", color: "text-blue-600", bg: "bg-blue-50", border: "border-blue-200" };
+  if (type === "qris")
+    return { icon: QrCode, label: "QRIS", color: "text-teal-600", bg: "bg-teal-50", border: "border-teal-200" };
   return { icon: Phone, label: "Nomor HP", color: "text-slate-600", bg: "bg-slate-50", border: "border-slate-200" };
 }
 

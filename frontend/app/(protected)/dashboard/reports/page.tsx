@@ -3,7 +3,7 @@ import { redirect } from 'next/navigation';
 import Link from 'next/link';
 import {
   Clock, CheckCircle2, XCircle, FileText, PlusCircle,
-  ArrowRight, Phone, Building2,
+  ArrowRight, Phone, Building2, QrCode,
 } from 'lucide-react';
 import type { Metadata } from 'next';
 import { formatDateID } from '@/core/utils';
@@ -110,6 +110,7 @@ export default async function LaporanPage() {
             const status     = STATUS_CONFIG[report.status as keyof typeof STATUS_CONFIG] ?? STATUS_CONFIG.pending;
             const StatusIcon = status.icon;
             const isPhone    = report.targetType === 'phone';
+            const isQris     = report.targetType === 'qris';
             const canAppeal  = report.status === 'rejected';
 
             return (
@@ -117,7 +118,9 @@ export default async function LaporanPage() {
                 <div className="flex items-start justify-between gap-3">
                   <div className="flex items-start gap-3 min-w-0">
                     <div className="w-8 h-8 sm:w-9 sm:h-9 bg-zinc-100 rounded-xl flex items-center justify-center shrink-0 mt-0.5">
-                      {isPhone
+                      {isQris
+                        ? <QrCode className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-zinc-500" />
+                        : isPhone
                         ? <Phone className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-zinc-500" />
                         : <Building2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 text-zinc-500" />}
                     </div>

@@ -5,7 +5,7 @@ import Chart from 'chart.js/auto';
 import {
   FileText, Hourglass, ShieldCheck, Wallet, TrendingUp,
   ArrowUpRight, ArrowDownRight, Calendar, Search, Landmark,
-  CreditCard, Smartphone, MessageCircle, Users, Camera,
+  CreditCard, Smartphone, QrCode, MessageCircle, Users, Camera,
   MoreHorizontal, ChevronRight, Sparkles, CheckCircle2,
 } from 'lucide-react';
 import type { Stats, AdminAnalytics } from '@/features/admin/types';
@@ -35,6 +35,7 @@ const TYPE_LABEL: Record<string, string> = {
   phone: 'Nomor HP',
   bank_account: 'Rekening Bank',
   ewallet: 'E-Wallet',
+  qris: 'QRIS',
 };
 
 function calcTrend(series: number[]): number | null {
@@ -480,6 +481,7 @@ export default function StatistikTab({ stats, analytics }: { stats: Stats; analy
                     'Rekening Bank': Landmark,
                     'E-Wallet': CreditCard,
                     'Nomor HP': Smartphone,
+                    'QRIS': QrCode,
                   };
                   const Icon = iconMap[d.name] ?? Smartphone;
                   return (

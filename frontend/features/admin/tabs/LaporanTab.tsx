@@ -3,7 +3,7 @@
 import { useMemo, useState, useRef, useEffect } from 'react';
 import {
   Search, ChevronDown, CheckCircle, XCircle, Eye, Mail, MoreHorizontal,
-  FileText, Clock, ShieldCheck, XOctagon, Landmark, CreditCard, Smartphone,
+  FileText, Clock, ShieldCheck, XOctagon, Landmark, CreditCard, Smartphone, QrCode,
   SlidersHorizontal, ChevronLeft, ChevronRight, X, Trash2, AlertTriangle,
 } from 'lucide-react';
 import Image from 'next/image';
@@ -23,6 +23,7 @@ const TYPE_MAP: Record<string, { label: string; icon: React.ElementType }> = {
   phone:        { label: 'Nomor HP',      icon: Smartphone },
   bank_account: { label: 'Rekening Bank', icon: Landmark    },
   ewallet:      { label: 'E-Wallet',      icon: CreditCard  },
+  qris:         { label: 'QRIS',          icon: QrCode      },
 };
 
 const CATEGORY_PALETTE = [
@@ -357,7 +358,7 @@ export default function LaporanTab({ reports: initial, token, initialSearch = ''
         </div>
         {[
           { value: statusFilter, set: setStatusFilter, opts: [['', 'Semua status'], ['pending', 'Pending'], ['verified', 'Terverifikasi'], ['rejected', 'Ditolak']] },
-          { value: typeFilter, set: setTypeFilter, opts: [['', 'Semua tipe'], ['phone', 'Nomor HP'], ['bank_account', 'Rekening Bank'], ['ewallet', 'E-Wallet']] },
+          { value: typeFilter, set: setTypeFilter, opts: [['', 'Semua tipe'], ['phone', 'Nomor HP'], ['bank_account', 'Rekening Bank'], ['ewallet', 'E-Wallet'], ['qris', 'QRIS']] },
         ].map(({ value, set, opts }, i) => (
           <div className="relative" key={i}>
             <select value={value} onChange={e => { set(e.target.value); setPage(1); }}

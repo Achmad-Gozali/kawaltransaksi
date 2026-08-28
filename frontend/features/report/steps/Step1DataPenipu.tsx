@@ -19,6 +19,7 @@ interface Step1Props {
   customPlatform: string;
   onUpdateTarget: (updated: TargetEntry) => void;
   onQrisEvidenceFile: (file: File, preview: string) => void;
+  onClearQrisEvidence: () => void;
   onFormDataChange: (data: ReportFormData) => void;
   onSuspectPhotoChange: (e: React.ChangeEvent<HTMLInputElement>) => void;
   onRemoveSuspectPhoto: () => void;
@@ -32,7 +33,7 @@ interface Step1Props {
 export function Step1DataPenipu({
   target, formData, suspectPhotoPreview,
   customCategory, customPlatform,
-  onUpdateTarget, onQrisEvidenceFile,
+  onUpdateTarget, onQrisEvidenceFile, onClearQrisEvidence,
   onFormDataChange, onSuspectPhotoChange, onRemoveSuspectPhoto,
   onAddSocialField, onRemoveSocialField, onUpdateSocialField,
   onCustomCategoryChange, onCustomPlatformChange,
@@ -47,7 +48,7 @@ export function Step1DataPenipu({
             title="Nomor Penipu"
             subtitle="Nomor HP, rekening, atau e-wallet yang digunakan pelaku"
           />
-          <TargetEntryCard entry={target} onChange={onUpdateTarget} onQrisEvidenceFile={onQrisEvidenceFile} />
+          <TargetEntryCard entry={target} onChange={onUpdateTarget} onQrisEvidenceFile={onQrisEvidenceFile} onClearQrisEvidence={onClearQrisEvidence} />
         </div>
       </Card>
 

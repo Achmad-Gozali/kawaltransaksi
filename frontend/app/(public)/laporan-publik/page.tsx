@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Image from "next/image";
 import type { Metadata } from "next";
-import { Phone, Building2, Wallet, ArrowRight } from "lucide-react";
+import { Phone, Building2, Wallet, QrCode, ArrowRight } from "lucide-react";
 import { formatDateID, encodeSlug } from "@/core/utils";
 import StatsChart from "./StatsChart";
 import SearchBar from "./SearchBar";
@@ -53,6 +53,9 @@ function getTargetMeta(type: string, bankName: string | null) {
   }
   if (type === "bank_account") {
     return { icon: Building2, label: bankName ?? "Rekening Bank", color: "text-blue-600", bg: "bg-blue-50", border: "border-blue-200" };
+  }
+  if (type === "qris") {
+    return { icon: QrCode, label: "QRIS", color: "text-teal-600", bg: "bg-teal-50", border: "border-teal-200" };
   }
   return { icon: Phone, label: "Nomor HP", color: "text-slate-600", bg: "bg-slate-50", border: "border-slate-200" };
 }
@@ -185,6 +188,7 @@ export default async function LaporanPublikPage({
                 {[
                   { val: "all", label: "Semua" }, { val: "phone", label: "HP / WA" },
                   { val: "bank_account", label: "Rekening" }, { val: "ewallet", label: "E-Wallet" },
+                  { val: "qris", label: "QRIS" },
                 ].map((t) => (
                   <Link key={t.val} href={buildUrl({ type: t.val })} scroll={false}
                     className={`px-3 py-1.5 text-xs font-semibold rounded-lg border transition-colors ${
