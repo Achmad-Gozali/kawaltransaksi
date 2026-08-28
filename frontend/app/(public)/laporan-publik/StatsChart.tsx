@@ -1,22 +1,27 @@
 /* eslint-disable react-hooks/purity */
 'use client';
 
-import { useState, useMemo, useRef } from 'react';
+import { useState, useMemo } from 'react';
 import {
   LineChart, Line, XAxis, YAxis, Tooltip, ResponsiveContainer,
   PieChart, Pie, Cell, BarChart, Bar,
 } from 'recharts';
 
-interface RawReport {
-  target_type: string;
-  bank_name: string | null;
-  category: string | null;
-  status: string;
-  created_at: string;
+// Bentuk hasil agregasi dari GET /api/reports/laporan-stats. Semua penghitungan
+// (tren harian, kategori, platform) sudah dikerjakan Postgres per rentang waktu
+// -- komponen ini tinggal memetakan label + slice top-N.
+export interface LaporanStats {
+  total: number;
+  daily: { date: string; count: number }[];
+  ranges: Record<Range, {
+    total: number;
+    categories: { name: string; value: number }[];
+    platforms: { target_type: string; bank_name: string | null; value: number }[];
+  }>;
 }
 
 interface StatsChartProps {
-  rawReports: RawReport[];
+  stats: LaporanStats;
 }
 
 type Range = 'all' | '30' | '7';
@@ -90,23 +95,23 @@ const renderBarLabel = ({ x, y, width, value, index, data }: any) => {
   );
 };
 
-export default function StatsChart({ rawReports }: StatsChartProps) {
+export default function StatsChart({ stats }: StatsChartProps) {
   const [range, setRange] = useState<Range>('30');
 
   const now = Date.now();
 
-  const filteredReports = useMemo(() => {
-    if (range === 'all') return rawReports;
-    const days = parseInt(range);
-    const cutoff = new Date(now);
-    cutoff.setDate(cutoff.getDate() - days);
-    cutoff.setHours(0, 0, 0, 0);
-    return rawReports.filter(r => new Date(r.created_at) >= cutoff);
-  }, [rawReports, range, now]);
+  const agg = stats.ranges[range];
+  const rangeTotal = agg.total;
+
+  const dailyMap = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const d of stats.daily) m.set(d.date, d.count);
+    return m;
+  }, [stats.daily]);
 
   const trendData = useMemo(() => {
     const days = range === 'all'
-      ? Math.max(7, Math.ceil((now - new Date(rawReports[rawReports.length - 1]?.created_at ?? now).getTime()) / 86400000) + 1)
+      ? Math.max(7, Math.ceil((now - new Date(stats.daily[0]?.date ?? now).getTime()) / 86400000) + 1)
       : parseInt(range);
     const cappedDays = Math.min(days, range === 'all' ? 60 : parseInt(range));
     const result: { date: string; count: number }[] = [];
@@ -115,26 +120,16 @@ export default function StatsChart({ rawReports }: StatsChartProps) {
       d.setDate(d.getDate() - i);
       const wibStr = toWIBDateString(d.toISOString());
       const label = formatShortDate(wibStr);
-      const count = filteredReports.filter(r => toWIBDateString(r.created_at) === wibStr).length;
-      result.push({ date: label, count });
+      result.push({ date: label, count: dailyMap.get(wibStr) ?? 0 });
     }
     return result;
-  }, [filteredReports, range, rawReports, now]);
+  }, [dailyMap, range, now, stats.daily]);
 
-  const categoryData = useMemo(() => {
-    const count: Record<string, number> = {};
-    filteredReports.forEach(r => {
-      if (r.category) count[r.category] = (count[r.category] ?? 0) + 1;
-    });
-    return Object.entries(count)
-      .sort((a, b) => b[1] - a[1])
-      .slice(0, 5)
-      .map(([name, value]) => ({ name, value }));
-  }, [filteredReports]);
+  const categoryData = useMemo(() => agg.categories.slice(0, 5), [agg.categories]);
 
   const platformData = useMemo(() => {
     const count: Record<string, number> = {};
-    filteredReports.forEach(r => {
+    agg.platforms.forEach(r => {
       const bankKey = r.bank_name?.toLowerCase() ?? '';
       let platform = 'HP/WA';
       if (r.target_type === 'qris') {
@@ -166,15 +161,15 @@ export default function StatsChart({ rawReports }: StatsChartProps) {
       } else if (r.target_type === 'phone' && r.bank_name && ewalletNames.includes(bankKey)) {
         platform = r.bank_name;
       }
-      count[platform] = (count[platform] ?? 0) + 1;
+      count[platform] = (count[platform] ?? 0) + r.value;
     });
     return Object.entries(count)
       .sort((a, b) => b[1] - a[1])
       .slice(0, 6)
       .map(([name, value]) => ({ name, value }));
-  }, [filteredReports]);
+  }, [agg.platforms]);
 
-  const hasData = filteredReports.length > 0;
+  const hasData = rangeTotal > 0;
   const hasTrend = trendData.some(d => d.count > 0);
   const trendDays = range === '7' ? 7 : range === '30' ? 30 : trendData.length;
   const tickInterval = trendDays > 14 ? Math.floor(trendDays / 7) : 0;
@@ -208,7 +203,7 @@ export default function StatsChart({ rawReports }: StatsChartProps) {
           ))}
         </div>
         <span className="text-xs font-bold text-slate-400">
-          {filteredReports.length} laporan
+          {rangeTotal} laporan
         </span>
       </div>
 

@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { db } from "../../core/db.js";
 import { reports, evidence, publicReportColumns } from "../../core/schema.js";
-import { eq, desc, count, and, sql } from "drizzle-orm";
+import { eq, desc, and, sql } from "drizzle-orm";
 import { requireAuth } from "../../core/auth.middleware.js";
 import { saveFile, validateImageBuffer, isOwnStorageUrl } from "../../core/storage.js";
 import { checkSpam, checkCompleteness, looksLikeQrisNmid } from "../../core/robot.js";
@@ -53,6 +53,27 @@ const publicCheckRateLimit = {
   }),
 };
 
+// Statistik per targetType (phone/bank_account/qris) untuk endpoint /public/stats-*.
+// Satu query: total laporan tipe itu (semua status), jumlah verified, dan total
+// kerugian dari yang verified. SUM mengabaikan NULL, jadi identik dengan versi
+// lama yang punya "AND amount IS NOT NULL" eksplisit.
+async function targetTypeStats(targetType: "phone" | "bank_account" | "qris") {
+  const [row] = await db.execute(sql`
+    SELECT
+      COUNT(*)::int                                                  AS total,
+      COUNT(*) FILTER (WHERE status = 'verified')::int               AS verified,
+      COALESCE(SUM(amount) FILTER (WHERE status = 'verified'), 0)::bigint AS total_loss
+    FROM reports
+    WHERE target_type = ${targetType}
+  `);
+  const r = row as unknown as Record<string, unknown>;
+  return {
+    totalLaporan: Number(r.total),
+    verified: Number(r.verified),
+    totalKerugian: Number(r.total_loss),
+  };
+}
+
 export async function reportsRoutes(app: FastifyInstance) {
   // ── Stream realtime (SSE) ────────────────────────────────────────────────
   // Publik, tanpa auth. Dipakai bersama oleh homepage + halaman kategori;
@@ -99,97 +120,38 @@ export async function reportsRoutes(app: FastifyInstance) {
   });
 
   app.get("/public/stats", { onSend: withPublicCache }, async () => {
-    const [total] = await db.select({ count: count() }).from(reports);
-    const [verified] = await db
-      .select({ count: count() })
-      .from(reports)
-      .where(eq(reports.status, "verified"));
-    const [lossRow] = await db.execute(sql`
-      SELECT COALESCE(SUM(amount), 0)::bigint AS total_loss
-      FROM reports WHERE status = 'verified' AND amount IS NOT NULL
+    // Satu query: total laporan (semua status), jumlah verified, dan total
+    // kerugian dari laporan verified. Dulu 3 query terpisah.
+    const [row] = await db.execute(sql`
+      SELECT
+        COUNT(*)::int                                                  AS total,
+        COUNT(*) FILTER (WHERE status = 'verified')::int               AS verified,
+        COALESCE(SUM(amount) FILTER (WHERE status = 'verified'), 0)::bigint AS total_loss
+      FROM reports
     `);
+    const r = row as unknown as Record<string, unknown>;
     return {
       data: {
-        total: total.count,
-        verified: verified.count,
-        totalLoss: Number((lossRow as any).total_loss ?? 0),
+        total: Number(r.total),
+        verified: Number(r.verified),
+        totalLoss: Number(r.total_loss),
       },
     };
   });
 
   app.get("/public/stats-nomor", { onSend: withPublicCache }, async () => {
-    const [total] = await db
-      .select({ count: count() })
-      .from(reports)
-      .where(eq(reports.targetType, "phone"));
-    const [verified] = await db
-      .select({ count: count() })
-      .from(reports)
-      .where(
-        and(eq(reports.targetType, "phone"), eq(reports.status, "verified")),
-      );
-    const [lossRow] = await db.execute(sql`
-      SELECT COALESCE(SUM(amount), 0)::bigint AS total_loss
-      FROM reports WHERE target_type = 'phone' AND status = 'verified' AND amount IS NOT NULL
-    `);
-    return {
-      data: {
-        totalLaporan: total.count,
-        totalNomor: verified.count,
-        totalKerugian: Number((lossRow as any).total_loss ?? 0),
-      },
-    };
+    const s = await targetTypeStats("phone");
+    return { data: { totalLaporan: s.totalLaporan, totalNomor: s.verified, totalKerugian: s.totalKerugian } };
   });
 
   app.get("/public/stats-rekening", { onSend: withPublicCache }, async () => {
-    const [total] = await db
-      .select({ count: count() })
-      .from(reports)
-      .where(eq(reports.targetType, "bank_account"));
-    const [verified] = await db
-      .select({ count: count() })
-      .from(reports)
-      .where(
-        and(
-          eq(reports.targetType, "bank_account"),
-          eq(reports.status, "verified"),
-        ),
-      );
-    const [lossRow] = await db.execute(sql`
-      SELECT COALESCE(SUM(amount), 0)::bigint AS total_loss
-      FROM reports WHERE target_type = 'bank_account' AND status = 'verified' AND amount IS NOT NULL
-    `);
-    return {
-      data: {
-        totalLaporan: total.count,
-        totalRekening: verified.count,
-        totalKerugian: Number((lossRow as any).total_loss ?? 0),
-      },
-    };
+    const s = await targetTypeStats("bank_account");
+    return { data: { totalLaporan: s.totalLaporan, totalRekening: s.verified, totalKerugian: s.totalKerugian } };
   });
 
   app.get("/public/stats-qris", { onSend: withPublicCache }, async () => {
-    const [total] = await db
-      .select({ count: count() })
-      .from(reports)
-      .where(eq(reports.targetType, "qris"));
-    const [verified] = await db
-      .select({ count: count() })
-      .from(reports)
-      .where(
-        and(eq(reports.targetType, "qris"), eq(reports.status, "verified")),
-      );
-    const [lossRow] = await db.execute(sql`
-      SELECT COALESCE(SUM(amount), 0)::bigint AS total_loss
-      FROM reports WHERE target_type = 'qris' AND status = 'verified' AND amount IS NOT NULL
-    `);
-    return {
-      data: {
-        totalLaporan: total.count,
-        totalQris: verified.count,
-        totalKerugian: Number((lossRow as any).total_loss ?? 0),
-      },
-    };
+    const s = await targetTypeStats("qris");
+    return { data: { totalLaporan: s.totalLaporan, totalQris: s.verified, totalKerugian: s.totalKerugian } };
   });
 
   app.get("/public/leaderboard-nomor", { onSend: withPublicCache }, async () => {
@@ -341,18 +303,97 @@ export async function reportsRoutes(app: FastifyInstance) {
   });
 
   app.get("/laporan-stats", { onSend: withPublicCache }, async () => {
-    const data = await db
-      .select({
-        bank_name: sql<string | null>`COALESCE(${reports.bankName}, ${reports.walletName})`,
-        category: reports.category,
-        status: reports.status,
-        created_at: reports.createdAt,
-      })
-      .from(reports)
-      .where(sql`${reports.status} IN ('verified', 'pending')`)
-      .orderBy(desc(reports.createdAt))
-      .limit(1000);
-    return { data };
+    // Dulu: tarik <=1000 baris mentah tiap kunjungan lalu hitung tren/kategori/
+    // platform di JS (dan `.length` jadi salah begitu laporan >1000). Sekarang
+    // semua agregasi dikerjakan Postgres; payload turun dari ribuan baris jadi
+    // beberapa puluh. StatsChart hanya memetakan label + slice top-N.
+    //
+    // Cutoff 7/30 hari direplikasi persis dari StatsChart lama:
+    // `new Date(now); setDate(-N); setHours(0,0,0,0)` di zona server. Container
+    // frontend & Postgres sama-sama UTC, jadi pakai setUTC* di sini.
+    const nowD = new Date();
+    const cutoff = (days: number) => {
+      const d = new Date(nowD);
+      d.setUTCDate(d.getUTCDate() - days);
+      d.setUTCHours(0, 0, 0, 0);
+      return d.toISOString();
+    };
+    const c7 = cutoff(7);
+    const c30 = cutoff(30);
+
+    // Tren harian: bucket per tanggal WIB (UTC+7), seluruh riwayat. Jumlah baris
+    // = jumlah hari aktif, bukan jumlah laporan. StatsChart yang membangun
+    // deret hari (termasuk hari nol) dan melihat angka dari sini.
+    const dailyRows = await db.execute(sql`
+      SELECT to_char((created_at + interval '7 hours')::date, 'YYYY-MM-DD') AS date,
+             COUNT(*)::int AS count
+      FROM reports
+      WHERE status IN ('verified', 'pending')
+      GROUP BY 1
+      ORDER BY 1
+    `);
+
+    const [totalsRow] = await db.execute(sql`
+      SELECT
+        COUNT(*) FILTER (WHERE created_at >= ${c7})::int  AS c7,
+        COUNT(*) FILTER (WHERE created_at >= ${c30})::int AS c30,
+        COUNT(*)::int                                     AS call
+      FROM reports
+      WHERE status IN ('verified', 'pending')
+    `);
+
+    const categoryRows = await db.execute(sql`
+      SELECT category AS name,
+        COUNT(*) FILTER (WHERE created_at >= ${c7})::int  AS v7,
+        COUNT(*) FILTER (WHERE created_at >= ${c30})::int AS v30,
+        COUNT(*)::int                                     AS vall
+      FROM reports
+      WHERE status IN ('verified', 'pending') AND category IS NOT NULL
+      GROUP BY category
+    `);
+
+    const platformRows = await db.execute(sql`
+      SELECT target_type,
+        COALESCE(bank_name, wallet_name) AS bank_name,
+        COUNT(*) FILTER (WHERE created_at >= ${c7})::int  AS v7,
+        COUNT(*) FILTER (WHERE created_at >= ${c30})::int AS v30,
+        COUNT(*)::int                                     AS vall
+      FROM reports
+      WHERE status IN ('verified', 'pending')
+      GROUP BY target_type, COALESCE(bank_name, wallet_name)
+    `);
+
+    const pickCats = (key: "v7" | "v30" | "vall") =>
+      (categoryRows as unknown as Record<string, unknown>[])
+        .map((r) => ({ name: String(r.name), value: Number(r[key]) }))
+        .filter((r) => r.value > 0)
+        .sort((a, b) => b.value - a.value || a.name.localeCompare(b.name));
+
+    const pickPlatforms = (key: "v7" | "v30" | "vall") =>
+      (platformRows as unknown as Record<string, unknown>[])
+        .map((r) => ({
+          target_type: String(r.target_type),
+          bank_name: (r.bank_name as string | null) ?? null,
+          value: Number(r[key]),
+        }))
+        .filter((r) => r.value > 0)
+        .sort((a, b) => b.value - a.value);
+
+    const t = totalsRow as unknown as Record<string, unknown>;
+    return {
+      data: {
+        total: Number(t.call),
+        daily: (dailyRows as unknown as Record<string, unknown>[]).map((r) => ({
+          date: String(r.date),
+          count: Number(r.count),
+        })),
+        ranges: {
+          "7":   { total: Number(t.c7),   categories: pickCats("v7"),   platforms: pickPlatforms("v7") },
+          "30":  { total: Number(t.c30),  categories: pickCats("v30"),  platforms: pickPlatforms("v30") },
+          "all": { total: Number(t.call), categories: pickCats("vall"), platforms: pickPlatforms("vall") },
+        },
+      },
+    };
   });
 
   app.get("/laporan-publik", { onSend: withPublicCache }, async (req) => {
@@ -383,22 +424,57 @@ export async function reportsRoutes(app: FastifyInstance) {
       ? sql`AND (r.target_value ILIKE ${"%" + q.trim() + "%"} OR r.bank_name ILIKE ${"%" + q.trim() + "%"} OR r.wallet_name ILIKE ${"%" + q.trim() + "%"})`
       : sql``;
 
+    // Dulu: dua subquery berkorelasi (target_name, category) di SELECT list
+    // sebuah query GROUP BY -- di-evaluasi per baris hasil. Sekarang: agregasi
+    // di CTE `grouped`, ambil satu halaman di `page`, lalu target_name/category
+    // di-resolve set-based lewat DISTINCT ON yang di-join hanya ke 12 baris
+    // halaman itu. Semantik pemilihan dipertahankan persis:
+    //  - target_name : satu target_name dari laporan verified untuk target_value
+    //    itu (tanpa ORDER BY tertentu di versi lama -> tetap "salah satu").
+    //  - category    : kategori dari laporan TERBARU untuk target_value itu.
+    // Keduanya di-key ke target_value saja (bukan grup type+bank), sama seperti
+    // subquery lama.
     const rows = await db.execute(sql`
+      WITH grouped AS (
+        SELECT
+          r.target_value                                      AS target_number,
+          r.target_type,
+          COALESCE(r.bank_name, r.wallet_name)               AS bank_name,
+          COUNT(*)::int                                      AS total,
+          COUNT(*) FILTER (WHERE r.status = 'verified')::int AS verified_count,
+          COUNT(*) FILTER (WHERE r.status = 'pending')::int  AS pending_count,
+          MAX(r.created_at)                                  AS latest_at
+        FROM reports r
+        WHERE 1=1 ${typeFilter} ${searchFilter}
+        GROUP BY r.target_value, r.target_type, COALESCE(r.bank_name, r.wallet_name)
+      ),
+      page AS (
+        SELECT * FROM grouped
+        ORDER BY latest_at ${sortDir}
+        LIMIT ${perPage} OFFSET ${offset}
+      ),
+      name_pick AS (
+        SELECT DISTINCT ON (rr.target_value) rr.target_value, rr.target_name
+        FROM reports rr
+        JOIN page p ON p.target_number = rr.target_value
+        WHERE rr.status = 'verified'
+        ORDER BY rr.target_value
+      ),
+      cat_pick AS (
+        SELECT DISTINCT ON (rr.target_value) rr.target_value, rr.category
+        FROM reports rr
+        JOIN page p ON p.target_number = rr.target_value
+        ORDER BY rr.target_value, rr.created_at DESC
+      )
       SELECT
-        r.target_value                                        AS target_number,
-        r.target_type,
-        COALESCE(r.bank_name, r.wallet_name)                 AS bank_name,
-        COUNT(*)::int                                        AS total,
-        COUNT(*) FILTER (WHERE r.status = 'verified')::int   AS verified_count,
-        COUNT(*) FILTER (WHERE r.status = 'pending')::int    AS pending_count,
-        MAX(r.created_at)                                    AS latest_at,
-        (SELECT rr.target_name FROM reports rr WHERE rr.target_value = r.target_value AND rr.status = 'verified' LIMIT 1) AS target_name,
-        (SELECT rr.category FROM reports rr WHERE rr.target_value = r.target_value ORDER BY rr.created_at DESC LIMIT 1)   AS category
-      FROM reports r
-      WHERE 1=1 ${typeFilter} ${searchFilter}
-      GROUP BY r.target_value, r.target_type, COALESCE(r.bank_name, r.wallet_name)
-      ORDER BY latest_at ${sortDir}
-      LIMIT ${perPage} OFFSET ${offset}
+        p.target_number, p.target_type, p.bank_name,
+        p.total, p.verified_count, p.pending_count, p.latest_at,
+        n.target_name,
+        c.category
+      FROM page p
+      LEFT JOIN name_pick n ON n.target_value = p.target_number
+      LEFT JOIN cat_pick  c ON c.target_value = p.target_number
+      ORDER BY p.latest_at ${sortDir}
     `);
 
     const [countRow] = await db.execute(sql`
