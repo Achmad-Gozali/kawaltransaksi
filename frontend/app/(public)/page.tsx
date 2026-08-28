@@ -169,6 +169,7 @@ export default async function HomePage() {
             <h2 className="text-lg sm:text-2xl font-bold text-slate-900">Laporan Masuk Terkini</h2>
             <Link
               href="/laporan-publik"
+              prefetch={false}
               className="text-xs font-bold text-slate-500 uppercase tracking-widest hover:text-emerald-700 transition-colors whitespace-nowrap"
             >
               Lihat semua →
@@ -201,6 +202,7 @@ export default async function HomePage() {
             </Link>
             <Link
               href="/register"
+              prefetch={false}
               className="w-full sm:w-auto px-7 py-3 border-2 border-slate-300 bg-white text-slate-900 font-bold text-sm tracking-wide rounded-xl hover:border-slate-900 transition-colors"
             >
               Gabung Komunitas
