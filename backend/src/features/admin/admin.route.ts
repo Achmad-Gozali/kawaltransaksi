@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { db } from "../../core/db.js";
 import { reports, users, evidence, articles } from "../../core/schema.js";
-import { eq, desc, count, sql, gte } from "drizzle-orm";
+import { eq, desc, sql } from "drizzle-orm";
 import { requireAdmin } from "../../core/auth.middleware.js";
 import { deleteFile } from "../../core/storage.js";
 import { sanitizeArticleHtml, sanitizePlainText } from "../../core/sanitize.js";
@@ -28,21 +28,34 @@ export async function adminRoutes(app: FastifyInstance) {
   app.get("/stats", { preHandler: requireAdmin }, async () => {
     const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
 
-    const [totalReports] = await db.select({ count: count() }).from(reports);
-    const [totalUsers]   = await db.select({ count: count() }).from(users);
-    const [pending]      = await db.select({ count: count() }).from(reports).where(eq(reports.status, "pending"));
-    const [verified]     = await db.select({ count: count() }).from(reports).where(eq(reports.status, "verified"));
-    const [rejected]     = await db.select({ count: count() }).from(reports).where(eq(reports.status, "rejected"));
-    const [newUsers]     = await db.select({ count: count() }).from(users).where(gte(users.createdAt, sevenDaysAgo));
+    // Satu query: cross join dua subquery satu-baris (reports + users), tiap
+    // tabel di-scan sekali dengan COUNT(*) FILTER. Dulu 6 query terpisah.
+    const [row] = await db.execute(sql`
+      SELECT
+        r.total_reports, r.pending, r.verified, r.rejected,
+        u.total_users, u.new_users
+      FROM
+        (SELECT
+           COUNT(*)::int                                        AS total_reports,
+           COUNT(*) FILTER (WHERE status = 'pending')::int       AS pending,
+           COUNT(*) FILTER (WHERE status = 'verified')::int      AS verified,
+           COUNT(*) FILTER (WHERE status = 'rejected')::int      AS rejected
+         FROM reports) r,
+        (SELECT
+           COUNT(*)::int                                              AS total_users,
+           COUNT(*) FILTER (WHERE created_at >= ${sevenDaysAgo})::int  AS new_users
+         FROM users) u
+    `);
+    const d = row as unknown as Record<string, unknown>;
 
     return {
       data: {
-        totalReports: totalReports.count,
-        totalUsers:   totalUsers.count,
-        pending:      pending.count,
-        verified:     verified.count,
-        rejected:     rejected.count,
-        newUsers:     newUsers.count,
+        totalReports: Number(d.total_reports),
+        totalUsers:   Number(d.total_users),
+        pending:      Number(d.pending),
+        verified:     Number(d.verified),
+        rejected:     Number(d.rejected),
+        newUsers:     Number(d.new_users),
       },
     };
   });

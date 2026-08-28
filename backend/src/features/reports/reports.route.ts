@@ -1,7 +1,7 @@
 import type { FastifyInstance, FastifyReply, FastifyRequest } from "fastify";
 import { db } from "../../core/db.js";
 import { reports, evidence, publicReportColumns } from "../../core/schema.js";
-import { eq, desc, count, and, sql } from "drizzle-orm";
+import { eq, desc, and, sql } from "drizzle-orm";
 import { requireAuth } from "../../core/auth.middleware.js";
 import { saveFile, validateImageBuffer, isOwnStorageUrl } from "../../core/storage.js";
 import { checkSpam, checkCompleteness, looksLikeQrisNmid } from "../../core/robot.js";
@@ -53,6 +53,27 @@ const publicCheckRateLimit = {
   }),
 };
 
+// Statistik per targetType (phone/bank_account/qris) untuk endpoint /public/stats-*.
+// Satu query: total laporan tipe itu (semua status), jumlah verified, dan total
+// kerugian dari yang verified. SUM mengabaikan NULL, jadi identik dengan versi
+// lama yang punya "AND amount IS NOT NULL" eksplisit.
+async function targetTypeStats(targetType: "phone" | "bank_account" | "qris") {
+  const [row] = await db.execute(sql`
+    SELECT
+      COUNT(*)::int                                                  AS total,
+      COUNT(*) FILTER (WHERE status = 'verified')::int               AS verified,
+      COALESCE(SUM(amount) FILTER (WHERE status = 'verified'), 0)::bigint AS total_loss
+    FROM reports
+    WHERE target_type = ${targetType}
+  `);
+  const r = row as unknown as Record<string, unknown>;
+  return {
+    totalLaporan: Number(r.total),
+    verified: Number(r.verified),
+    totalKerugian: Number(r.total_loss),
+  };
+}
+
 export async function reportsRoutes(app: FastifyInstance) {
   // ── Stream realtime (SSE) ────────────────────────────────────────────────
   // Publik, tanpa auth. Dipakai bersama oleh homepage + halaman kategori;
@@ -99,97 +120,38 @@ export async function reportsRoutes(app: FastifyInstance) {
   });
 
   app.get("/public/stats", { onSend: withPublicCache }, async () => {
-    const [total] = await db.select({ count: count() }).from(reports);
-    const [verified] = await db
-      .select({ count: count() })
-      .from(reports)
-      .where(eq(reports.status, "verified"));
-    const [lossRow] = await db.execute(sql`
-      SELECT COALESCE(SUM(amount), 0)::bigint AS total_loss
-      FROM reports WHERE status = 'verified' AND amount IS NOT NULL
+    // Satu query: total laporan (semua status), jumlah verified, dan total
+    // kerugian dari laporan verified. Dulu 3 query terpisah.
+    const [row] = await db.execute(sql`
+      SELECT
+        COUNT(*)::int                                                  AS total,
+        COUNT(*) FILTER (WHERE status = 'verified')::int               AS verified,
+        COALESCE(SUM(amount) FILTER (WHERE status = 'verified'), 0)::bigint AS total_loss
+      FROM reports
     `);
+    const r = row as unknown as Record<string, unknown>;
     return {
       data: {
-        total: total.count,
-        verified: verified.count,
-        totalLoss: Number((lossRow as any).total_loss ?? 0),
+        total: Number(r.total),
+        verified: Number(r.verified),
+        totalLoss: Number(r.total_loss),
       },
     };
   });
 
   app.get("/public/stats-nomor", { onSend: withPublicCache }, async () => {
-    const [total] = await db
-      .select({ count: count() })
-      .from(reports)
-      .where(eq(reports.targetType, "phone"));
-    const [verified] = await db
-      .select({ count: count() })
-      .from(reports)
-      .where(
-        and(eq(reports.targetType, "phone"), eq(reports.status, "verified")),
-      );
-    const [lossRow] = await db.execute(sql`
-      SELECT COALESCE(SUM(amount), 0)::bigint AS total_loss
-      FROM reports WHERE target_type = 'phone' AND status = 'verified' AND amount IS NOT NULL
-    `);
-    return {
-      data: {
-        totalLaporan: total.count,
-        totalNomor: verified.count,
-        totalKerugian: Number((lossRow as any).total_loss ?? 0),
-      },
-    };
+    const s = await targetTypeStats("phone");
+    return { data: { totalLaporan: s.totalLaporan, totalNomor: s.verified, totalKerugian: s.totalKerugian } };
   });
 
   app.get("/public/stats-rekening", { onSend: withPublicCache }, async () => {
-    const [total] = await db
-      .select({ count: count() })
-      .from(reports)
-      .where(eq(reports.targetType, "bank_account"));
-    const [verified] = await db
-      .select({ count: count() })
-      .from(reports)
-      .where(
-        and(
-          eq(reports.targetType, "bank_account"),
-          eq(reports.status, "verified"),
-        ),
-      );
-    const [lossRow] = await db.execute(sql`
-      SELECT COALESCE(SUM(amount), 0)::bigint AS total_loss
-      FROM reports WHERE target_type = 'bank_account' AND status = 'verified' AND amount IS NOT NULL
-    `);
-    return {
-      data: {
-        totalLaporan: total.count,
-        totalRekening: verified.count,
-        totalKerugian: Number((lossRow as any).total_loss ?? 0),
-      },
-    };
+    const s = await targetTypeStats("bank_account");
+    return { data: { totalLaporan: s.totalLaporan, totalRekening: s.verified, totalKerugian: s.totalKerugian } };
   });
 
   app.get("/public/stats-qris", { onSend: withPublicCache }, async () => {
-    const [total] = await db
-      .select({ count: count() })
-      .from(reports)
-      .where(eq(reports.targetType, "qris"));
-    const [verified] = await db
-      .select({ count: count() })
-      .from(reports)
-      .where(
-        and(eq(reports.targetType, "qris"), eq(reports.status, "verified")),
-      );
-    const [lossRow] = await db.execute(sql`
-      SELECT COALESCE(SUM(amount), 0)::bigint AS total_loss
-      FROM reports WHERE target_type = 'qris' AND status = 'verified' AND amount IS NOT NULL
-    `);
-    return {
-      data: {
-        totalLaporan: total.count,
-        totalQris: verified.count,
-        totalKerugian: Number((lossRow as any).total_loss ?? 0),
-      },
-    };
+    const s = await targetTypeStats("qris");
+    return { data: { totalLaporan: s.totalLaporan, totalQris: s.verified, totalKerugian: s.totalKerugian } };
   });
 
   app.get("/public/leaderboard-nomor", { onSend: withPublicCache }, async () => {
