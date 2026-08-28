@@ -119,6 +119,11 @@ export async function generateMetadata({ params, searchParams }: CheckPageProps)
 
   return {
     title, description,
+    // Nomor tanpa laporan apa pun = halaman tipis. `/check/{slug}` menerima
+    // slug arbitrer, jadi crawler bisa bikin ribuan URL kosong -> noindex
+    // (tapi follow, biar link internal tetap ditelusuri). Yang punya laporan
+    // (pending/verified) tetap index. Sitemap hanya berisi target verified.
+    robots: { index: totalReports > 0, follow: true },
     // Selalu pakai realNumber (sudah dinormalisasi jadi digit saja), BUKAN slug
     // mentah dari URL. Slug mentah bisa berisi karakter apa pun, sehingga URL
     // sampah seperti /check/0812xxx-promo akan menghasilkan canonical yang
