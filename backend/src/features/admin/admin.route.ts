@@ -5,7 +5,6 @@ import { eq, desc, sql } from "drizzle-orm";
 import { requireAdmin } from "../../core/auth.middleware.js";
 import { deleteFile } from "../../core/storage.js";
 import { sanitizeArticleHtml, sanitizePlainText } from "../../core/sanitize.js";
-import { notifyReportVerified, toLiveReport } from "../../core/realtime.js";
 
 // Sama seperti reports.route.ts/search.route.ts: endpoint publik read-only,
 // cache pendek biar Cloudflare bisa menyerap traffic berulang tanpa
@@ -242,26 +241,11 @@ export async function adminRoutes(app: FastifyInstance) {
     const { id }     = req.params as { id: string };
     const { status } = req.body as { status: "verified" | "rejected" };
 
-    // Ambil status lama dulu -- guard supaya report_verified tidak double-fire
-    // kalau admin men-set 'verified' pada laporan yang memang sudah 'verified'.
-    const [before] = await db
-      .select({ status: reports.status })
-      .from(reports)
-      .where(eq(reports.id, id))
-      .limit(1);
-    if (!before) return reply.status(404).send({ error: "Laporan tidak ditemukan." });
-
     const [updated]  = await db.update(reports)
       .set({ status, updatedAt: new Date() })
       .where(eq(reports.id, id))
       .returning();
     if (!updated) return reply.status(404).send({ error: "Laporan tidak ditemukan." });
-
-    if (status === "verified" && before.status !== "verified") {
-      notifyReportVerified(toLiveReport(updated)).catch((err) =>
-        req.log.error({ err }, "realtime: gagal NOTIFY report_verified (admin)"),
-      );
-    }
 
     return { data: updated };
   });

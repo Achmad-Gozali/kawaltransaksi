@@ -1,13 +1,23 @@
 import Link from "next/link";
 import Image from "next/image";
-import { Phone, Landmark, ScanLine } from "lucide-react";
+import { Phone, Landmark, Wallet, QrCode, ArrowRight, ScanLine } from "lucide-react";
 import * as motion from "motion/react-client";
-import LiveStats from "@/features/reports/LiveStats";
-import RecentReports, { type RecentReportItem } from "@/features/homepage/RecentReports";
 
 export const revalidate = 60;
 
 const BACKEND_URL = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
+
+const ewalletNames = ["gopay", "dana", "ovo", "shopeepay", "linkaja"];
+
+const bankLogoMap: Record<string, string> = {
+  bca: "/banks/bca.png", bni: "/banks/bni.png", bri: "/banks/bri.png",
+  bsi: "/banks/bsi.png", cimb: "/banks/cimb.png", mandiri: "/banks/mandiri.png",
+};
+
+const ewalletLogoMap: Record<string, string> = {
+  gopay: "/ewallets/gopay.png", dana: "/ewallets/dana.png", ovo: "/ewallets/ovo.png",
+  shopeepay: "/ewallets/shopeepay.png", linkaja: "/ewallets/linkaja.png",
+};
 
 const HOW_IT_WORKS = [
   {
@@ -32,9 +42,53 @@ const HOW_IT_WORKS = [
   },
 ];
 
+function formatDateID(dateString: string) {
+  try {
+    return new Date(dateString).toLocaleDateString("id-ID", { day: "numeric", month: "short", year: "numeric" });
+  } catch { return dateString; }
+}
+
+function formatLoss(amount: number) {
+  if (amount === 0) return "Rp0";
+  if (amount >= 1_000_000_000) return `Rp${(amount / 1_000_000_000).toFixed(1)} M+`;
+  if (amount >= 1_000_000) return `Rp${(amount / 1_000_000).toFixed(1)} Jt+`;
+  if (amount >= 1_000) return `Rp${(amount / 1_000).toFixed(0)} Rb+`;
+  return `Rp${amount.toLocaleString("id-ID")}`;
+}
+
+function getPlatformLogo(type: string, bankName: string | null, walletName: string | null) {
+  const key = (walletName ?? bankName ?? "").toLowerCase();
+  if (type === "ewallet" || ewalletNames.includes(key)) return ewalletLogoMap[key] ?? null;
+  if (type === "bank_account") return bankLogoMap[key] ?? null;
+  return null;
+}
+
+function getTargetMeta(type: string, bankName: string | null, walletName: string | null) {
+  const key = (walletName ?? bankName ?? "").toLowerCase();
+  if (type === "ewallet" || (type === "phone" && ewalletNames.includes(key)))
+    return { icon: Wallet, label: walletName ?? bankName ?? "E-Wallet", color: "text-violet-600", bg: "bg-violet-50", border: "border-violet-200" };
+  if (type === "bank_account")
+    return { icon: Landmark, label: bankName ?? "Rekening Bank", color: "text-blue-600", bg: "bg-blue-50", border: "border-blue-200" };
+  if (type === "qris")
+    return { icon: QrCode, label: "QRIS", color: "text-teal-600", bg: "bg-teal-50", border: "border-teal-200" };
+  return { icon: Phone, label: "Nomor HP", color: "text-slate-600", bg: "bg-slate-50", border: "border-slate-200" };
+}
+
+interface ReportItem {
+  id: string;
+  targetValue: string;
+  targetType: string;
+  targetName: string | null;
+  bankName: string | null;
+  walletName: string | null;
+  description: string;
+  createdAt: string;
+  status: string;
+}
+
 interface Stats { total: number; verified: number; totalLoss: number; }
 
-async function getRecentReports(): Promise<RecentReportItem[]> {
+async function getRecentReports(): Promise<ReportItem[]> {
   try {
     const res = await fetch(`${BACKEND_URL}/api/reports/public/recent`, {
       signal: AbortSignal.timeout(5000),
@@ -56,6 +110,32 @@ async function getStats(): Promise<Stats> {
     const json = await res.json();
     return json.data ?? { total: 0, verified: 0, totalLoss: 0 };
   } catch { return { total: 0, verified: 0, totalLoss: 0 }; }
+}
+
+function StatsCard({ stats }: { stats: Stats }) {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 16 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true }}
+      transition={{ duration: 0.4 }}
+      className="bg-white rounded-2xl border border-slate-200 shadow-lg shadow-slate-100 overflow-hidden"
+    >
+      <div className="grid grid-cols-2 sm:grid-cols-3 sm:divide-x divide-slate-100">
+        {[
+          { label: "Laporan", value: `${stats.total}+`, sub: "Kasus dilaporkan", color: "text-slate-900", border: "border-r border-b sm:border-b-0 border-slate-100" },
+          { label: "Terverifikasi", value: `${stats.verified}+`, sub: "Penipuan terkonfirmasi", color: "text-emerald-700", border: "border-b sm:border-b-0 border-slate-100" },
+          { label: "Kerugian", value: formatLoss(stats.totalLoss), sub: "Total kerugian dilaporkan", color: "text-red-500", border: "col-span-2 sm:col-span-1" },
+        ].map((item, i) => (
+          <div key={i} className={`px-5 py-5 sm:px-8 sm:py-6 ${item.border}`}>
+            <p className="text-[10px] sm:text-xs font-bold text-slate-500 uppercase tracking-widest mb-1.5">{item.label}</p>
+            <p className={`text-2xl sm:text-4xl font-black leading-none tabular-nums ${item.color}`}>{item.value}</p>
+            <p className="text-xs text-slate-500 mt-1.5 leading-snug">{item.sub}</p>
+          </div>
+        ))}
+      </div>
+    </motion.div>
+  );
 }
 
 export default async function HomePage() {
@@ -111,7 +191,7 @@ export default async function HomePage() {
       {/* STATS */}
       <section className="bg-white pb-10 sm:pb-16">
         <div className="max-w-5xl mx-auto px-4 sm:px-6 -mt-6 sm:-mt-14 relative z-10">
-          <LiveStats variant="home" initial={stats} />
+          <StatsCard stats={stats} />
         </div>
       </section>
 
@@ -176,7 +256,64 @@ export default async function HomePage() {
             </Link>
           </div>
 
-          <RecentReports initial={recentReports} />
+          {recentReports.length === 0 ? (
+            <div className="text-center py-16 text-slate-400 text-sm">Belum ada laporan yang masuk.</div>
+          ) : (
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+              {recentReports.map((report, i) => {
+                const meta = getTargetMeta(report.targetType, report.bankName, report.walletName);
+                const logoSrc = getPlatformLogo(report.targetType, report.bankName, report.walletName);
+                const statusMap: Record<string, { label: string; className: string }> = {
+                  verified: { label: "Terverifikasi", className: "bg-emerald-50 text-emerald-700 border-emerald-200" },
+                  pending:  { label: "Pending",        className: "bg-amber-50 text-amber-700 border-amber-200" },
+                };
+                const statusStyle = statusMap[report.status] ?? statusMap.pending;
+                const displayName = report.targetName ?? "Anonim";
+                const displayNumber = report.targetValue;
+
+                return (
+                  <motion.div
+                    key={report.id}
+                    initial={{ opacity: 0, y: 8 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: i * 0.07 }}
+                  >
+                    <Link
+                      href={`/check/${encodeURIComponent(report.targetValue)}`}
+                      className="block bg-white border border-slate-200 p-4 sm:p-5 rounded-xl hover:border-slate-300 hover:shadow-md transition-all group h-full"
+                    >
+                      <div className="flex justify-between items-start mb-4">
+                        <span className={`px-2 py-0.5 text-[10px] font-bold uppercase tracking-widest rounded-full border ${statusStyle.className}`}>
+                          {statusStyle.label}
+                        </span>
+                        <span className="text-xs text-slate-500 font-medium">{formatDateID(report.createdAt)}</span>
+                      </div>
+                      <div className="mb-4">
+                        <p className="text-base sm:text-lg font-black tracking-tight text-slate-900 group-hover:text-slate-700 transition-colors font-mono break-all">
+                          {displayNumber}
+                        </p>
+                        <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mt-1 truncate">
+                          A.N. {displayName}
+                        </p>
+                      </div>
+                      <div className="flex items-center justify-between pt-3 border-t border-slate-100">
+                        <span className={`flex items-center gap-1.5 px-2 py-1 rounded-lg text-xs font-bold border ${meta.bg} ${meta.color} ${meta.border}`}>
+                          {logoSrc ? (
+                            <Image src={logoSrc} alt={meta.label} width={14} height={14} className="object-contain rounded-sm" />
+                          ) : (
+                            <meta.icon className="w-3 h-3" />
+                          )}
+                          <span className="truncate max-w-[80px]">{meta.label}</span>
+                        </span>
+                        <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 transition-colors" />
+                      </div>
+                    </Link>
+                  </motion.div>
+                );
+              })}
+            </div>
+          )}
         </div>
       </section>
 

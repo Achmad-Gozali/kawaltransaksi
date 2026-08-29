@@ -7,14 +7,6 @@ import { saveFile, validateImageBuffer, isOwnStorageUrl } from "../../core/stora
 import { checkSpam, checkCompleteness, looksLikeQrisNmid } from "../../core/robot.js";
 import { verifyTurnstile } from "../../core/turnstile.js";
 import { parseQrisPayload } from "../../core/qris.js";
-import {
-  registerStreamClient,
-  unregisterStreamClient,
-  isStreamAtCapacity,
-  notifyReportSubmitted,
-  notifyReportVerified,
-  toLiveReport,
-} from "../../core/realtime.js";
 
 const MAX_FILES_PER_REQUEST = 10;
 
@@ -75,40 +67,6 @@ async function targetTypeStats(targetType: "phone" | "bank_account" | "qris") {
 }
 
 export async function reportsRoutes(app: FastifyInstance) {
-  // ── Stream realtime (SSE) ────────────────────────────────────────────────
-  // Publik, tanpa auth. Dipakai bersama oleh homepage + halaman kategori;
-  // frontend yang memfilter event per targetType. rateLimit dimatikan supaya
-  // reconnect dari jaringan mobile tidak kena limit (lihat juga allowList di
-  // index.ts + `limit_req off` di nginx untuk path ini).
-  app.get("/stream", { config: { rateLimit: false } }, (req, reply) => {
-    // Tolak lebih awal kalau proses ini sudah melayani MAX_STREAM_CLIENTS
-    // koneksi -- sebelum hijack & sebelum didaftarkan. Klien EventSource akan
-    // mencoba reconnect otomatis (server tetap kirim `retry: 3000` untuk yang
-    // berhasil), jadi 503 di sini aman sebagai backpressure.
-    if (isStreamAtCapacity()) {
-      return reply
-        .status(503)
-        .header("Retry-After", "30")
-        .send({ error: "Koneksi realtime penuh. Coba lagi sebentar." });
-    }
-
-    const origin = process.env.FRONTEND_URL ?? "*";
-    reply.hijack();
-    reply.raw.writeHead(200, {
-      "Content-Type": "text/event-stream; charset=utf-8",
-      "Cache-Control": "no-cache, no-transform",
-      Connection: "keep-alive",
-      "X-Accel-Buffering": "no",
-      "Access-Control-Allow-Origin": origin,
-      "Access-Control-Allow-Credentials": "true",
-    });
-    reply.raw.write("retry: 3000\n\n");
-    reply.raw.write(": connected\n\n");
-
-    registerStreamClient(reply.raw);
-    req.raw.on("close", () => unregisterStreamClient(reply.raw));
-  });
-
   app.get("/public/recent", { onSend: withPublicCache }, async () => {
     const data = await db
       .select(publicReportColumns)
@@ -642,20 +600,6 @@ export async function reportsRoutes(app: FastifyInstance) {
 
       return inserted;
     });
-
-    // Realtime: selalu emit `submitted`; kalau checkCompleteness() sudah
-    // menetapkan `verified` di transaksi yang sama, emit `verified` juga.
-    // Counter "LAPORAN" di frontend hanya bereaksi ke `submitted` dan counter
-    // "TERVERIFIKASI"/kerugian hanya ke `verified`, jadi satu laporan
-    // auto-verified tidak terhitung dobel.
-    notifyReportSubmitted(report.targetType).catch((err) =>
-      app.log.error({ err }, "realtime: gagal NOTIFY report_submitted"),
-    );
-    if (report.status === "verified") {
-      notifyReportVerified(toLiveReport(report)).catch((err) =>
-        app.log.error({ err }, "realtime: gagal NOTIFY report_verified"),
-      );
-    }
 
     return { data: { ...report, robotStatus: status } };
   });
