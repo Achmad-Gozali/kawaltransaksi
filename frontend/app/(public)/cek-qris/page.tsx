@@ -1,13 +1,13 @@
 import Link from "next/link";
-import { ShieldCheck, ScanLine, Store } from "lucide-react";
+import { ArrowRight, TrendingUp } from "lucide-react";
 import type { Metadata } from "next";
 import QrisSearchForm from "@/features/check/QrisSearchForm";
 import SearchHero from "@/features/check/SearchHero";
-import { formatRupiah, safeJsonLd } from "@/core/utils";
+import { formatRupiah, encodeSlug, safeJsonLd } from "@/core/utils";
 
-const PAGE_TITLE = "Cek QRIS Palsu — Cara Cek QRIS Asli atau Palsu | KawalTransaksi";
+const PAGE_TITLE = "Cek QRIS Penipu Online Gratis & Real-Time | KawalTransaksi";
 const PAGE_DESC =
-  "Cek QRIS palsu sebelum membayar. Pelajari cara cek QRIS asli atau palsu: unggah atau pindai foto QRIS untuk memeriksa NMID merchant dan riwayat laporan penipuannya.";
+  "Cek QRIS penipu online secara gratis dan real-time. Verifikasi NMID merchant QRIS sebelum membayar lewat database laporan komunitas KawalTransaksi, cukup dengan memindai atau mengunggah fotonya.";
 const PAGE_URL = "https://kawaltransaksi.com/cek-qris";
 
 export const metadata: Metadata = {
@@ -33,29 +33,11 @@ export const revalidate = 60;
 
 const BACKEND_URL = process.env.BACKEND_INTERNAL_URL ?? process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:4000";
 
-const steps = [
-  {
-    icon: ScanLine,
-    title: "Foto atau Pindai QRIS",
-    desc: "Unggah foto QRIS yang ingin diperiksa, atau pindai langsung menggunakan kamera. Data merchant dibaca otomatis dari kode QR-nya.",
-  },
-  {
-    icon: Store,
-    title: "Lihat Data Merchant",
-    desc: "NMID, nama, dan kota merchant terbaca otomatis, jadi Anda tidak perlu mengetik apa pun dan tidak ada risiko salah ketik.",
-  },
-  {
-    icon: ShieldCheck,
-    title: "Cek Riwayat Laporan",
-    desc: "Kami tampilkan apakah NMID tersebut pernah dilaporkan sebagai QRIS palsu atau ditempel di atas QRIS asli milik pihak lain.",
-  },
-];
-
 const articles = [
-  { title: "Waspada QRIS Palsu Ditempel", desc: "Modus penipuan dengan menempelkan stiker QRIS palsu di atas QRIS asli milik toko/warung semakin marak. Selalu cek NMID sebelum membayar." },
-  { title: "Apa itu NMID?", desc: "National Merchant ID (NMID) adalah nomor identitas resmi merchant QRIS yang terdaftar di sistem Bank Indonesia. Setiap merchant resmi punya NMID yang unik." },
-  { title: "Cara Kerja Cek QRIS", desc: "KawalTransaksi membaca kode QR dari foto yang Anda unggah, lalu mencocokkan NMID-nya dengan basis data laporan penipuan dari komunitas." },
-  { title: "Laporkan QRIS Mencurigakan", desc: "Kalau Anda menemukan QRIS yang terlihat ditempel ulang, rusak, atau mencurigakan, laporkan lewat halaman Laporkan supaya pengguna lain ikut terlindungi." },
+  { title: "Cek QRIS Penjual Online", desc: "Jadilah pembeli yang cermat dengan memeriksa apakah QRIS pembayaran milik penjual pernah dilaporkan melakukan penipuan sebelum Anda membayar." },
+  { title: "Apa itu NMID?", desc: "NMID (National Merchant ID) adalah nomor identitas resmi merchant QRIS yang terdaftar di sistem pembayaran Indonesia. Setiap merchant resmi memiliki NMID yang unik." },
+  { title: "Cara Kerja Cek QRIS", desc: "KawalTransaksi membaca kode QR dari foto yang Anda unggah, lalu mencocokkan NMID merchant-nya dengan database laporan penipuan dari komunitas." },
+  { title: "Laporkan QRIS Penipu", desc: "Semua laporan yang masuk kami tinjau mulai dari kronologi kejadian hingga bukti pembayaran sebelum dipublikasikan." },
 ];
 
 const schema = {
@@ -70,6 +52,8 @@ const schema = {
   ],
 };
 
+const RANK_STYLE: Record<number, string> = { 0: "bg-red-100 text-red-600", 1: "bg-orange-100 text-orange-500", 2: "bg-amber-100 text-amber-500" };
+
 async function getStats() {
   try {
     const res = await fetch(`${BACKEND_URL}/api/reports/public/stats-qris`, {
@@ -81,8 +65,19 @@ async function getStats() {
   } catch { return { totalLaporan: 0, totalQris: 0, totalKerugian: 0 }; }
 }
 
+async function getLeaderboard() {
+  try {
+    const res = await fetch(`${BACKEND_URL}/api/reports/public/leaderboard-qris`, {
+      signal: AbortSignal.timeout(5000),
+      next: { revalidate: 60 },
+    });
+    if (!res.ok) return [];
+    return (await res.json()).data ?? [] as { target_number: string; merchant_name: string | null; report_count: number }[];
+  } catch { return []; }
+}
+
 export default async function CekQrisPage() {
-  const { totalLaporan, totalQris, totalKerugian } = await getStats();
+  const [{ totalLaporan, totalQris, totalKerugian }, leaderboard] = await Promise.all([getStats(), getLeaderboard()]);
 
   const stats = [
     { icon: (<svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" /><polyline points="14 2 14 8 20 8" /></svg>), value: totalLaporan > 0 ? `${totalLaporan.toLocaleString("id-ID")}+` : "0", desc: "Kasus penipuan yang telah dilaporkan pengguna" },
@@ -93,8 +88,8 @@ export default async function CekQrisPage() {
   return (
     <div className="min-h-screen bg-white text-slate-900 font-sans">
       <SearchHero
-        title="Cek QRIS Palsu Sebelum Membayar"
-        description="Cara cek QRIS asli atau palsu: foto atau pindai kode QRIS untuk mengecek NMID merchant dan riwayat laporannya sebelum Anda benar-benar membayar."
+        title="Cek QRIS Penipu Online"
+        description="Identifikasi apakah sebuah QRIS pernah dipakai untuk penipuan sebelum Anda membayar. Cek merchant QRIS lewat NMID-nya — cukup pindai atau unggah fotonya."
         hint="Data merchant dibaca otomatis dari foto, tanpa perlu input manual."
       >
         <QrisSearchForm />
@@ -125,28 +120,39 @@ export default async function CekQrisPage() {
         </div>
       </section>
 
-      <section className="bg-white py-10 sm:py-16">
-        <div className="max-w-5xl mx-auto px-4 sm:px-6">
-          <div className="mb-8 sm:mb-10 text-center">
-            <h2 className="text-lg sm:text-2xl font-bold text-slate-900 mb-2">Cara Kerja Cek QRIS</h2>
-            <p className="text-slate-500 text-sm max-w-lg mx-auto">Tiga langkah sederhana, tanpa perlu mengetik data merchant secara manual.</p>
+      {leaderboard.length > 0 && (
+        <section className="bg-white py-10 sm:py-14">
+          <div className="max-w-5xl mx-auto px-4 sm:px-6">
+            <div className="flex items-center gap-2.5 mb-5">
+              <div className="w-8 h-8 rounded-lg bg-red-50 flex items-center justify-center shrink-0"><TrendingUp className="w-4 h-4 text-red-500" /></div>
+              <div>
+                <h2 className="text-base sm:text-lg font-bold text-slate-900 leading-none">QRIS Paling Banyak Dilaporkan</h2>
+                <p className="text-xs text-slate-400 mt-0.5">30 hari terakhir</p>
+              </div>
+            </div>
+
+            <div className="bg-white border border-slate-200 rounded-lg overflow-hidden divide-y divide-slate-100">
+              {(leaderboard as any[]).map((entry, i) => {
+                const nmid = entry.target_number;
+                const merchantName = entry.merchant_name ?? "Merchant tidak diketahui";
+                return (
+                  <Link key={nmid} href={`/check/${encodeSlug(nmid)}?type=qris`} className="flex items-center gap-4 px-4 sm:px-6 py-3.5 sm:py-4 hover:bg-slate-50 transition-colors group">
+                    <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 font-black text-sm ${RANK_STYLE[i] ?? "bg-slate-100 text-slate-500"}`}>{i + 1}</div>
+                    <div className="flex-1 min-w-0">
+                      <p className="text-sm sm:text-base font-black font-mono text-slate-900 tracking-tight group-hover:text-emerald-700 transition-colors truncate">{nmid}</p>
+                      <p className="text-xs text-slate-400 mt-0.5 truncate">{merchantName}</p>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      <span className="hidden sm:inline-flex items-center px-2.5 py-1 rounded-full bg-red-50 border border-red-100 text-xs font-bold text-red-600">{entry.report_count} laporan</span>
+                      <ArrowRight className="w-4 h-4 text-slate-300 group-hover:text-slate-500 transition-colors" />
+                    </div>
+                  </Link>
+                );
+              })}
+            </div>
           </div>
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-6 sm:gap-8">
-            {steps.map((step, i) => {
-              const Icon = step.icon;
-              return (
-                <div key={i} className="text-center">
-                  <div className="w-12 h-12 rounded-xl bg-emerald-500 flex items-center justify-center mx-auto mb-4 shadow-sm shadow-emerald-200">
-                    <Icon className="w-5 h-5 text-white" />
-                  </div>
-                  <h3 className="text-sm font-bold text-slate-900 mb-2">{step.title}</h3>
-                  <p className="text-xs text-slate-500 leading-relaxed">{step.desc}</p>
-                </div>
-              );
-            })}
-          </div>
-        </div>
-      </section>
+        </section>
+      )}
 
       <div className="bg-white overflow-hidden">
         <svg viewBox="0 0 1440 60" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="none" className="w-full h-8 sm:h-14 block">
@@ -158,11 +164,11 @@ export default async function CekQrisPage() {
         <div className="max-w-5xl mx-auto px-4 sm:px-6">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-10 items-center">
             <div>
-              <h2 className="text-lg sm:text-2xl font-bold text-slate-900 mb-3">Kenapa Perlu Cek QRIS?</h2>
-              <p className="text-slate-500 text-sm leading-relaxed">Modus QRIS palsu yang ditempel di atas kode asli membuat pembayaran justru masuk ke rekening pelaku, bukan ke merchant yang sebenarnya. Mengecek NMID sebelum membayar membantu memastikan uang Anda diterima oleh pihak yang tepat.</p>
+              <h2 className="text-lg sm:text-2xl font-bold text-slate-900 mb-3">Apa itu Cek QRIS?</h2>
+              <p className="text-slate-500 text-sm leading-relaxed">Layanan verifikasi QRIS KawalTransaksi membantu Anda mengidentifikasi potensi risiko penipuan pada QRIS merchant tujuan, berdasarkan laporan dan keluhan pengguna yang telah bertransaksi sebelumnya.</p>
             </div>
             <div className="bg-white border border-emerald-100 rounded-lg px-6 sm:px-8 py-6 sm:py-8">
-              <p className="text-slate-700 text-sm font-medium leading-relaxed text-center">&quot;NMID resmi tidak pernah berubah untuk merchant yang sama. Kalau ragu, cek dulu sebelum bayar.&quot;</p>
+              <p className="text-slate-700 text-sm font-medium leading-relaxed text-center">&quot;Sebelum membayar lewat QRIS, sempatkan periksa merchant-nya. Satu langkah kecil yang bisa menyelamatkan uang Anda dari tangan penipu.&quot;</p>
             </div>
           </div>
         </div>
@@ -183,11 +189,6 @@ export default async function CekQrisPage() {
                 <p className="text-xs sm:text-sm text-slate-500 leading-relaxed">{a.desc}</p>
               </div>
             ))}
-          </div>
-          <div className="mt-10 text-center">
-            <Link href="/report" className="inline-flex items-center justify-center px-6 py-3 bg-emerald-500 hover:bg-emerald-600 text-white text-sm font-semibold rounded-xl transition-colors">
-              Laporkan QRIS Mencurigakan
-            </Link>
           </div>
         </div>
       </section>

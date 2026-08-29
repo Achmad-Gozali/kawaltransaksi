@@ -146,6 +146,23 @@ export async function reportsRoutes(app: FastifyInstance) {
     return { data: rows };
   });
 
+  app.get("/public/leaderboard-qris", { onSend: withPublicCache }, async () => {
+    const rows = await db.execute(sql`
+      SELECT
+        target_value AS target_number,
+        target_name  AS merchant_name,
+        COUNT(*)::int AS report_count
+      FROM reports
+      WHERE target_type = 'qris'
+      AND status = 'verified'
+      AND target_value IS NOT NULL
+      GROUP BY target_value, target_name
+      ORDER BY report_count DESC
+      LIMIT 5
+    `);
+    return { data: rows };
+  });
+
   app.get("/public/bank/:name", { config: { rateLimit: publicCheckRateLimit }, onSend: withPublicCache }, async (req) => {
     const { name } = req.params as { name: string };
     const data = await db
