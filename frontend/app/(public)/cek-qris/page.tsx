@@ -167,7 +167,7 @@ export default async function CekQrisPage() {
               <h2 className="text-lg sm:text-2xl font-bold text-slate-900 mb-3">Apa itu Cek QRIS?</h2>
               <p className="text-slate-500 text-sm leading-relaxed">Layanan verifikasi QRIS KawalTransaksi membantu Anda mengidentifikasi potensi risiko penipuan pada QRIS merchant tujuan, berdasarkan laporan dan keluhan pengguna yang telah bertransaksi sebelumnya.</p>
             </div>
-            <div className="bg-white border border-emerald-100 rounded-lg px-6 sm:px-8 py-6 sm:py-8">
+            <div className="bg-emerald-50 border border-emerald-100 rounded-lg px-6 sm:px-8 py-6 sm:py-8">
               <p className="text-slate-700 text-sm font-medium leading-relaxed text-center">&quot;Sebelum membayar lewat QRIS, sempatkan periksa merchant-nya. Satu langkah kecil yang bisa menyelamatkan uang Anda dari tangan penipu.&quot;</p>
             </div>
           </div>
