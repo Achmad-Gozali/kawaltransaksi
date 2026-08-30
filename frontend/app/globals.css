@@ -13,6 +13,21 @@ html {
   scroll-behavior: smooth;
 }
 
+/* -- CEGAH SCROLL HORIZONTAL GLOBAL --
+   Pengaman utama: apa pun elemen yang kelebihan lebar dari viewport (container
+   tanpa max-width, margin negatif, elemen absolute/fixed yang keluar bounds,
+   konten nowrap yang kepanjangan, dll) TIDAK boleh bikin halaman bisa digeser
+   ke samping. Vertikal tetap normal. Berlaku di seluruh situs. */
+html,
+body {
+  max-width: 100%;
+  overflow-x: hidden;
+  /* `clip` dipakai kalau browser dukung: tidak seperti `hidden`, dia TIDAK
+     memaksa overflow-y jadi `auto`, jadi `position: sticky` di elemen anak
+     (navbar, sidebar admin, dll) tetap jalan normal. */
+  overflow-x: clip;
+}
+
 /* -- PAGE TRANSITION -- */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(8px); }
