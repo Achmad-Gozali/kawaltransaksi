@@ -1,13 +1,15 @@
 import { configDotenv } from "dotenv";
 configDotenv();
 
-import Fastify, { type FastifyError } from "fastify";
+import Fastify, { type FastifyError, type FastifyRequest } from "fastify";
 import cors from "@fastify/cors";
 import cookie from "@fastify/cookie";
 import multipart from "@fastify/multipart";
 import rateLimit from "@fastify/rate-limit";
 import helmet from "@fastify/helmet";
+import { sql } from "drizzle-orm";
 
+import { db } from "./core/db.js";
 import { authRoutes } from "./features/auth/auth.route.js";
 import { reportsRoutes } from "./features/reports/reports.route.js";
 import { searchRoutes } from "./features/search/search.route.js";
@@ -15,7 +17,55 @@ import { adminRoutes } from "./features/admin/admin.route.js";
 import { uploadRoutes } from "./features/upload/upload.route.js";
 import { qrisRoutes } from "./features/qris/qris.route.js";
 
+// ── Validasi environment saat boot ───────────────────────────────────────
+// Tanpa ini, env var yang hilang baru ketahuan saat request pertama jenis
+// itu masuk (login 500, upload 500, dsb) -- sulit dilacak dan /health tetap
+// bilang "ok". Lebih baik gagal keras di sini. (DATABASE_URL sudah dicek
+// lebih dulu di core/db.js saat modul dievaluasi; tetap didaftarkan di sini
+// supaya daftarnya lengkap di satu tempat.)
+const REQUIRED_ENV = [
+  "DATABASE_URL",
+  "JWT_ACCESS_SECRET",
+  "JWT_REFRESH_SECRET",
+  "COOKIE_SECRET",
+  "FRONTEND_URL",
+  "R2_ENDPOINT",
+  "R2_ACCESS_KEY_ID",
+  "R2_SECRET_ACCESS_KEY",
+  "R2_BUCKET_NAME",
+  "R2_PUBLIC_URL",
+  "TURNSTILE_SECRET_KEY",
+  "RESEND_API_KEY",
+  "GOOGLE_CLIENT_ID",
+  "GOOGLE_CLIENT_SECRET",
+  "GOOGLE_REDIRECT_URI",
+] as const;
+
+const missingEnv = REQUIRED_ENV.filter((key) => !process.env[key]?.trim());
+if (missingEnv.length > 0) {
+  console.error(
+    `FATAL: environment variable wajib belum di-set: ${missingEnv.join(", ")}. ` +
+      `Cek .env (lokal) atau environment variable container (produksi).`,
+  );
+  process.exit(1);
+}
+
+// Promise yang ditolak tanpa .catch akan meng-crash proses di Node modern
+// (unhandled rejection = fatal). Log dulu supaya penyebabnya terlihat --
+// jangan biarkan seluruh backend mati diam-diam karena satu promise nyasar.
+process.on("unhandledRejection", (reason) => {
+  console.error("unhandledRejection:", reason);
+});
+
 const app = Fastify({ logger: true, trustProxy: true });
+
+// SSR first-party dari container frontend memanggil backend lewat jaringan
+// Docker internal (tanpa lewat nginx), jadi request-nya TIDAK membawa
+// X-Forwarded-For. Traffic pengunjung asli selalu membawanya (CF -> nginx).
+// Rate limiter global di bawah dikeraskan untuk pengunjung, tapi render SSR
+// sendiri (semua terkumpul di satu IP container) tidak boleh ikut kena --
+// kalau kena, halaman ISR gagal regenerasi dan malah render data kosong.
+const isFirstPartySSR = (req: FastifyRequest) => !req.headers["x-forwarded-for"];
 
 await app.register(helmet, {
   contentSecurityPolicy: false,
@@ -42,6 +92,7 @@ await app.register(rateLimit, {
   max: 20,
   timeWindow: "5 seconds",
   nameSpace: "burst-",
+  allowList: isFirstPartySSR,
   errorResponseBuilder: (_req, context) => ({
     statusCode: 429,
     error: `Terlalu banyak permintaan dalam waktu singkat. Coba lagi dalam ${Math.ceil(context.ttl / 1000)} detik.`,
@@ -57,6 +108,7 @@ await app.register(rateLimit, {
   max: 50,
   timeWindow: "1 minute",
   nameSpace: "general-",
+  allowList: isFirstPartySSR,
   errorResponseBuilder: (_req, context) => ({
     statusCode: 429,
     error: `Terlalu banyak permintaan. Coba lagi dalam ${Math.ceil(context.ttl / 1000)} detik.`,
@@ -74,7 +126,25 @@ await app.register(adminRoutes, { prefix: "/api/admin" });
 await app.register(uploadRoutes, { prefix: "/api/upload" });
 await app.register(qrisRoutes, { prefix: "/api/qris" });
 
-app.get("/health", async () => ({ status: "ok" }));
+// Health check yang benar-benar memverifikasi dependency kritis (Postgres).
+// Tanpa cek DB, /health balas "ok" walau DB mati -- monitor uptime & (kelak)
+// load balancer menganggap sehat lalu tetap mengalirkan traffic ke instance
+// yang 500 semua. Timeout pendek supaya endpoint ini tidak ikut menggantung
+// kalau DB-nya yang bermasalah.
+app.get("/health", async (_req, reply) => {
+  try {
+    await Promise.race([
+      db.execute(sql`SELECT 1`),
+      new Promise((_resolve, rejectRace) =>
+        setTimeout(() => rejectRace(new Error("cek DB melewati batas waktu 2 detik")), 2000),
+      ),
+    ]);
+    return { status: "ok" };
+  } catch (err) {
+    app.log.error({ err }, "health check gagal: Postgres tidak merespons");
+    return reply.status(503).send({ status: "error", detail: "database tidak tersedia" });
+  }
+});
 
 // api.kawaltransaksi.com murni API, tidak ada konten untuk diindeks --
 // tutup total dari crawler, jangan cuma andalkan "tidak ada yang link ke sini".

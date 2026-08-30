@@ -1,5 +1,40 @@
 import type { NextConfig } from "next";
 
+const isDev = process.env.NODE_ENV !== "production";
+
+// Content-Security-Policy — dijalankan REPORT-ONLY dulu: browser hanya
+// melaporkan pelanggaran (console devtools), TIDAK memblokir apa pun. Tujuannya
+// mengumpulkan dulu apa saja yang sebenarnya dimuat halaman sebelum diubah jadi
+// enforcing (ganti header jadi "Content-Security-Policy" tanpa "-Report-Only").
+//
+// Sumber yang sudah diketahui sah:
+//  - 'unsafe-inline' script/style : Next.js App Router menyuntik <script>/<style>
+//    inline tanpa nonce (belum ada setup nonce di app ini).
+//  - 'unsafe-eval' (dev saja)     : react-refresh / HMR next dev.
+//  - googletagmanager + google-analytics : GA4 gtag di app/layout.tsx.
+//  - challenges.cloudflare.com    : widget Turnstile (script + iframe).
+//  - img.kawaltransaksi.com       : foto bukti / thumbnail (R2).
+//  - api.kawaltransaksi.com       : fetch client-side ke backend.
+// Font next/font/google di-self-host saat build -> cukup 'self'.
+//
+// Belum ada report-uri/report-to: pelanggaran baru terlihat di devtools tiap
+// browser. Kalau mau agregasi, tambah endpoint kolektor lalu "report-to".
+const cspReportOnly = [
+  "default-src 'self'",
+  `script-src 'self' 'unsafe-inline'${isDev ? " 'unsafe-eval'" : ""} https://www.googletagmanager.com https://challenges.cloudflare.com`,
+  "style-src 'self' 'unsafe-inline'",
+  "img-src 'self' data: blob: https://img.kawaltransaksi.com https://www.googletagmanager.com https://*.google-analytics.com",
+  "font-src 'self' data:",
+  `connect-src 'self' https://api.kawaltransaksi.com https://challenges.cloudflare.com https://www.googletagmanager.com https://*.google-analytics.com https://*.analytics.google.com${isDev ? " ws:" : ""}`,
+  "frame-src https://challenges.cloudflare.com",
+  "worker-src 'self' blob:",
+  "manifest-src 'self'",
+  "base-uri 'self'",
+  "form-action 'self'",
+  "frame-ancestors 'self'",
+  "object-src 'none'",
+].join("; ");
+
 const nextConfig: NextConfig = {
   output: "standalone",
   poweredByHeader: false,
@@ -31,6 +66,9 @@ const nextConfig: NextConfig = {
           // aman hanya kalau benar-benar tidak ada subdomain internal yang
           // masih HTTP. Tambahkan setelah itu diverifikasi.
           { key: "Strict-Transport-Security", value: "max-age=31536000" },
+          // REPORT-ONLY — tidak memblokir, hanya melaporkan. Lihat catatan di
+          // atas `cspReportOnly`.
+          { key: "Content-Security-Policy-Report-Only", value: cspReportOnly },
         ],
       },
     ];
