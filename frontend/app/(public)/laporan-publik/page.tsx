@@ -22,8 +22,9 @@ export const metadata: Metadata = {
   },
 };
 
-export const dynamic = "force-dynamic";
-
+// Tidak perlu `dynamic = "force-dynamic"`: penggunaan searchParams sudah
+// membuat halaman ini dynamic otomatis. Fetch data tetap pakai
+// `next: { revalidate: 30 }` sehingga kombinasi filter yang sama di-share.
 const BACKEND_URL = process.env.BACKEND_INTERNAL_URL || process.env.NEXT_PUBLIC_API_URL;
 
 const ewalletNames = ["gopay", "dana", "ovo", "shopeepay", "linkaja"];

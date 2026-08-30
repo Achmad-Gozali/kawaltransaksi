@@ -8,7 +8,6 @@ import {
   ShieldAlert, ShieldX,
 } from "lucide-react";
 import { formatNum, decodeSlug, safeJsonLd } from "@/core/utils";
-import { forwardedClientHeaders } from "@/core/http";
 import ShareButtons from "@/features/check/ShareButtons";
 import NumberCard from "@/features/check/components/NumberCard";
 import ReportList from "@/features/check/components/ReportList";
@@ -40,10 +39,14 @@ function resolveRealNumber(decodedSlug: string, type?: string): { realNumber: st
 // React cache(): dedup per-request. generateMetadata dan body render sama-sama
 // memanggil ini dengan argumen sama dalam satu request, jadi backend cuma
 // di-hit sekali. force-dynamic tetap; ini bukan cache lintas-request.
+// Tanpa forward X-Forwarded-For: endpoint /public/check & /public/blacklist
+// sudah meng-allowList request tanpa header itu (fetch SSR first-party), dan
+// dengan revalidate 15 dtk hasil lookup nomor yang sama di-share lintas
+// pengunjung -- satu nomor viral tidak lagi memicu query DB tiap request.
 const fetchCheckPageData = cache(async (number: string) => {
   try {
     const res = await fetch(`${BACKEND_URL}/api/reports/public/check/${number}`, {
-      headers: await forwardedClientHeaders(),
+      next: { revalidate: 15 },
     });
     if (!res.ok) return { reports: [], linked: [] };
     return (await res.json()).data ?? { reports: [], linked: [] };
@@ -53,7 +56,7 @@ const fetchCheckPageData = cache(async (number: string) => {
 const fetchBlacklistData = cache(async (number: string) => {
   try {
     const res = await fetch(`${BACKEND_URL}/api/reports/public/blacklist/${number}`, {
-      headers: await forwardedClientHeaders(),
+      next: { revalidate: 15 },
     });
     if (!res.ok) return { blacklist: null, trend: null };
     return (await res.json()).data ?? { blacklist: null, trend: null };

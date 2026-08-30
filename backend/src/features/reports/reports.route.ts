@@ -299,44 +299,45 @@ export async function reportsRoutes(app: FastifyInstance) {
     // Tren harian: bucket per tanggal WIB (UTC+7), seluruh riwayat. Jumlah baris
     // = jumlah hari aktif, bukan jumlah laporan. StatsChart yang membangun
     // deret hari (termasuk hari nol) dan melihat angka dari sini.
-    const dailyRows = await db.execute(sql`
-      SELECT to_char((created_at + interval '7 hours')::date, 'YYYY-MM-DD') AS date,
-             COUNT(*)::int AS count
-      FROM reports
-      WHERE status IN ('verified', 'pending')
-      GROUP BY 1
-      ORDER BY 1
-    `);
-
-    const [totalsRow] = await db.execute(sql`
-      SELECT
-        COUNT(*) FILTER (WHERE created_at >= ${c7})::int  AS c7,
-        COUNT(*) FILTER (WHERE created_at >= ${c30})::int AS c30,
-        COUNT(*)::int                                     AS call
-      FROM reports
-      WHERE status IN ('verified', 'pending')
-    `);
-
-    const categoryRows = await db.execute(sql`
-      SELECT category AS name,
-        COUNT(*) FILTER (WHERE created_at >= ${c7})::int  AS v7,
-        COUNT(*) FILTER (WHERE created_at >= ${c30})::int AS v30,
-        COUNT(*)::int                                     AS vall
-      FROM reports
-      WHERE status IN ('verified', 'pending') AND category IS NOT NULL
-      GROUP BY category
-    `);
-
-    const platformRows = await db.execute(sql`
-      SELECT target_type,
-        COALESCE(bank_name, wallet_name) AS bank_name,
-        COUNT(*) FILTER (WHERE created_at >= ${c7})::int  AS v7,
-        COUNT(*) FILTER (WHERE created_at >= ${c30})::int AS v30,
-        COUNT(*)::int                                     AS vall
-      FROM reports
-      WHERE status IN ('verified', 'pending')
-      GROUP BY target_type, COALESCE(bank_name, wallet_name)
-    `);
+    // 4 agregat independen -- jalankan paralel, bukan berurutan.
+    const [dailyRows, totalsRows, categoryRows, platformRows] = await Promise.all([
+      db.execute(sql`
+        SELECT to_char((created_at + interval '7 hours')::date, 'YYYY-MM-DD') AS date,
+               COUNT(*)::int AS count
+        FROM reports
+        WHERE status IN ('verified', 'pending')
+        GROUP BY 1
+        ORDER BY 1
+      `),
+      db.execute(sql`
+        SELECT
+          COUNT(*) FILTER (WHERE created_at >= ${c7})::int  AS c7,
+          COUNT(*) FILTER (WHERE created_at >= ${c30})::int AS c30,
+          COUNT(*)::int                                     AS call
+        FROM reports
+        WHERE status IN ('verified', 'pending')
+      `),
+      db.execute(sql`
+        SELECT category AS name,
+          COUNT(*) FILTER (WHERE created_at >= ${c7})::int  AS v7,
+          COUNT(*) FILTER (WHERE created_at >= ${c30})::int AS v30,
+          COUNT(*)::int                                     AS vall
+        FROM reports
+        WHERE status IN ('verified', 'pending') AND category IS NOT NULL
+        GROUP BY category
+      `),
+      db.execute(sql`
+        SELECT target_type,
+          COALESCE(bank_name, wallet_name) AS bank_name,
+          COUNT(*) FILTER (WHERE created_at >= ${c7})::int  AS v7,
+          COUNT(*) FILTER (WHERE created_at >= ${c30})::int AS v30,
+          COUNT(*)::int                                     AS vall
+        FROM reports
+        WHERE status IN ('verified', 'pending')
+        GROUP BY target_type, COALESCE(bank_name, wallet_name)
+      `),
+    ]);
+    const [totalsRow] = totalsRows;
 
     const pickCats = (key: "v7" | "v30" | "vall") =>
       (categoryRows as unknown as Record<string, unknown>[])
