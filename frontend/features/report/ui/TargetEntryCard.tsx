@@ -148,6 +148,7 @@ export function TargetEntryCard({ entry, onChange, onQrisEvidenceFile, onClearQr
             number: '', name: '', qris_payload: undefined, qris_merchant_city: undefined,
           });
         }}>
+          <option value="">Pilih tipe laporan...</option>
           <option value="phone">Nomor HP / WhatsApp</option>
           <option value="bank_account">Rekening Bank</option>
           <option value="ewallet">E-Wallet / Dompet Digital</option>
@@ -201,7 +202,7 @@ export function TargetEntryCard({ entry, onChange, onQrisEvidenceFile, onClearQr
         </div>
       )}
 
-      {entry.type !== 'qris' && (
+      {(entry.type === 'phone' || entry.type === 'bank_account' || entry.type === 'ewallet') && (
         <>
           <Input
             type={entry.type === 'phone' ? 'tel' : 'text'}

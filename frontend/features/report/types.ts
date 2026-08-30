@@ -7,7 +7,10 @@ export interface TargetEntry {
   // Untuk phone/bank_account/ewallet: nama pemilik (opsional, manual).
   // Untuk qris: nama merchant hasil decode (wajib ada, read-only).
   name: string;
-  type: TargetType;
+  // '' = belum dipilih (placeholder dropdown). Field target lain baru muncul
+  // setelah user memilih tipe secara eksplisit -- pola sama dgn dropdown
+  // Kategori Penipuan.
+  type: TargetType | '';
   bank_name: string;
   ewallet_name: string;
   custom_bank_name?: string;

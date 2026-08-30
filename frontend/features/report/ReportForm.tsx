@@ -14,7 +14,7 @@ import { Step2Kronologi } from '@/features/report/steps/Step2Kronologi';
 import { Step3BuktiKirim } from '@/features/report/steps/Step3BuktiKirim';
 
 const defaultTarget = (): TargetEntry => ({
-  number: '', name: '', type: 'phone', bank_name: '', ewallet_name: '',
+  number: '', name: '', type: '', bank_name: '', ewallet_name: '',
   custom_bank_name: '', custom_ewallet_name: '',
 });
 
@@ -150,6 +150,8 @@ export default function ReportForm() {
   const navigate = (dir: 'next' | 'prev') => {
     setError(null);
     if (dir === 'next') {
+      if (currentStep === 1 && !target.type)
+        return setError('Pilih dulu tipe laporannya.');
       if (currentStep === 1 && !target.number.trim())
         return setError(
           target.type === 'qris'
@@ -170,6 +172,11 @@ export default function ReportForm() {
   const handleSubmit = async () => {
     if (!turnstileToken) {
       setError('Selesaikan dulu verifikasi keamanannya.');
+      return;
+    }
+
+    if (!target.type) {
+      setError('Pilih dulu tipe laporannya di bagian Data Penipu.');
       return;
     }
 
