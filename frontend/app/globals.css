@@ -52,6 +52,18 @@ main {
 /* -- RECAPTCHA -- */
 .grecaptcha-badge { visibility: hidden !important; }
 
+/* -- iOS SAFARI: cegah auto-zoom saat tap field --
+   Safari di iOS otomatis men-zoom halaman kalau font-size elemen form < 16px.
+   Paksa minimal 16px di viewport < 640px (breakpoint `sm` Tailwind); di layar
+   lebih besar biarkan ukuran dari utility class (text-sm, text-xs, dll). */
+@media (max-width: 639.98px) {
+  input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+  select,
+  textarea {
+    font-size: 16px !important;
+  }
+}
+
 /* -- DATE INPUT -- */
 input[type="date"]::-webkit-calendar-picker-indicator {
   opacity: 0.4;

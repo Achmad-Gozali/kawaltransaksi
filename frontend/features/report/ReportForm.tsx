@@ -68,6 +68,10 @@ function StepIndicator({ currentStep }: { currentStep: number }) {
 export default function ReportForm() {
   const router = useRouter();
   const [currentStep,         setCurrentStep]         = useState(1);
+  // Step 1 "Data Penipu" punya 4 sub-layar internal (1a pilih tipe, 1b data
+  // pelaku, 1c kategori & toko, 1d detail tambahan opsional). Step besar tetap
+  // 3. Form state di bawah tetap satu, tidak dipecah per sub-layar.
+  const [step1Sub,            setStep1Sub]            = useState<1 | 2 | 3 | 4>(1);
   const [isLoading,           setIsLoading]           = useState(false);
   const [isSuccess,           setIsSuccess]           = useState(false);
   const [error,               setError]               = useState<string | null>(null);
@@ -131,7 +135,7 @@ export default function ReportForm() {
   // sama efeknya dengan tombol reset (RotateCcw) di TargetEntryCard. Dipakai
   // saat satu-satunya bukti QRIS dihapus dari Step 3, supaya kedua step konsisten.
   const resetQrisTarget = useCallback(() => {
-    setTarget(t => ({ ...t, number: '', name: '', qris_payload: undefined, qris_merchant_city: undefined }));
+    setTarget(t => ({ ...t, number: '', name: '', qris_payload: undefined, qris_merchant_city: undefined, qris_preview: undefined }));
   }, []);
 
   // Buang foto QRIS dari evidence tanpa menyentuh state target -- dipakai saat
@@ -147,26 +151,58 @@ export default function ReportForm() {
     setEvidenceFiles(prev => prev.filter((_, i) => i !== index));
   }, [evidenceFiles, resetQrisTarget]);
 
+  const scrollTop = () => window.scrollTo({ top: 0, behavior: 'smooth' });
+
   const navigate = (dir: 'next' | 'prev') => {
     setError(null);
-    if (dir === 'next') {
-      if (currentStep === 1 && !target.type)
-        return setError('Pilih dulu tipe laporannya.');
-      if (currentStep === 1 && !target.number.trim())
-        return setError(
-          target.type === 'qris'
-            ? 'Unggah dulu foto QRIS aslinya dan tunggu sampai berhasil terbaca.'
-            : 'Nomor HP, rekening, atau e-wallet wajib diisi.'
-        );
-      if (currentStep === 1 && !formData.category)
-        return setError('Pilih dulu kategori penipuannya.');
-      if (currentStep === 2 && formData.chronology.trim().length < 20)
-        return setError('Kronologi kejadian minimal 20 karakter.');
-      setCurrentStep(s => Math.min(s + 1, 3));
-    } else {
+
+    if (dir === 'prev') {
+      if (currentStep === 1) {
+        if (step1Sub > 1) setStep1Sub(s => (s - 1) as 1 | 2 | 3 | 4);
+        scrollTop();
+        return;
+      }
+      if (currentStep === 2) {
+        // Kembali dari Kronologi mendarat di sub-layar terakhir Step 1.
+        setCurrentStep(1);
+        setStep1Sub(4);
+        scrollTop();
+        return;
+      }
       setCurrentStep(s => Math.max(s - 1, 1));
+      scrollTop();
+      return;
     }
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+
+    // dir === 'next'
+    if (currentStep === 1) {
+      if (step1Sub === 1) {
+        if (!target.type) return setError('Pilih tipe laporan terlebih dahulu.');
+        setStep1Sub(2);
+      } else if (step1Sub === 2) {
+        if (!target.number.trim())
+          return setError(
+            target.type === 'qris'
+              ? 'Unggah dulu foto QRIS aslinya dan tunggu sampai berhasil terbaca.'
+              : 'Nomor HP, rekening, atau e-wallet wajib diisi.'
+          );
+        setStep1Sub(3);
+      } else if (step1Sub === 3) {
+        if (!formData.category) return setError('Pilih dulu kategori penipuannya.');
+        setStep1Sub(4);
+      } else {
+        // step1Sub === 4 -- semua field di sini opsional, langsung lanjut.
+        setCurrentStep(2);
+      }
+      scrollTop();
+      return;
+    }
+
+    if (currentStep === 2 && formData.chronology.trim().length < 20)
+      return setError('Kronologi kejadian minimal 20 karakter.');
+
+    setCurrentStep(s => Math.min(s + 1, 3));
+    scrollTop();
   };
 
   const handleSubmit = async () => {
@@ -296,6 +332,7 @@ export default function ReportForm() {
   const stepComponents = [
     <Step1DataPenipu
       key="step1"
+      subStep={step1Sub}
       target={target} formData={formData}
       suspectPhotoPreview={suspectPhotoPreview}
       customCategory={customCategory} customPlatform={customPlatform}
@@ -324,6 +361,9 @@ export default function ReportForm() {
     />,
   ];
 
+  // Tombol "Kembali" tampil di semua langkah KECUALI sub-layar pertama Step 1.
+  const showBack = currentStep > 1 || step1Sub > 1;
+
   return (
     <div className="max-w-2xl mx-auto space-y-6">
       <StepIndicator currentStep={currentStep} />
@@ -335,7 +375,7 @@ export default function ReportForm() {
         </div>
       )}
 
-      <motion.div key={currentStep} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.3 }}>
+      <motion.div key={`${currentStep}-${step1Sub}`} initial={{ opacity: 0, y: 16 }} animate={{ opacity: 1, y: 0 }} transition={{ duration: 0.25 }}>
         {stepComponents[currentStep - 1]}
       </motion.div>
 
@@ -358,8 +398,8 @@ export default function ReportForm() {
         </div>
       )}
 
-      <div className={`flex gap-3 ${currentStep === 1 ? 'justify-end' : 'justify-between'}`}>
-        {currentStep > 1 && (
+      <div className={`flex gap-3 ${showBack ? 'justify-between' : 'justify-end'}`}>
+        {showBack && (
           <button type="button" onClick={() => navigate('prev')}
             className="flex items-center gap-2 px-6 py-3 border border-slate-200 text-slate-600 text-sm font-semibold rounded-xl hover:bg-slate-50 hover:border-slate-300 transition-all active:scale-95">
             <ArrowLeft className="w-4 h-4" /> Kembali

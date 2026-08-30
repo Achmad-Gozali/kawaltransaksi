@@ -20,6 +20,10 @@ export interface TargetEntry {
   // cuma untuk validasi step & tampilan, server mengabaikannya untuk qris.
   qris_payload?: string;
   qris_merchant_city?: string;
+  // Data URL foto QRIS untuk thumbnail di UI. Transient -- TIDAK dikirim ke
+  // server. Disimpan di sini (bukan useState lokal TargetEntryCard) supaya
+  // tidak hilang saat komponen unmount/remount pindah sub-layar Step 1.
+  qris_preview?: string;
 }
 
 export interface EvidenceFile {
