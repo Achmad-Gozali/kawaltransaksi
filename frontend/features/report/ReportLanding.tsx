@@ -59,13 +59,13 @@ export default function ReportLanding() {
       {/* ── HERO SECTION (abu) ── */}
       <section className="relative bg-slate-100 pt-12 sm:pt-20 pb-0 overflow-hidden">
         <div className="max-w-6xl mx-auto px-4 sm:px-6 pb-16 sm:pb-24">
-          <div className="grid lg:grid-cols-2 gap-10 lg:gap-16 items-start">
+          <div className="grid lg:grid-cols-[1.25fr_1fr] gap-10 lg:gap-16 items-start">
 
             {/* Kiri: Judul + Steps */}
             <div className="space-y-8">
               <div>
-                <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 leading-tight mb-3">
-                  Laporkan Nomor HP, Rekening, <span className="whitespace-nowrap">E-Wallet</span><br className="hidden sm:block" /> &amp; QRIS Penipuan
+                <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 leading-tight mb-3 text-balance">
+                  Laporkan Nomor HP, Rekening, E&#8209;Wallet &amp; QRIS Penipuan
                 </h1>
                 <p className="text-slate-500 text-sm leading-relaxed max-w-md">
                   Laporan Anda sangat berarti untuk mencegah penipuan berikutnya oleh pelaku yang sama. Bersama-sama, kita bisa melindungi lebih banyak orang.
