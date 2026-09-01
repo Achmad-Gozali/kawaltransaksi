@@ -220,7 +220,7 @@ export default function AdminShell({ email, children }: AdminShellProps) {
         </button>
       </aside>
 
-      <div className={`flex-1 flex flex-col min-h-screen transition-all duration-200 ${collapsed ? 'lg:ml-[64px]' : 'lg:ml-[240px]'}`}>
+      <div className={`flex-1 min-w-0 flex flex-col min-h-screen transition-all duration-200 ${collapsed ? 'lg:ml-[64px]' : 'lg:ml-[240px]'}`}>
         <header className="h-14 sm:h-16 bg-white border-b border-slate-200 flex items-center justify-between px-3 sm:px-6 shrink-0 sticky top-0 z-30">
           <button onClick={() => setMobileOpen(true)}
             className="lg:hidden w-9 h-9 flex items-center justify-center rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors">
@@ -231,7 +231,7 @@ export default function AdminShell({ email, children }: AdminShellProps) {
               Kawal<span className="text-emerald-600">Transaksi</span>
             </span>
           </div>
-          <form onSubmit={handleGlobalSearch} className="flex-1 max-w-lg mx-3 sm:mx-4">
+          <form onSubmit={handleGlobalSearch} className="flex-1 min-w-0 max-w-lg mx-3 sm:mx-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400" />
               <input type="text" placeholder="Cari laporan..."
@@ -249,7 +249,7 @@ export default function AdminShell({ email, children }: AdminShellProps) {
           </div>
         </header>
 
-        <main className="flex-1 p-3 sm:p-5 lg:p-8 pb-6">
+        <main className="flex-1 min-w-0 p-3 sm:p-5 lg:p-8 pb-6">
           {children}
         </main>
       </div>

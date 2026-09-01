@@ -163,7 +163,7 @@ function DetailModal({ report, onClose, onVerify, onReject, loading }: { report:
       <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[85vh] overflow-y-auto" onClick={e => e.stopPropagation()}>
         <div className="sticky top-0 bg-white border-b border-slate-100 px-5 py-4 flex items-center justify-between">
           <div>
-            <p className="text-sm font-black text-slate-900 font-mono">{targetValue}</p>
+            <p className="text-sm font-black text-slate-900 font-mono break-all">{targetValue}</p>
             <span className={`inline-flex mt-1 text-[10px] font-bold px-2 py-0.5 rounded-full border ${status.className}`}>{status.label}</span>
           </div>
           <button onClick={onClose} className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:bg-slate-50 transition-colors"><X className="w-4 h-4" /></button>
@@ -183,7 +183,7 @@ function DetailModal({ report, onClose, onVerify, onReject, loading }: { report:
             {DETAIL_FIELDS(report).map(({ label, value, cls }) => (
               <div key={label}>
                 <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-0.5">{label}</p>
-                <p className={`font-semibold text-slate-800 ${cls ?? ''}`}>{value}</p>
+                <p className={`font-semibold text-slate-800 break-words ${cls ?? ''}`}>{value}</p>
               </div>
             ))}
           </div>
@@ -194,7 +194,7 @@ function DetailModal({ report, onClose, onVerify, onReject, loading }: { report:
           {chronology && (
             <div>
               <p className="text-[10px] text-slate-400 uppercase tracking-wide mb-1.5">Kronologi</p>
-              <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap bg-slate-50 border border-slate-200 rounded-xl p-3">{chronology}</p>
+              <p className="text-xs text-slate-700 leading-relaxed whitespace-pre-wrap break-words bg-slate-50 border border-slate-200 rounded-xl p-3">{chronology}</p>
             </div>
           )}
 
@@ -350,8 +350,8 @@ export default function LaporanTab({ reports: initial, token, initialSearch = ''
         </div>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-2">
-        <div className="relative flex-1">
+      <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2">
+        <div className="relative flex-1 min-w-0 sm:min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} placeholder="Cari nomor, kategori, atau email..."
             className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm outline-none focus:border-emerald-400 transition-colors" />
@@ -381,10 +381,10 @@ export default function LaporanTab({ reports: initial, token, initialSearch = ''
       </div>
 
       {selected.size > 0 && (
-        <div className="bg-slate-100 rounded-xl px-4 py-2.5 flex items-center gap-2 text-sm text-slate-600">
+        <div className="bg-slate-100 rounded-xl px-4 py-2.5 flex flex-wrap items-center gap-2 text-sm text-slate-600">
           <span>{selected.size} laporan dipilih</span>
           {pendingSelectedIds.length < selected.size && <span className="text-xs text-slate-400">({pendingSelectedIds.length} pending yang bisa diproses)</span>}
-          <div className="ml-auto flex gap-2">
+          <div className="ml-auto flex flex-wrap gap-2">
             <button onClick={() => bulkUpdateStatus('verified')} disabled={bulkLoading || !pendingSelectedIds.length} className="flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-semibold rounded-lg transition-all disabled:opacity-40">
               <CheckCircle className="w-3.5 h-3.5" /> Verifikasi semua
             </button>

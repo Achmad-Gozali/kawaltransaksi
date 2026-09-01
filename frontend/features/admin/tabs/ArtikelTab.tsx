@@ -226,9 +226,9 @@ export default function ArtikelTab({ token }: { token: string }) {
   if (view === 'editor') {
     return (
       <div className="space-y-4">
-        <div className="flex items-center justify-between">
+        <div className="flex flex-wrap items-center justify-between gap-2">
           <p className="text-sm font-bold text-slate-800">{editing ? 'Edit Artikel' : 'Artikel Baru'}</p>
-          <div className="flex gap-2">
+          <div className="flex flex-wrap gap-2">
             <button onClick={() => setView('list')} className="px-4 py-2 text-slate-500 hover:text-slate-700 text-sm font-semibold rounded-xl transition-all">Batal</button>
             <button onClick={() => handleSave('draft')} disabled={loading || !form.title.trim()} className="px-4 py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 text-sm font-semibold rounded-xl transition-all disabled:opacity-40">Simpan Draft</button>
             <button onClick={() => handleSave('published')} disabled={loading || !form.title.trim()} className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white text-sm font-semibold rounded-xl transition-all disabled:opacity-40">
@@ -297,8 +297,8 @@ export default function ArtikelTab({ token }: { token: string }) {
         </button>
       </div>
 
-      <div className="flex flex-col sm:flex-row gap-2">
-        <div className="relative flex-1">
+      <div className="flex flex-col sm:flex-row sm:flex-wrap gap-2">
+        <div className="relative flex-1 min-w-0 sm:min-w-[200px]">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input value={search} onChange={e => { setSearch(e.target.value); setPage(1); }} placeholder="Cari artikel berdasarkan judul, kategori, atau tag..."
             className="w-full pl-9 pr-4 py-2.5 bg-white border border-slate-200 rounded-xl text-sm outline-none focus:border-emerald-400 transition-colors" />
