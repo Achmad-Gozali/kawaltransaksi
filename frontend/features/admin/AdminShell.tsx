@@ -2,11 +2,12 @@
 import { authClient } from '@/core/auth/client';
 import { useState } from 'react';
 import Link from 'next/link';
+import Image from 'next/image';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
   LayoutDashboard, FileText, BarChart2, Users,
   Home, LogOut, ChevronLeft, ChevronRight,
-  Search, X, Shield, Menu, Newspaper, MessageCircle,
+  Search, X, Menu, Newspaper, MessageCircle,
 } from 'lucide-react';
 
 interface AdminShellProps {
@@ -177,9 +178,7 @@ export default function AdminShell({ email, children }: AdminShellProps) {
       `}>
         <div className="flex items-center justify-between h-16 border-b border-slate-100 px-4 shrink-0">
           <div className="flex items-center gap-3">
-            <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center shrink-0">
-              <Shield className="w-4 h-4 text-white" />
-            </div>
+            <Image src="/logo.png" alt="KawalTransaksi" width={32} height={32} className="rounded-lg shrink-0" />
             <div>
               <p className="text-[13px] font-bold text-slate-900 leading-tight">
                 Kawal<span className="text-emerald-600">Transaksi</span>
@@ -201,9 +200,7 @@ export default function AdminShell({ email, children }: AdminShellProps) {
         ${collapsed ? 'w-[64px]' : 'w-[240px]'}
       `}>
         <div className={`flex items-center h-16 border-b border-slate-100 shrink-0 px-4 ${collapsed ? 'justify-center px-0' : 'gap-3'}`}>
-          <div className="w-8 h-8 bg-emerald-600 rounded-lg flex items-center justify-center shrink-0">
-            <Shield className="w-4 h-4 text-white" />
-          </div>
+          <Image src="/logo.png" alt="KawalTransaksi" width={32} height={32} className="rounded-lg shrink-0" />
           {!collapsed && (
             <div className="min-w-0">
               <p className="text-[13px] font-bold text-slate-900 leading-tight">
@@ -227,6 +224,7 @@ export default function AdminShell({ email, children }: AdminShellProps) {
             <Menu className="w-5 h-5" />
           </button>
           <div className="flex items-center gap-2 lg:hidden">
+            <Image src="/logo.png" alt="KawalTransaksi" width={24} height={24} className="rounded-md shrink-0" />
             <span className="text-sm font-bold text-slate-900">
               Kawal<span className="text-emerald-600">Transaksi</span>
             </span>
