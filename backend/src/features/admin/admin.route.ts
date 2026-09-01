@@ -180,7 +180,7 @@ export async function adminRoutes(app: FastifyInstance) {
       ...(newReports as any[]).map(r => ({
         type: "report_new" as const,
         id: r.id,
-        label: `Laporan ID ${r.target_value} menunggu review`,
+        label: `Laporan ID ${r.target_value} dibuat`,
         ts: r.ts,
       })),
       ...(statusChanges as any[]).map(r => ({

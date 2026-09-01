@@ -29,7 +29,7 @@ interface ActivityItem {
 
 const ACTIVITY_META: Record<ActivityItem['type'], { icon: React.ElementType; bg: string; color: string; title: string }> = {
   report_verified:   { icon: CheckCircle2, bg: 'bg-emerald-100', color: 'text-emerald-600', title: 'Laporan berhasil diverifikasi' },
-  report_new:        { icon: Hourglass,    bg: 'bg-amber-100',   color: 'text-amber-600',   title: 'Laporan baru menunggu review' },
+  report_new:        { icon: FileText,     bg: 'bg-sky-100',     color: 'text-sky-600',     title: 'Laporan baru masuk' },
   user_new:          { icon: UserCircle,   bg: 'bg-sky-100',     color: 'text-sky-600',     title: 'Pengguna baru terdaftar' },
   article_published: { icon: Newspaper,    bg: 'bg-violet-100',  color: 'text-violet-600',  title: 'Artikel baru dipublikasikan' },
   report_rejected:   { icon: XCircle,      bg: 'bg-red-100',     color: 'text-red-600',     title: 'Laporan ditolak' },
