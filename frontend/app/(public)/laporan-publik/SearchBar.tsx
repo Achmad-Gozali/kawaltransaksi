@@ -38,7 +38,7 @@ export default function SearchBar({ defaultValue = '', type, sort }: Props) {
           value={q}
           onChange={(e) => setQ(e.target.value)}
           onKeyDown={(e) => e.key === 'Enter' && handleSubmit(e as any)}
-          placeholder="Cari nomor HP, rekening, atau e-wallet..."
+          placeholder="Cari nomor HP, rekening, e-wallet, atau QRIS..."
           className="w-full px-4 py-2.5 text-sm bg-slate-50 border border-slate-200 rounded-lg focus:outline-none focus:border-emerald-400 focus:ring-2 focus:ring-emerald-50 transition-all"
         />
         {q && (

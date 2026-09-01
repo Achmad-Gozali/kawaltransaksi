@@ -16,7 +16,7 @@ const steps = [
   {
     icon: FileText,
     title: 'Isi Formulir Laporan',
-    desc: 'Laporkan nomor rekening atau nomor telepon yang diduga dipakai pelaku penipuan. Isi formulir dengan informasi yang sebenar-benarnya.',
+    desc: 'Laporkan nomor HP, rekening bank, e-wallet, atau QRIS yang diduga dipakai pelaku penipuan. Isi formulir dengan informasi yang sebenar-benarnya.',
   },
   {
     icon: Send,
@@ -39,6 +39,14 @@ const explanations = [
     desc: 'Untuk melaporkan seseorang terkait penipuan online, Anda cukup mengisi formulir di halaman ini. Setelah laporan dikirim dan ditinjau tim kami, nomor HP yang diduga dipakai menipu akan masuk daftar hitam dan bisa diperiksa oleh semua pengguna.',
   },
   {
+    title: 'Laporkan E-Wallet Penipu',
+    desc: 'Akun e-wallet seperti GoPay, DANA, OVO, ShopeePay, atau LinkAja yang dipakai untuk menipu juga bisa dilaporkan. Sertakan nomor atau nama akun beserta bukti transaksinya, dan setelah ditinjau, akun tersebut akan masuk daftar hitam di sistem kami.',
+  },
+  {
+    title: 'Laporkan QRIS Penipu',
+    desc: 'Kalau Anda menemukan kode QRIS yang dipakai untuk penipuan, unggah foto kode QRIS-nya lewat formulir ini. Sistem akan membaca data merchant (NMID, nama, dan kota) secara otomatis, lalu laporan ditinjau tim kami sebelum dipublikasikan ke basis data.',
+  },
+  {
     title: 'Lapor Penipuan Transaksi Online',
     desc: 'Kalau Anda pernah menjadi korban penipuan saat bertransaksi online, Anda bisa melaporkan kejadiannya lewat KawalTransaksi supaya tidak ada korban berikutnya dari pelaku yang sama.',
   },
@@ -57,7 +65,7 @@ export default function ReportLanding() {
             <div className="space-y-8">
               <div>
                 <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 leading-tight mb-3">
-                  Laporkan Nomor Rekening Atau<br className="hidden sm:block" /> Nomor Telepon Penipuan
+                  Laporkan Nomor HP, Rekening, E-Wallet<br className="hidden sm:block" /> &amp; QRIS Penipuan
                 </h1>
                 <p className="text-slate-500 text-sm leading-relaxed max-w-md">
                   Laporan Anda sangat berarti untuk mencegah penipuan berikutnya oleh pelaku yang sama. Bersama-sama, kita bisa melindungi lebih banyak orang.

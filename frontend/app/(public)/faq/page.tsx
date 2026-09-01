@@ -28,7 +28,11 @@ export const metadata: Metadata = {
 const faqs = [
   {
     q: 'Apa itu KawalTransaksi?',
-    a: 'KawalTransaksi adalah platform verifikasi anti-penipuan yang memungkinkan siapa saja mengecek nomor HP, rekening bank, atau e-wallet sebelum bertransaksi. Data kami bersumber dari laporan komunitas pengguna di seluruh Indonesia.',
+    a: 'KawalTransaksi adalah platform verifikasi anti-penipuan yang memungkinkan siapa saja mengecek nomor HP, rekening bank, e-wallet, atau QRIS sebelum bertransaksi. Data kami bersumber dari laporan komunitas pengguna di seluruh Indonesia.',
+  },
+  {
+    q: 'Apa saja yang bisa dicek di KawalTransaksi?',
+    a: 'Anda bisa mengecek empat jenis target: nomor HP (termasuk WhatsApp), rekening bank, akun e-wallet (GoPay, DANA, OVO, ShopeePay, LinkAja), dan kode QRIS merchant. Semua pengecekan gratis dan real-time.',
   },
   {
     q: 'Apakah KawalTransaksi gratis?',

@@ -7,7 +7,7 @@ import * as motion from "motion/react-client";
 export const metadata: Metadata = {
   title: "Tentang Kami - KawalTransaksi",
   description:
-    "KawalTransaksi adalah platform komunitas anti-penipuan digital Indonesia. Kenali cerita dan misi di balik layanan verifikasi nomor HP, rekening bank, dan e-wallet.",
+    "KawalTransaksi adalah platform komunitas anti-penipuan digital Indonesia. Kenali cerita dan misi di balik layanan verifikasi nomor HP, rekening bank, e-wallet, dan QRIS.",
   alternates: { canonical: "https://kawaltransaksi.com/tentang-kami" },
 };
 
@@ -23,7 +23,7 @@ export default function AboutPage() {
           </h1>
           <p className="text-slate-500 text-sm sm:text-base leading-relaxed max-w-xl mx-auto">
             KawalTransaksi membantu masyarakat memverifikasi nomor HP,
-            rekening bank, dan e-wallet sebelum bertransaksi, sehingga
+            rekening bank, e-wallet, dan QRIS sebelum bertransaksi, sehingga
             kepercayaan tidak lagi menjadi celah yang dimanfaatkan pelaku
             penipuan.
           </p>
@@ -81,7 +81,7 @@ export default function AboutPage() {
                 <strong className="text-slate-900">kawaltransaksi.com</strong>{" "}
                 adalah platform komunitas anti-penipuan digital Indonesia
                 yang membantu masyarakat memverifikasi nomor HP, rekening
-                bank, dan e-wallet sebelum bertransaksi. Kami berperan
+                bank, e-wallet, dan QRIS sebelum bertransaksi. Kami berperan
                 sebagai garis pertahanan pertama sebelum dana berpindah
                 tangan kepada pihak yang tidak bertanggung jawab.
               </p>
@@ -131,9 +131,10 @@ export default function AboutPage() {
                 lahir dari kegelisahan yang sama dirasakan banyak orang:
                 sulitnya memastikan keamanan sebuah transaksi sebelum dana
                 benar-benar berpindah tangan. Nomor HP asing yang meminta
-                transfer, rekening baru yang belum pernah terdengar, atau
-                e-wallet yang tiba-tiba meminta kepercayaan menjadi celah
-                yang kerap dimanfaatkan pelaku penipuan.
+                transfer, rekening baru yang belum pernah terdengar,
+                e-wallet yang tiba-tiba meminta kepercayaan, atau kode QRIS
+                merchant yang tidak jelas menjadi celah yang kerap
+                dimanfaatkan pelaku penipuan.
               </p>
               <p className="text-justify">
                 Dari kegelisahan tersebut, KawalTransaksi dibangun sebagai

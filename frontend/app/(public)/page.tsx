@@ -23,7 +23,7 @@ const HOW_IT_WORKS = [
   {
     number: "#1",
     title: "Laporan Komunitas",
-    desc: "Laporan nomor HP, rekening bank, atau e-wallet mencurigakan dikumpulkan dari komunitas pengguna beserta bukti digital pendukung.",
+    desc: "Laporan nomor HP, rekening bank, e-wallet, atau QRIS mencurigakan dikumpulkan dari komunitas pengguna beserta bukti digital pendukung.",
   },
   {
     number: "#2",
@@ -153,7 +153,7 @@ export default async function HomePage() {
                 <br className="hidden sm:block" />Hati Tenang
               </h1>
               <p className="text-slate-500 text-sm sm:text-base mb-8 leading-relaxed max-w-md">
-                Verifikasi nomor HP, rekening bank, dan e-wallet dalam hitungan detik. Bersama komunitas, kami berkomitmen untuk mewujudkan ekosistem transaksi digital yang lebih aman di Indonesia.
+                Verifikasi nomor HP, rekening bank, e-wallet, dan QRIS dalam hitungan detik. Bersama komunitas, kami berkomitmen untuk mewujudkan ekosistem transaksi digital yang lebih aman di Indonesia.
               </p>
               <div className="flex flex-col sm:flex-row sm:flex-wrap gap-3">
                 <Link
@@ -200,7 +200,7 @@ export default async function HomePage() {
         <div className="max-w-5xl mx-auto px-4 sm:px-6 text-center">
           <h2 className="text-xl sm:text-2xl lg:text-3xl font-bold text-slate-900 mb-4">Apa itu KawalTransaksi?</h2>
           <p className="text-slate-500 text-sm sm:text-base max-w-xl mx-auto leading-relaxed">
-            KawalTransaksi adalah platform komunitas anti-penipuan digital Indonesia. Kami membantu Anda memverifikasi nomor HP, rekening bank, dan e-wallet sebelum bertransaksi — gratis, cepat, dan didukung laporan nyata dari komunitas.
+            KawalTransaksi adalah platform komunitas anti-penipuan digital Indonesia. Kami membantu Anda memverifikasi nomor HP, rekening bank, e-wallet, dan QRIS sebelum bertransaksi — gratis, cepat, dan didukung laporan nyata dari komunitas.
           </p>
         </div>
       </section>

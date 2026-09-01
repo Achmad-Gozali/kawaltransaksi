@@ -7,7 +7,7 @@ import {
   loadInterFonts,
 } from "@/core/og";
 
-export const alt = "KawalTransaksi - Cek Rekening & Nomor Penipu Sebelum Transfer";
+export const alt = "KawalTransaksi - Cek Transaksi Aman Sebelum Transfer";
 export const size = OG_SIZE;
 export const contentType = OG_CONTENT_TYPE;
 
@@ -22,7 +22,7 @@ export default async function Image() {
         logo={logo}
         eyebrow="Platform anti-penipuan komunitas"
         title="KawalTransaksi"
-        tagline="Cek Rekening & Nomor Penipu Sebelum Transfer"
+        tagline="Cek Transaksi Aman Sebelum Transfer"
       />
     ),
     { ...size, fonts },

@@ -8,13 +8,13 @@ import SearchBar from "./SearchBar";
 
 export const metadata: Metadata = {
   title: "Database Laporan Publik Penipuan - KawalTransaksi",
-  description: "Lihat seluruh laporan nomor HP, rekening bank, dan e-wallet terindikasi penipuan yang masuk ke sistem KawalTransaksi, lengkap dengan status verifikasi.",
+  description: "Lihat seluruh laporan nomor HP, rekening bank, e-wallet, dan QRIS terindikasi penipuan yang masuk ke sistem KawalTransaksi, lengkap dengan status verifikasi.",
   alternates: {
     canonical: "https://kawaltransaksi.com/laporan-publik",
   },
   openGraph: {
     title: "Database Laporan Publik Penipuan - KawalTransaksi",
-    description: "Lihat seluruh laporan nomor HP, rekening bank, dan e-wallet terindikasi penipuan yang masuk ke sistem KawalTransaksi.",
+    description: "Lihat seluruh laporan nomor HP, rekening bank, e-wallet, dan QRIS terindikasi penipuan yang masuk ke sistem KawalTransaksi.",
     url: "https://kawaltransaksi.com/laporan-publik",
     siteName: "KawalTransaksi",
     locale: "id_ID",
