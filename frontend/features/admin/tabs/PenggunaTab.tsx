@@ -142,6 +142,14 @@ export default function PenggunaTab({ users: initial }: { users: AdminUser[] }) 
   const currentPage = Math.min(page, totalPages);
   const paginated = filtered.slice((currentPage - 1) * PER_PAGE, currentPage * PER_PAGE);
 
+  const pageNumbers = Array.from({ length: totalPages }, (_, i) => i + 1)
+    .filter(n => n === 1 || n === totalPages || Math.abs(n - currentPage) <= 1)
+    .reduce<(number | 'ellipsis')[]>((acc, n, idx, arr) => {
+      if (idx > 0 && n - (arr[idx - 1] as number) > 1) acc.push('ellipsis');
+      acc.push(n);
+      return acc;
+    }, []);
+
   const adminCount = users.filter(u => u.role === 'admin').length;
   const userCount  = users.filter(u => u.role === 'user').length;
   const now        = Date.now();
@@ -318,7 +326,9 @@ export default function PenggunaTab({ users: initial }: { users: AdminUser[] }) 
               >
                 <ChevronLeft className="w-3.5 h-3.5" />
               </button>
-              {Array.from({ length: totalPages }, (_, i) => i + 1).map(n => (
+              {pageNumbers.map((n, i) => n === 'ellipsis' ? (
+                <span key={`e${i}`} className="w-7 h-7 flex items-center justify-center text-xs text-slate-400">…</span>
+              ) : (
                 <button
                   key={n}
                   onClick={() => setPage(n)}

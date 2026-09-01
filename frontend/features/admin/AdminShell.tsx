@@ -223,9 +223,9 @@ export default function AdminShell({ email, children }: AdminShellProps) {
             className="lg:hidden w-9 h-9 flex items-center justify-center rounded-xl text-slate-500 hover:text-slate-900 hover:bg-slate-100 transition-colors">
             <Menu className="w-5 h-5" />
           </button>
-          <div className="flex items-center gap-2 lg:hidden">
+          <div className="flex items-center gap-2 lg:hidden shrink-0">
             <Image src="/logo.png" alt="KawalTransaksi" width={24} height={24} className="rounded-md shrink-0" />
-            <span className="text-sm font-bold text-slate-900">
+            <span className="hidden sm:inline text-sm font-bold text-slate-900">
               Kawal<span className="text-emerald-600">Transaksi</span>
             </span>
           </div>

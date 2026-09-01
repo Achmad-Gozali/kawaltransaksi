@@ -9,7 +9,7 @@ import {
   Plus, Pencil, Trash2, Eye,
   Bold, Italic, List, ListOrdered, Heading2, Heading3, Quote, Minus, Upload, X,
   Search, ChevronDown, MoreHorizontal, Calendar, FileText,
-  ChevronLeft, ChevronRight, Globe, PencilLine,
+  ChevronLeft, ChevronRight, Globe, PencilLine, AlertTriangle,
 } from 'lucide-react';
 import { authClient } from '@/core/auth/client';
 
@@ -121,6 +121,26 @@ function StatusDropdown({ article, onTogglePublish }: { article: Article; onTogg
   );
 }
 
+function ConfirmDeleteModal({ article, onClose, onConfirm, loading }: { article: Article; onClose: () => void; onConfirm: () => void; loading: boolean }) {
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm" onClick={onClose}>
+      <div className="bg-white rounded-2xl w-full max-w-sm p-5" onClick={e => e.stopPropagation()}>
+        <div className="w-11 h-11 rounded-2xl bg-red-50 flex items-center justify-center mb-3"><AlertTriangle className="w-5 h-5 text-red-600" strokeWidth={2.25} /></div>
+        <p className="text-sm font-black text-slate-900">Hapus artikel ini?</p>
+        <p className="text-xs text-slate-500 mt-1.5 leading-relaxed">
+          Artikel <span className="font-semibold text-slate-700">&ldquo;{article.title}&rdquo;</span> akan dihapus permanen. Tindakan ini tidak bisa dibatalkan.
+        </p>
+        <div className="flex gap-2 mt-5">
+          <button onClick={onClose} disabled={loading} className="flex-1 px-4 py-2.5 bg-slate-50 border border-slate-200 text-slate-600 text-xs font-semibold rounded-xl hover:bg-slate-100 transition-colors disabled:opacity-40">Batal</button>
+          <button onClick={onConfirm} disabled={loading} className="flex-1 flex items-center justify-center gap-1.5 px-4 py-2.5 bg-red-600 hover:bg-red-700 text-white text-xs font-semibold rounded-xl transition-all disabled:opacity-40">
+            {loading ? 'Menghapus...' : <><Trash2 className="w-3.5 h-3.5" /> Hapus</>}
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 const emptyForm = { title: '', excerpt: '', content: '', thumbnail: '', category: '', status: 'draft' };
 
 export default function ArtikelTab({ token }: { token: string }) {
@@ -130,6 +150,7 @@ export default function ArtikelTab({ token }: { token: string }) {
   const [editing, setEditing]   = useState<ArticleFull | null>(null);
   const [loading, setLoading]   = useState(false);
   const [deleting, setDeleting] = useState<string | null>(null);
+  const [deleteTarget, setDeleteTarget] = useState<Article | null>(null);
   const [uploading, setUploading] = useState(false);
   const [thumbnailPreview, setThumbnailPreview] = useState<string | null>(null);
 
@@ -202,11 +223,11 @@ export default function ArtikelTab({ token }: { token: string }) {
   };
 
   const handleDelete = async (id: string) => {
-    if (!confirm('Hapus artikel ini?')) return;
     setDeleting(id);
     try {
       await fetch(`${API_URL}/api/admin/articles/${id}`, { method: 'DELETE', headers: authHeaders(getToken()) });
       setArticles(prev => prev.filter(a => a.id !== id));
+      setDeleteTarget(null);
     } finally { setDeleting(null); }
   };
 
@@ -243,7 +264,7 @@ export default function ArtikelTab({ token }: { token: string }) {
             <input value={form.title} onChange={e => setForm(f => ({ ...f, title: e.target.value }))} placeholder="Judul artikel..." className={inputCls} />
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="text-[10px] font-bold text-slate-400 uppercase tracking-widest block mb-1.5">Kategori</label>
               <input value={form.category} onChange={e => setForm(f => ({ ...f, category: e.target.value }))} placeholder="Contoh: Tips Keamanan, Modus, Berita..." className={inputCls} />
@@ -376,7 +397,7 @@ export default function ArtikelTab({ token }: { token: string }) {
                             <span title="Publish dulu untuk bisa preview" className="w-8 h-8 flex items-center justify-center text-slate-200 cursor-not-allowed"><Eye className="w-4 h-4" /></span>
                           )}
                           <button onClick={() => openEdit(a.id)} title="Edit" className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-all"><Pencil className="w-4 h-4" /></button>
-                          <button onClick={() => handleDelete(a.id)} disabled={deleting === a.id} title="Hapus" className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all disabled:opacity-40"><Trash2 className="w-4 h-4" /></button>
+                          <button onClick={() => setDeleteTarget(a)} disabled={deleting === a.id} title="Hapus" className="w-8 h-8 flex items-center justify-center text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-lg transition-all disabled:opacity-40"><Trash2 className="w-4 h-4" /></button>
                           <StatusDropdown article={a} onTogglePublish={() => togglePublish(a)} />
                         </div>
                       </td>
@@ -401,6 +422,15 @@ export default function ArtikelTab({ token }: { token: string }) {
           </div>
         )}
       </div>
+
+      {deleteTarget && (
+        <ConfirmDeleteModal
+          article={deleteTarget}
+          loading={deleting === deleteTarget.id}
+          onClose={() => setDeleteTarget(null)}
+          onConfirm={() => handleDelete(deleteTarget.id)}
+        />
+      )}
     </div>
   );
 }

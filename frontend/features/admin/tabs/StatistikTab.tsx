@@ -353,7 +353,7 @@ export default function StatistikTab({ stats, analytics }: { stats: Stats; analy
       </div>
 
       {/* Overview */}
-      <div className="grid grid-cols-2 sm:grid-cols-5 gap-3">
+      <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
         <StatCard
           icon={FileText} iconBg="bg-emerald-50" iconColor="text-emerald-600"
           label="Total Laporan" value={stats.total}

@@ -360,9 +360,9 @@ export default function LaporanTab({ reports: initial, token, initialSearch = ''
           { value: statusFilter, set: setStatusFilter, opts: [['', 'Semua status'], ['pending', 'Pending'], ['verified', 'Terverifikasi'], ['rejected', 'Ditolak']] },
           { value: typeFilter, set: setTypeFilter, opts: [['', 'Semua tipe'], ['phone', 'Nomor HP'], ['bank_account', 'Rekening Bank'], ['ewallet', 'E-Wallet'], ['qris', 'QRIS']] },
         ].map(({ value, set, opts }, i) => (
-          <div className="relative" key={i}>
+          <div className="relative flex-1 sm:flex-none" key={i}>
             <select value={value} onChange={e => { set(e.target.value); setPage(1); }}
-              className="appearance-none pl-3.5 pr-9 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-700 outline-none focus:border-emerald-400 transition-colors cursor-pointer">
+              className="w-full appearance-none pl-3.5 pr-9 py-2.5 bg-white border border-slate-200 rounded-xl text-sm font-medium text-slate-700 outline-none focus:border-emerald-400 transition-colors cursor-pointer">
               {opts.map(([v, l]) => <option key={v} value={v}>{l}</option>)}
             </select>
             <ChevronDown className="absolute right-3 top-1/2 -translate-y-1/2 w-3.5 h-3.5 text-slate-400 pointer-events-none" />

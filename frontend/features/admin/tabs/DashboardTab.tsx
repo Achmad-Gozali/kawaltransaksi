@@ -177,17 +177,19 @@ export default function DashboardTab({ stats, reports }: { stats: DashboardStats
 
       {/* Insight banner */}
       {spike && (
-        <div className="bg-emerald-50 border border-emerald-100 rounded-2xl px-5 py-4 flex items-center gap-4">
-          <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center shrink-0">
-            <TrendingUp className="w-5 h-5 text-emerald-700" strokeWidth={2.25} />
+        <div className="bg-emerald-50 border border-emerald-100 rounded-2xl px-5 py-4 flex flex-col sm:flex-row sm:items-center gap-3 sm:gap-4">
+          <div className="flex items-start gap-4 flex-1 min-w-0">
+            <div className="w-10 h-10 rounded-xl bg-emerald-100 flex items-center justify-center shrink-0">
+              <TrendingUp className="w-5 h-5 text-emerald-700" strokeWidth={2.25} />
+            </div>
+            <div className="flex-1 min-w-0">
+              <p className="text-sm font-black text-emerald-800">Lonjakan laporan terdeteksi!</p>
+              <p className="text-xs text-emerald-700 mt-0.5">
+                Terjadi peningkatan laporan {spike.pct}% pada {spike.date} 2026 dibandingkan rata-rata 7 hari sebelumnya.
+              </p>
+            </div>
           </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-black text-emerald-800">Lonjakan laporan terdeteksi!</p>
-            <p className="text-xs text-emerald-700 mt-0.5">
-              Terjadi peningkatan laporan {spike.pct}% pada {spike.date} 2026 dibandingkan rata-rata 7 hari sebelumnya.
-            </p>
-          </div>
-          <Link href="?tab=statistik" className="shrink-0 flex items-center gap-1 px-3.5 py-2 bg-white border border-emerald-200 text-emerald-700 text-xs font-bold rounded-xl hover:bg-emerald-100 transition-colors">
+          <Link href="?tab=statistik" className="shrink-0 flex items-center justify-center gap-1 px-3.5 py-2 bg-white border border-emerald-200 text-emerald-700 text-xs font-bold rounded-xl hover:bg-emerald-100 transition-colors">
             Lihat Detail <ArrowRight className="w-3.5 h-3.5" />
           </Link>
         </div>
@@ -201,45 +203,51 @@ export default function DashboardTab({ stats, reports }: { stats: DashboardStats
 
           <div className="space-y-2.5">
             {pendingCount > 0 && (
-              <div className="flex items-center gap-3 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
-                <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
-                  <Hourglass className="w-4 h-4 text-amber-600" />
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 bg-amber-50 border border-amber-100 rounded-xl px-4 py-3">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div className="w-9 h-9 rounded-xl bg-amber-100 flex items-center justify-center shrink-0">
+                    <Hourglass className="w-4 h-4 text-amber-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-slate-800">{pendingCount} laporan menunggu review</p>
+                    <p className="text-[11px] text-slate-500">Segera review laporan yang masuk.</p>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-slate-800">{pendingCount} laporan menunggu review</p>
-                  <p className="text-[11px] text-slate-500">Segera review laporan yang masuk.</p>
-                </div>
-                <Link href="?tab=laporan" className="shrink-0 flex items-center gap-1 px-3 py-1.5 bg-amber-100 text-amber-800 text-[11px] font-bold rounded-lg hover:bg-amber-200 transition-colors">
+                <Link href="?tab=laporan" className="shrink-0 flex items-center justify-center gap-1 px-3 py-1.5 bg-amber-100 text-amber-800 text-[11px] font-bold rounded-lg hover:bg-amber-200 transition-colors">
                   Review Sekarang <ArrowRight className="w-3 h-3" />
                 </Link>
               </div>
             )}
 
             {spike && (
-              <div className="flex items-center gap-3 bg-red-50 border border-red-100 rounded-xl px-4 py-3">
-                <div className="w-9 h-9 rounded-xl bg-red-100 flex items-center justify-center shrink-0">
-                  <TrendingUp className="w-4 h-4 text-red-600" />
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 bg-red-50 border border-red-100 rounded-xl px-4 py-3">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div className="w-9 h-9 rounded-xl bg-red-100 flex items-center justify-center shrink-0">
+                    <TrendingUp className="w-4 h-4 text-red-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-slate-800">Lonjakan laporan {spike.pct}%</p>
+                    <p className="text-[11px] text-slate-500">Dibandingkan rata-rata 7 hari sebelumnya.</p>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-slate-800">Lonjakan laporan {spike.pct}%</p>
-                  <p className="text-[11px] text-slate-500">Dibandingkan rata-rata 7 hari sebelumnya.</p>
-                </div>
-                <Link href="?tab=statistik" className="shrink-0 flex items-center gap-1 px-3 py-1.5 bg-red-100 text-red-700 text-[11px] font-bold rounded-lg hover:bg-red-200 transition-colors">
+                <Link href="?tab=statistik" className="shrink-0 flex items-center justify-center gap-1 px-3 py-1.5 bg-red-100 text-red-700 text-[11px] font-bold rounded-lg hover:bg-red-200 transition-colors">
                   Lihat Detail <ArrowRight className="w-3 h-3" />
                 </Link>
               </div>
             )}
 
             {newUsersCount > 0 && (
-              <div className="flex items-center gap-3 bg-sky-50 border border-sky-100 rounded-xl px-4 py-3">
-                <div className="w-9 h-9 rounded-xl bg-sky-100 flex items-center justify-center shrink-0">
-                  <Users className="w-4 h-4 text-sky-600" />
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-3 bg-sky-50 border border-sky-100 rounded-xl px-4 py-3">
+                <div className="flex items-center gap-3 flex-1 min-w-0">
+                  <div className="w-9 h-9 rounded-xl bg-sky-100 flex items-center justify-center shrink-0">
+                    <Users className="w-4 h-4 text-sky-600" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className="text-sm font-bold text-slate-800">{newUsersCount} pengguna baru</p>
+                    <p className="text-[11px] text-slate-500">Dalam 7 hari terakhir.</p>
+                  </div>
                 </div>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-bold text-slate-800">{newUsersCount} pengguna baru</p>
-                  <p className="text-[11px] text-slate-500">Dalam 7 hari terakhir.</p>
-                </div>
-                <Link href="?tab=pengguna" className="shrink-0 flex items-center gap-1 px-3 py-1.5 bg-sky-100 text-sky-700 text-[11px] font-bold rounded-lg hover:bg-sky-200 transition-colors">
+                <Link href="?tab=pengguna" className="shrink-0 flex items-center justify-center gap-1 px-3 py-1.5 bg-sky-100 text-sky-700 text-[11px] font-bold rounded-lg hover:bg-sky-200 transition-colors">
                   Lihat Pengguna <ArrowRight className="w-3 h-3" />
                 </Link>
               </div>
