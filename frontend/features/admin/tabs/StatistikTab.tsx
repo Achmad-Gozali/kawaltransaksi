@@ -5,9 +5,16 @@ import Chart from 'chart.js/auto';
 import {
   FileText, Hourglass, ShieldCheck, Wallet, TrendingUp,
   ArrowUpRight, ArrowDownRight, Calendar, Search, Landmark,
-  CreditCard, Smartphone, QrCode, MessageCircle, Users, Camera,
+  CreditCard, Smartphone, QrCode, Globe,
   MoreHorizontal, ChevronRight, Sparkles, CheckCircle2,
 } from 'lucide-react';
+import type { IconType } from 'react-icons';
+import {
+  SiWhatsapp, SiTelegram, SiLine, SiMessenger, SiInstagram, SiFacebook,
+  SiTiktok, SiX, SiYoutube, SiPinterest, SiThreads, SiDiscord, SiSnapchat,
+  SiShopee, SiGojek, SiGrab, SiBukalapak, SiBlibli, SiGmail,
+} from 'react-icons/si';
+import { FaLinkedin } from 'react-icons/fa6';
 import type { Stats, AdminAnalytics } from '@/features/admin/types';
 
 const AXIS_TEXT  = '#94938d';
@@ -21,15 +28,6 @@ const BRAND = {
   amber:       '#f59e0b',
   rose:        '#e11d48',
 };
-
-// TikTok tidak ada di lucide-react secara native — dibuat sebagai path SVG kecil
-function TikTokIcon({ className }: { className?: string }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
-      <path d="M16.6 5.82s.51.5 0 0A4.278 4.278 0 0 1 15.54 3h-3.09v12.4a2.592 2.592 0 0 1-2.59 2.5c-1.42 0-2.6-1.16-2.6-2.6 0-1.72 1.66-3.01 3.37-2.48V9.66c-3.45-.46-6.47 2.22-6.47 5.64 0 3.33 2.76 5.7 5.69 5.7 3.14 0 5.69-2.55 5.69-5.7V9.01a7.35 7.35 0 0 0 4.3 1.38V7.3s-1.88.09-3.24-1.48Z" />
-    </svg>
-  );
-}
 
 const TYPE_LABEL: Record<string, string> = {
   phone: 'Nomor HP',
@@ -153,16 +151,40 @@ function useChart(
   }, deps);
 }
 
-const PLATFORM_ICON: Record<string, { icon: React.ElementType; color: string }> = {
-  whatsapp:  { icon: MessageCircle, color: 'text-emerald-600' },
-  facebook:  { icon: Users,         color: 'text-blue-600' },
-  tiktok:    { icon: TikTokIcon,    color: 'text-slate-900' },
-  instagram: { icon: Camera,        color: 'text-pink-600' },
+// Logo brand asli tiap platform. Sumber: react-icons (Simple Icons set, lisensi
+// MIT) + FaLinkedin. Key = nilai `platform` di-lowercase -- lihat `platformList`
+// di features/report/constants.ts untuk daftar nilai yang mungkin tersimpan.
+// `color` = warna brand resmi; dipakai via `style` karena tidak semua ada di
+// palet Tailwind. Platform tak dikenal / "Lainnya" jatuh ke ikon Globe generik.
+const PLATFORM_BRAND: Record<string, { icon: IconType; color: string }> = {
+  'whatsapp':             { icon: SiWhatsapp,  color: '#25D366' },
+  'telegram':             { icon: SiTelegram,  color: '#26A5E4' },
+  'line':                 { icon: SiLine,      color: '#00C300' },
+  'messenger':            { icon: SiMessenger, color: '#00B2FF' },
+  'instagram':            { icon: SiInstagram, color: '#E4405F' },
+  'facebook':             { icon: SiFacebook,  color: '#0866FF' },
+  'facebook marketplace': { icon: SiFacebook,  color: '#0866FF' },
+  'tiktok':               { icon: SiTiktok,    color: '#111111' },
+  'tiktok shop':          { icon: SiTiktok,    color: '#111111' },
+  'twitter/x':            { icon: SiX,         color: '#111111' },
+  'youtube':              { icon: SiYoutube,   color: '#FF0000' },
+  'pinterest':            { icon: SiPinterest, color: '#BD081C' },
+  'linkedin':             { icon: FaLinkedin,  color: '#0A66C2' },
+  'threads':              { icon: SiThreads,   color: '#111111' },
+  'discord':              { icon: SiDiscord,   color: '#5865F2' },
+  'snapchat':             { icon: SiSnapchat,  color: '#C9A100' },
+  'shopee':               { icon: SiShopee,    color: '#EE4D2D' },
+  'gojek':                { icon: SiGojek,     color: '#00AA13' },
+  'grab':                 { icon: SiGrab,      color: '#00B14F' },
+  'bukalapak':            { icon: SiBukalapak, color: '#E31E52' },
+  'blibli':               { icon: SiBlibli,    color: '#0095DA' },
+  'email':                { icon: SiGmail,     color: '#EA4335' },
+  'gmail':                { icon: SiGmail,     color: '#EA4335' },
 };
 
-function platformMeta(name: string) {
-  const key = name.toLowerCase();
-  return PLATFORM_ICON[key] ?? { icon: MoreHorizontal, color: 'text-slate-500' };
+function platformMeta(name: string): { Icon: IconType | React.ElementType; color: string } {
+  const hit = PLATFORM_BRAND[name.trim().toLowerCase()];
+  return hit ? { Icon: hit.icon, color: hit.color } : { Icon: Globe, color: '#64748b' };
 }
 
 export default function StatistikTab({ stats, analytics }: { stats: Stats; analytics: AdminAnalytics }) {
@@ -530,12 +552,11 @@ export default function StatistikTab({ stats, analytics }: { stats: Stats; analy
                   const max = data.platformData[0]?.value ?? 1;
                   const pct = Math.round((d.value / max) * 100);
                   const total = stats.total > 0 ? Math.round((d.value / stats.total) * 100) : 0;
-                  const meta = platformMeta(d.name);
-                  const Icon = meta.icon;
+                  const { Icon, color } = platformMeta(d.name);
                   return (
                     <div key={i} className="flex items-center gap-3">
-                      <div className={`w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center shrink-0 ${meta.color}`}>
-                        <Icon className="w-4 h-4" strokeWidth={2} />
+                      <div className="w-9 h-9 rounded-xl bg-slate-50 flex items-center justify-center shrink-0">
+                        <Icon className="w-4 h-4" style={{ color }} />
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex justify-between text-xs mb-1">
