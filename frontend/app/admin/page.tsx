@@ -26,6 +26,12 @@ export default async function AdminPage() {
     adminFetch('/api/admin/analytics', token),
   ]);
 
+  // Kalau /stats gagal (mis. query error 500), response-nya tidak punya `data` dan
+  // semua kartu diam-diam jadi 0. Catat supaya kegagalan ini punya jejak di log.
+  if (!statsRes?.data) {
+    console.error('[admin] GET /api/admin/stats tidak mengembalikan data:', statsRes);
+  }
+
   const stats = {
     total:    Number(statsRes.data?.totalReports ?? 0),
     pending:  Number(statsRes.data?.pending      ?? 0),

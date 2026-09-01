@@ -456,7 +456,7 @@ export default function StatistikTab({ stats, analytics }: { stats: Stats; analy
               <div className="mt-4">
                 <InsightBox icon={Sparkles}>
                   Kategori dominan: <span className="font-bold">{data.categoryData[0].name}</span>{' '}
-                  ({Math.round((data.categoryData[0].value / stats.total) * 100)}%)
+                  ({stats.total > 0 ? Math.round((data.categoryData[0].value / stats.total) * 100) : 0}%)
                 </InsightBox>
               </div>
             </>
@@ -507,7 +507,7 @@ export default function StatistikTab({ stats, analytics }: { stats: Stats; analy
               <div className="mt-4">
                 <InsightBox icon={Sparkles}>
                   <span className="font-bold">{data.typeData[0].name}</span> menjadi target utama{' '}
-                  ({Math.round((data.typeData[0].value / stats.total) * 100)}%)
+                  ({stats.total > 0 ? Math.round((data.typeData[0].value / stats.total) * 100) : 0}%)
                 </InsightBox>
               </div>
             </>
@@ -571,7 +571,7 @@ export default function StatistikTab({ stats, analytics }: { stats: Stats; analy
               <div className="mt-4">
                 <InsightBox icon={Sparkles}>
                   <span className="font-bold">{data.platformData[0].name}</span> menjadi platform terbanyak{' '}
-                  ({Math.round((data.platformData[0].value / stats.total) * 100)}%)
+                  ({stats.total > 0 ? Math.round((data.platformData[0].value / stats.total) * 100) : 0}%)
                 </InsightBox>
               </div>
             </>

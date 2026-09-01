@@ -25,10 +25,13 @@ function slugify(text: string) {
 export async function adminRoutes(app: FastifyInstance) {
   // ── STATS ──────────────────────────────────────────────────────────────────
   app.get("/stats", { preHandler: requireAdmin }, async () => {
-    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
-
     // Satu query: cross join dua subquery satu-baris (reports + users), tiap
     // tabel di-scan sekali dengan COUNT(*) FILTER. Dulu 6 query terpisah.
+    //
+    // Cutoff "pengguna baru" pakai ekspresi SQL `now() - interval '7 days'`
+    // (bukan objek Date JS yang di-interpolasi) -- Drizzle menolak meng-encode
+    // objek Date mentah di dalam sql`` raw dan seluruh query jadi gagal 500.
+    // Sama gaya dengan endpoint /analytics yang juga hitung tanggal di SQL.
     const [row] = await db.execute(sql`
       SELECT
         r.total_reports, r.pending, r.verified, r.rejected,
@@ -42,7 +45,7 @@ export async function adminRoutes(app: FastifyInstance) {
          FROM reports) r,
         (SELECT
            COUNT(*)::int                                              AS total_users,
-           COUNT(*) FILTER (WHERE created_at >= ${sevenDaysAgo})::int  AS new_users
+           COUNT(*) FILTER (WHERE created_at >= now() - interval '7 days')::int  AS new_users
          FROM users) u
     `);
     const d = row as unknown as Record<string, unknown>;
