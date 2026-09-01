@@ -65,7 +65,7 @@ export default function ReportLanding() {
             <div className="space-y-8">
               <div>
                 <h1 className="text-2xl sm:text-3xl font-bold text-slate-900 leading-tight mb-3">
-                  Laporkan Nomor HP, Rekening, E-Wallet<br className="hidden sm:block" /> &amp; QRIS Penipuan
+                  Laporkan Nomor HP, Rekening, <span className="whitespace-nowrap">E-Wallet</span><br className="hidden sm:block" /> &amp; QRIS Penipuan
                 </h1>
                 <p className="text-slate-500 text-sm leading-relaxed max-w-md">
                   Laporan Anda sangat berarti untuk mencegah penipuan berikutnya oleh pelaku yang sama. Bersama-sama, kita bisa melindungi lebih banyak orang.
